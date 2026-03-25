@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-34: Fee Auto-Population from Rate Cards</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+h3 { font-size: 14px; font-weight: 700; margin: 20px 0 8px; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: rgba(21,44,255,0.04); border: 2px solid rgba(21,44,255,0.2); border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #152CFF; font-size: 14px; margin-bottom: 6px; }
+.nav { height: 40px; background: #111827; display: flex; align-items: center; padding: 0 16px; gap: 16px; }
+.nav .logo { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; }
+.nav .brand { font-weight: 700; font-size: 13px; color: #fff; }
+.nav .link { font-size: 12px; color: rgba(255,255,255,0.5); }
+.nav .link.active { color: #fff; font-weight: 600; padding: 4px 10px; background: rgba(255,255,255,0.1); border-radius: 4px; }
+.th { text-align: left; padding: 6px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+.td { padding: 8px 10px; font-size: 11px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+.sec-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-34: Fee Auto-Population from Rate Cards</h1>
+
+<div class="hmw">
+When a job is created for FM Trucking with HaleSun on route TikTok WH &rarr; SZ Bay, which L2 fees get auto-created as fee line items?
+</div>
+
+<div class="context">
+<strong>The real scenario:</strong> The admin has set up HaleSun's FM Trucking rate card with 3 L2 fees for the TikTok WH &rarr; SZ Bay route: FM001 (Warehouse Transfer RM 450/trip), FM002 (Pickup Fee RM 30/trip), FM003 (Cross-Border Handling RM 45/trip). When an ops planner creates a new job on a delivery order and selects HaleSun + FM Trucking + TikTok WH &rarr; SZ Bay, what fee line items appear on the job? All 3? Just the primary one? Only the ones marked "default"?
+<br><br>
+<strong>Why it matters:</strong> If fees don't auto-populate, the rate card is pointless -- ops has to manually look up and enter each fee, which is exactly what they did in Excel. If ALL fees auto-populate, the job cost is instantly accurate. But if a fee shouldn't apply to a specific shipment, do we want it there by default?
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION A: ALL L2 FEES AUTO-POPULATE          -->
+<!-- ============================================ -->
+
+<h2>Option A: All L2 Fees With Rates Auto-Populate</h2>
+<span class="label" style="background: rgba(21,44,255,0.06); color: #152CFF;">Recommended</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> When ops selects a vendor + service + route, the system looks up ALL L2 fee rates configured for that combination in the rate sheet. Every L2 fee that has a rate value creates a FeeLineItem on the job. If FM001=RM 450, FM002=RM 30, FM003=RM 45 for this route, all 3 become fee line items immediately. If FM003 has no rate for a different route, it simply isn't created for jobs on that route.
+
+<p style="margin-top: 8px;"><strong>How it works:</strong></p>
+<ol style="font-size: 11px; padding-left: 16px; line-height: 1.8;">
+<li><strong>Vendor + Service + Route selected</strong> &rarr; system queries rate sheet for all L2 fees matching that combination</li>
+<li><strong>For each L2 fee with a non-empty rate</strong> &rarr; creates a FeeLineItem with: name, costId, rate, unit, qty (defaulted), amount (calculated)</li>
+<li><strong>Fee line items appear instantly</strong> on the create form, showing the full cost breakdown before the job is saved</li>
+<li><strong>Ops can remove any fee</strong> (click x) or add manual surcharges (+ Add fee) -- but the default is "everything configured"</li>
+</ol>
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+&bull; Zero manual fee entry for 95% of jobs<br>
+&bull; Job cost is accurate from the moment of creation<br>
+&bull; Rate card is the single source of truth<br>
+&bull; If a fee shouldn't apply, remove the rate from the sheet -- not per-job</div>
+<div class="cons"><strong>Cons</strong><br>
+&bull; Ops might not realize extra fees were added<br>
+&bull; Removing a one-time inapplicable fee requires a click<br>
+&bull; If rate sheet has errors, wrong fees propagate to many jobs</div>
+</div>
+</div>
+
+<!-- MOCKUP 1: CREATE FORM WITH AUTO-POPULATED FEES -->
+<h3>Mockup 1: Create Form -- Job with 3 Auto-Populated FM Fees</h3>
+
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link active">Delivery Orders</span>
+  <span class="link">Rates</span>
+  <span class="link">Billing</span>
+  <span class="link">Master Data</span>
+</div>
+
+<div style="padding: 16px;">
+  <!-- Page header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <div>
+      <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">New Delivery Order</h1>
+      <p style="font-size: 11px; color: #9ca3af;">Step 2 of 2 &mdash; Assign Vendors</p>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button style="padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #374151; cursor: pointer;">&larr; Back</button>
+      <button style="padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: none; background: #152CFF; color: #fff; cursor: pointer;">Create Order</button>
+    </div>
+  </div>
+
+  <!-- Order context bar -->
+  <div style="display: flex; gap: 16px; padding: 8px 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 16px; align-items: center;">
+    <div>
+      <span style="font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Customer</span>
+      <div style="font-size: 12px; font-weight: 600;">TikTok</div>
+    </div>
+    <div style="width: 1px; height: 24px; background: #e5e7eb;"></div>
+    <div>
+      <span style="font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">MAWB</span>
+      <div class="mono" style="font-size: 11px;">160-82774910</div>
+    </div>
+    <div style="width: 1px; height: 24px; background: #e5e7eb;"></div>
+    <div>
+      <span style="font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Bags / Weight</span>
+      <div class="mono" style="font-size: 11px;">18 bags &middot; 960 kg</div>
+    </div>
+  </div>
+
+  <!-- Quick add service bar -->
+  <div style="display: flex; gap: 6px; margin-bottom: 16px; align-items: center;">
+    <span style="font-size: 10px; color: #9ca3af; margin-right: 4px;">Add job:</span>
+    <button style="padding: 3px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; border: 1px solid rgba(21,44,255,0.2); background: rgba(21,44,255,0.04); color: #152CFF; cursor: pointer;">+ FM</button>
+    <button style="padding: 3px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">+ EC</button>
+    <button style="padding: 3px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">+ CS</button>
+    <button style="padding: 3px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">+ CR</button>
+    <button style="padding: 3px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">+ OH</button>
+  </div>
+
+  <!-- Job 1: FM Trucking -->
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; margin-bottom: 16px; background: #fff;">
+    <!-- Job header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-weight: 700; font-size: 13px; color: #152CFF;">J01</span>
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.12); color: #152CFF;">FM Trucking</span>
+      </div>
+      <span style="font-size: 10px; color: #d1d5db; cursor: pointer;">Remove job</span>
+    </div>
+
+    <!-- Vendor + Route row -->
+    <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+      <div style="flex: 1;">
+        <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 4px;">Vendor</div>
+        <select style="width: 100%; padding: 5px 8px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 12px; font-family: 'Instrument Sans', sans-serif; color: #111827;">
+          <option selected>HaleSun</option>
+        </select>
+      </div>
+      <div style="flex: 1;">
+        <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 4px;">Origin</div>
+        <select style="width: 100%; padding: 5px 8px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 12px; font-family: 'Instrument Sans', sans-serif; color: #111827;">
+          <option selected>TikTok WH</option>
+        </select>
+      </div>
+      <div style="flex: 1;">
+        <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 4px;">Destination</div>
+        <select style="width: 100%; padding: 5px 8px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 12px; font-family: 'Instrument Sans', sans-serif; color: #111827;">
+          <option selected>SZ Bay</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Auto-populated fees banner -->
+    <div style="display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.12); border-radius: 4px; margin-bottom: 10px;">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#152CFF" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="#152CFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span style="font-size: 10px; color: #152CFF; font-weight: 600;">3 fees auto-populated from rate card</span>
+      <span style="font-size: 9px; color: rgba(21,44,255,0.5); margin-left: auto;">HaleSun &middot; FM &middot; TikTok WH &rarr; SZ Bay</span>
+    </div>
+
+    <!-- Fee line items table -->
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 6px;">
+    <thead>
+    <tr>
+      <th style="text-align: left; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">Fee</th>
+      <th style="text-align: left; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">Cost ID</th>
+      <th style="text-align: right; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">Rate</th>
+      <th style="text-align: center; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; width: 50px;">Qty</th>
+      <th style="text-align: right; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; width: 90px;">Amount</th>
+      <th style="width: 24px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;"></th>
+    </tr>
+    </thead>
+    <tbody>
+    <!-- FM001 -->
+    <tr>
+      <td style="padding: 6px 8px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6;">
+        <div style="font-weight: 500;">Warehouse Transfer</div>
+        <div style="font-size: 8px; color: #9ca3af;">From rate card</div>
+      </td>
+      <td style="padding: 6px 8px; border-bottom: 1px solid #f3f4f6;">
+        <span class="mono" style="font-size: 9px; color: #6b7280;">FM001</span>
+      </td>
+      <td style="padding: 6px 8px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono">
+        <span style="font-size: 10px;">RM 450.00</span> <span style="color: #9ca3af; font-size: 9px;">/trip</span>
+      </td>
+      <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid #f3f4f6;">
+        <span class="mono" style="font-size: 10px; color: #6b7280;">1</span>
+      </td>
+      <td style="padding: 6px 8px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono">
+        <strong style="font-size: 10px;">RM 450.00</strong>
+      </td>
+      <td style="padding: 6px 8px; border-bottom: 1px solid #f3f4f6; text-align: center;">
+        <span style="color: #d1d5db; cursor: pointer; font-size: 11px;">&times;</span>
+      </td>
+    </tr>
+    <!-- FM002 -->
+    <tr>
+      <td style="padding: 6px 8px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6;">
+        <div style="font-weight: 500;">Pickup Fee</div>
+        <div style="font-size: 8px; color: #9ca3af;">From rate card</div>
+      </td>
+      <td style="padding: 6px 8px; border-bottom: 1px solid #f3f4f6;">
+        <span class="mono" style="font-size: 9px; color: #6b7280;">FM002</span>
+      </td>
+      <td style="padding: 6px 8px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono">
+        <span style="font-size: 10px;">RM 30.00</span> <span style="color: #9ca3af; font-size: 9px;">/trip</span>
+      </td>
+      <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid #f3f4f6;">
+        <span class="mono" style="font-size: 10px; color: #6b7280;">1</span>
+      </td>
+      <td style="padding: 6px 8px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono">
+        <strong style="font-size: 10px;">RM 30.00</strong>
+      </td>
+      <td style="padding: 6px 8px; border-bottom: 1px solid #f3f4f6; text-align: center;">
+        <span style="color: #d1d5db; cursor: pointer; font-size: 11px;">&times;</span>
+      </td>
+    </tr>
+    <!-- FM003 -->
+    <tr>
+      <td style="padding: 6px 8px; font-size: 10px; color: #374151;">
+        <div style="font-weight: 500;">Cross-Border Handling</div>
+        <div style="font-size: 8px; color: #9ca3af;">From rate card</div>
+      </td>
+      <td style="padding: 6px 8px;">
+        <span class="mono" style="font-size: 9px; color: #6b7280;">FM003</span>
+      </td>
+      <td style="padding: 6px 8px; text-align: right;" class="mono">
+        <span style="font-size: 10px;">RM 45.00</span> <span style="color: #9ca3af; font-size: 9px;">/trip</span>
+      </td>
+      <td style="padding: 6px 8px; text-align: center;">
+        <span class="mono" style="font-size: 10px; color: #6b7280;">1</span>
+      </td>
+      <td style="padding: 6px 8px; text-align: right;" class="mono">
+        <strong style="font-size: 10px;">RM 45.00</strong>
+      </td>
+      <td style="padding: 6px 8px; text-align: center;">
+        <span style="color: #d1d5db; cursor: pointer; font-size: 11px;">&times;</span>
+      </td>
+    </tr>
+    </tbody>
+    <tfoot>
+    <tr style="background: #f9fafb; border-top: 1px solid #e5e7eb;">
+      <td colspan="4" style="padding: 6px 8px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Total (3 fees)</td>
+      <td style="padding: 6px 8px; text-align: right;" class="mono"><strong style="color: #152CFF; font-size: 11px;">RM 525.00</strong></td>
+      <td></td>
+    </tr>
+    </tfoot>
+    </table>
+
+    <!-- Add fee button -->
+    <button style="display: flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 4px; border: 1px dashed #e5e7eb; background: none; color: #9ca3af; font-size: 10px; cursor: pointer; width: 100%; justify-content: center; margin-top: 8px;">
+      + Add manual fee
+    </button>
+  </div>
+</div>
+</div>
+
+<!-- MOCKUP 2: SLIDE-OUT FEE BREAKDOWN -->
+<h3>Mockup 2: Slide-Out Panel -- Fee Breakdown After Job Created</h3>
+
+<div class="screen">
+<!-- Two-panel layout: main content + slide-out -->
+<div style="display: flex; height: 520px;">
+
+  <!-- Main content (behind, dimmed) -->
+  <div style="flex: 1; background: #f3f4f6; opacity: 0.4; padding: 0;">
+    <div class="nav" style="opacity: 0.6;">
+      <div class="logo"></div>
+      <span class="brand">Teleport OS</span>
+      <span class="link active">Delivery Orders</span>
+      <span class="link">Rates</span>
+      <span class="link">Billing</span>
+      <span class="link">Master Data</span>
+    </div>
+    <div style="padding: 16px;">
+      <!-- Simulated table rows behind -->
+      <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 0;">
+        <div style="padding: 6px 12px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; border-radius: 6px 6px 0 0;">
+          Delivery Orders
+        </div>
+        <div style="padding: 8px 12px; border-bottom: 1px solid #f3f4f6; font-size: 11px;">
+          <span style="font-weight: 600;">TikTok</span> <span class="mono" style="font-size: 9px; color: #9ca3af;">DO-2026-041</span>
+        </div>
+        <!-- Expanded sub-table row -->
+        <div style="padding: 6px 12px 6px 40px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+          <div style="display: flex; align-items: center; gap: 12px; font-size: 10px;">
+            <span style="font-weight: 600; color: #152CFF;">J01</span>
+            <span>HaleSun</span>
+            <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(21,44,255,0.06); color: #152CFF; font-weight: 600;">FM</span>
+            <span style="color: #6b7280;">TikTok WH &rarr; SZ Bay</span>
+            <span class="mono" style="margin-left: auto; font-weight: 600; font-size: 10px;">RM 525.00</span>
+          </div>
+        </div>
+        <div style="padding: 6px 12px 6px 40px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+          <div style="display: flex; align-items: center; gap: 12px; font-size: 10px; color: #9ca3af;">
+            <span style="font-weight: 600; color: #152CFF;">J02</span>
+            <span style="color: #374151;">Gonda</span>
+            <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: #f3f4f6; color: #6b7280; font-weight: 600;">EC</span>
+            <span>SZ Bay</span>
+            <span class="mono" style="margin-left: auto; font-weight: 600; font-size: 10px; color: #374151;">RM 120.00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide-out panel -->
+  <div style="width: 380px; background: #fff; border-left: 1px solid #e5e7eb; box-shadow: -4px 0 24px rgba(0,0,0,0.1); display: flex; flex-direction: column; flex-shrink: 0;">
+
+    <!-- Panel header -->
+    <div style="padding: 10px 16px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <div style="font-size: 14px; font-weight: 700;">
+          <span style="color: #152CFF;">J01</span> FM Trucking
+        </div>
+        <div style="font-size: 10px; color: #9ca3af; margin-top: 2px;">HaleSun &middot; TikTok WH &rarr; SZ Bay</div>
+      </div>
+      <span style="font-size: 14px; color: #9ca3af; cursor: pointer;">&times;</span>
+    </div>
+
+    <!-- Panel content -->
+    <div style="padding: 16px; overflow-y: auto; flex: 1;">
+
+      <!-- Status -->
+      <div class="sec-title">Status</div>
+      <div style="display: flex; gap: 4px; margin-bottom: 16px;">
+        <button style="padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">Pending</button>
+        <button style="padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; border: 1px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; cursor: pointer;">In Progress</button>
+        <button style="padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">Completed</button>
+      </div>
+
+      <!-- Route -->
+      <div class="sec-title">Route</div>
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <div style="flex: 1; padding: 8px 10px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
+          <div style="font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Origin</div>
+          <div style="font-size: 11px; font-weight: 600; margin-top: 2px;">TikTok WH</div>
+          <div style="font-size: 9px; color: #9ca3af;">Shenzhen</div>
+        </div>
+        <div style="display: flex; align-items: center; color: #d1d5db;">&rarr;</div>
+        <div style="flex: 1; padding: 8px 10px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
+          <div style="font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Destination</div>
+          <div style="font-size: 11px; font-weight: 600; margin-top: 2px;">SZ Bay</div>
+          <div style="font-size: 9px; color: #9ca3af;">Shenzhen</div>
+        </div>
+      </div>
+
+      <!-- Quantities -->
+      <div class="sec-title">Quantities <span style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: #b45309;">(from order)</span></div>
+      <div style="display: flex; gap: 12px; padding: 8px 10px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 16px;">
+        <div>
+          <span style="font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Bags</span>
+          <div class="mono" style="font-size: 12px; font-weight: 600;">18</div>
+        </div>
+        <div>
+          <span style="font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Weight</span>
+          <div class="mono" style="font-size: 12px; font-weight: 600;">960 kg</div>
+        </div>
+        <div>
+          <span style="font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Volume</span>
+          <div class="mono" style="font-size: 12px; font-weight: 600;">1.8 CBM</div>
+        </div>
+      </div>
+
+      <!-- Fee breakdown -->
+      <div class="sec-title">Fee Breakdown (3 items)</div>
+      <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 6px;">
+      <thead>
+      <tr>
+        <th style="text-align: left; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">Fee</th>
+        <th style="text-align: right; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">Rate</th>
+        <th style="text-align: center; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; width: 36px;">Qty</th>
+        <th style="text-align: right; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; width: 80px;">Amount</th>
+      </tr>
+      </thead>
+      <tbody>
+      <!-- FM001 -->
+      <tr>
+        <td style="padding: 6px 8px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6;">
+          <div style="font-weight: 500;">Warehouse Transfer</div>
+          <div style="font-size: 8px; color: #9ca3af;"><span class="mono">FM001</span> &middot; Rate card</div>
+        </td>
+        <td style="padding: 6px 8px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono">
+          <span style="font-size: 10px;">RM 450</span> <span style="color: #9ca3af; font-size: 8px;">/trip</span>
+        </td>
+        <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid #f3f4f6;" class="mono" style="font-size: 10px; color: #6b7280;">
+          <span style="font-size: 10px; color: #6b7280;">1</span>
+        </td>
+        <td style="padding: 6px 8px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono">
+          <strong style="font-size: 10px;">RM 450.00</strong>
+        </td>
+      </tr>
+      <!-- FM002 -->
+      <tr>
+        <td style="padding: 6px 8px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6;">
+          <div style="font-weight: 500;">Pickup Fee</div>
+          <div style="font-size: 8px; color: #9ca3af;"><span class="mono">FM002</span> &middot; Rate card</div>
+        </td>
+        <td style="padding: 6px 8px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono">
+          <span style="font-size: 10px;">RM 30</span> <span style="color: #9ca3af; font-size: 8px;">/trip</span>
+        </td>
+        <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid #f3f4f6;" class="mono">
+          <span style="font-size: 10px; color: #6b7280;">1</span>
+        </td>
+        <td style="padding: 6px 8px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono">
+          <strong style="font-size: 10px;">RM 30.00</strong>
+        </td>
+      </tr>
+      <!-- FM003 -->
+      <tr>
+        <td style="padding: 6px 8px; font-size: 10px; color: #374151;">
+          <div style="font-weight: 500;">Cross-Border Handling</div>
+          <div style="font-size: 8px; color: #9ca3af;"><span class="mono">FM003</span> &middot; Rate card</div>
+        </td>
+        <td style="padding: 6px 8px; text-align: right;" class="mono">
+          <span style="font-size: 10px;">RM 45</span> <span style="color: #9ca3af; font-size: 8px;">/trip</span>
+        </td>
+        <td style="padding: 6px 8px; text-align: center;" class="mono">
+          <span style="font-size: 10px; color: #6b7280;">1</span>
+        </td>
+        <td style="padding: 6px 8px; text-align: right;" class="mono">
+          <strong style="font-size: 10px;">RM 45.00</strong>
+        </td>
+      </tr>
+      </tbody>
+      <tfoot>
+      <tr style="background: #f9fafb; border-top: 1px solid #e5e7eb;">
+        <td colspan="3" style="padding: 6px 8px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Total Cost</td>
+        <td style="padding: 6px 8px; text-align: right;" class="mono"><strong style="color: #152CFF; font-size: 12px;">RM 525.00</strong></td>
+      </tr>
+      </tfoot>
+      </table>
+
+      <!-- Add fee button -->
+      <button style="display: flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 4px; border: 1px dashed #e5e7eb; background: none; color: #9ca3af; font-size: 10px; cursor: pointer; width: 100%; justify-content: center; margin-top: 8px;">
+        + Add manual fee
+      </button>
+
+      <!-- Proofs -->
+      <div class="sec-title" style="margin-top: 16px;">Proof Documents</div>
+      <div style="padding: 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; text-align: center;">
+        <span style="font-size: 10px; color: #9ca3af;">No proofs uploaded yet</span>
+      </div>
+
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION B: ONLY BASE RATE AUTO-POPULATES      -->
+<!-- ============================================ -->
+
+<h2>Option B: Only Base Rate Auto-Populates, Others Manual</h2>
+<span class="label" style="background: #f3f4f6; color: #6b7280;">Conservative</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Only the first/primary L2 fee (e.g., FM001 Warehouse Transfer) auto-creates a fee line item. Other L2 fees (FM002 Pickup, FM003 Cross-Border Handling) are available via an "Add fee" dropdown but must be manually selected. This gives ops explicit control over which fees apply to each job.
+
+<p style="margin-top: 8px;"><strong>How it works:</strong></p>
+<ol style="font-size: 11px; padding-left: 16px; line-height: 1.8;">
+<li><strong>Vendor + Service + Route selected</strong> &rarr; system creates only 1 FeeLineItem from the "primary" L2 fee (first in the rate card)</li>
+<li><strong>Ops clicks "+ Add fee"</strong> &rarr; dropdown shows remaining L2 fees with their rates pre-filled. Select to add.</li>
+<li><strong>Benefit:</strong> Ops explicitly approves each fee. No surprise charges.</li>
+<li><strong>Cost:</strong> 2 extra clicks per job for fees that apply 99% of the time.</li>
+</ol>
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+&bull; Ops has explicit control over each fee<br>
+&bull; No surprise charges on jobs<br>
+&bull; Simpler initial experience -- only 1 fee visible at first</div>
+<div class="cons"><strong>Cons</strong><br>
+&bull; Defeats the purpose of a comprehensive rate card<br>
+&bull; 2 extra clicks per job for fees that almost always apply<br>
+&bull; Ops might forget to add mandatory fees (e.g., cross-border handling)<br>
+&bull; "Which fee is the primary one?" -- ambiguous for services with 5+ L2 fees</div>
+</div>
+</div>
+
+<div class="screen">
+<div style="padding: 16px;">
+  <h3 style="font-size: 13px; margin-bottom: 12px;">Create Form -- Only FM001 Auto-Created</h3>
+
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; background: #fff;">
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+      <span style="font-weight: 700; font-size: 13px; color: #152CFF;">J01</span>
+      <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.12); color: #152CFF;">FM Trucking</span>
+      <span style="font-size: 10px; color: #6b7280;">HaleSun &middot; TikTok WH &rarr; SZ Bay</span>
+    </div>
+
+    <!-- Only 1 fee auto-populated -->
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 6px;">
+    <thead>
+    <tr>
+      <th style="text-align: left; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">Fee</th>
+      <th style="text-align: right; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">Rate</th>
+      <th style="text-align: center; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; width: 36px;">Qty</th>
+      <th style="text-align: right; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; width: 80px;">Amount</th>
+      <th style="width: 24px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;"></th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+      <td style="padding: 6px 8px; font-size: 10px; color: #374151;">
+        <div style="font-weight: 500;">Warehouse Transfer</div>
+        <div style="font-size: 8px; color: #9ca3af;"><span class="mono">FM001</span> &middot; Rate card</div>
+      </td>
+      <td style="padding: 6px 8px; text-align: right;" class="mono">
+        <span style="font-size: 10px;">RM 450.00</span> <span style="color: #9ca3af; font-size: 9px;">/trip</span>
+      </td>
+      <td style="padding: 6px 8px; text-align: center;" class="mono">
+        <span style="font-size: 10px; color: #6b7280;">1</span>
+      </td>
+      <td style="padding: 6px 8px; text-align: right;" class="mono">
+        <strong style="font-size: 10px;">RM 450.00</strong>
+      </td>
+      <td style="padding: 6px 8px; text-align: center;">
+        <span style="color: #d1d5db; cursor: pointer; font-size: 11px;">&times;</span>
+      </td>
+    </tr>
+    </tbody>
+    <tfoot>
+    <tr style="background: #f9fafb; border-top: 1px solid #e5e7eb;">
+      <td colspan="4" style="padding: 6px 8px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Total (1 fee)</td>
+      <td style="padding: 6px 8px; text-align: right;" class="mono"><strong style="color: #152CFF; font-size: 11px;">RM 450.00</strong></td>
+    </tr>
+    </tfoot>
+    </table>
+
+    <!-- Add fee dropdown showing available fees from rate card -->
+    <div style="margin-top: 8px; padding: 8px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px;">
+      <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 6px;">Available from rate card (click to add)</div>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: #fff; border: 1px solid #e5e7eb; border-radius: 4px; cursor: pointer;">
+          <div>
+            <span style="font-size: 10px; font-weight: 500; color: #374151;">Pickup Fee</span>
+            <span class="mono" style="font-size: 8px; color: #9ca3af; margin-left: 4px;">FM002</span>
+          </div>
+          <span class="mono" style="font-size: 10px; color: #6b7280;">RM 30.00 /trip</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: #fff; border: 1px solid #e5e7eb; border-radius: 4px; cursor: pointer;">
+          <div>
+            <span style="font-size: 10px; font-weight: 500; color: #374151;">Cross-Border Handling</span>
+            <span class="mono" style="font-size: 8px; color: #9ca3af; margin-left: 4px;">FM003</span>
+          </div>
+          <span class="mono" style="font-size: 10px; color: #6b7280;">RM 45.00 /trip</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Warning -->
+    <div style="display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px; margin-top: 8px;">
+      <span style="font-size: 10px; color: #b45309;">2 additional fees available from rate card. Add them manually if applicable.</span>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION C: CONFIGURABLE PER VENDOR-SERVICE    -->
+<!-- ============================================ -->
+
+<h2>Option C: Configurable Per Vendor-Service -- "Rate Card Template"</h2>
+<span class="label" style="background: #fffbeb; color: #b45309;">Maximum Config</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> In the rate sheet, admin marks which L2 fees are "default" (auto-populate) and which are "optional" (available but not auto-created) for each vendor-service combination. When a job is created, only default-marked fees become fee line items. Optional fees are available via "+ Add fee" with rates pre-filled.
+
+<p style="margin-top: 8px;"><strong>How it works:</strong></p>
+<ol style="font-size: 11px; padding-left: 16px; line-height: 1.8;">
+<li><strong>In the rate sheet:</strong> each L2 fee row has a toggle: "Default" (auto-create) or "Optional" (available on demand)</li>
+<li><strong>On job creation:</strong> only L2 fees marked "Default" become FeeLineItems</li>
+<li><strong>"+ Add fee"</strong> shows optional L2 fees with rates pre-filled, plus manual entry</li>
+<li><strong>Example:</strong> Admin marks FM001 and FM003 as default, FM002 as optional. Job gets 2 auto-fees, FM002 available on demand.</li>
+</ol>
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+&bull; Maximum flexibility -- admins decide per vendor what's standard<br>
+&bull; Different vendors can have different default fees<br>
+&bull; Seasonal or route-specific fees can be toggled</div>
+<div class="cons"><strong>Cons</strong><br>
+&bull; More config to manage in the rate sheet<br>
+&bull; "Default vs Optional" adds a column to every rate row<br>
+&bull; Admin overhead: must review defaults when adding new L2 fees<br>
+&bull; Complexity for a problem that might not exist (are there fees that only sometimes apply?)</div>
+</div>
+</div>
+
+<div class="screen">
+<div style="padding: 16px;">
+  <h3 style="font-size: 13px; margin-bottom: 12px;">Rate Sheet with Default/Optional Toggle</h3>
+
+  <!-- Rate sheet snippet -->
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+  <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+  <thead>
+    <tr>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: #fff; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; width: 180px;">L2 Fee Type</th>
+      <th style="padding: 8px 10px; text-align: center; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; width: 80px;">Auto-Create</th>
+      <th style="padding: 8px 10px; text-align: right; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;">TikTok WH &rarr; SZ Bay</th>
+      <th style="padding: 8px 10px; text-align: right; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;">DG Cross-dock &rarr; SZX</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr style="background: #f9fafb;">
+      <td colspan="4" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #152CFF; border-bottom: 1px solid #e5e7eb;">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.12);">FM</span>
+        Trucking
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM001</span> Warehouse Transfer
+      </td>
+      <td style="padding: 5px 10px; text-align: center; border-bottom: 1px solid #f3f4f6;">
+        <span style="display: inline-block; width: 28px; height: 14px; background: #152CFF; border-radius: 7px; position: relative;">
+          <span style="position: absolute; right: 2px; top: 2px; width: 10px; height: 10px; background: #fff; border-radius: 50%;"></span>
+        </span>
+      </td>
+      <td style="padding: 5px 10px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono">
+        <span style="font-weight: 600;">RM 450</span> <span style="color: #9ca3af; font-size: 8px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono">
+        <span style="font-weight: 600;">RM 520</span> <span style="color: #9ca3af; font-size: 8px;">/trip</span>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM002</span> Pickup Fee
+      </td>
+      <td style="padding: 5px 10px; text-align: center; border-bottom: 1px solid #f3f4f6;">
+        <span style="display: inline-block; width: 28px; height: 14px; background: #d1d5db; border-radius: 7px; position: relative;">
+          <span style="position: absolute; left: 2px; top: 2px; width: 10px; height: 10px; background: #fff; border-radius: 50%;"></span>
+        </span>
+      </td>
+      <td style="padding: 5px 10px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono">
+        <span style="font-weight: 600; color: #9ca3af;">RM 30</span> <span style="color: #d1d5db; font-size: 8px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono">
+        <span style="font-weight: 600; color: #9ca3af;">RM 30</span> <span style="color: #d1d5db; font-size: 8px;">/trip</span>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM003</span> Cross-Border Handling
+      </td>
+      <td style="padding: 5px 10px; text-align: center;">
+        <span style="display: inline-block; width: 28px; height: 14px; background: #152CFF; border-radius: 7px; position: relative;">
+          <span style="position: absolute; right: 2px; top: 2px; width: 10px; height: 10px; background: #fff; border-radius: 50%;"></span>
+        </span>
+      </td>
+      <td style="padding: 5px 10px; text-align: right;" class="mono">
+        <span style="font-weight: 600;">RM 45</span> <span style="color: #9ca3af; font-size: 8px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; text-align: right;" class="mono">
+        <span style="font-weight: 600;">RM 45</span> <span style="color: #9ca3af; font-size: 8px;">/trip</span>
+      </td>
+    </tr>
+  </tbody>
+  </table>
+  </div>
+
+  <div style="font-size: 10px; color: #6b7280; margin-top: 8px; line-height: 1.6;">
+    <strong>Result on job creation:</strong> FM001 (RM 450) and FM003 (RM 45) auto-create as fee line items. FM002 (RM 30) is available via "+ Add fee" but not auto-added. Admin controls which fees are standard for this vendor.
+  </div>
+
+  <!-- Visual: resulting job fees -->
+  <div style="margin-top: 12px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px;">
+    <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 6px;">Resulting job fees (2 auto + 1 optional)</div>
+    <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 4px;">
+      <span style="padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; background: rgba(21,44,255,0.06); color: #152CFF;">AUTO</span>
+      <span style="font-size: 10px;">FM001 Warehouse Transfer</span>
+      <span class="mono" style="font-size: 10px; margin-left: auto; font-weight: 600;">RM 450.00</span>
+    </div>
+    <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 4px;">
+      <span style="padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; background: rgba(21,44,255,0.06); color: #152CFF;">AUTO</span>
+      <span style="font-size: 10px;">FM003 Cross-Border Handling</span>
+      <span class="mono" style="font-size: 10px; margin-left: auto; font-weight: 600;">RM 45.00</span>
+    </div>
+    <div style="display: flex; gap: 6px; align-items: center; padding-top: 4px; border-top: 1px dashed #e5e7eb;">
+      <span style="padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; background: #f3f4f6; color: #9ca3af;">OPT</span>
+      <span style="font-size: 10px; color: #9ca3af;">FM002 Pickup Fee</span>
+      <span class="mono" style="font-size: 10px; margin-left: auto; color: #9ca3af;">RM 30.00</span>
+      <button style="padding: 2px 8px; border-radius: 3px; font-size: 9px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">+ Add</button>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- VERDICT                                       -->
+<!-- ============================================ -->
+
+<div class="verdict">
+<h3>Verdict: Option A -- All Configured L2 Fees Auto-Populate</h3>
+<p style="font-size: 12px; line-height: 1.6; color: #374151;">
+<strong>Recommended because:</strong> The entire point of rate cards is to pre-define the cost structure for a vendor-service-route combination. If the admin put FM001, FM002, and FM003 in HaleSun's FM rate card for the TikTok WH &rarr; SZ Bay route, those fees should all appear on every job for that combination. Period.
+</p>
+<ul style="font-size: 11px; color: #374151; margin-top: 8px; padding-left: 16px; line-height: 1.8;">
+<li><strong>Rule:</strong> Rate in the sheet = fee on the job. No rate = no fee. Simple.</li>
+<li><strong>Control point is the rate sheet, not the job.</strong> If FM002 shouldn't apply to a route, remove its rate from that column. Don't make ops decide per-job.</li>
+<li><strong>Option B</strong> forces ops to manually add fees that apply 99% of the time. That's Excel behavior -- exactly what we're replacing.</li>
+<li><strong>Option C</strong> adds a "default/optional" toggle that solves a theoretical problem. In practice, if a fee has a rate for a route, it applies. If it doesn't apply, delete the rate.</li>
+<li><strong>Edge case:</strong> If a fee genuinely doesn't apply to a specific shipment, ops can remove it (click x). This is rare and the 1-click removal is less friction than 2-click manual addition on every job.</li>
+<li><strong>Job creation flow:</strong> Select vendor + service + route &rarr; all matching L2 fees appear instantly with rates and amounts &rarr; total cost visible before saving. Zero manual fee entry for standard jobs.</li>
+</ul>
+</div>
+
+</div>
+</body>
+</html>

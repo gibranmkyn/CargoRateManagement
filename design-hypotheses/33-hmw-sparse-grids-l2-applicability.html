@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-33: Sparse Grids — L2 Applicability</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+h3 { font-size: 14px; font-weight: 700; margin: 20px 0 8px; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: rgba(21,44,255,0.04); border: 2px solid rgba(21,44,255,0.2); border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #152CFF; font-size: 14px; margin-bottom: 6px; }
+.nav { height: 40px; background: #111827; display: flex; align-items: center; padding: 0 16px; gap: 16px; }
+.nav .logo { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; }
+.nav .brand { font-weight: 700; font-size: 13px; color: #fff; }
+.nav .link { font-size: 12px; color: rgba(255,255,255,0.5); }
+.nav .link.active { color: #fff; font-weight: 600; padding: 4px 10px; background: rgba(255,255,255,0.1); border-radius: 4px; }
+.th { text-align: left; padding: 6px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+.td { padding: 8px 10px; font-size: 11px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+.chip { padding: 3px 8px; border-radius: 99px; font-size: 9px; font-weight: 600; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-33: Sparse Grids — L2 Fee Applicability</h1>
+
+<div class="hmw">
+How might we handle L2 fees that don't apply to every route — should the rate sheet show all 20 rows or only the applicable ones?
+</div>
+
+<div class="context">
+<strong>The problem:</strong> There are 20 L2 fee types across 5 L1 services. A vendor like HaleSun only has rates configured for 5 of those 20 fees (FM001 Warehouse Transfer, FM002 Pickup, FM003 Cross-Border Handling, CR001 Registration, CR002 Cargo Retrieval Pick Up). The other 15 rows would show nothing but dashes across every route column.
+<br><br>
+<strong>Why this matters:</strong> FM003 (Cross-Border Handling) only applies to cross-border routes. CS004 (Security X-Ray Screening) only applies to certain airports. If we always show all 20 rows, most of the grid is empty — visually noisy, confusing, and makes the configured rates harder to find. But hiding rows means the user might not realize a fee type exists.
+<br><br>
+<strong>Real scenario:</strong> HaleSun has 5 configured L2 fees across 3 routes = 15 cells with data. A full 20-row grid across 3 routes = 60 cells total — 75% of the grid is empty dashes. That's a bad signal-to-noise ratio for a tool that's supposed to feel like a "smart spreadsheet."
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION A: SHOW ONLY APPLICABLE               -->
+<!-- ============================================ -->
+
+<h2>Option A: Show Only Configured L2 Fees (Toggle to Expand)</h2>
+<span class="label" style="background: rgba(21,44,255,0.06); color: #152CFF;">Recommended</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> The rate sheet only shows L2 rows where the vendor has at least 1 rate configured across any route. A "Show all L2 fees" toggle at the bottom reveals the full 20-row grid for adding new rates. Clean by default, complete when needed.
+
+<p style="margin-top: 8px;"><strong>How it works:</strong></p>
+<ul style="font-size: 11px; padding-left: 16px; line-height: 1.8;">
+<li>Default view: only L2 rows with at least 1 configured rate are visible</li>
+<li>L1 group headers only appear if that group has visible L2 rows</li>
+<li>Footer shows "5 of 20 L2 fees shown" with a toggle link</li>
+<li>Toggle "Show all L2 fees" expands to the full 20-row grid — unconfigured rows have empty input cells ready for entry</li>
+<li>Adding a rate to a previously hidden row keeps it visible after collapsing</li>
+</ul>
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+- Clean default: only signal, no noise<br>
+- 5 rows vs 20 — dramatically less scrolling<br>
+- L1 groups that have no rates don't clutter the view<br>
+- Toggle preserves full discoverability<br>
+- Matches the "smart spreadsheet" ethos — show what matters</div>
+<div class="cons"><strong>Cons</strong><br>
+- Users must know to click toggle to add new fee types<br>
+- Slight learning curve: "where are the other fees?"<br>
+- Toggle state needs to persist per vendor or reset on switch</div>
+</div>
+</div>
+
+<!-- OPTION A MOCKUP: Default view — 5 configured fees -->
+<p style="font-size: 10px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px;">Default view — only configured fees shown</p>
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link">Delivery Orders</span>
+  <span class="link active">Rates</span>
+  <span class="link">Billing</span>
+  <span class="link">Master Data</span>
+</div>
+
+<div style="padding: 16px;">
+  <!-- Header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <div>
+      <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">Rate Cards</h1>
+      <p style="font-size: 11px; color: #9ca3af;">Manage vendor rate cards by service and route</p>
+    </div>
+  </div>
+
+  <!-- Vendor selector -->
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+    <span style="font-size: 11px; color: #9ca3af;">Vendor:</span>
+    <div style="display: flex; gap: 4px;">
+      <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; cursor: pointer;">HaleSun</button>
+      <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">Gonda</button>
+      <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">SevenSeas</button>
+      <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">ThaiKee</button>
+      <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">The Lorry</button>
+    </div>
+    <button style="margin-left: auto; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: none; background: #152CFF; color: #fff; cursor: pointer;">Save Changes</button>
+  </div>
+
+  <!-- Rate sheet: CONFIGURED ONLY -->
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+  <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+  <thead>
+    <tr>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: #fff; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; width: 200px; position: sticky; left: 0; z-index: 1;">
+        L2 Fee Type
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 140px;">
+        <div>TikTok WH → SZ Bay</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.4); margin-top: 1px;">Shenzhen</div>
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 140px;">
+        <div>DG Cross-dock → SZX</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.4); margin-top: 1px;">Dongguan → Shenzhen</div>
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 140px;">
+        <div>GZ WH → Huangpu</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.4); margin-top: 1px;">Guangzhou</div>
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 140px;">
+        <div>Yantian Port</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.4); margin-top: 1px;">CR location</div>
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- FM Trucking L1 header -->
+    <tr style="background: #f9fafb;">
+      <td colspan="5" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #152CFF; border-bottom: 1px solid #e5e7eb;">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.12);">FM</span>
+        Trucking
+      </td>
+    </tr>
+    <!-- FM001 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM001</span> Warehouse Transfer
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 450" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 520" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 380" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+    </tr>
+    <!-- FM002 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM002</span> Pickup Fee
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 30" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 35" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 25" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+    </tr>
+    <!-- FM003 — only on cross-border route (col 1) -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #e5e7eb; background: #fff; position: sticky; left: 0;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM003</span> Cross-Border Handling
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="RM 45" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+    </tr>
+
+    <!-- CR L1 header -->
+    <tr style="background: #f9fafb;">
+      <td colspan="5" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #2563eb; border-bottom: 1px solid #e5e7eb;">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(37,99,235,0.06); border: 1px solid rgba(37,99,235,0.12); color: #2563eb;">CR</span>
+        Cargo Retrieval
+      </td>
+    </tr>
+    <!-- CR001 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">CR001</span> Registration Fee
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="CNY 15" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+    <!-- CR002 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #e5e7eb; background: #fff; position: sticky; left: 0;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">CR002</span> Cargo Retrieval Pick Up
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/bag</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="CNY 25" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+  </tbody>
+  </table>
+
+  <!-- Footer with toggle -->
+  <div style="padding: 8px 10px; background: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #9ca3af;">
+    <span>Showing <strong style="color: #111827;">5</strong> of <strong style="color: #111827;">20</strong> L2 fees with configured rates</span>
+    <button style="padding: 3px 10px; border-radius: 4px; border: 1px solid #e5e7eb; background: #fff; color: #152CFF; font-size: 10px; font-weight: 600; cursor: pointer;">Show all 20 L2 fees</button>
+  </div>
+  </div>
+</div>
+</div>
+
+<!-- OPTION A MOCKUP: Expanded view — all 20 fees -->
+<p style="font-size: 10px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px;">After clicking "Show all 20 L2 fees" — full grid revealed</p>
+<div class="screen">
+<div style="padding: 16px;">
+  <!-- Vendor selector compact -->
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+    <span style="font-size: 11px; color: #9ca3af;">Vendor:</span>
+    <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; cursor: pointer;">HaleSun</button>
+    <button style="margin-left: auto; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: none; background: #152CFF; color: #fff; cursor: pointer;">Save Changes</button>
+  </div>
+
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+  <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+  <thead>
+    <tr>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: #fff; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; width: 220px;">L2 Fee Type</th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 120px;">
+        <div>TikTok WH → SZ Bay</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.4); margin-top: 1px;">Shenzhen</div>
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 120px;">
+        <div>DG Cross-dock → SZX</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.4); margin-top: 1px;">Dongguan → Shenzhen</div>
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 120px;">
+        <div>GZ WH → Huangpu</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.4); margin-top: 1px;">Guangzhou</div>
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 120px;">
+        <div>Yantian Port</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.4); margin-top: 1px;">CR location</div>
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- CR L1 header -->
+    <tr style="background: #f9fafb;">
+      <td colspan="5" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #2563eb; border-bottom: 1px solid #e5e7eb;">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(37,99,235,0.06); border: 1px solid rgba(37,99,235,0.12); color: #2563eb;">CR</span>
+        Cargo Retrieval
+      </td>
+    </tr>
+    <!-- CR001 — configured -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">CR001</span> Registration Fee
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="CNY 15" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+    <!-- CR002 — configured -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #e5e7eb; background: #fff;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">CR002</span> Cargo Retrieval Pick Up
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/bag</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="CNY 25" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+
+    <!-- CS L1 header — unconfigured group -->
+    <tr style="background: #f9fafb;">
+      <td colspan="5" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #7c3aed; border-bottom: 1px solid #e5e7eb;">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(124,58,237,0.06); border: 1px solid rgba(124,58,237,0.12); color: #7c3aed;">CS</span>
+        Cargo Submission
+        <span style="font-size: 9px; font-weight: 400; color: #9ca3af; margin-left: 6px;">no rates configured</span>
+      </td>
+    </tr>
+    <!-- CS001 — unconfigured -->
+    <tr style="background: #fafafa;">
+      <td style="padding: 5px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;">
+        <span class="mono" style="font-size: 8px; color: #d1d5db; margin-right: 4px;">CS001</span> Express Center Handling
+        <span style="font-size: 8px; color: #d1d5db; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="" placeholder="—" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #f3f4f6; border-radius: 3px; color: #d1d5db; text-align: right; background: #fafafa;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="" placeholder="—" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #f3f4f6; border-radius: 3px; color: #d1d5db; text-align: right; background: #fafafa;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="" placeholder="—" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #f3f4f6; border-radius: 3px; color: #d1d5db; text-align: right; background: #fafafa;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="" placeholder="—" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #f3f4f6; border-radius: 3px; color: #d1d5db; text-align: right; background: #fafafa;">
+      </td>
+    </tr>
+    <!-- CS002 — unconfigured -->
+    <tr style="background: #fafafa;">
+      <td style="padding: 5px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;">
+        <span class="mono" style="font-size: 8px; color: #d1d5db; margin-right: 4px;">CS002</span> Intl Cargo Terminal
+        <span style="font-size: 8px; color: #d1d5db; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="" placeholder="—" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #f3f4f6; border-radius: 3px; color: #d1d5db; text-align: right; background: #fafafa;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="" placeholder="—" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #f3f4f6; border-radius: 3px; color: #d1d5db; text-align: right; background: #fafafa;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="" placeholder="—" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #f3f4f6; border-radius: 3px; color: #d1d5db; text-align: right; background: #fafafa;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="" placeholder="—" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #f3f4f6; border-radius: 3px; color: #d1d5db; text-align: right; background: #fafafa;">
+      </td>
+    </tr>
+    <!-- CS003-006 abbreviated -->
+    <tr style="background: #fafafa;">
+      <td style="padding: 5px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;">
+        <span class="mono" style="font-size: 8px; color: #d1d5db; margin-right: 4px;">CS003</span> RA Agent Fee
+        <span style="font-size: 8px; color: #d1d5db; margin-left: 4px;">/trip</span>
+      </td>
+      <td colspan="4" style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 9px; font-style: italic; text-align: center;">— no rates —</td>
+    </tr>
+    <tr style="background: #fafafa;">
+      <td style="padding: 5px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;">
+        <span class="mono" style="font-size: 8px; color: #d1d5db; margin-right: 4px;">CS004</span> Security X-Ray
+        <span style="font-size: 8px; color: #d1d5db; margin-left: 4px;">/trip</span>
+      </td>
+      <td colspan="4" style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 9px; font-style: italic; text-align: center;">— no rates —</td>
+    </tr>
+    <tr style="background: #fafafa;">
+      <td style="padding: 5px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;">
+        <span class="mono" style="font-size: 8px; color: #d1d5db; margin-right: 4px;">CS005</span> Terminal Handling
+        <span style="font-size: 8px; color: #d1d5db; margin-left: 4px;">/trip</span>
+      </td>
+      <td colspan="4" style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 9px; font-style: italic; text-align: center;">— no rates —</td>
+    </tr>
+    <tr style="background: #fafafa;">
+      <td style="padding: 5px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #e5e7eb; background: #fafafa;">
+        <span class="mono" style="font-size: 8px; color: #d1d5db; margin-right: 4px;">CS006</span> Ground Handling
+        <span style="font-size: 8px; color: #d1d5db; margin-left: 4px;">/trip</span>
+      </td>
+      <td colspan="4" style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 9px; font-style: italic; text-align: center;">— no rates —</td>
+    </tr>
+
+    <!-- EC L1 header — unconfigured -->
+    <tr style="background: #f9fafb;">
+      <td colspan="5" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #059669; border-bottom: 1px solid #e5e7eb;">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(5,150,105,0.06); border: 1px solid rgba(5,150,105,0.12); color: #059669;">EC</span>
+        Export Customs
+        <span style="font-size: 9px; font-weight: 400; color: #9ca3af; margin-left: 6px;">no rates configured</span>
+      </td>
+    </tr>
+    <tr style="background: #fafafa;">
+      <td style="padding: 5px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;">
+        <span class="mono" style="font-size: 8px; color: #d1d5db; margin-right: 4px;">EC001</span> Customs Declaration
+        <span style="font-size: 8px; color: #d1d5db; margin-left: 4px;">/trip</span>
+      </td>
+      <td colspan="4" style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 9px; font-style: italic; text-align: center;">— no rates —</td>
+    </tr>
+    <tr style="background: #fafafa;">
+      <td style="padding: 5px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;">
+        <span class="mono" style="font-size: 8px; color: #d1d5db; margin-right: 4px;">EC002</span> Customs Inspection
+        <span style="font-size: 8px; color: #d1d5db; margin-left: 4px;">/trip</span>
+      </td>
+      <td colspan="4" style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 9px; font-style: italic; text-align: center;">— no rates —</td>
+    </tr>
+    <tr style="background: #fafafa;">
+      <td style="padding: 5px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #e5e7eb; background: #fafafa;">
+        <span class="mono" style="font-size: 8px; color: #d1d5db; margin-right: 4px;">EC003</span> Customs Service
+        <span style="font-size: 8px; color: #d1d5db; margin-left: 4px;">/trip</span>
+      </td>
+      <td colspan="4" style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 9px; font-style: italic; text-align: center;">— no rates —</td>
+    </tr>
+
+    <!-- FM L1 header — configured -->
+    <tr style="background: #f9fafb;">
+      <td colspan="5" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #152CFF; border-bottom: 1px solid #e5e7eb;">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.12);">FM</span>
+        Trucking
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM001</span> Warehouse Transfer
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 450" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 520" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 380" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM002</span> Pickup Fee
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 30" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 35" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 25" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #e5e7eb; background: #fff;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM003</span> Cross-Border Handling
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="RM 45" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+    </tr>
+
+    <!-- OH L1 header — unconfigured -->
+    <tr style="background: #f9fafb;">
+      <td colspan="5" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #d97706; border-bottom: 1px solid #e5e7eb;">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(217,119,6,0.06); border: 1px solid rgba(217,119,6,0.12); color: #d97706;">OH</span>
+        Origin Handling
+        <span style="font-size: 9px; font-weight: 400; color: #9ca3af; margin-left: 6px;">no rates configured</span>
+      </td>
+    </tr>
+    <tr style="background: #fafafa;">
+      <td style="padding: 5px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;">
+        <span class="mono" style="font-size: 8px; color: #d1d5db; margin-right: 4px;">OH001</span> MAWB Fee
+        <span style="font-size: 8px; color: #d1d5db; margin-left: 4px;">/trip</span>
+      </td>
+      <td colspan="4" style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 9px; font-style: italic; text-align: center;">— no rates —</td>
+    </tr>
+    <tr style="background: #fafafa;">
+      <td style="padding: 5px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;">
+        <span class="mono" style="font-size: 8px; color: #d1d5db; margin-right: 4px;">OH002</span> Loading/Unloading
+        <span style="font-size: 8px; color: #d1d5db; margin-left: 4px;">/trip</span>
+      </td>
+      <td colspan="4" style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 9px; font-style: italic; text-align: center;">— no rates —</td>
+    </tr>
+    <tr style="background: #fafafa;">
+      <td style="padding: 5px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;">
+        <span class="mono" style="font-size: 8px; color: #d1d5db; margin-right: 4px;">OH003</span> Handling Fee
+        <span style="font-size: 8px; color: #d1d5db; margin-left: 4px;">/trip</span>
+      </td>
+      <td colspan="4" style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 9px; font-style: italic; text-align: center;">— no rates —</td>
+    </tr>
+    <tr style="background: #fafafa;">
+      <td style="padding: 5px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;">
+        <span class="mono" style="font-size: 8px; color: #d1d5db; margin-right: 4px;">OH004</span> Sorting Fee
+        <span style="font-size: 8px; color: #d1d5db; margin-left: 4px;">/bag</span>
+      </td>
+      <td colspan="4" style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 9px; font-style: italic; text-align: center;">— no rates —</td>
+    </tr>
+    <tr style="background: #fafafa;">
+      <td style="padding: 5px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #e5e7eb; background: #fafafa;">
+        <span class="mono" style="font-size: 8px; color: #d1d5db; margin-right: 4px;">OH005</span> Palletization/Build-Up
+        <span style="font-size: 8px; color: #d1d5db; margin-left: 4px;">/CBM</span>
+      </td>
+      <td colspan="4" style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 9px; font-style: italic; text-align: center;">— no rates —</td>
+    </tr>
+  </tbody>
+  </table>
+
+  <!-- Footer with toggle (now showing "collapse") -->
+  <div style="padding: 8px 10px; background: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #9ca3af;">
+    <span>Showing all <strong style="color: #111827;">20</strong> L2 fees &middot; <strong style="color: #111827;">5</strong> configured, <strong style="color: #9ca3af;">15</strong> empty</span>
+    <button style="padding: 3px 10px; border-radius: 4px; border: 1px solid #e5e7eb; background: #fff; color: #152CFF; font-size: 10px; font-weight: 600; cursor: pointer;">Show configured only</button>
+  </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION B: SHOW ALL, GRAY OUT EMPTY           -->
+<!-- ============================================ -->
+
+<h2>Option B: Show All 20 Rows, Gray Out Empty</h2>
+<span class="label" style="background: #f3f4f6; color: #6b7280;">Full Grid</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Always show all 20 L2 fee rows in the rate sheet. Rows with no rates configured get a subtle gray background and muted text, making them visually recede but still scannable. No toggle — what you see is what you get.
+
+<p style="margin-top: 8px;"><strong>How it works:</strong></p>
+<ul style="font-size: 11px; padding-left: 16px; line-height: 1.8;">
+<li>All 20 rows always visible, grouped by L1 service</li>
+<li>Rows with configured rates: white background, dark text, editable inputs</li>
+<li>Rows with no rates: #fafafa background, muted text, empty inputs with dashed borders</li>
+<li>User can click into any empty cell and start typing to add a rate</li>
+</ul>
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+- Full picture always visible — no hidden state<br>
+- Zero learning curve — every fee type is right there<br>
+- Easy to add new rates — just click and type<br>
+- No toggle to discover or manage</div>
+<div class="cons"><strong>Cons</strong><br>
+- 75% of grid is empty dashes — very noisy<br>
+- Configured rates get lost in the sea of empty rows<br>
+- 20 rows + 5 L1 headers = 25 rows to scan even for 5 configured fees<br>
+- Feels like an incomplete spreadsheet, not a "smart" one</div>
+</div>
+</div>
+
+<p style="font-size: 10px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px;">Always shows all 20 rows — configured and empty mixed together</p>
+<div class="screen">
+<div style="padding: 16px;">
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+    <span style="font-size: 11px; color: #9ca3af;">Vendor:</span>
+    <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; cursor: pointer;">HaleSun</button>
+  </div>
+
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+  <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+  <thead>
+    <tr>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: #fff; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; width: 220px;">L2 Fee Type</th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 100px;">TikTok WH → SZ Bay</th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 100px;">DG Cross-dock → SZX</th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 100px;">GZ WH → Huangpu</th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 100px;">Yantian Port</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- CR header -->
+    <tr style="background: #f9fafb;"><td colspan="5" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #2563eb; border-bottom: 1px solid #e5e7eb;"><span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(37,99,235,0.06); border: 1px solid rgba(37,99,235,0.12); color: #2563eb;">CR</span> Cargo Retrieval</td></tr>
+    <!-- CR001 — configured -->
+    <tr>
+      <td style="padding: 4px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff;"><span class="mono" style="font-size: 8px; color: #9ca3af;">CR001</span> Registration Fee</td>
+      <td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 10px;">—</td>
+      <td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 10px;">—</td>
+      <td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 10px;">—</td>
+      <td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6;"><span class="mono" style="font-size: 10px; font-weight: 600;">CNY 15</span></td>
+    </tr>
+    <!-- CR002 — configured -->
+    <tr>
+      <td style="padding: 4px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #e5e7eb; background: #fff;"><span class="mono" style="font-size: 8px; color: #9ca3af;">CR002</span> Cargo Retrieval Pick Up</td>
+      <td style="padding: 4px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 10px;">—</td>
+      <td style="padding: 4px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 10px;">—</td>
+      <td style="padding: 4px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 10px;">—</td>
+      <td style="padding: 4px 10px; border-bottom: 1px solid #e5e7eb;"><span class="mono" style="font-size: 10px; font-weight: 600;">CNY 25</span></td>
+    </tr>
+    <!-- CS header -->
+    <tr style="background: #f9fafb;"><td colspan="5" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #7c3aed; border-bottom: 1px solid #e5e7eb;"><span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(124,58,237,0.06); border: 1px solid rgba(124,58,237,0.12); color: #7c3aed;">CS</span> Cargo Submission</td></tr>
+    <!-- CS001-006 all empty -->
+    <tr style="background: #fafafa;"><td style="padding: 4px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;"><span class="mono" style="font-size: 8px; color: #d1d5db;">CS001</span> Express Center</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td></tr>
+    <tr style="background: #fafafa;"><td style="padding: 4px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;"><span class="mono" style="font-size: 8px; color: #d1d5db;">CS002</span> Intl Cargo Terminal</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td></tr>
+    <tr style="background: #fafafa;"><td style="padding: 4px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;"><span class="mono" style="font-size: 8px; color: #d1d5db;">CS003</span> RA Agent Fee</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td></tr>
+    <tr style="background: #fafafa;"><td style="padding: 4px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;"><span class="mono" style="font-size: 8px; color: #d1d5db;">CS004</span> Security X-Ray</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td></tr>
+    <tr style="background: #fafafa;"><td style="padding: 4px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;"><span class="mono" style="font-size: 8px; color: #d1d5db;">CS005</span> Terminal Handling</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td></tr>
+    <tr style="background: #fafafa;"><td style="padding: 4px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #e5e7eb; background: #fafafa;"><span class="mono" style="font-size: 8px; color: #d1d5db;">CS006</span> Ground Handling</td><td style="padding: 4px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db;">—</td></tr>
+    <!-- EC header -->
+    <tr style="background: #f9fafb;"><td colspan="5" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #059669; border-bottom: 1px solid #e5e7eb;"><span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(5,150,105,0.06); border: 1px solid rgba(5,150,105,0.12); color: #059669;">EC</span> Export Customs</td></tr>
+    <tr style="background: #fafafa;"><td style="padding: 4px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;"><span class="mono" style="font-size: 8px; color: #d1d5db;">EC001</span> Customs Declaration</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td></tr>
+    <tr style="background: #fafafa;"><td style="padding: 4px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;"><span class="mono" style="font-size: 8px; color: #d1d5db;">EC002</span> Customs Inspection</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td></tr>
+    <tr style="background: #fafafa;"><td style="padding: 4px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #e5e7eb; background: #fafafa;"><span class="mono" style="font-size: 8px; color: #d1d5db;">EC003</span> Customs Service</td><td style="padding: 4px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db;">—</td></tr>
+    <!-- FM header -->
+    <tr style="background: #f9fafb;"><td colspan="5" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #152CFF; border-bottom: 1px solid #e5e7eb;"><span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.12);">FM</span> Trucking</td></tr>
+    <!-- FM001 — configured -->
+    <tr>
+      <td style="padding: 4px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff;"><span class="mono" style="font-size: 8px; color: #9ca3af;">FM001</span> Warehouse Transfer</td>
+      <td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6;"><span class="mono" style="font-size: 10px; font-weight: 600;">RM 450</span></td>
+      <td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6;"><span class="mono" style="font-size: 10px; font-weight: 600;">RM 520</span></td>
+      <td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6;"><span class="mono" style="font-size: 10px; font-weight: 600;">RM 380</span></td>
+      <td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td>
+    </tr>
+    <!-- FM002 — configured -->
+    <tr>
+      <td style="padding: 4px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff;"><span class="mono" style="font-size: 8px; color: #9ca3af;">FM002</span> Pickup Fee</td>
+      <td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6;"><span class="mono" style="font-size: 10px; font-weight: 600;">RM 30</span></td>
+      <td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6;"><span class="mono" style="font-size: 10px; font-weight: 600;">RM 35</span></td>
+      <td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6;"><span class="mono" style="font-size: 10px; font-weight: 600;">RM 25</span></td>
+      <td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td>
+    </tr>
+    <!-- FM003 — configured (1 route only) -->
+    <tr>
+      <td style="padding: 4px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #e5e7eb; background: #fff;"><span class="mono" style="font-size: 8px; color: #9ca3af;">FM003</span> Cross-Border Handling</td>
+      <td style="padding: 4px 10px; border-bottom: 1px solid #e5e7eb;"><span class="mono" style="font-size: 10px; font-weight: 600;">RM 45</span></td>
+      <td style="padding: 4px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db;">—</td>
+      <td style="padding: 4px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db;">—</td>
+      <td style="padding: 4px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db;">—</td>
+    </tr>
+    <!-- OH header -->
+    <tr style="background: #f9fafb;"><td colspan="5" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #d97706; border-bottom: 1px solid #e5e7eb;"><span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(217,119,6,0.06); border: 1px solid rgba(217,119,6,0.12); color: #d97706;">OH</span> Origin Handling</td></tr>
+    <tr style="background: #fafafa;"><td style="padding: 4px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;"><span class="mono" style="font-size: 8px; color: #d1d5db;">OH001</span> MAWB Fee</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td></tr>
+    <tr style="background: #fafafa;"><td style="padding: 4px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;"><span class="mono" style="font-size: 8px; color: #d1d5db;">OH002</span> Loading/Unloading</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td></tr>
+    <tr style="background: #fafafa;"><td style="padding: 4px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;"><span class="mono" style="font-size: 8px; color: #d1d5db;">OH003</span> Handling Fee</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td></tr>
+    <tr style="background: #fafafa;"><td style="padding: 4px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #f3f4f6; background: #fafafa;"><span class="mono" style="font-size: 8px; color: #d1d5db;">OH004</span> Sorting Fee</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db;">—</td></tr>
+    <tr style="background: #fafafa;"><td style="padding: 4px 10px; font-size: 10px; color: #9ca3af; border-bottom: 1px solid #e5e7eb; background: #fafafa;"><span class="mono" style="font-size: 8px; color: #d1d5db;">OH005</span> Palletization/Build-Up</td><td style="padding: 4px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db;">—</td><td style="padding: 4px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db;">—</td></tr>
+  </tbody>
+  </table>
+
+  <!-- Footer -->
+  <div style="padding: 8px 10px; background: #f9fafb; border-top: 1px solid #e5e7eb; font-size: 10px; color: #9ca3af;">
+    <span>HaleSun: <strong style="color: #111827;">5</strong> of 20 L2 fees configured across <strong style="color: #111827;">4</strong> routes &middot; <span style="color: #d97706;">75% of cells are empty</span></span>
+  </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION C: DYNAMIC ROWS PER ROUTE             -->
+<!-- ============================================ -->
+
+<h2>Option C: Applicable Per Route (Dynamic Rows)</h2>
+<span class="label" style="background: #fefafa; color: #dc2626;">Radical</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Different route columns show different L2 fee rows. FM003 (Cross-Border Handling) only appears in columns for cross-border routes. CS004 (Security X-Ray) only appears for airport location columns. The grid rows vary per column — the most accurate representation, but the most confusing.
+
+<p style="margin-top: 8px;"><strong>How it works:</strong></p>
+<ul style="font-size: 11px; padding-left: 16px; line-height: 1.8;">
+<li>Each route column is tagged with attributes (cross-border: yes/no, airport: yes/no, etc.)</li>
+<li>L2 fee types have applicability rules — FM003 is tagged "cross-border only"</li>
+<li>Grid only shows cells where the fee type is applicable to the route</li>
+<li>Non-applicable cells show a gray "N/A" instead of a dash or empty input</li>
+</ul>
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+- Most accurate — only shows fees that can actually apply<br>
+- Eliminates confusion about "should I fill this cell?"<br>
+- Makes route-specific fees obvious</div>
+<div class="cons"><strong>Cons</strong><br>
+- Breaks the spreadsheet mental model — rows vary per column<br>
+- Very confusing to scan: "why does this row have cells in some columns but not others?"<br>
+- Complex to implement — need applicability rules per L2 fee<br>
+- Hard to add new routes — must define applicability first<br>
+- Users expect grids to be rectangular, not ragged</div>
+</div>
+</div>
+
+<p style="font-size: 10px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px;">FM003 row shows "N/A" on non-cross-border routes — grid is non-rectangular</p>
+<div class="screen">
+<div style="padding: 16px;">
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+    <span style="font-size: 11px; color: #9ca3af;">Vendor:</span>
+    <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; cursor: pointer;">HaleSun</button>
+  </div>
+
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+  <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+  <thead>
+    <tr>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: #fff; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; width: 220px;">L2 Fee Type</th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 130px;">
+        <div>TikTok WH → SZ Bay</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.4); margin-top: 1px;">Shenzhen · <span style="color: #fde68a;">cross-border</span></div>
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 130px;">
+        <div>DG Cross-dock → SZX</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.4); margin-top: 1px;">Dongguan → Shenzhen · domestic</div>
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 130px;">
+        <div>GZ WH → Huangpu</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.4); margin-top: 1px;">Guangzhou · domestic</div>
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- FM header -->
+    <tr style="background: #f9fafb;"><td colspan="4" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #152CFF; border-bottom: 1px solid #e5e7eb;"><span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.12);">FM</span> Trucking</td></tr>
+    <!-- FM001 — applies everywhere -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM001</span> Warehouse Transfer
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 450" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 520" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 380" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+    <!-- FM002 — applies everywhere -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM002</span> Pickup Fee
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 30" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 35" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 25" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+    <!-- FM003 — cross-border ONLY -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #e5e7eb; background: #fff;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM003</span> Cross-Border Handling
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+        <span style="font-size: 7px; padding: 1px 4px; border-radius: 2px; background: #fefce8; color: #b45309; border: 1px solid #fde68a; margin-left: 4px;">CROSS-BORDER ONLY</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="RM 45" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <!-- N/A cells — fee doesn't apply to domestic routes -->
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; background: repeating-linear-gradient(45deg, #f9fafb, #f9fafb 4px, #f3f4f6 4px, #f3f4f6 8px);">
+        <span style="font-size: 9px; color: #d1d5db; font-style: italic;">N/A</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; background: repeating-linear-gradient(45deg, #f9fafb, #f9fafb 4px, #f3f4f6 4px, #f3f4f6 8px);">
+        <span style="font-size: 9px; color: #d1d5db; font-style: italic;">N/A</span>
+      </td>
+    </tr>
+  </tbody>
+  </table>
+
+  <!-- Annotation callout -->
+  <div style="padding: 10px 12px; background: #fffbeb; border-top: 1px solid #fde68a; font-size: 10px; color: #92400e; line-height: 1.5;">
+    <strong>Problem:</strong> The "N/A" cells with diagonal striping break the rectangular grid model. Users expect every row to have the same number of fillable cells. This creates confusion: "Is this a bug? Should I be able to enter a rate here? What determines applicability?" The grid becomes a puzzle instead of a tool.
+  </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- VERDICT                                      -->
+<!-- ============================================ -->
+
+<div class="verdict">
+<h3>Verdict: Option A — Show Configured Only, Toggle to Expand</h3>
+<p style="font-size: 12px; line-height: 1.6; color: #374151;">
+<strong>Recommended because:</strong> The rate sheet's job is to show what's configured, not what's possible. A vendor with 5 fees shouldn't wade through 15 empty rows to find them. The "Show all" toggle preserves full discoverability for when you need to add new fee types, but the default view is clean and focused.
+</p>
+<ul style="font-size: 11px; color: #374151; margin-top: 8px; padding-left: 16px; line-height: 1.8;">
+<li><strong>Default view:</strong> Only L2 rows with at least 1 configured rate — 5 rows for HaleSun instead of 20</li>
+<li><strong>L1 groups hidden if empty:</strong> If a vendor has no CS, EC, or OH rates, those groups don't appear</li>
+<li><strong>"Show all 20 L2 fees" toggle:</strong> Reveals full grid with empty rows in muted style for adding new rates</li>
+<li><strong>Unconfigured rows:</strong> Gray background (#fafafa), muted text, empty inputs with subtle borders — clearly secondary</li>
+<li><strong>Footer summary:</strong> "5 of 20 L2 fees configured" gives context without requiring expansion</li>
+<li><strong>No applicability rules needed:</strong> Unlike Option C, we don't need to define which fees apply to which routes. A dash means "not configured" — the user decides if that's intentional or an oversight</li>
+</ul>
+<p style="font-size: 11px; color: #6b7280; margin-top: 12px;">
+<strong>Why not Option B:</strong> Full grid is visually noisy — 75% empty cells makes it hard to scan. The gray styling helps, but the fundamental problem is signal-to-noise ratio.
+<br>
+<strong>Why not Option C:</strong> Dynamic rows per column breaks the spreadsheet mental model. Users expect grids to be rectangular. N/A cells create confusion about what's allowed vs. what's simply not configured.
+</p>
+</div>
+
+</div>
+</body>
+</html>

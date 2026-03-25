@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-36: Services Master Data — L1/L2 Hierarchy with Cost IDs</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+h3 { font-size: 14px; font-weight: 700; margin: 20px 0 8px; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: rgba(21,44,255,0.04); border: 2px solid rgba(21,44,255,0.2); border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #152CFF; font-size: 14px; margin-bottom: 6px; }
+.nav { height: 40px; background: #111827; display: flex; align-items: center; padding: 0 16px; gap: 16px; }
+.nav .logo { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; }
+.nav .brand { font-weight: 700; font-size: 13px; color: #fff; }
+.nav .link { font-size: 12px; color: rgba(255,255,255,0.5); }
+.nav .link.active { color: #fff; font-weight: 600; padding: 4px 10px; background: rgba(255,255,255,0.1); border-radius: 4px; }
+.th { text-align: left; padding: 6px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+.td { padding: 8px 10px; font-size: 11px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+.chip { padding: 3px 8px; border-radius: 99px; font-size: 9px; font-weight: 600; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-36: Services Master Data — L1/L2 Hierarchy</h1>
+
+<div class="hmw">
+How should the Services tab in Master Data display and manage the L1/L2 service hierarchy with Cost IDs?
+</div>
+
+<div class="context">
+<strong>Current state:</strong> The Services tab in Master Data is a "Coming soon" placeholder. But the L1/L2 service taxonomy is the backbone of the rate management system — it defines the 20 Cost IDs across 5 L1 services that generate rate sheet rows and auto-populate fees on jobs.
+<br><br>
+<strong>The taxonomy:</strong> 5 L1 services (CR, CS, EC, FM, OH) contain 19 L2 sub-services total — each with a Cost ID (e.g., FM001), a name, and a default unit type (/trip, /kg, /bag, /CBM). This is the source of truth that determines what rows appear in vendor rate sheets (HMW-31) and what fees auto-populate on jobs (HMW-25/26).
+<br><br>
+<strong>Why it matters now:</strong> Without a proper Services master data UI, admins can't see what fee types exist, can't add new ones, and have no visibility into which vendors have rates configured for each fee. The rate sheet (HMW-31) needs this as its row source.
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION A: EXPANDABLE TREE TABLE              -->
+<!-- ============================================ -->
+
+<h2>Option A: Expandable Tree Table</h2>
+<span class="label" style="background: rgba(21,44,255,0.06); color: #152CFF;">Recommended</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> The L1/L2 hierarchy IS a tree — the UI should reflect it. Each L1 service is an expandable row that reveals its L2 sub-services when clicked. Collapsed rows show a count of L2 fees. Expanded rows show the full detail. Color-coded L1 badges match the existing service tag styling. Columns show Cost ID, Name, Unit Type, Vendors Using, and Rates Configured — giving admins a full picture of the taxonomy's "coverage."
+
+<p style="margin-top: 8px;"><strong>How it works:</strong></p>
+<ul style="font-size: 11px; padding-left: 16px; line-height: 1.8;">
+<li>Table with 5 L1 rows — click any to expand and see nested L2 sub-services</li>
+<li>L2 rows show Cost ID (mono), name, unit type badge, vendor count, rates count</li>
+<li>"+ Add L2 Fee" button within each expanded L1 section</li>
+<li>Summary stats bar: total L1 services, total L2 fees, total rates configured</li>
+<li>L1 badges use the existing service pill style (Future Blue, 99px radius)</li>
+</ul>
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
++ Tree structure matches the mental model of L1/L2 hierarchy<br>
++ Expand what you need, collapse what you don't — scales well<br>
++ Vendor/rate counts give immediate visibility into coverage gaps<br>
++ "Add L2 Fee" scoped to the right L1 parent — prevents misclassification</div>
+<div class="cons"><strong>Cons</strong><br>
+- Slightly more interaction to see all 19 fees (must expand each L1)<br>
+- Nested table indentation eats horizontal space<br>
+- Expand/collapse state not persisted across page navigations</div>
+</div>
+</div>
+
+<!-- MOCKUP: Option A -->
+<div class="screen">
+
+  <!-- Nav -->
+  <div class="nav">
+    <div class="logo"></div>
+    <div class="brand">Teleport OS</div>
+    <div class="link">Delivery Orders</div>
+    <div class="link">Rates</div>
+    <div class="link">Billing</div>
+    <div class="link active">Master Data</div>
+  </div>
+
+  <!-- Sub-tabs -->
+  <div style="display: flex; align-items: center; gap: 0; border-bottom: 1px solid #e5e7eb; background: #fff;">
+    <div style="padding: 8px 16px; font-size: 11px; font-weight: 400; color: #9ca3af; cursor: pointer;">Locations</div>
+    <div style="padding: 8px 16px; font-size: 11px; font-weight: 400; color: #9ca3af; cursor: pointer;">Vendors</div>
+    <div style="padding: 8px 16px; font-size: 11px; font-weight: 400; color: #9ca3af; cursor: pointer;">Customers</div>
+    <div style="padding: 8px 16px; font-size: 11px; font-weight: 600; color: #152CFF; border-bottom: 2px solid #152CFF; cursor: pointer;">Services</div>
+  </div>
+
+  <!-- Page header -->
+  <div style="padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e5e7eb;">
+    <div>
+      <div style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">Service Taxonomy</div>
+      <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">L1/L2 fee hierarchy — source of truth for rate sheets and job fee auto-population</div>
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <button style="padding: 5px 12px; border-radius: 6px; border: 1px solid #e5e7eb; background: #fff; font-size: 11px; font-weight: 600; color: #374151; cursor: pointer; font-family: inherit;">Expand All</button>
+    </div>
+  </div>
+
+  <!-- Stats bar -->
+  <div style="padding: 6px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 11px; color: #9ca3af; display: flex; gap: 16px;">
+    <span><strong style="color: #111827;">5</strong> L1 services</span>
+    <span style="color: #e5e7eb;">|</span>
+    <span><strong style="color: #111827;">19</strong> L2 fees (Cost IDs)</span>
+    <span style="color: #e5e7eb;">|</span>
+    <span><strong style="color: #111827;">47</strong> rates configured</span>
+    <span style="color: #e5e7eb;">|</span>
+    <span><strong style="color: #111827;">5</strong> active vendors</span>
+  </div>
+
+  <!-- Table -->
+  <table style="width: 100%; border-collapse: collapse;">
+    <thead>
+      <tr>
+        <th class="th" style="width: 28px;"></th>
+        <th class="th" style="width: 100px;">Code</th>
+        <th class="th">Name</th>
+        <th class="th" style="width: 90px;">Unit Type</th>
+        <th class="th" style="width: 100px;">Vendors Using</th>
+        <th class="th" style="width: 110px;">Rates Configured</th>
+        <th class="th" style="width: 40px;"></th>
+      </tr>
+    </thead>
+    <tbody>
+
+      <!-- ======== CR — COLLAPSED ======== -->
+      <tr style="cursor: pointer; background: #fff;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; color: #9ca3af; font-size: 10px; text-align: center;">&#9654;</td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb;">
+          <span class="chip" style="background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF;">CR</span>
+        </td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #111827;">
+          Cargo Retrieval
+          <span style="font-weight: 400; color: #9ca3af; margin-left: 6px; font-size: 10px;">2 sub-services</span>
+        </td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; color: #9ca3af;">—</td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; color: #9ca3af;">3 vendors</td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; color: #9ca3af;">5 rates</td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb;"></td>
+      </tr>
+
+      <!-- ======== CS — COLLAPSED ======== -->
+      <tr style="cursor: pointer; background: #fff;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; color: #9ca3af; font-size: 10px; text-align: center;">&#9654;</td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb;">
+          <span class="chip" style="background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF;">CS</span>
+        </td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #111827;">
+          Cargo Submission
+          <span style="font-weight: 400; color: #9ca3af; margin-left: 6px; font-size: 10px;">6 sub-services</span>
+        </td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; color: #9ca3af;">—</td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; color: #9ca3af;">4 vendors</td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; color: #9ca3af;">14 rates</td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb;"></td>
+      </tr>
+
+      <!-- ======== EC — COLLAPSED ======== -->
+      <tr style="cursor: pointer; background: #fff;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; color: #9ca3af; font-size: 10px; text-align: center;">&#9654;</td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb;">
+          <span class="chip" style="background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF;">EC</span>
+        </td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #111827;">
+          Export Customs
+          <span style="font-weight: 400; color: #9ca3af; margin-left: 6px; font-size: 10px;">3 sub-services</span>
+        </td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; color: #9ca3af;">—</td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; color: #9ca3af;">3 vendors</td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; color: #9ca3af;">8 rates</td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb;"></td>
+      </tr>
+
+      <!-- ======== FM — EXPANDED ======== -->
+      <tr style="cursor: pointer; background: #f9fafb;">
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; color: #152CFF; font-size: 10px; text-align: center;">&#9660;</td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb;">
+          <span class="chip" style="background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF;">FM</span>
+        </td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #111827;">
+          Trucking
+          <span style="font-weight: 400; color: #152CFF; margin-left: 6px; font-size: 10px;">3 sub-services</span>
+        </td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; color: #9ca3af;">—</td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; color: #374151; font-weight: 600;">4 vendors</td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; color: #374151; font-weight: 600;">12 rates</td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb;"></td>
+      </tr>
+      <!-- FM L2 rows -->
+      <tr style="background: #fafbfc;">
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6;"></td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; padding-left: 20px;">
+          <span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">FM001</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 11px; color: #374151; padding-left: 20px;">
+          Warehouse Transfer Fee
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6;">
+          <span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #f3f4f6; border: 1px solid #e5e7eb; color: #6b7280;">/trip</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 10px; color: #374151;">
+          4
+          <span style="color: #9ca3af; font-size: 9px; margin-left: 2px;">vendors</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 10px; color: #374151;">
+          6
+          <span style="color: #9ca3af; font-size: 9px; margin-left: 2px;">rates</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; text-align: center;">
+          <span style="font-size: 10px; color: #9ca3af; cursor: pointer;" title="Edit">&#9998;</span>
+        </td>
+      </tr>
+      <tr style="background: #fafbfc;">
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6;"></td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; padding-left: 20px;">
+          <span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">FM002</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 11px; color: #374151; padding-left: 20px;">
+          Pickup Fee
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6;">
+          <span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #f3f4f6; border: 1px solid #e5e7eb; color: #6b7280;">/trip</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 10px; color: #374151;">
+          4
+          <span style="color: #9ca3af; font-size: 9px; margin-left: 2px;">vendors</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 10px; color: #374151;">
+          4
+          <span style="color: #9ca3af; font-size: 9px; margin-left: 2px;">rates</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; text-align: center;">
+          <span style="font-size: 10px; color: #9ca3af; cursor: pointer;" title="Edit">&#9998;</span>
+        </td>
+      </tr>
+      <tr style="background: #fafbfc;">
+        <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb;"></td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; padding-left: 20px;">
+          <span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">FM003</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; font-size: 11px; color: #374151; padding-left: 20px;">
+          Cross-Border Handling Fee
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb;">
+          <span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #f3f4f6; border: 1px solid #e5e7eb; color: #6b7280;">/trip</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; font-size: 10px; color: #374151;">
+          3
+          <span style="color: #9ca3af; font-size: 9px; margin-left: 2px;">vendors</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; font-size: 10px; color: #374151;">
+          2
+          <span style="color: #9ca3af; font-size: 9px; margin-left: 2px;">rates</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">
+          <span style="font-size: 10px; color: #9ca3af; cursor: pointer;" title="Edit">&#9998;</span>
+        </td>
+      </tr>
+      <!-- FM "add" row -->
+      <tr style="background: #fafbfc;">
+        <td colspan="7" style="padding: 5px 10px 8px 20px; border-bottom: 1px solid #e5e7eb;">
+          <span style="font-size: 10px; font-weight: 600; color: #152CFF; cursor: pointer;">+ Add L2 Fee to FM</span>
+        </td>
+      </tr>
+
+      <!-- ======== OH — EXPANDED ======== -->
+      <tr style="cursor: pointer; background: #f9fafb;">
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; color: #152CFF; font-size: 10px; text-align: center;">&#9660;</td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb;">
+          <span class="chip" style="background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF;">OH</span>
+        </td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #111827;">
+          Origin Handling
+          <span style="font-weight: 400; color: #152CFF; margin-left: 6px; font-size: 10px;">5 sub-services</span>
+        </td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; color: #9ca3af;">—</td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; color: #374151; font-weight: 600;">3 vendors</td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb; color: #374151; font-weight: 600;">8 rates</td>
+        <td class="td" style="border-bottom: 1px solid #e5e7eb;"></td>
+      </tr>
+      <!-- OH L2 rows -->
+      <tr style="background: #fafbfc;">
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6;"></td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; padding-left: 20px;">
+          <span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">OH001</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 11px; color: #374151; padding-left: 20px;">
+          MAWB Fee
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6;">
+          <span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #f3f4f6; border: 1px solid #e5e7eb; color: #6b7280;">/trip</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 10px; color: #374151;">
+          3
+          <span style="color: #9ca3af; font-size: 9px; margin-left: 2px;">vendors</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 10px; color: #374151;">
+          3
+          <span style="color: #9ca3af; font-size: 9px; margin-left: 2px;">rates</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; text-align: center;">
+          <span style="font-size: 10px; color: #9ca3af; cursor: pointer;" title="Edit">&#9998;</span>
+        </td>
+      </tr>
+      <tr style="background: #fafbfc;">
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6;"></td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; padding-left: 20px;">
+          <span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">OH002</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 11px; color: #374151; padding-left: 20px;">
+          Loading/Unloading Fee
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6;">
+          <span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #eff6ff; border: 1px solid #bfdbfe; color: #2563eb;">/kg</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 10px; color: #374151;">
+          2
+          <span style="color: #9ca3af; font-size: 9px; margin-left: 2px;">vendors</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 10px; color: #374151;">
+          2
+          <span style="color: #9ca3af; font-size: 9px; margin-left: 2px;">rates</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; text-align: center;">
+          <span style="font-size: 10px; color: #9ca3af; cursor: pointer;" title="Edit">&#9998;</span>
+        </td>
+      </tr>
+      <tr style="background: #fafbfc;">
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6;"></td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; padding-left: 20px;">
+          <span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">OH003</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 11px; color: #374151; padding-left: 20px;">
+          Handling Fee
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6;">
+          <span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #eff6ff; border: 1px solid #bfdbfe; color: #2563eb;">/kg</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 10px; color: #374151;">
+          2
+          <span style="color: #9ca3af; font-size: 9px; margin-left: 2px;">vendors</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 10px; color: #374151;">
+          1
+          <span style="color: #9ca3af; font-size: 9px; margin-left: 2px;">rate</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; text-align: center;">
+          <span style="font-size: 10px; color: #9ca3af; cursor: pointer;" title="Edit">&#9998;</span>
+        </td>
+      </tr>
+      <tr style="background: #fafbfc;">
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6;"></td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; padding-left: 20px;">
+          <span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">OH004</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 11px; color: #374151; padding-left: 20px;">
+          Sorting Fee
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6;">
+          <span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #f5f3ff; border: 1px solid #ddd6fe; color: #7c3aed;">/bag</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 10px; color: #374151;">
+          1
+          <span style="color: #9ca3af; font-size: 9px; margin-left: 2px;">vendor</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 10px; color: #374151;">
+          1
+          <span style="color: #9ca3af; font-size: 9px; margin-left: 2px;">rate</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #f3f4f6; text-align: center;">
+          <span style="font-size: 10px; color: #9ca3af; cursor: pointer;" title="Edit">&#9998;</span>
+        </td>
+      </tr>
+      <tr style="background: #fafbfc;">
+        <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb;"></td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; padding-left: 20px;">
+          <span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">OH005</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; font-size: 11px; color: #374151; padding-left: 20px;">
+          Palletization/Build-Up Fee
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb;">
+          <span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #fffbeb; border: 1px solid #fde68a; color: #d97706;">/CBM</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; font-size: 10px; color: #374151;">
+          1
+          <span style="color: #9ca3af; font-size: 9px; margin-left: 2px;">vendor</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; font-size: 10px; color: #374151;">
+          1
+          <span style="color: #9ca3af; font-size: 9px; margin-left: 2px;">rate</span>
+        </td>
+        <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">
+          <span style="font-size: 10px; color: #9ca3af; cursor: pointer;" title="Edit">&#9998;</span>
+        </td>
+      </tr>
+      <!-- OH "add" row -->
+      <tr style="background: #fafbfc;">
+        <td colspan="7" style="padding: 5px 10px 8px 20px; border-bottom: 1px solid #e5e7eb;">
+          <span style="font-size: 10px; font-weight: 600; color: #152CFF; cursor: pointer;">+ Add L2 Fee to OH</span>
+        </td>
+      </tr>
+
+    </tbody>
+  </table>
+
+  <!-- Footer summary -->
+  <div style="padding: 8px 16px; background: #f9fafb; font-size: 10px; color: #9ca3af; display: flex; justify-content: space-between;">
+    <span>Showing 5 L1 services, 2 expanded. <strong style="color: #111827;">19</strong> total L2 fees across all services.</span>
+    <span>Last modified: 24 Mar 2026</span>
+  </div>
+
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION B: TWO-PANEL LAYOUT                   -->
+<!-- ============================================ -->
+
+<h2>Option B: Two-Panel Master-Detail Layout</h2>
+<span class="label" style="background: #f3f4f6; color: #6b7280;">Classic</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Left panel shows the 5 L1 services as a clickable list. Selecting one loads the right panel with that L1's L2 sub-services. Classic master-detail pattern used in settings/config pages. Clean separation of hierarchy levels.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
++ Clean separation — L1 list always visible on the left<br>
++ Right panel has full width for L2 detail (more room for columns)<br>
++ Familiar pattern — settings pages, email clients, etc.<br>
++ Easy to add L1-level metadata (description, rate type) to the right panel header</div>
+<div class="cons"><strong>Cons</strong><br>
+- Can't see all services at once — must click through each L1<br>
+- More clicks to get a holistic view of the full taxonomy<br>
+- Left panel wastes space with only 5 items in the list<br>
+- Two-panel layout feels heavy for such a small dataset</div>
+</div>
+</div>
+
+<!-- MOCKUP: Option B -->
+<div class="screen">
+
+  <!-- Nav -->
+  <div class="nav">
+    <div class="logo"></div>
+    <div class="brand">Teleport OS</div>
+    <div class="link">Delivery Orders</div>
+    <div class="link">Rates</div>
+    <div class="link">Billing</div>
+    <div class="link active">Master Data</div>
+  </div>
+
+  <!-- Sub-tabs -->
+  <div style="display: flex; align-items: center; gap: 0; border-bottom: 1px solid #e5e7eb; background: #fff;">
+    <div style="padding: 8px 16px; font-size: 11px; font-weight: 400; color: #9ca3af;">Locations</div>
+    <div style="padding: 8px 16px; font-size: 11px; font-weight: 400; color: #9ca3af;">Vendors</div>
+    <div style="padding: 8px 16px; font-size: 11px; font-weight: 400; color: #9ca3af;">Customers</div>
+    <div style="padding: 8px 16px; font-size: 11px; font-weight: 600; color: #152CFF; border-bottom: 2px solid #152CFF;">Services</div>
+  </div>
+
+  <!-- Two-panel body -->
+  <div style="display: flex; min-height: 380px;">
+
+    <!-- Left panel: L1 list -->
+    <div style="width: 220px; border-right: 1px solid #e5e7eb; background: #f9fafb;">
+      <div style="padding: 10px 12px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; border-bottom: 1px solid #e5e7eb;">
+        L1 Services
+      </div>
+      <!-- CR -->
+      <div style="padding: 8px 12px; font-size: 11px; color: #374151; border-bottom: 1px solid #f3f4f6; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+        <span class="chip" style="background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF;">CR</span>
+        <div>
+          <div style="font-weight: 500;">Cargo Retrieval</div>
+          <div style="font-size: 9px; color: #9ca3af;">2 sub-services</div>
+        </div>
+      </div>
+      <!-- CS — SELECTED -->
+      <div style="padding: 8px 12px; font-size: 11px; color: #111827; border-bottom: 1px solid #f3f4f6; cursor: pointer; display: flex; align-items: center; gap: 8px; background: #fff; border-left: 2px solid #152CFF;">
+        <span class="chip" style="background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF;">CS</span>
+        <div>
+          <div style="font-weight: 600;">Cargo Submission</div>
+          <div style="font-size: 9px; color: #152CFF;">6 sub-services</div>
+        </div>
+      </div>
+      <!-- EC -->
+      <div style="padding: 8px 12px; font-size: 11px; color: #374151; border-bottom: 1px solid #f3f4f6; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+        <span class="chip" style="background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF;">EC</span>
+        <div>
+          <div style="font-weight: 500;">Export Customs</div>
+          <div style="font-size: 9px; color: #9ca3af;">3 sub-services</div>
+        </div>
+      </div>
+      <!-- FM -->
+      <div style="padding: 8px 12px; font-size: 11px; color: #374151; border-bottom: 1px solid #f3f4f6; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+        <span class="chip" style="background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF;">FM</span>
+        <div>
+          <div style="font-weight: 500;">Trucking</div>
+          <div style="font-size: 9px; color: #9ca3af;">3 sub-services</div>
+        </div>
+      </div>
+      <!-- OH -->
+      <div style="padding: 8px 12px; font-size: 11px; color: #374151; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+        <span class="chip" style="background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF;">OH</span>
+        <div>
+          <div style="font-weight: 500;">Origin Handling</div>
+          <div style="font-size: 9px; color: #9ca3af;">5 sub-services</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right panel: L2 detail for CS -->
+    <div style="flex: 1; background: #fff;">
+      <!-- Right panel header -->
+      <div style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+          <div style="font-size: 14px; font-weight: 700; color: #111827;">
+            <span class="chip" style="background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF; margin-right: 6px;">CS</span>
+            Cargo Submission
+          </div>
+          <div style="font-size: 10px; color: #9ca3af; margin-top: 3px;">6 L2 sub-services  ·  Rate type: location  ·  4 vendors with rates</div>
+        </div>
+        <button style="padding: 5px 12px; border-radius: 6px; border: 1px solid #152CFF; background: #152CFF; font-size: 11px; font-weight: 600; color: #fff; cursor: pointer; font-family: inherit;">+ Add L2 Fee</button>
+      </div>
+
+      <!-- L2 table -->
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr>
+            <th class="th" style="width: 80px;">Cost ID</th>
+            <th class="th">Name</th>
+            <th class="th" style="width: 80px;">Unit</th>
+            <th class="th" style="width: 90px;">Vendors</th>
+            <th class="th" style="width: 80px;">Rates</th>
+            <th class="th" style="width: 40px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="td"><span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">CS001</span></td>
+            <td class="td" style="color: #374151;">Express Center Ground Handling</td>
+            <td class="td"><span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #eff6ff; border: 1px solid #bfdbfe; color: #2563eb;">/kg</span></td>
+            <td class="td" style="font-size: 10px;">4 <span style="color: #9ca3af;">vendors</span></td>
+            <td class="td" style="font-size: 10px;">4 <span style="color: #9ca3af;">rates</span></td>
+            <td class="td" style="text-align: center;"><span style="font-size: 10px; color: #9ca3af; cursor: pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td class="td"><span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">CS002</span></td>
+            <td class="td" style="color: #374151;">Intl Cargo Terminal Transit</td>
+            <td class="td"><span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #f3f4f6; border: 1px solid #e5e7eb; color: #6b7280;">/trip</span></td>
+            <td class="td" style="font-size: 10px;">2 <span style="color: #9ca3af;">vendors</span></td>
+            <td class="td" style="font-size: 10px;">3 <span style="color: #9ca3af;">rates</span></td>
+            <td class="td" style="text-align: center;"><span style="font-size: 10px; color: #9ca3af; cursor: pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td class="td"><span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">CS003</span></td>
+            <td class="td" style="color: #374151;">RA Agent Fee</td>
+            <td class="td"><span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #f3f4f6; border: 1px solid #e5e7eb; color: #6b7280;">/trip</span></td>
+            <td class="td" style="font-size: 10px;">3 <span style="color: #9ca3af;">vendors</span></td>
+            <td class="td" style="font-size: 10px;">3 <span style="color: #9ca3af;">rates</span></td>
+            <td class="td" style="text-align: center;"><span style="font-size: 10px; color: #9ca3af; cursor: pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td class="td"><span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">CS004</span></td>
+            <td class="td" style="color: #374151;">Security X-Ray Screening</td>
+            <td class="td"><span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #eff6ff; border: 1px solid #bfdbfe; color: #2563eb;">/kg</span></td>
+            <td class="td" style="font-size: 10px;">2 <span style="color: #9ca3af;">vendors</span></td>
+            <td class="td" style="font-size: 10px;">2 <span style="color: #9ca3af;">rates</span></td>
+            <td class="td" style="text-align: center;"><span style="font-size: 10px; color: #9ca3af; cursor: pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td class="td"><span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">CS005</span></td>
+            <td class="td" style="color: #374151;">Terminal Handling Charges</td>
+            <td class="td"><span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #eff6ff; border: 1px solid #bfdbfe; color: #2563eb;">/kg</span></td>
+            <td class="td" style="font-size: 10px;">1 <span style="color: #9ca3af;">vendor</span></td>
+            <td class="td" style="font-size: 10px;">1 <span style="color: #9ca3af;">rate</span></td>
+            <td class="td" style="text-align: center;"><span style="font-size: 10px; color: #9ca3af; cursor: pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td class="td" style="border-bottom: none;"><span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">CS006</span></td>
+            <td class="td" style="border-bottom: none; color: #374151;">Ground Handling Fee</td>
+            <td class="td" style="border-bottom: none;"><span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #eff6ff; border: 1px solid #bfdbfe; color: #2563eb;">/kg</span></td>
+            <td class="td" style="border-bottom: none; font-size: 10px;">1 <span style="color: #9ca3af;">vendor</span></td>
+            <td class="td" style="border-bottom: none; font-size: 10px;">1 <span style="color: #9ca3af;">rate</span></td>
+            <td class="td" style="border-bottom: none; text-align: center;"><span style="font-size: 10px; color: #9ca3af; cursor: pointer;">&#9998;</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION C: FLAT TABLE WITH GROUPING           -->
+<!-- ============================================ -->
+
+<h2>Option C: Flat Table With L1 Group Headers</h2>
+<span class="label" style="background: #f3f4f6; color: #6b7280;">Simple</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Show all 19 L2 fees in one flat table, grouped by L1 service header rows. No expand/collapse — everything visible at once. Similar to how the rates page currently groups rates by vendor. Header rows are visually distinct with the L1 badge and service name.
+
+<p style="margin-top: 8px;">The dataset is small enough (19 rows) that nesting isn't strictly needed. A flat table with group headers provides full visibility with zero interaction cost.</p>
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
++ Everything visible at once — zero clicks needed<br>
++ Simple implementation — standard table with group header rows<br>
++ Easy to scan, search, and sort<br>
++ 19 rows fits on one screen — no scrolling for most monitors</div>
+<div class="cons"><strong>Cons</strong><br>
+- Doesn't visually communicate the L1/L2 hierarchy as strongly<br>
+- Group headers take up row space without data columns<br>
+- "Add L2 Fee" placement is less obvious (bottom of each group?)<br>
+- If taxonomy grows beyond 30+ fees, the flat list becomes unwieldy</div>
+</div>
+</div>
+
+<!-- MOCKUP: Option C -->
+<div class="screen">
+
+  <!-- Nav -->
+  <div class="nav">
+    <div class="logo"></div>
+    <div class="brand">Teleport OS</div>
+    <div class="link">Delivery Orders</div>
+    <div class="link">Rates</div>
+    <div class="link">Billing</div>
+    <div class="link active">Master Data</div>
+  </div>
+
+  <!-- Sub-tabs -->
+  <div style="display: flex; align-items: center; gap: 0; border-bottom: 1px solid #e5e7eb; background: #fff;">
+    <div style="padding: 8px 16px; font-size: 11px; font-weight: 400; color: #9ca3af;">Locations</div>
+    <div style="padding: 8px 16px; font-size: 11px; font-weight: 400; color: #9ca3af;">Vendors</div>
+    <div style="padding: 8px 16px; font-size: 11px; font-weight: 400; color: #9ca3af;">Customers</div>
+    <div style="padding: 8px 16px; font-size: 11px; font-weight: 600; color: #152CFF; border-bottom: 2px solid #152CFF;">Services</div>
+  </div>
+
+  <!-- Page header -->
+  <div style="padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e5e7eb;">
+    <div>
+      <div style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">Service Taxonomy</div>
+      <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">All 19 L2 fees grouped by L1 service</div>
+    </div>
+  </div>
+
+  <!-- Flat table -->
+  <table style="width: 100%; border-collapse: collapse;">
+    <thead>
+      <tr>
+        <th class="th" style="width: 80px;">Cost ID</th>
+        <th class="th">Name</th>
+        <th class="th" style="width: 80px;">Unit</th>
+        <th class="th" style="width: 90px;">Vendors</th>
+        <th class="th" style="width: 80px;">Rates</th>
+      </tr>
+    </thead>
+    <tbody>
+
+      <!-- CR group header -->
+      <tr>
+        <td colspan="5" style="padding: 8px 10px; background: #f3f4f6; border-bottom: 1px solid #e5e7eb; font-size: 11px; font-weight: 600; color: #111827;">
+          <span class="chip" style="background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF; margin-right: 6px;">CR</span>
+          Cargo Retrieval
+          <span style="font-weight: 400; color: #9ca3af; margin-left: 8px; font-size: 10px;">2 sub-services</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="td"><span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">CR001</span></td>
+        <td class="td">Registration Fee</td>
+        <td class="td"><span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #f3f4f6; border: 1px solid #e5e7eb; color: #6b7280;">/trip</span></td>
+        <td class="td" style="font-size: 10px;">3 vendors</td>
+        <td class="td" style="font-size: 10px;">4 rates</td>
+      </tr>
+      <tr>
+        <td class="td"><span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">CR002</span></td>
+        <td class="td">Cargo Retrieval Pick Up Fee</td>
+        <td class="td"><span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #f3f4f6; border: 1px solid #e5e7eb; color: #6b7280;">/trip</span></td>
+        <td class="td" style="font-size: 10px;">2 vendors</td>
+        <td class="td" style="font-size: 10px;">1 rate</td>
+      </tr>
+
+      <!-- CS group header -->
+      <tr>
+        <td colspan="5" style="padding: 8px 10px; background: #f3f4f6; border-bottom: 1px solid #e5e7eb; font-size: 11px; font-weight: 600; color: #111827;">
+          <span class="chip" style="background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF; margin-right: 6px;">CS</span>
+          Cargo Submission
+          <span style="font-weight: 400; color: #9ca3af; margin-left: 8px; font-size: 10px;">6 sub-services</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="td"><span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">CS001</span></td>
+        <td class="td">Express Center Ground Handling</td>
+        <td class="td"><span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #eff6ff; border: 1px solid #bfdbfe; color: #2563eb;">/kg</span></td>
+        <td class="td" style="font-size: 10px;">4 vendors</td>
+        <td class="td" style="font-size: 10px;">4 rates</td>
+      </tr>
+      <tr>
+        <td class="td"><span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">CS002</span></td>
+        <td class="td">Intl Cargo Terminal Transit</td>
+        <td class="td"><span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #f3f4f6; border: 1px solid #e5e7eb; color: #6b7280;">/trip</span></td>
+        <td class="td" style="font-size: 10px;">2 vendors</td>
+        <td class="td" style="font-size: 10px;">3 rates</td>
+      </tr>
+      <tr>
+        <td class="td"><span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">CS003</span></td>
+        <td class="td">RA Agent Fee</td>
+        <td class="td"><span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #f3f4f6; border: 1px solid #e5e7eb; color: #6b7280;">/trip</span></td>
+        <td class="td" style="font-size: 10px;">3 vendors</td>
+        <td class="td" style="font-size: 10px;">3 rates</td>
+      </tr>
+      <tr>
+        <td class="td"><span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">CS004</span></td>
+        <td class="td">Security X-Ray Screening</td>
+        <td class="td"><span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #eff6ff; border: 1px solid #bfdbfe; color: #2563eb;">/kg</span></td>
+        <td class="td" style="font-size: 10px;">2 vendors</td>
+        <td class="td" style="font-size: 10px;">2 rates</td>
+      </tr>
+      <tr>
+        <td class="td"><span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">CS005</span></td>
+        <td class="td">Terminal Handling Charges</td>
+        <td class="td"><span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #eff6ff; border: 1px solid #bfdbfe; color: #2563eb;">/kg</span></td>
+        <td class="td" style="font-size: 10px;">1 vendor</td>
+        <td class="td" style="font-size: 10px;">1 rate</td>
+      </tr>
+      <tr>
+        <td class="td"><span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">CS006</span></td>
+        <td class="td">Ground Handling Fee</td>
+        <td class="td"><span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #eff6ff; border: 1px solid #bfdbfe; color: #2563eb;">/kg</span></td>
+        <td class="td" style="font-size: 10px;">1 vendor</td>
+        <td class="td" style="font-size: 10px;">1 rate</td>
+      </tr>
+
+      <!-- EC group header -->
+      <tr>
+        <td colspan="5" style="padding: 8px 10px; background: #f3f4f6; border-bottom: 1px solid #e5e7eb; font-size: 11px; font-weight: 600; color: #111827;">
+          <span class="chip" style="background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF; margin-right: 6px;">EC</span>
+          Export Customs
+          <span style="font-weight: 400; color: #9ca3af; margin-left: 8px; font-size: 10px;">3 sub-services</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="td"><span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">EC001</span></td>
+        <td class="td">Customs Declaration Fee</td>
+        <td class="td"><span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #f3f4f6; border: 1px solid #e5e7eb; color: #6b7280;">/trip</span></td>
+        <td class="td" style="font-size: 10px;">3 vendors</td>
+        <td class="td" style="font-size: 10px;">5 rates</td>
+      </tr>
+      <tr>
+        <td class="td"><span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">EC002</span></td>
+        <td class="td">Customs Inspection Fee</td>
+        <td class="td"><span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #f3f4f6; border: 1px solid #e5e7eb; color: #6b7280;">/trip</span></td>
+        <td class="td" style="font-size: 10px;">2 vendors</td>
+        <td class="td" style="font-size: 10px;">2 rates</td>
+      </tr>
+      <tr>
+        <td class="td" style="border-bottom: none;"><span class="mono" style="font-size: 10px; color: #152CFF; font-weight: 500;">EC003</span></td>
+        <td class="td" style="border-bottom: none;">Customs Service Fee</td>
+        <td class="td" style="border-bottom: none;"><span style="display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: #f3f4f6; border: 1px solid #e5e7eb; color: #6b7280;">/trip</span></td>
+        <td class="td" style="border-bottom: none; font-size: 10px;">1 vendor</td>
+        <td class="td" style="border-bottom: none; font-size: 10px;">1 rate</td>
+      </tr>
+
+      <!-- FM + OH truncated with note -->
+    </tbody>
+  </table>
+  <div style="padding: 8px 16px; background: #f9fafb; border-top: 1px solid #e5e7eb; font-size: 10px; color: #9ca3af; text-align: center; font-style: italic;">
+    ... FM Trucking (3 sub-services) and OH Origin Handling (5 sub-services) continue below ...
+  </div>
+
+</div>
+
+
+<!-- ============================================ -->
+<!-- VERDICT                                       -->
+<!-- ============================================ -->
+
+<div class="verdict">
+<h3>Verdict: Option A — Expandable Tree Table</h3>
+<p style="font-size: 12px; color: #374151; line-height: 1.6;">
+The L1/L2 hierarchy IS a tree. The UI should reflect that structure. Expand what you need, collapse what you don't. Each collapsed L1 row shows a count badge ("6 sub-services") so you always know the scope. Expanded rows show full L2 detail with Cost IDs in JetBrains Mono, color-coded unit type badges, and vendor/rate coverage counts.
+</p>
+<ul style="font-size: 11px; color: #374151; margin-top: 8px; padding-left: 16px; line-height: 1.8;">
+<li><strong>Tree table</strong> — 5 expandable L1 rows, 19 L2 child rows total</li>
+<li><strong>Collapsed state</strong> — shows L1 badge, name, sub-service count, aggregate vendor/rate counts</li>
+<li><strong>Expanded state</strong> — shows L2 rows with Cost ID (mono), name, unit badge, per-fee vendor/rate counts</li>
+<li><strong>Unit badges</strong> — color-coded per existing design system: gray /trip, blue /kg, purple /bag, amber /CBM</li>
+<li><strong>"+ Add L2 Fee" button</strong> — scoped to each L1 section, prevents misclassification</li>
+<li><strong>Stats bar</strong> — 5 L1 services, 19 L2 fees, N rates configured, N active vendors</li>
+<li><strong>Source of truth</strong> — this table defines the rows that appear in vendor rate sheets (HMW-31) and the fees that auto-populate on jobs (HMW-25/26)</li>
+</ul>
+<p style="font-size: 11px; color: #6b7280; margin-top: 12px;">
+<strong>Why not Option B?</strong> Two-panel layout is overkill for 5 L1 items — left panel wastes 220px showing a 5-item list. Can't see the full taxonomy at once.<br>
+<strong>Why not Option C?</strong> Flat table works but loses the hierarchy affordance. At 19 rows it's fine, but it doesn't communicate the L1/L2 relationship as effectively. The tree table makes the parent-child structure explicit and allows progressive disclosure.
+</p>
+</div>
+
+</div>
+</body>
+</html>

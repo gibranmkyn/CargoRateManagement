@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-35: Unit Type Flexibility</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+h3 { font-size: 14px; font-weight: 700; margin: 20px 0 8px; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.rationale strong { color: #111827; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: rgba(21,44,255,0.04); border: 2px solid rgba(21,44,255,0.2); border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #152CFF; font-size: 14px; margin-bottom: 6px; }
+.nav { height: 40px; background: #111827; display: flex; align-items: center; padding: 0 16px; gap: 16px; }
+.nav .logo { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; }
+.nav .brand { font-weight: 700; font-size: 13px; color: #fff; }
+.nav .link { font-size: 12px; color: rgba(255,255,255,0.5); }
+.nav .link.active { color: #fff; font-weight: 600; padding: 4px 10px; background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+/* Unit badges matching DESIGN.md */
+.unit-badge { padding: 1px 5px; border-radius: 3px; font-size: 9px; font-weight: 600; font-family: 'JetBrains Mono', monospace; display: inline-block; }
+.unit-flat { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+.unit-kg { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+.unit-bag { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+.unit-cbm { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+
+/* Master data table styles */
+.md-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.md-table th { text-align: left; padding: 6px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+.md-table td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 11px; color: #374151; }
+.md-table tr:hover { background: #f9fafb; }
+.md-table .l1-row td { background: #f9fafb; font-weight: 700; border-bottom: 1px solid #e5e7eb; padding: 8px 10px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-35: Unit Type Flexibility</h1>
+
+<div class="hmw">
+"Should rate unit types (/trip, /bag, /kg, /cbm) be fixed per Cost ID globally, or configurable per vendor-route?"
+</div>
+
+<div class="context">
+<strong>The question:</strong> FM001 (Warehouse Transfer) is currently /trip (flat rate). But could a different vendor charge FM001 per-kg instead? This decision has a cascading impact on the rate sheet UI, the Services master data, and billing calculations.<br><br>
+<strong>If fixed per Cost ID:</strong> The rate sheet row label shows "/trip" and all cells in that row are the same unit. Simple, consistent. Every vendor charges FM001 the same way (flat rate), just different amounts.<br><br>
+<strong>If flexible:</strong> Each cell in the rate sheet grid needs its own unit dropdown. FM001 could be /trip for HaleSun but /kg for Gonda. That's 300+ unit dropdowns in a full rate sheet. More flexible, but noisy and inconsistent.<br><br>
+<strong>Real-world signal:</strong> Across 5 vendors and 20 Cost IDs, 95%+ of fee types use the same unit for all vendors. Registration fees are always /trip. Handling fees are always /kg. Retrieval is always /bag. The unit is inherent to the fee type, not the vendor.
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION A: FIXED PER COST ID                  -->
+<!-- ============================================ -->
+
+<h2>Option A: Fixed Per Cost ID in Master Data</h2>
+<span class="label" style="background: rgba(21,44,255,0.06); color: #152CFF;">Recommended</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Each L2 Cost ID has a default unit type defined once in master data (Services tab). FM001 = /trip, CR002 = /bag, OH003 = /kg. This applies everywhere. The rate sheet row label includes the unit, and all cells in that row are the same unit type. If a vendor genuinely charges a different unit for the same service, create a separate L2 Cost ID.
+
+<p style="margin-top: 8px;"><strong>How it works:</strong></p>
+<ul style="font-size: 11px; padding-left: 16px; line-height: 1.8;">
+<li>Services master data defines L1/L2 hierarchy with unit type per Cost ID</li>
+<li>Rate sheet rows inherit the unit from master data and display it on the label</li>
+<li>All cells in a row are the same unit -- just enter the amount</li>
+<li>Rate sheet inputs are amount-only, no unit dropdown needed</li>
+<li>Edge case: if a vendor charges per-kg for what's normally /trip, create a new Cost ID (e.g., FM001A "Warehouse Transfer (weight-based)" /kg)</li>
+</ul>
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+- Simplest rate sheet UI: amount-only cells, no dropdowns<br>
+- Consistent: same fee = same unit everywhere<br>
+- Row labels are self-documenting ("FM001 Warehouse Transfer /trip")<br>
+- No ambiguity in billing calculations<br>
+- Matches 95%+ of real-world rate cards</div>
+<div class="cons"><strong>Cons</strong><br>
+- 5% edge case requires creating a new Cost ID<br>
+- Slightly more master data management<br>
+- Can't accommodate vendor-specific pricing models without a new L2 entry</div>
+</div>
+</div>
+
+<!-- Mockup A1: Services master data -->
+<h3>Services master data with unit type per Cost ID</h3>
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link">Delivery Orders</span>
+  <span class="link">Rates</span>
+  <span class="link">Billing</span>
+  <span class="link active">Master Data</span>
+</div>
+
+<div style="padding: 16px;">
+  <!-- Master Data sub-tabs -->
+  <div style="display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
+    <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">Locations</button>
+    <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">Vendors</button>
+    <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">Customers</button>
+    <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; cursor: pointer;">Services</button>
+  </div>
+
+  <!-- Header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <div>
+      <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">Service Catalog</h1>
+      <p style="font-size: 11px; color: #9ca3af;">L1/L2 service hierarchy with unit types. Unit type is fixed per Cost ID.</p>
+    </div>
+    <button style="padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: none; background: #152CFF; color: #fff; cursor: pointer;">+ Add L2 Fee Type</button>
+  </div>
+
+  <!-- Info banner -->
+  <div style="padding: 8px 12px; border-radius: 4px; font-size: 10px; display: flex; align-items: center; gap: 8px; background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.12); color: #152CFF; margin-bottom: 12px;">
+    <span style="font-weight: 700;">Unit type is global.</span> All rate sheet cells for a given Cost ID use the same unit. To support a different unit, create a new Cost ID.
+  </div>
+
+  <!-- Services table -->
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+  <table class="md-table">
+    <thead>
+      <tr>
+        <th style="width: 80px;">Cost ID</th>
+        <th style="width: 220px;">Fee Name</th>
+        <th style="width: 100px;">Unit Type</th>
+        <th style="width: 80px;">Rate Type</th>
+        <th>Description</th>
+        <th style="width: 60px;"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- FM L1 -->
+      <tr class="l1-row">
+        <td colspan="6" style="color: #152CFF;">
+          <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.12);">FM</span>
+          <span style="margin-left: 4px;">Trucking</span>
+          <span style="font-weight: 400; color: #9ca3af; font-size: 10px; margin-left: 8px;">3 fee types</span>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size: 10px; font-weight: 600;">FM001</span></td>
+        <td style="font-weight: 500;">Warehouse Transfer Fee</td>
+        <td><span class="unit-badge unit-flat">/trip</span></td>
+        <td style="font-size: 10px; color: #9ca3af;">Route</td>
+        <td style="font-size: 10px; color: #9ca3af;">Flat rate per trip, origin to destination</td>
+        <td style="text-align: center;"><span style="color: #9ca3af; cursor: pointer; font-size: 10px;">Edit</span></td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size: 10px; font-weight: 600;">FM002</span></td>
+        <td style="font-weight: 500;">Pickup Fee</td>
+        <td><span class="unit-badge unit-flat">/trip</span></td>
+        <td style="font-size: 10px; color: #9ca3af;">Route</td>
+        <td style="font-size: 10px; color: #9ca3af;">Additional pickup charge per trip</td>
+        <td style="text-align: center;"><span style="color: #9ca3af; cursor: pointer; font-size: 10px;">Edit</span></td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size: 10px; font-weight: 600;">FM003</span></td>
+        <td style="font-weight: 500;">Cross-Border Handling Fee</td>
+        <td><span class="unit-badge unit-flat">/trip</span></td>
+        <td style="font-size: 10px; color: #9ca3af;">Route</td>
+        <td style="font-size: 10px; color: #9ca3af;">Cross-border documentation and handling</td>
+        <td style="text-align: center;"><span style="color: #9ca3af; cursor: pointer; font-size: 10px;">Edit</span></td>
+      </tr>
+
+      <!-- CR L1 -->
+      <tr class="l1-row">
+        <td colspan="6" style="color: #2563eb;">
+          <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(37,99,235,0.06); border: 1px solid rgba(37,99,235,0.12); color: #2563eb;">CR</span>
+          <span style="margin-left: 4px;">Cargo Retrieval</span>
+          <span style="font-weight: 400; color: #9ca3af; font-size: 10px; margin-left: 8px;">2 fee types</span>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size: 10px; font-weight: 600;">CR001</span></td>
+        <td style="font-weight: 500;">Registration Fee</td>
+        <td><span class="unit-badge unit-flat">/trip</span></td>
+        <td style="font-size: 10px; color: #9ca3af;">Location</td>
+        <td style="font-size: 10px; color: #9ca3af;">Fixed registration per retrieval</td>
+        <td style="text-align: center;"><span style="color: #9ca3af; cursor: pointer; font-size: 10px;">Edit</span></td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size: 10px; font-weight: 600;">CR002</span></td>
+        <td style="font-weight: 500;">Cargo Retrieval Pick Up Fee</td>
+        <td><span class="unit-badge unit-bag">/bag</span></td>
+        <td style="font-size: 10px; color: #9ca3af;">Location</td>
+        <td style="font-size: 10px; color: #9ca3af;">Per-bag charge at pickup location</td>
+        <td style="text-align: center;"><span style="color: #9ca3af; cursor: pointer; font-size: 10px;">Edit</span></td>
+      </tr>
+
+      <!-- OH L1 -->
+      <tr class="l1-row">
+        <td colspan="6" style="color: #d97706;">
+          <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(217,119,6,0.06); border: 1px solid rgba(217,119,6,0.12); color: #d97706;">OH</span>
+          <span style="margin-left: 4px;">Origin Handling</span>
+          <span style="font-weight: 400; color: #9ca3af; font-size: 10px; margin-left: 8px;">5 fee types</span>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size: 10px; font-weight: 600;">OH001</span></td>
+        <td style="font-weight: 500;">MAWB Fee</td>
+        <td><span class="unit-badge unit-flat">/trip</span></td>
+        <td style="font-size: 10px; color: #9ca3af;">Location</td>
+        <td style="font-size: 10px; color: #9ca3af;">Fixed fee per MAWB</td>
+        <td style="text-align: center;"><span style="color: #9ca3af; cursor: pointer; font-size: 10px;">Edit</span></td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size: 10px; font-weight: 600;">OH002</span></td>
+        <td style="font-weight: 500;">Loading/Unloading Fee</td>
+        <td><span class="unit-badge unit-bag">/bag</span></td>
+        <td style="font-size: 10px; color: #9ca3af;">Location</td>
+        <td style="font-size: 10px; color: #9ca3af;">Per-bag loading at origin</td>
+        <td style="text-align: center;"><span style="color: #9ca3af; cursor: pointer; font-size: 10px;">Edit</span></td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size: 10px; font-weight: 600;">OH003</span></td>
+        <td style="font-weight: 500;">Handling Fee</td>
+        <td><span class="unit-badge unit-kg">/kg</span></td>
+        <td style="font-size: 10px; color: #9ca3af;">Location</td>
+        <td style="font-size: 10px; color: #9ca3af;">Per-kg handling at warehouse</td>
+        <td style="text-align: center;"><span style="color: #9ca3af; cursor: pointer; font-size: 10px;">Edit</span></td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size: 10px; font-weight: 600;">OH004</span></td>
+        <td style="font-weight: 500;">Sorting Fee</td>
+        <td><span class="unit-badge unit-bag">/bag</span></td>
+        <td style="font-size: 10px; color: #9ca3af;">Location</td>
+        <td style="font-size: 10px; color: #9ca3af;">Per-bag sorting at warehouse</td>
+        <td style="text-align: center;"><span style="color: #9ca3af; cursor: pointer; font-size: 10px;">Edit</span></td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size: 10px; font-weight: 600;">OH005</span></td>
+        <td style="font-weight: 500;">Palletization/Build-Up Fee</td>
+        <td><span class="unit-badge unit-cbm">/cbm</span></td>
+        <td style="font-size: 10px; color: #9ca3af;">Location</td>
+        <td style="font-size: 10px; color: #9ca3af;">Per-CBM palletization at warehouse</td>
+        <td style="text-align: center;"><span style="color: #9ca3af; cursor: pointer; font-size: 10px;">Edit</span></td>
+      </tr>
+
+      <!-- CS L1 -->
+      <tr class="l1-row">
+        <td colspan="6" style="color: #059669;">
+          <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(5,150,105,0.06); border: 1px solid rgba(5,150,105,0.12); color: #059669;">CS</span>
+          <span style="margin-left: 4px;">Cargo Submission</span>
+          <span style="font-weight: 400; color: #9ca3af; font-size: 10px; margin-left: 8px;">6 fee types</span>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size: 10px; font-weight: 600;">CS001</span></td>
+        <td style="font-weight: 500;">Express Center Ground Handling</td>
+        <td><span class="unit-badge unit-kg">/kg</span></td>
+        <td style="font-size: 10px; color: #9ca3af;">Location</td>
+        <td style="font-size: 10px; color: #9ca3af;">Per-kg ground handling at express center</td>
+        <td style="text-align: center;"><span style="color: #9ca3af; cursor: pointer; font-size: 10px;">Edit</span></td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size: 10px; font-weight: 600;">CS002</span></td>
+        <td style="font-weight: 500;">Intl Cargo Terminal Transit</td>
+        <td><span class="unit-badge unit-kg">/kg</span></td>
+        <td style="font-size: 10px; color: #9ca3af;">Location</td>
+        <td style="font-size: 10px; color: #9ca3af;">Per-kg transit through international terminal</td>
+        <td style="text-align: center;"><span style="color: #9ca3af; cursor: pointer; font-size: 10px;">Edit</span></td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size: 10px; font-weight: 600;">CS003</span></td>
+        <td style="font-weight: 500;">RA Agent Fee</td>
+        <td><span class="unit-badge unit-flat">/trip</span></td>
+        <td style="font-size: 10px; color: #9ca3af;">Location</td>
+        <td style="font-size: 10px; color: #9ca3af;">Fixed RA agent fee per submission</td>
+        <td style="text-align: center;"><span style="color: #9ca3af; cursor: pointer; font-size: 10px;">Edit</span></td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size: 10px; font-weight: 600;">CS004</span></td>
+        <td style="font-weight: 500;">Security X-Ray Screening</td>
+        <td><span class="unit-badge unit-kg">/kg</span></td>
+        <td style="font-size: 10px; color: #9ca3af;">Location</td>
+        <td style="font-size: 10px; color: #9ca3af;">Per-kg security screening</td>
+        <td style="text-align: center;"><span style="color: #9ca3af; cursor: pointer; font-size: 10px;">Edit</span></td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size: 10px; font-weight: 600;">CS005</span></td>
+        <td style="font-weight: 500;">Terminal Handling Charges</td>
+        <td><span class="unit-badge unit-kg">/kg</span></td>
+        <td style="font-size: 10px; color: #9ca3af;">Location</td>
+        <td style="font-size: 10px; color: #9ca3af;">Per-kg terminal handling</td>
+        <td style="text-align: center;"><span style="color: #9ca3af; cursor: pointer; font-size: 10px;">Edit</span></td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size: 10px; font-weight: 600;">CS006</span></td>
+        <td style="font-weight: 500;">Ground Handling Fee</td>
+        <td><span class="unit-badge unit-kg">/kg</span></td>
+        <td style="font-size: 10px; color: #9ca3af;">Location</td>
+        <td style="font-size: 10px; color: #9ca3af;">Per-kg ground handling</td>
+        <td style="text-align: center;"><span style="color: #9ca3af; cursor: pointer; font-size: 10px;">Edit</span></td>
+      </tr>
+
+      <!-- EC L1 -->
+      <tr class="l1-row">
+        <td colspan="6" style="color: #dc2626;">
+          <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(220,38,38,0.06); border: 1px solid rgba(220,38,38,0.12); color: #dc2626;">EC</span>
+          <span style="margin-left: 4px;">Export Customs</span>
+          <span style="font-weight: 400; color: #9ca3af; font-size: 10px; margin-left: 8px;">3 fee types</span>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size: 10px; font-weight: 600;">EC001</span></td>
+        <td style="font-weight: 500;">Customs Declaration Fee</td>
+        <td><span class="unit-badge unit-flat">/trip</span></td>
+        <td style="font-size: 10px; color: #9ca3af;">Location</td>
+        <td style="font-size: 10px; color: #9ca3af;">Fixed fee per customs declaration</td>
+        <td style="text-align: center;"><span style="color: #9ca3af; cursor: pointer; font-size: 10px;">Edit</span></td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size: 10px; font-weight: 600;">EC002</span></td>
+        <td style="font-weight: 500;">Customs Inspection Fee</td>
+        <td><span class="unit-badge unit-flat">/trip</span></td>
+        <td style="font-size: 10px; color: #9ca3af;">Location</td>
+        <td style="font-size: 10px; color: #9ca3af;">Fixed inspection fee</td>
+        <td style="text-align: center;"><span style="color: #9ca3af; cursor: pointer; font-size: 10px;">Edit</span></td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size: 10px; font-weight: 600;">EC003</span></td>
+        <td style="font-weight: 500;">Customs Service Fee</td>
+        <td><span class="unit-badge unit-flat">/trip</span></td>
+        <td style="font-size: 10px; color: #9ca3af;">Location</td>
+        <td style="font-size: 10px; color: #9ca3af;">Fixed service fee per declaration</td>
+        <td style="text-align: center;"><span style="color: #9ca3af; cursor: pointer; font-size: 10px;">Edit</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Summary footer -->
+  <div style="padding: 8px 10px; background: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; font-size: 10px; color: #9ca3af;">
+    <span><strong style="color: #111827;">19</strong> L2 fee types across <strong style="color: #111827;">5</strong> L1 services</span>
+    <span>Unit type: <span class="unit-badge unit-flat">/trip</span> <span class="unit-badge unit-kg">/kg</span> <span class="unit-badge unit-bag">/bag</span> <span class="unit-badge unit-cbm">/cbm</span></span>
+  </div>
+  </div>
+</div>
+</div>
+
+<!-- Mockup A2: How this looks on the rate sheet -->
+<h3>Rate sheet with unit inherited from master data (amount-only cells)</h3>
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link">Delivery Orders</span>
+  <span class="link active">Rates</span>
+  <span class="link">Billing</span>
+  <span class="link">Master Data</span>
+</div>
+
+<div style="padding: 16px;">
+  <!-- Header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <div>
+      <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">Rate Cards</h1>
+      <p style="font-size: 11px; color: #9ca3af;">Unit type inherited from Service Catalog. Amount-only entry.</p>
+    </div>
+    <button style="padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: none; background: #152CFF; color: #fff; cursor: pointer;">Save Changes</button>
+  </div>
+
+  <!-- Vendor selector -->
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+    <span style="font-size: 11px; color: #9ca3af;">Vendor:</span>
+    <div style="display: flex; gap: 4px;">
+      <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; cursor: pointer;">HaleSun</button>
+      <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">Gonda</button>
+      <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">SevenSeas</button>
+    </div>
+  </div>
+
+  <!-- Rate Sheet -->
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+  <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+  <thead>
+    <tr>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: #fff; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; width: 230px; position: sticky; left: 0; z-index: 1;">
+        L2 Fee Type
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 120px;">
+        <div>TikTok WH &rarr; SZ Bay</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.4); margin-top: 1px;">Shenzhen</div>
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 120px;">
+        <div>DG Cross-dock &rarr; SZX</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.4); margin-top: 1px;">Dongguan &rarr; Shenzhen</div>
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 120px;">
+        <div>GZ WH &rarr; Huangpu</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.4); margin-top: 1px;">Guangzhou</div>
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- FM L1 header -->
+    <tr style="background: #f9fafb;">
+      <td colspan="4" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #152CFF; border-bottom: 1px solid #e5e7eb;">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.12);">FM</span>
+        Trucking
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM001</span> Warehouse Transfer
+        <span class="unit-badge unit-flat" style="margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 450" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 520" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 380" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM002</span> Pickup Fee
+        <span class="unit-badge unit-flat" style="margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 30" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 35" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 25" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+
+    <!-- OH L1 header -->
+    <tr style="background: #f9fafb;">
+      <td colspan="4" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #d97706; border-bottom: 1px solid #e5e7eb;">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(217,119,6,0.06); border: 1px solid rgba(217,119,6,0.12); color: #d97706;">OH</span>
+        Origin Handling
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">OH003</span> Handling Fee
+        <span class="unit-badge unit-kg" style="margin-left: 4px;">/kg</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 0.12" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 0.15" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 0.10" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">OH004</span> Sorting Fee
+        <span class="unit-badge unit-bag" style="margin-left: 4px;">/bag</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 8" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 10" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 7" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #e5e7eb; background: #fff; position: sticky; left: 0;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">OH005</span> Palletization
+        <span class="unit-badge unit-cbm" style="margin-left: 4px;">/cbm</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="RM 45" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="RM 50" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="" placeholder="---" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; color: #d1d5db; text-align: right;">
+      </td>
+    </tr>
+  </tbody>
+  </table>
+
+  <!-- Footer callout -->
+  <div style="padding: 8px 10px; background: #f9fafb; border-top: 1px solid #e5e7eb; font-size: 10px; color: #9ca3af;">
+    Unit types are fixed per Cost ID. To change the unit, edit the <a href="#" style="color: #152CFF; text-decoration: none; font-weight: 600;">Service Catalog</a>.
+  </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION B: FLEXIBLE PER CELL                  -->
+<!-- ============================================ -->
+
+<h2>Option B: Flexible Per Cell</h2>
+<span class="label" style="background: #fef2f2; color: #dc2626;">Not Recommended</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Each rate cell has its own unit type dropdown. FM001 could be /trip for HaleSun on route A but /kg for Gonda on route B. Maximum flexibility, but the rate sheet becomes cluttered with 300+ dropdowns, and it's unclear at a glance what unit a row uses.
+
+<p style="margin-top: 8px;"><strong>How it works:</strong></p>
+<ul style="font-size: 11px; padding-left: 16px; line-height: 1.8;">
+<li>Each cell = amount input + unit dropdown side by side</li>
+<li>No unit shown on the row label (because it varies)</li>
+<li>Vendor A might charge FM001 /trip, Vendor B might charge FM001 /kg</li>
+<li>Billing must check each cell's unit independently</li>
+</ul>
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+- Maximum flexibility for edge cases<br>
+- No need to create new Cost IDs for different units<br>
+- Vendors with non-standard pricing can be accommodated</div>
+<div class="cons"><strong>Cons</strong><br>
+- 300+ unit dropdowns clutter the rate sheet<br>
+- Inconsistent: same fee, different units across vendors<br>
+- Higher error risk (wrong unit selected)<br>
+- Billing calculations become per-cell, not per-row<br>
+- No visual consistency -- can't scan a row and know the unit</div>
+</div>
+</div>
+
+<!-- Mockup B: Per-cell dropdowns -->
+<h3>Rate sheet with per-cell unit dropdowns (cluttered)</h3>
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link">Delivery Orders</span>
+  <span class="link active">Rates</span>
+  <span class="link">Billing</span>
+  <span class="link">Master Data</span>
+</div>
+
+<div style="padding: 16px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <div>
+      <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">Rate Cards</h1>
+      <p style="font-size: 11px; color: #9ca3af;">Unit type is per-cell. Each cell has its own amount + unit.</p>
+    </div>
+  </div>
+
+  <!-- Vendor selector -->
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+    <span style="font-size: 11px; color: #9ca3af;">Vendor:</span>
+    <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; cursor: pointer;">HaleSun</button>
+    <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">Gonda</button>
+  </div>
+
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+  <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+  <thead>
+    <tr>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: #fff; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; width: 180px;">
+        L2 Fee Type
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 170px;">
+        <div>TikTok WH &rarr; SZ Bay</div>
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 170px;">
+        <div>DG Cross-dock &rarr; SZX</div>
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 170px;">
+        <div>GZ WH &rarr; Huangpu</div>
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- FM L1 header -->
+    <tr style="background: #f9fafb;">
+      <td colspan="4" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #152CFF; border-bottom: 1px solid #e5e7eb;">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.12);">FM</span>
+        Trucking
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM001</span> Warehouse Transfer
+        <!-- no unit badge here -- it varies per cell -->
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <div style="display: flex; gap: 3px; align-items: center;">
+          <input type="text" value="RM 450" style="width: 68px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 5px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+          <select style="font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 2px; border: 1px solid #e5e7eb; border-radius: 3px; color: #6b7280; background: #f3f4f6;">
+            <option selected>/trip</option>
+            <option>/kg</option>
+            <option>/bag</option>
+            <option>/cbm</option>
+          </select>
+        </div>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <div style="display: flex; gap: 3px; align-items: center;">
+          <input type="text" value="RM 520" style="width: 68px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 5px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+          <select style="font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 2px; border: 1px solid #e5e7eb; border-radius: 3px; color: #6b7280; background: #f3f4f6;">
+            <option selected>/trip</option>
+            <option>/kg</option>
+            <option>/bag</option>
+            <option>/cbm</option>
+          </select>
+        </div>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <div style="display: flex; gap: 3px; align-items: center;">
+          <input type="text" value="RM 380" style="width: 68px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 5px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+          <select style="font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 2px; border: 1px solid #e5e7eb; border-radius: 3px; color: #6b7280; background: #f3f4f6;">
+            <option selected>/trip</option>
+            <option>/kg</option>
+            <option>/bag</option>
+            <option>/cbm</option>
+          </select>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM002</span> Pickup Fee
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <div style="display: flex; gap: 3px; align-items: center;">
+          <input type="text" value="RM 30" style="width: 68px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 5px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+          <select style="font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 2px; border: 1px solid #e5e7eb; border-radius: 3px; color: #6b7280; background: #f3f4f6;">
+            <option selected>/trip</option>
+            <option>/kg</option>
+            <option>/bag</option>
+            <option>/cbm</option>
+          </select>
+        </div>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <div style="display: flex; gap: 3px; align-items: center;">
+          <input type="text" value="RM 35" style="width: 68px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 5px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+          <select style="font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 2px; border: 1px solid #e5e7eb; border-radius: 3px; color: #6b7280; background: #f3f4f6;">
+            <option selected>/trip</option>
+            <option>/kg</option>
+            <option>/bag</option>
+            <option>/cbm</option>
+          </select>
+        </div>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <div style="display: flex; gap: 3px; align-items: center;">
+          <input type="text" value="RM 25" style="width: 68px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 5px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+          <select style="font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 2px; border: 1px solid #e5e7eb; border-radius: 3px; color: #6b7280; background: #f3f4f6;">
+            <option selected>/trip</option>
+            <option>/kg</option>
+            <option>/bag</option>
+            <option>/cbm</option>
+          </select>
+        </div>
+      </td>
+    </tr>
+
+    <!-- OH L1 header -->
+    <tr style="background: #f9fafb;">
+      <td colspan="4" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #d97706; border-bottom: 1px solid #e5e7eb;">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(217,119,6,0.06); border: 1px solid rgba(217,119,6,0.12); color: #d97706;">OH</span>
+        Origin Handling
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">OH003</span> Handling Fee
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <div style="display: flex; gap: 3px; align-items: center;">
+          <input type="text" value="RM 0.12" style="width: 68px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 5px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+          <select style="font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 2px; border: 1px solid #e5e7eb; border-radius: 3px; color: #6b7280; background: #f3f4f6;">
+            <option>/trip</option>
+            <option selected>/kg</option>
+            <option>/bag</option>
+            <option>/cbm</option>
+          </select>
+        </div>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <div style="display: flex; gap: 3px; align-items: center;">
+          <input type="text" value="RM 0.15" style="width: 68px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 5px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+          <select style="font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 2px; border: 1px solid #e5e7eb; border-radius: 3px; color: #6b7280; background: #f3f4f6;">
+            <option>/trip</option>
+            <option selected>/kg</option>
+            <option>/bag</option>
+            <option>/cbm</option>
+          </select>
+        </div>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <div style="display: flex; gap: 3px; align-items: center;">
+          <input type="text" value="RM 0.10" style="width: 68px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 5px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+          <select style="font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 2px; border: 1px solid #e5e7eb; border-radius: 3px; color: #6b7280; background: #f3f4f6;">
+            <option>/trip</option>
+            <option selected>/kg</option>
+            <option>/bag</option>
+            <option>/cbm</option>
+          </select>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #e5e7eb; background: #fff;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">OH004</span> Sorting Fee
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+        <div style="display: flex; gap: 3px; align-items: center;">
+          <input type="text" value="RM 8" style="width: 68px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 5px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+          <select style="font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 2px; border: 1px solid #e5e7eb; border-radius: 3px; color: #6b7280; background: #f3f4f6;">
+            <option>/trip</option>
+            <option>/kg</option>
+            <option selected>/bag</option>
+            <option>/cbm</option>
+          </select>
+        </div>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+        <div style="display: flex; gap: 3px; align-items: center;">
+          <input type="text" value="RM 10" style="width: 68px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 5px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+          <select style="font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 2px; border: 1px solid #e5e7eb; border-radius: 3px; color: #6b7280; background: #f3f4f6;">
+            <option>/trip</option>
+            <option>/kg</option>
+            <option selected>/bag</option>
+            <option>/cbm</option>
+          </select>
+        </div>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+        <div style="display: flex; gap: 3px; align-items: center;">
+          <input type="text" value="RM 7" style="width: 68px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 5px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+          <select style="font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 2px; border: 1px solid #e5e7eb; border-radius: 3px; color: #6b7280; background: #f3f4f6;">
+            <option>/trip</option>
+            <option>/kg</option>
+            <option selected>/bag</option>
+            <option>/cbm</option>
+          </select>
+        </div>
+      </td>
+    </tr>
+  </tbody>
+  </table>
+
+  <!-- Warning -->
+  <div style="padding: 8px 10px; background: #fefce8; border-top: 1px solid #fde68a; font-size: 10px; color: #92400e; display: flex; align-items: center; gap: 6px;">
+    <span style="font-weight: 700;">Warning:</span> 6 rows x 3 routes = 18 unit dropdowns shown. Full rate sheet (20 rows x 5 routes) = 100+ dropdowns.
+  </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION C: DEFAULT WITH OVERRIDE              -->
+<!-- ============================================ -->
+
+<h2>Option C: Default With Override</h2>
+<span class="label" style="background: #fffbeb; color: #b45309;">Compromise</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Unit type defaults from master data (like Option A) but can be overridden per vendor-route cell. Overridden cells show an amber dot indicator meaning "non-standard unit." This is a compromise between consistency and flexibility.
+
+<p style="margin-top: 8px;"><strong>How it works:</strong></p>
+<ul style="font-size: 11px; padding-left: 16px; line-height: 1.8;">
+<li>Row label shows the default unit from master data (e.g., FM001 /trip)</li>
+<li>Cells default to the master data unit -- amount-only input</li>
+<li>Right-click or click a small icon to override the unit for that specific cell</li>
+<li>Overridden cells show an amber dot: "This cell uses a non-standard unit"</li>
+<li>Hover the amber dot to see: "Default: /trip. Override: /kg"</li>
+</ul>
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+- 95% of cells stay clean (amount only, inherited unit)<br>
+- 5% edge cases handled without new Cost IDs<br>
+- Visual indicator makes overrides scannable</div>
+<div class="cons"><strong>Cons</strong><br>
+- Adds a hidden interaction (right-click / icon to override)<br>
+- Override mechanism is non-obvious -- training required<br>
+- Mixed units in same row = confusing billing calculations<br>
+- Amber dots add visual noise to an already dense grid<br>
+- "Is this row /trip or /kg?" becomes ambiguous</div>
+</div>
+</div>
+
+<!-- Mockup C: Default with override -->
+<h3>Rate sheet with default units and amber override indicators</h3>
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link">Delivery Orders</span>
+  <span class="link active">Rates</span>
+  <span class="link">Billing</span>
+  <span class="link">Master Data</span>
+</div>
+
+<div style="padding: 16px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <div>
+      <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">Rate Cards</h1>
+      <p style="font-size: 11px; color: #9ca3af;">Default unit from master data. Override per cell if needed.</p>
+    </div>
+  </div>
+
+  <!-- Vendor selector -->
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+    <span style="font-size: 11px; color: #9ca3af;">Vendor:</span>
+    <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; cursor: pointer;">Gonda</button>
+    <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">HaleSun</button>
+    <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">SevenSeas</button>
+  </div>
+
+  <!-- Legend -->
+  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px; font-size: 10px; color: #9ca3af;">
+    <span style="display: flex; align-items: center; gap: 4px;">
+      <span style="width: 6px; height: 6px; border-radius: 50%; background: #d97706; display: inline-block;"></span>
+      Amber dot = unit overridden from default
+    </span>
+  </div>
+
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+  <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+  <thead>
+    <tr>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: #fff; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; width: 230px;">
+        L2 Fee Type
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 130px;">
+        <div>TikTok WH &rarr; SZ Bay</div>
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 130px;">
+        <div>DG Cross-dock &rarr; SZX</div>
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 130px;">
+        <div>GZ WH &rarr; Huangpu</div>
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- FM L1 header -->
+    <tr style="background: #f9fafb;">
+      <td colspan="4" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #152CFF; border-bottom: 1px solid #e5e7eb;">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.12);">FM</span>
+        Trucking
+      </td>
+    </tr>
+    <!-- FM001: default is /trip, but Gonda overrides one route to /kg -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM001</span> Warehouse Transfer
+        <span class="unit-badge unit-flat" style="margin-left: 4px;">/trip</span>
+      </td>
+      <!-- Standard: /trip -->
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 480" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <!-- OVERRIDDEN: /kg instead of /trip -->
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <input type="text" value="RM 0.85" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #fde68a; border-radius: 3px; font-weight: 600; color: #111827; text-align: right; background: #fffef5;">
+          <span title="Override: /kg (default: /trip)" style="display: flex; align-items: center; gap: 2px; cursor: help;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #d97706; display: inline-block;"></span>
+            <span class="unit-badge unit-kg" style="font-size: 8px;">/kg</span>
+          </span>
+        </div>
+      </td>
+      <!-- Standard: /trip -->
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 420" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #e5e7eb; background: #fff;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM002</span> Pickup Fee
+        <span class="unit-badge unit-flat" style="margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="RM 35" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="RM 40" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="RM 30" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+
+    <!-- OH L1 header -->
+    <tr style="background: #f9fafb;">
+      <td colspan="4" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #d97706; border-bottom: 1px solid #e5e7eb;">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(217,119,6,0.06); border: 1px solid rgba(217,119,6,0.12); color: #d97706;">OH</span>
+        Origin Handling
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">OH003</span> Handling Fee
+        <span class="unit-badge unit-kg" style="margin-left: 4px;">/kg</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 0.14" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <!-- OVERRIDDEN: /cbm instead of /kg -->
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <input type="text" value="RM 38" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #fde68a; border-radius: 3px; font-weight: 600; color: #111827; text-align: right; background: #fffef5;">
+          <span title="Override: /cbm (default: /kg)" style="display: flex; align-items: center; gap: 2px; cursor: help;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #d97706; display: inline-block;"></span>
+            <span class="unit-badge unit-cbm" style="font-size: 8px;">/cbm</span>
+          </span>
+        </div>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 0.11" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #e5e7eb; background: #fff;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">OH004</span> Sorting Fee
+        <span class="unit-badge unit-bag" style="margin-left: 4px;">/bag</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="RM 9" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="RM 11" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="RM 8" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+  </tbody>
+  </table>
+
+  <!-- Override summary -->
+  <div style="padding: 8px 10px; background: #fffef5; border-top: 1px solid #fde68a; font-size: 10px; color: #92400e; display: flex; align-items: center; gap: 6px;">
+    <span style="width: 6px; height: 6px; border-radius: 50%; background: #d97706; display: inline-block;"></span>
+    <strong>2 overrides</strong> in this rate card. FM001 DG route uses /kg instead of /trip. OH003 DG route uses /cbm instead of /kg.
+  </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- VERDICT                                      -->
+<!-- ============================================ -->
+
+<div class="verdict">
+  <h3>Verdict: Option A -- Fixed Per Cost ID in Master Data</h3>
+  <p style="font-size: 12px; line-height: 1.7; color: #374151;">
+    <strong>Recommended: Option A.</strong> Unit types should be fixed per Cost ID, defined once in the Service Catalog (Master Data > Services).
+  </p>
+  <ul style="font-size: 11px; line-height: 1.8; padding-left: 16px; color: #374151; margin-top: 8px;">
+    <li><strong>Simplest rate sheet:</strong> Amount-only cells. No unit dropdowns. No ambiguity. Tab through cells like a spreadsheet.</li>
+    <li><strong>Self-documenting rows:</strong> "FM001 Warehouse Transfer /trip" tells you everything. You know every cell in that row is a flat rate.</li>
+    <li><strong>Consistent billing:</strong> Rate x qty calculation is the same for every cell in a row. No per-cell unit checking.</li>
+    <li><strong>95/5 rule:</strong> 95%+ of real rate cards use the same unit per fee type across all vendors. The 5% edge case (vendor charges per-kg for a normally /trip fee) is handled by creating a new Cost ID -- which is actually the correct business modeling. A per-kg warehouse transfer is a fundamentally different service.</li>
+    <li><strong>Option B (per-cell) rejected:</strong> 300+ dropdowns in a full grid is unacceptable noise. The flexibility isn't worth the cognitive overhead.</li>
+    <li><strong>Option C (default + override) rejected:</strong> Adds hidden interactions and amber dots for a 5% case. The complexity isn't justified.</li>
+  </ul>
+
+  <div style="margin-top: 12px; padding: 10px; background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.12); border-radius: 4px; font-size: 11px; color: #152CFF;">
+    <strong>Implementation note:</strong> Services master data table needs a "Unit Type" column with values: /trip, /kg, /bag, /cbm. Rate sheet rows inherit the unit and display it on the row label. Rate cells are amount-only inputs. If a new unit type is needed, it's added to the enum in master data config.
+  </div>
+</div>
+
+</div>
+</body>
+</html>

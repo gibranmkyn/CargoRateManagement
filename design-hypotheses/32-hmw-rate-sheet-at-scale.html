@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-32: Rate Sheet at Scale — 15+ Routes × 20 L2 Fees</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+h3 { font-size: 14px; font-weight: 700; margin: 20px 0 8px; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: rgba(21,44,255,0.04); border: 2px solid rgba(21,44,255,0.2); border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #152CFF; font-size: 14px; margin-bottom: 6px; }
+.nav { height: 40px; background: #111827; display: flex; align-items: center; padding: 0 16px; gap: 16px; }
+.nav .logo { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; }
+.nav .brand { font-weight: 700; font-size: 13px; color: #fff; }
+.nav .link { font-size: 12px; color: rgba(255,255,255,0.5); }
+.nav .link.active { color: #fff; font-weight: 600; padding: 4px 10px; background: rgba(255,255,255,0.1); border-radius: 4px; }
+.th { text-align: left; padding: 6px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+.td { padding: 8px 10px; font-size: 11px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+.chip { padding: 3px 8px; border-radius: 99px; font-size: 9px; font-weight: 600; display: inline-block; }
+
+/* Zone-collapse animation */
+.zone-group { transition: all 0.15s ease; }
+.zone-header { cursor: pointer; user-select: none; }
+.zone-header:hover { background: rgba(255,255,255,0.12) !important; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-32: Rate Sheet at Scale</h1>
+
+<div class="hmw">
+How might we keep the vendor rate sheet usable when a vendor serves 15+ routes with 20 L2 fee types — 300+ cells?
+</div>
+
+<div class="context">
+<strong>The scale problem:</strong> HMW-31 introduced the vendor rate sheet — a spreadsheet grid where rows = L2 fee types and columns = routes. At 4 routes, the grid was manageable. But real vendors like HaleSun serve 15+ routes across Shenzhen, Guangzhou, and Hong Kong. That's 20 rows × 15 columns = 300+ cells. Horizontal scrolling becomes brutal — you lose sight of which fee type you're editing.
+<br><br>
+<strong>The real-world pattern:</strong> Ops rarely edits ALL routes at once. They typically work on 3-5 routes in a zone (e.g., "update all Shenzhen rates"). The grid needs to support scale without forcing users to scroll through zones they're not working on.
+<br><br>
+<strong>Math:</strong> 5 L1 services × 2-6 L2 fees each = 19 rows. 15 routes across 3 zones (Shenzhen: 5, Guangzhou: 5, Hong Kong: 5) = 15 columns. At ~140px per column, that's 2,100px of horizontal content — well beyond any viewport.
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION A: ZONE-GROUPED COLUMNS + FROZEN COL  -->
+<!-- ============================================ -->
+
+<h2>Option A: Zone-Grouped Columns + Frozen First Column</h2>
+<span class="label" style="background: rgba(21,44,255,0.06); color: #152CFF;">Recommended</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Group route columns by zone and make zone groups collapsible. First column (L2 fee names) is sticky — always visible. Expand only the zone you're working on. This turns 15 columns into 3-5 visible columns at a time, keeping the spreadsheet power without the scroll pain.
+
+<p style="margin-top: 8px;"><strong>How it works:</strong></p>
+<ul style="font-size: 11px; padding-left: 16px; line-height: 1.8;">
+<li>Route columns are grouped under zone headers: Shenzhen (5), Guangzhou (5), Hong Kong (5)</li>
+<li>Click zone header to expand/collapse — only shows routes in that zone</li>
+<li>Collapsed zone shows a summary: "5 routes · 42 rates" so you know what's inside</li>
+<li>First column (L2 fee type) is sticky/frozen — always visible while scrolling</li>
+<li>Typical workflow: expand Shenzhen, edit 5 routes, collapse, expand Guangzhou, repeat</li>
+<li>Multiple zones can be open simultaneously if needed for cross-zone comparison</li>
+</ul>
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Keeps the spreadsheet grid — cross-route comparison within a zone<br>
+• Reduces visible columns from 15 to 5-8 at a time<br>
+• Frozen first column means you always know what fee you're editing<br>
+• Zone grouping matches mental model: "I'm updating Shenzhen rates"<br>
+• Collapsed zones act as bookmarks — see where rates exist at a glance</div>
+<div class="cons"><strong>Cons</strong><br>
+• Cross-zone comparison requires opening 2 zones (wider view)<br>
+• Zone assignment must be maintained in master data<br>
+• Slightly more complex UI than flat grid</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link">Delivery Orders</span>
+  <span class="link active">Rates</span>
+  <span class="link">Billing</span>
+  <span class="link">Master Data</span>
+</div>
+
+<div style="padding: 16px;">
+  <!-- Header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <div>
+      <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">Rate Cards</h1>
+      <p style="font-size: 11px; color: #9ca3af;">Manage vendor rate cards by service and route</p>
+    </div>
+  </div>
+
+  <!-- Vendor selector -->
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+    <span style="font-size: 11px; color: #9ca3af;">Vendor:</span>
+    <div style="display: flex; gap: 4px;">
+      <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; cursor: pointer;">HaleSun</button>
+      <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">Gonda</button>
+      <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">SevenSeas</button>
+      <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">ThaiKee</button>
+      <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">The Lorry</button>
+    </div>
+    <div style="margin-left: auto; display: flex; gap: 6px; align-items: center;">
+      <span style="font-size: 10px; color: #9ca3af;">15 routes · 3 zones</span>
+      <button style="padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: none; background: #152CFF; color: #fff; cursor: pointer;">Save Changes</button>
+    </div>
+  </div>
+
+  <!-- Rate Sheet with Zone Grouping -->
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+  <div style="overflow-x: auto;">
+  <table style="width: max-content; min-width: 100%; border-collapse: collapse; font-size: 10px;">
+  <thead>
+    <tr>
+      <!-- Frozen first column -->
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: #fff; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; width: 200px; min-width: 200px; position: sticky; left: 0; z-index: 10;">
+        L2 Fee Type
+      </th>
+
+      <!-- SHENZHEN ZONE — EXPANDED -->
+      <th class="zone-header" style="padding: 8px 10px; text-align: center; background: #152CFF; color: #fff; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; border-left: 2px solid rgba(255,255,255,0.2);" colspan="5">
+        <span style="display: inline-flex; align-items: center; gap: 6px;">
+          <span style="font-size: 8px;">&#9660;</span>
+          Shenzhen
+          <span style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; opacity: 0.7;">5 routes</span>
+        </span>
+      </th>
+
+      <!-- GUANGZHOU ZONE — COLLAPSED -->
+      <th class="zone-header" style="padding: 8px 10px; text-align: center; background: #374151; color: rgba(255,255,255,0.8); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; border-left: 2px solid rgba(255,255,255,0.1); cursor: pointer; min-width: 140px;" colspan="1">
+        <span style="display: inline-flex; align-items: center; gap: 6px;">
+          <span style="font-size: 8px;">&#9654;</span>
+          Guangzhou
+          <span style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; opacity: 0.6;">5 routes · 38 rates</span>
+        </span>
+      </th>
+
+      <!-- HONG KONG ZONE — COLLAPSED -->
+      <th class="zone-header" style="padding: 8px 10px; text-align: center; background: #374151; color: rgba(255,255,255,0.8); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; border-left: 2px solid rgba(255,255,255,0.1); cursor: pointer; min-width: 140px;" colspan="1">
+        <span style="display: inline-flex; align-items: center; gap: 6px;">
+          <span style="font-size: 8px;">&#9654;</span>
+          Hong Kong
+          <span style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; opacity: 0.6;">5 routes · 31 rates</span>
+        </span>
+      </th>
+    </tr>
+
+    <!-- Route sub-headers (only for expanded zones) -->
+    <tr>
+      <th style="padding: 6px 10px; text-align: left; background: #1f2937; color: rgba(255,255,255,0.5); font-size: 8px; font-weight: 500; width: 200px; min-width: 200px; position: sticky; left: 0; z-index: 10; border-bottom: 1px solid #374151;">
+        <!-- empty for alignment -->
+      </th>
+
+      <!-- Shenzhen route columns -->
+      <th style="padding: 6px 10px; text-align: left; background: #1f2937; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; min-width: 130px; border-left: 2px solid #374151; border-bottom: 1px solid #374151;">
+        <div>TikTok WH → SZ Bay</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.35); margin-top: 1px;">Route · RM</div>
+      </th>
+      <th style="padding: 6px 10px; text-align: left; background: #1f2937; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; min-width: 130px; border-bottom: 1px solid #374151;">
+        <div>Shein WH → SZX</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.35); margin-top: 1px;">Route · RM</div>
+      </th>
+      <th style="padding: 6px 10px; text-align: left; background: #1f2937; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; min-width: 130px; border-bottom: 1px solid #374151;">
+        <div>Temu DC → SZ Bay</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.35); margin-top: 1px;">Route · CNY</div>
+      </th>
+      <th style="padding: 6px 10px; text-align: left; background: #1f2937; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; min-width: 130px; border-bottom: 1px solid #374151;">
+        <div>DG Cross-dock → SZX</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.35); margin-top: 1px;">Route · RM</div>
+      </th>
+      <th style="padding: 6px 10px; text-align: left; background: #1f2937; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; min-width: 130px; border-bottom: 1px solid #374151;">
+        <div>Nanshan WH → SZX</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.35); margin-top: 1px;">Route · CNY</div>
+      </th>
+
+      <!-- Guangzhou collapsed — single summary cell -->
+      <td style="padding: 6px 10px; background: #f9fafb; border-left: 2px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; text-align: center; color: #9ca3af; font-size: 9px; font-style: italic; vertical-align: middle;">
+        click to expand
+      </td>
+
+      <!-- Hong Kong collapsed — single summary cell -->
+      <td style="padding: 6px 10px; background: #f9fafb; border-left: 2px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; text-align: center; color: #9ca3af; font-size: 9px; font-style: italic; vertical-align: middle;">
+        click to expand
+      </td>
+    </tr>
+  </thead>
+  <tbody>
+
+    <!-- ===== FM Trucking L1 header ===== -->
+    <tr style="background: #f9fafb;">
+      <td style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #152CFF; border-bottom: 1px solid #e5e7eb; position: sticky; left: 0; background: #f9fafb; z-index: 5;" colspan="1">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.12);">FM</span>
+        Trucking
+      </td>
+      <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; background: #f9fafb;" colspan="5"></td>
+      <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; border-left: 2px solid #e5e7eb;"></td>
+      <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; border-left: 2px solid #e5e7eb;"></td>
+    </tr>
+
+    <!-- FM001 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0; z-index: 5;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM001</span> Warehouse Transfer
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; border-left: 2px solid #eef0ff;">
+        <input type="text" value="450" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="480" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="3,200" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="520" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="2,800" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <!-- GZ collapsed -->
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+      <!-- HK collapsed -->
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+    </tr>
+
+    <!-- FM002 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0; z-index: 5;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM002</span> Pickup Fee
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; border-left: 2px solid #eef0ff;">
+        <input type="text" value="30" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="30" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="200" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="35" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="180" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+    </tr>
+
+    <!-- FM003 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #e5e7eb; background: #fff; position: sticky; left: 0; z-index: 5;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM003</span> Cross-Border Handling
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; border-left: 2px solid #eef0ff;">
+        <input type="text" value="45" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="45" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="" placeholder="—" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; color: #d1d5db; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="50" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="" placeholder="—" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; color: #d1d5db; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+    </tr>
+
+    <!-- ===== CR Cargo Retrieval L1 header ===== -->
+    <tr style="background: #f9fafb;">
+      <td style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #2563eb; border-bottom: 1px solid #e5e7eb; position: sticky; left: 0; background: #f9fafb; z-index: 5;" colspan="1">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(37,99,235,0.06); border: 1px solid rgba(37,99,235,0.12); color: #2563eb;">CR</span>
+        Cargo Retrieval
+      </td>
+      <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; background: #f9fafb;" colspan="5"></td>
+      <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; border-left: 2px solid #e5e7eb;"></td>
+      <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; border-left: 2px solid #e5e7eb;"></td>
+    </tr>
+
+    <!-- CR001 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0; z-index: 5;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">CR001</span> Registration Fee
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; border-left: 2px solid #eef0ff;">
+        <input type="text" value="15" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="15" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="100" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="15" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="100" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+    </tr>
+
+    <!-- CR002 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #e5e7eb; background: #fff; position: sticky; left: 0; z-index: 5;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">CR002</span> Cargo Retrieval Pick Up
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/bag</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; border-left: 2px solid #eef0ff;">
+        <input type="text" value="25" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="25" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="160" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="28" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="150" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+    </tr>
+
+    <!-- ===== CS Cargo Submission L1 header ===== -->
+    <tr style="background: #f9fafb;">
+      <td style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #7c3aed; border-bottom: 1px solid #e5e7eb; position: sticky; left: 0; background: #f9fafb; z-index: 5;" colspan="1">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(124,58,237,0.06); border: 1px solid rgba(124,58,237,0.12); color: #7c3aed;">CS</span>
+        Cargo Submission
+      </td>
+      <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; background: #f9fafb;" colspan="5"></td>
+      <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; border-left: 2px solid #e5e7eb;"></td>
+      <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; border-left: 2px solid #e5e7eb;"></td>
+    </tr>
+
+    <!-- CS001 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0; z-index: 5;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">CS001</span> Express Center Handling
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/kg</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; border-left: 2px solid #eef0ff;">
+        <input type="text" value="1.20" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="1.20" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="8.50" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="1.30" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="8.00" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+    </tr>
+
+    <!-- CS002 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0; z-index: 5;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">CS002</span> Intl Cargo Terminal
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/kg</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; border-left: 2px solid #eef0ff;">
+        <input type="text" value="0.80" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="0.80" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="5.60" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="" placeholder="—" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; color: #d1d5db; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="5.20" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+    </tr>
+
+    <!-- CS003 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0; z-index: 5;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">CS003</span> RA Agent Fee
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; border-left: 2px solid #eef0ff;">
+        <input type="text" value="50" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="50" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="350" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="55" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="320" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+    </tr>
+
+    <!-- CS004 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0; z-index: 5;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">CS004</span> Security X-Ray
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/kg</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; border-left: 2px solid #eef0ff;">
+        <input type="text" value="0.35" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="0.35" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="2.50" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="0.40" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="2.20" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+    </tr>
+
+    <!-- CS005 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0; z-index: 5;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">CS005</span> Terminal Handling
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/kg</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; border-left: 2px solid #eef0ff;">
+        <input type="text" value="0.60" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="0.60" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="4.20" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="" placeholder="—" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; color: #d1d5db; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="3.80" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+    </tr>
+
+    <!-- CS006 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #e5e7eb; background: #fff; position: sticky; left: 0; z-index: 5;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">CS006</span> Ground Handling
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/kg</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; border-left: 2px solid #eef0ff;">
+        <input type="text" value="0.45" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="0.45" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="3.00" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="0.50" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="2.80" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+    </tr>
+
+    <!-- ===== EC Export Customs L1 header ===== -->
+    <tr style="background: #f9fafb;">
+      <td style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #d97706; border-bottom: 1px solid #e5e7eb; position: sticky; left: 0; background: #f9fafb; z-index: 5;" colspan="1">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(217,119,6,0.06); border: 1px solid rgba(217,119,6,0.12); color: #d97706;">EC</span>
+        Export Customs
+      </td>
+      <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; background: #f9fafb;" colspan="5"></td>
+      <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; border-left: 2px solid #e5e7eb;"></td>
+      <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; border-left: 2px solid #e5e7eb;"></td>
+    </tr>
+
+    <!-- EC001 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0; z-index: 5;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">EC001</span> Customs Declaration
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; border-left: 2px solid #eef0ff;">
+        <input type="text" value="80" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="80" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="550" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="85" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="500" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+    </tr>
+
+    <!-- EC002 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0; z-index: 5;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">EC002</span> Customs Inspection
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; border-left: 2px solid #eef0ff;">
+        <input type="text" value="120" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="120" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="850" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="" placeholder="—" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; color: #d1d5db; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="800" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+    </tr>
+
+    <!-- EC003 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #e5e7eb; background: #fff; position: sticky; left: 0; z-index: 5;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">EC003</span> Customs Service
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; border-left: 2px solid #eef0ff;">
+        <input type="text" value="60" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="60" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="420" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="65" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="380" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+    </tr>
+
+    <!-- ===== OH Origin Handling L1 header ===== -->
+    <tr style="background: #f9fafb;">
+      <td style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #059669; border-bottom: 1px solid #e5e7eb; position: sticky; left: 0; background: #f9fafb; z-index: 5;" colspan="1">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(5,150,105,0.06); border: 1px solid rgba(5,150,105,0.12); color: #059669;">OH</span>
+        Origin Handling
+      </td>
+      <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; background: #f9fafb;" colspan="5"></td>
+      <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; border-left: 2px solid #e5e7eb;"></td>
+      <td style="padding: 6px 10px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; border-left: 2px solid #e5e7eb;"></td>
+    </tr>
+
+    <!-- OH001 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0; z-index: 5;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">OH001</span> MAWB Fee
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; border-left: 2px solid #eef0ff;">
+        <input type="text" value="100" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="100" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="680" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="100" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="650" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+    </tr>
+
+    <!-- OH002 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0; z-index: 5;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">OH002</span> Loading/Unloading
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/bag</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; border-left: 2px solid #eef0ff;">
+        <input type="text" value="5" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="5" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="35" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="6" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="30" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+    </tr>
+
+    <!-- OH003 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0; z-index: 5;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">OH003</span> Handling Fee
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/kg</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; border-left: 2px solid #eef0ff;">
+        <input type="text" value="0.25" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="0.25" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="1.80" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="0.28" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="1.60" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+    </tr>
+
+    <!-- OH004 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0; z-index: 5;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">OH004</span> Sorting Fee
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/bag</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; border-left: 2px solid #eef0ff;">
+        <input type="text" value="3" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="3" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="20" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="3" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="18" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+    </tr>
+
+    <!-- OH005 -->
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #e5e7eb; background: #fff; position: sticky; left: 0; z-index: 5;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">OH005</span> Palletization/Build-Up
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/bag</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; border-left: 2px solid #eef0ff;">
+        <input type="text" value="8" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="8" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="55" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="9" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="50" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; border-left: 2px solid #e5e7eb; text-align: center; color: #d1d5db; font-size: 9px;">···</td>
+    </tr>
+
+  </tbody>
+  </table>
+  </div>
+
+  <!-- Summary footer -->
+  <div style="padding: 8px 10px; background: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #9ca3af;">
+    <span>HaleSun: <strong style="color: #111827;">19</strong> L2 fees across <strong style="color: #111827;">15</strong> routes in <strong style="color: #111827;">3</strong> zones &nbsp;·&nbsp; <strong style="color: #152CFF;">Shenzhen expanded</strong> &nbsp;·&nbsp; Guangzhou, Hong Kong collapsed</span>
+    <span>Last updated: 24 Mar 2026</span>
+  </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION B: SINGLE ROUTE VIEW                   -->
+<!-- ============================================ -->
+
+<h2>Option B: Single Route View with Route Picker</h2>
+<span class="label" style="background: #f3f4f6; color: #6b7280;">Simple</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Instead of showing all routes at once, show a dropdown to pick ONE route at a time. The rate sheet becomes a simple vertical list: L2 fee type on the left, amount on the right. A "Copy from route" button lets you duplicate rates from an existing route.
+
+<p style="margin-top: 8px;"><strong>How it works:</strong></p>
+<ul style="font-size: 11px; padding-left: 16px; line-height: 1.8;">
+<li>Route dropdown at the top: select one route to view/edit</li>
+<li>Grid becomes a simple 2-column layout: L2 fee name | rate amount</li>
+<li>"Copy from route" duplicates all rates from another route as a starting point</li>
+<li>No horizontal scrolling at all — ever</li>
+</ul>
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Zero horizontal scrolling — always fits on screen<br>
+• Simple, obvious UI — no cognitive overhead<br>
+• Works on narrow screens and smaller monitors<br>
+• Easy to build and maintain</div>
+<div class="cons"><strong>Cons</strong><br>
+• Loses cross-route comparison entirely — can't see "is SZ cheaper than GZ?"<br>
+• Must switch routes and remember values for comparison<br>
+• Bulk rate entry for a new vendor = N separate sessions (one per route)<br>
+• "Copy from route" is a workaround for lacking side-by-side view</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link">Delivery Orders</span>
+  <span class="link active">Rates</span>
+  <span class="link">Billing</span>
+  <span class="link">Master Data</span>
+</div>
+
+<div style="padding: 16px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <div>
+      <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">Rate Cards</h1>
+      <p style="font-size: 11px; color: #9ca3af;">Manage vendor rate cards by service and route</p>
+    </div>
+  </div>
+
+  <!-- Vendor selector -->
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+    <span style="font-size: 11px; color: #9ca3af;">Vendor:</span>
+    <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; cursor: pointer;">HaleSun</button>
+    <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">Gonda</button>
+    <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">SevenSeas</button>
+  </div>
+
+  <!-- Route picker + Copy action -->
+  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding: 8px 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
+    <span style="font-size: 11px; color: #9ca3af;">Route:</span>
+    <select style="padding: 4px 8px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 11px; font-family: inherit; color: #111827; background: #fff;">
+      <option>TikTok WH → SZ Bao'an (Shenzhen)</option>
+      <option>Shein WH → SZX Airport (Shenzhen)</option>
+      <option>Temu DC → SZ Bao'an (Shenzhen)</option>
+      <option>DG Cross-dock → SZX (Dongguan → Shenzhen)</option>
+      <option>GZ WH → Huangpu (Guangzhou)</option>
+      <option>Shopee WH → CAN Airport (Guangzhou)</option>
+      <option>HK Kai Tak → HKIA (Hong Kong)</option>
+    </select>
+    <div style="margin-left: auto; display: flex; gap: 6px;">
+      <button style="padding: 4px 10px; border-radius: 4px; font-size: 10px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">Copy from route...</button>
+      <button style="padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: none; background: #152CFF; color: #fff; cursor: pointer;">Save</button>
+    </div>
+  </div>
+
+  <!-- Single-route rate list -->
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; max-width: 500px;">
+  <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+  <thead>
+    <tr>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: #fff; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;">
+        L2 Fee Type
+      </th>
+      <th style="padding: 8px 10px; text-align: right; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; width: 120px;">
+        Rate (RM)
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- FM -->
+    <tr style="background: #f9fafb;">
+      <td colspan="2" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #152CFF; border-bottom: 1px solid #e5e7eb;">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.12);">FM</span>
+        Trucking
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM001</span> Warehouse Transfer <span style="font-size: 8px; color: #9ca3af;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; text-align: right;">
+        <input type="text" value="450" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM002</span> Pickup Fee <span style="font-size: 8px; color: #9ca3af;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; text-align: right;">
+        <input type="text" value="30" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #e5e7eb;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM003</span> Cross-Border <span style="font-size: 8px; color: #9ca3af;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">
+        <input type="text" value="45" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+    <!-- CS header -->
+    <tr style="background: #f9fafb;">
+      <td colspan="2" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #7c3aed; border-bottom: 1px solid #e5e7eb;">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(124,58,237,0.06); border: 1px solid rgba(124,58,237,0.12); color: #7c3aed;">CS</span>
+        Cargo Submission
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">CS001</span> Express Center <span style="font-size: 8px; color: #9ca3af;">/kg</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; text-align: right;">
+        <input type="text" value="1.20" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">CS002</span> Intl Cargo Terminal <span style="font-size: 8px; color: #9ca3af;">/kg</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; text-align: right;">
+        <input type="text" value="0.80" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; color: #9ca3af; font-style: italic;" colspan="2">
+        ... 4 more CS fees, then EC, CR, OH sections ...
+      </td>
+    </tr>
+  </tbody>
+  </table>
+  </div>
+
+  <div style="margin-top: 10px; padding: 8px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; font-size: 10px; color: #92400e;">
+    <strong>Limitation:</strong> Cannot compare rates across routes without switching back and forth. "Is TikTok WH cheaper than Shein WH?" requires remembering numbers.
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION C: TABBED ZONES                        -->
+<!-- ============================================ -->
+
+<h2>Option C: Tabbed Zones</h2>
+<span class="label" style="background: #f3f4f6; color: #6b7280;">Alternative</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Each zone (Shenzhen, Guangzhou, Hong Kong) gets its own tab. Within each tab, the grid only shows routes in that zone (3-5 columns). This caps horizontal content at ~700px — always fits without scrolling.
+
+<p style="margin-top: 8px;"><strong>How it works:</strong></p>
+<ul style="font-size: 11px; padding-left: 16px; line-height: 1.8;">
+<li>Tab bar: Shenzhen (5) | Guangzhou (5) | Hong Kong (5)</li>
+<li>Each tab shows the full 19-row rate grid but only routes in that zone</li>
+<li>Tab switch is instant — no page reload</li>
+<li>Can still do cross-route comparison within a zone</li>
+</ul>
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Predictable column count (3-5 per tab) — never scrolls<br>
+• Full grid power within each zone<br>
+• Simple mental model: "I'm on the Shenzhen tab"<br>
+• Tab badge shows route count — easy overview</div>
+<div class="cons"><strong>Cons</strong><br>
+• Cross-zone comparison requires tab switching<br>
+• Cannot see "all of HaleSun" in one view<br>
+• Adding a new zone = adding a new tab (minor friction)<br>
+• Tabs + vendor pills = two levels of selection at the top</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link">Delivery Orders</span>
+  <span class="link active">Rates</span>
+  <span class="link">Billing</span>
+  <span class="link">Master Data</span>
+</div>
+
+<div style="padding: 16px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <div>
+      <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">Rate Cards</h1>
+      <p style="font-size: 11px; color: #9ca3af;">Manage vendor rate cards by service and route</p>
+    </div>
+  </div>
+
+  <!-- Vendor selector -->
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+    <span style="font-size: 11px; color: #9ca3af;">Vendor:</span>
+    <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; cursor: pointer;">HaleSun</button>
+    <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">Gonda</button>
+    <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">SevenSeas</button>
+    <button style="margin-left: auto; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: none; background: #152CFF; color: #fff; cursor: pointer;">Save Changes</button>
+  </div>
+
+  <!-- Zone tabs -->
+  <div style="display: flex; gap: 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 0;">
+    <button style="padding: 8px 16px; font-size: 11px; font-weight: 600; border: none; background: none; color: #152CFF; border-bottom: 2px solid #152CFF; margin-bottom: -2px; cursor: pointer;">
+      Shenzhen <span style="font-size: 9px; font-weight: 400; color: #9ca3af; margin-left: 2px;">(5)</span>
+    </button>
+    <button style="padding: 8px 16px; font-size: 11px; font-weight: 500; border: none; background: none; color: #9ca3af; cursor: pointer;">
+      Guangzhou <span style="font-size: 9px; font-weight: 400; margin-left: 2px;">(5)</span>
+    </button>
+    <button style="padding: 8px 16px; font-size: 11px; font-weight: 500; border: none; background: none; color: #9ca3af; cursor: pointer;">
+      Hong Kong <span style="font-size: 9px; font-weight: 400; margin-left: 2px;">(5)</span>
+    </button>
+  </div>
+
+  <!-- Shenzhen tab content -->
+  <div style="border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 6px 6px; overflow: hidden;">
+  <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+  <thead>
+    <tr>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: #fff; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; width: 200px;">
+        L2 Fee Type
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 120px;">
+        <div>TikTok WH → SZ Bay</div>
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 120px;">
+        <div>Shein WH → SZX</div>
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 120px;">
+        <div>Temu DC → SZ Bay</div>
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 120px;">
+        <div>DG → SZX</div>
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 120px;">
+        <div>Nanshan → SZX</div>
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- FM -->
+    <tr style="background: #f9fafb;">
+      <td colspan="6" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #152CFF; border-bottom: 1px solid #e5e7eb;">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.12);">FM</span>
+        Trucking
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM001</span> Warehouse Transfer <span style="font-size: 8px; color: #9ca3af;">/trip</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="450" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="480" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="3,200" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="520" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="2,800" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM002</span> Pickup Fee <span style="font-size: 8px; color: #9ca3af;">/trip</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="30" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="30" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="200" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="35" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="180" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #e5e7eb;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM003</span> Cross-Border <span style="font-size: 8px; color: #9ca3af;">/trip</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="45" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="45" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="" placeholder="—" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; color: #d1d5db; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="50" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="" placeholder="—" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; color: #d1d5db; text-align: right;">
+      </td>
+    </tr>
+    <!-- CR -->
+    <tr style="background: #f9fafb;">
+      <td colspan="6" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #2563eb; border-bottom: 1px solid #e5e7eb;">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(37,99,235,0.06); border: 1px solid rgba(37,99,235,0.12); color: #2563eb;">CR</span>
+        Cargo Retrieval
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">CR001</span> Registration <span style="font-size: 8px; color: #9ca3af;">/trip</span>
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="15" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="15" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="100" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="15" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 4px 6px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="100" style="width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #9ca3af; font-style: italic; border-bottom: 1px solid #e5e7eb;" colspan="6">
+        ... remaining 14 L2 fee rows (CS, EC, OH) follow same pattern ...
+      </td>
+    </tr>
+  </tbody>
+  </table>
+  </div>
+
+  <!-- Comparison callout -->
+  <div style="margin-top: 10px; padding: 8px 12px; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 10px; color: #6b7280;">
+    <strong style="color: #374151;">Note:</strong> To compare Shenzhen vs. Guangzhou rates, you'd switch between the Shenzhen and Guangzhou tabs. Within a zone, cross-route comparison works perfectly.
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- VERDICT                                       -->
+<!-- ============================================ -->
+
+<div class="verdict">
+  <h3>Verdict: Option A — Zone-Grouped Columns + Frozen First Column</h3>
+  <p style="font-size: 12px; line-height: 1.7; color: #374151;">
+    <strong>Zone grouping with collapsible columns is the right pattern</strong> because it solves the core problem (horizontal scroll at 15+ routes) without sacrificing the spreadsheet power that makes rate sheets useful.
+  </p>
+  <ul style="font-size: 11px; line-height: 1.8; padding-left: 16px; color: #374151; margin-top: 8px;">
+    <li><strong>Why not Option B (Single Route)?</strong> It kills cross-route comparison, which is a core rate management activity. "Is our Shenzhen rate competitive with Guangzhou?" requires switching and remembering numbers. That's a regression from Excel, not an improvement.</li>
+    <li><strong>Why not Option C (Tabbed Zones)?</strong> It's close to Option A but strictly worse. Tabs enforce rigid zone boundaries — you can never see Shenzhen and Guangzhou routes side by side. Option A lets you expand multiple zones when needed.</li>
+    <li><strong>Why Option A wins:</strong> Collapsed zones reduce 15 columns to 5-8 visible at a time. Frozen first column keeps fee context. Multiple zones can expand for cross-zone comparison when needed. This is how power users already think: "Let me focus on Shenzhen right now."</li>
+  </ul>
+  <div style="margin-top: 12px; padding: 10px 12px; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 10px; color: #374151;">
+    <strong>Implementation notes:</strong><br>
+    <span style="color: #6b7280;">
+    1. Zone assignment comes from location master data (each location has a zone field)<br>
+    2. Collapsed zone header shows summary: "5 routes · 42 rates" for at-a-glance coverage<br>
+    3. First column uses CSS <code style="font-family: 'JetBrains Mono', monospace; font-size: 9px; background: #f3f4f6; padding: 1px 4px; border-radius: 2px;">position: sticky; left: 0</code> — no JS needed<br>
+    4. Zone expand/collapse state persists in localStorage per vendor<br>
+    5. Default: first zone expanded, others collapsed
+    </span>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

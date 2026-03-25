@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-31: Rates Module Redesign with L1/L2 Services</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+h3 { font-size: 14px; font-weight: 700; margin: 20px 0 8px; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: rgba(21,44,255,0.04); border: 2px solid rgba(21,44,255,0.2); border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #152CFF; font-size: 14px; margin-bottom: 6px; }
+.nav { height: 40px; background: #111827; display: flex; align-items: center; padding: 0 16px; gap: 16px; }
+.nav .logo { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; }
+.nav .brand { font-weight: 700; font-size: 13px; color: #fff; }
+.nav .link { font-size: 12px; color: rgba(255,255,255,0.5); }
+.nav .link.active { color: #fff; font-weight: 600; padding: 4px 10px; background: rgba(255,255,255,0.1); border-radius: 4px; }
+.th { text-align: left; padding: 6px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+.td { padding: 8px 10px; font-size: 11px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+.chip { padding: 3px 8px; border-radius: 99px; font-size: 9px; font-weight: 600; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-31: Rates Module Redesign with L1/L2 Services</h1>
+
+<div class="hmw">
+How might we redesign the rates module so it's structured around the L1/L2 service hierarchy, supports bulk rate entry, and feels delightful instead of tedious — while properly connecting to master data?
+</div>
+
+<div class="context">
+<strong>What's wrong today:</strong> The rates page is a flat table of rates grouped by vendor. Adding rates is one-by-one via a slide-out form. There's no concept of L2 sub-services — each rate is just "vendor + L1 service + location = amount." But the real business has 20 distinct fee types (Cost IDs) across 5 services, and a rate card should define ALL applicable L2 fees for a vendor-route combination at once.
+<br><br>
+<strong>The L1/L2 taxonomy (from CR Trip Management):</strong>
+<table style="width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 10px;">
+<tr style="background: #f9fafb;"><th style="padding: 4px 8px; text-align: left; border: 1px solid #e5e7eb;">L1 Service</th><th style="padding: 4px 8px; text-align: left; border: 1px solid #e5e7eb;">L2 Sub-Service</th><th style="padding: 4px 8px; text-align: left; border: 1px solid #e5e7eb;">Cost ID</th></tr>
+<tr><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" rowspan="2"><strong>CR</strong> Cargo Retrieval</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;">Registration Fee</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" class="mono">CR001</td></tr>
+<tr><td style="padding: 3px 8px; border: 1px solid #e5e7eb;">Cargo Retrieval Pick Up Fee</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" class="mono">CR002</td></tr>
+<tr><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" rowspan="6"><strong>CS</strong> Cargo Submission</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;">Express Center Ground Handling</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" class="mono">CS001</td></tr>
+<tr><td style="padding: 3px 8px; border: 1px solid #e5e7eb;">Intl Cargo Terminal Transit</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" class="mono">CS002</td></tr>
+<tr><td style="padding: 3px 8px; border: 1px solid #e5e7eb;">RA Agent Fee</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" class="mono">CS003</td></tr>
+<tr><td style="padding: 3px 8px; border: 1px solid #e5e7eb;">Security X-Ray Screening</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" class="mono">CS004</td></tr>
+<tr><td style="padding: 3px 8px; border: 1px solid #e5e7eb;">Terminal Handling Charges</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" class="mono">CS005</td></tr>
+<tr><td style="padding: 3px 8px; border: 1px solid #e5e7eb;">Ground Handling Fee</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" class="mono">CS006</td></tr>
+<tr><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" rowspan="3"><strong>EC</strong> Export Customs</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;">Customs Declaration Fee</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" class="mono">EC001</td></tr>
+<tr><td style="padding: 3px 8px; border: 1px solid #e5e7eb;">Customs Inspection Fee</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" class="mono">EC002</td></tr>
+<tr><td style="padding: 3px 8px; border: 1px solid #e5e7eb;">Customs Service Fee</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" class="mono">EC003</td></tr>
+<tr><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" rowspan="3"><strong>FM</strong> Trucking</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;">Warehouse Transfer Fee</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" class="mono">FM001</td></tr>
+<tr><td style="padding: 3px 8px; border: 1px solid #e5e7eb;">Pickup Fee</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" class="mono">FM002</td></tr>
+<tr><td style="padding: 3px 8px; border: 1px solid #e5e7eb;">Cross-Border Handling Fee</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" class="mono">FM003</td></tr>
+<tr><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" rowspan="5"><strong>OH</strong> Origin Handling</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;">MAWB Fee</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" class="mono">OH001</td></tr>
+<tr><td style="padding: 3px 8px; border: 1px solid #e5e7eb;">Loading/Unloading Fee</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" class="mono">OH002</td></tr>
+<tr><td style="padding: 3px 8px; border: 1px solid #e5e7eb;">Handling Fee</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" class="mono">OH003</td></tr>
+<tr><td style="padding: 3px 8px; border: 1px solid #e5e7eb;">Sorting Fee</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" class="mono">OH004</td></tr>
+<tr><td style="padding: 3px 8px; border: 1px solid #e5e7eb;">Palletization/Build-Up Fee</td><td style="padding: 3px 8px; border: 1px solid #e5e7eb;" class="mono">OH005</td></tr>
+</table>
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION A: VENDOR RATE SHEET                  -->
+<!-- ============================================ -->
+
+<h2>Option A: Vendor Rate Sheet — Spreadsheet-Style Bulk Entry</h2>
+<span class="label" style="background: rgba(21,44,255,0.06); color: #152CFF;">Recommended</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Instead of adding rates one-by-one, the rates page shows a "rate sheet" per vendor — a spreadsheet-like grid where columns are routes/locations and rows are L2 fee types (Cost IDs). Admin fills in the grid, hits save, and all rates are created at once. This mirrors how logistics rate cards actually work in the real world — they're spreadsheets.
+
+<p style="margin-top: 8px;"><strong>How it works:</strong></p>
+<ul style="font-size: 11px; padding-left: 16px; line-height: 1.8;">
+<li>Select a vendor → see their rate sheet</li>
+<li>Rate sheet rows = L2 fee types (grouped by L1 service)</li>
+<li>Rate sheet columns = routes/locations where this vendor operates</li>
+<li>Each cell = rate amount + unit. Blank = not applicable</li>
+<li>Edit any cell inline. Tab between cells like a spreadsheet</li>
+<li>"+ Add route" to add a new column</li>
+<li>Save all changes at once</li>
+</ul>
+
+<div class="pros-cons">
+<div class="pros"><strong>✓ Pros</strong><br>
+• Mirrors real-world rate card format (Excel)<br>
+• Bulk entry: fill 20 rates in 2 minutes, not 20 forms<br>
+• L2 structure is visible and obvious<br>
+• At-a-glance: see all rates for a vendor across all routes<br>
+• Copy rates between routes (common operation)</div>
+<div class="cons"><strong>✗ Cons</strong><br>
+• More complex to build than a simple table<br>
+• Horizontal scrolling if many routes<br>
+• Need to handle sparse grids (most vendors don't serve all routes)</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link">Delivery Orders</span>
+  <span class="link active">Rates</span>
+  <span class="link">Master Data</span>
+</div>
+
+<div style="padding: 16px;">
+  <!-- Header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <div>
+      <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">Rate Cards</h1>
+      <p style="font-size: 11px; color: #9ca3af;">Manage vendor rate cards by service and route</p>
+    </div>
+  </div>
+
+  <!-- Vendor selector -->
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+    <span style="font-size: 11px; color: #9ca3af;">Vendor:</span>
+    <div style="display: flex; gap: 4px;">
+      <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; cursor: pointer;">HaleSun</button>
+      <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">Gonda</button>
+      <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">SevenSeas</button>
+      <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">ThaiKee</button>
+      <button style="padding: 4px 12px; border-radius: 4px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">The Lorry</button>
+    </div>
+    <button style="margin-left: auto; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: none; background: #152CFF; color: #fff; cursor: pointer;">Save Changes</button>
+  </div>
+
+  <!-- HaleSun Rate Sheet -->
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+
+  <!-- Rate sheet header: routes as columns -->
+  <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+  <thead>
+    <tr>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: #fff; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; width: 200px; position: sticky; left: 0; z-index: 1;">
+        L2 Fee Type
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 140px;">
+        <div>TikTok WH → SZ Bay</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.4); margin-top: 1px;">Shenzhen</div>
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 140px;">
+        <div>DG Cross-dock → SZX</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.4); margin-top: 1px;">Dongguan → Shenzhen</div>
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 140px;">
+        <div>GZ WH → Huangpu</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.4); margin-top: 1px;">Guangzhou</div>
+      </th>
+      <th style="padding: 8px 10px; text-align: left; background: #111827; color: rgba(255,255,255,0.7); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; min-width: 140px;">
+        <div>Yantian Port</div>
+        <div style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.4); margin-top: 1px;">CR location</div>
+      </th>
+      <th style="padding: 8px 10px; background: #111827; width: 40px;">
+        <button style="padding: 2px 6px; border-radius: 3px; border: 1px dashed rgba(255,255,255,0.3); background: none; color: rgba(255,255,255,0.5); font-size: 9px; cursor: pointer;">+ Route</button>
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- FM Trucking L1 header -->
+    <tr style="background: #f9fafb;">
+      <td colspan="6" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #152CFF; border-bottom: 1px solid #e5e7eb;">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.12);">FM</span>
+        Trucking
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM001</span> Warehouse Transfer
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 450" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 520" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 380" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="border-bottom: 1px solid #f3f4f6;"></td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM002</span> Pickup Fee
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 30" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 35" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="RM 25" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="border-bottom: 1px solid #f3f4f6;"></td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #e5e7eb; background: #fff; position: sticky; left: 0;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">FM003</span> Cross-Border Handling
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="RM 45" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="" placeholder="—" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; color: #d1d5db; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="" placeholder="—" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; color: #d1d5db; text-align: right;">
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="border-bottom: 1px solid #e5e7eb;"></td>
+    </tr>
+
+    <!-- CR L1 header -->
+    <tr style="background: #f9fafb;">
+      <td colspan="6" style="padding: 6px 10px; font-size: 10px; font-weight: 700; color: #2563eb; border-bottom: 1px solid #e5e7eb;">
+        <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(37,99,235,0.06); border: 1px solid rgba(37,99,235,0.12); color: #2563eb;">CR</span>
+        Cargo Retrieval
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; background: #fff; position: sticky; left: 0;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">CR001</span> Registration Fee
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/trip</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #f3f4f6;">
+        <input type="text" value="CNY 15" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="border-bottom: 1px solid #f3f4f6;"></td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 10px; font-size: 10px; color: #374151; border-bottom: 1px solid #e5e7eb; background: #fff; position: sticky; left: 0;">
+        <span class="mono" style="font-size: 8px; color: #9ca3af; margin-right: 4px;">CR002</span> Cargo Retrieval Pick Up
+        <span style="font-size: 8px; color: #9ca3af; margin-left: 4px;">/bag</span>
+      </td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb; color: #d1d5db; font-size: 10px; font-style: italic;">—</td>
+      <td style="padding: 5px 10px; border-bottom: 1px solid #e5e7eb;">
+        <input type="text" value="CNY 25" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right;">
+      </td>
+      <td style="border-bottom: 1px solid #e5e7eb;"></td>
+    </tr>
+  </tbody>
+  </table>
+
+  <!-- Summary footer -->
+  <div style="padding: 8px 10px; background: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; font-size: 10px; color: #9ca3af;">
+    <span>HaleSun: <strong style="color: #111827;">5</strong> L2 fees configured across <strong style="color: #111827;">4</strong> routes</span>
+    <span>Last updated: 01 Mar 2026</span>
+  </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION B: CARD-BASED VENDOR PROFILES         -->
+<!-- ============================================ -->
+
+<h2>Option B: Vendor Profile Cards with L2 Accordion</h2>
+<span class="label" style="background: #f3f4f6; color: #6b7280;">Card Pattern</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Each vendor gets a "profile card" showing their L1 services. Click an L1 service to expand and see all L2 fees with rates. Add rates per L2 fee inline. This is less spreadsheet-like but more visually organized.
+
+<div class="pros-cons">
+<div class="pros"><strong>✓ Pros</strong><br>
+• Visually organized — L1/L2 hierarchy is clear<br>
+• Less overwhelming than a spreadsheet grid<br>
+• Each vendor's capability is visible at a glance</div>
+<div class="cons"><strong>✗ Cons</strong><br>
+• Still adding rates one-by-one per L2 fee<br>
+• Can't compare rates across routes easily<br>
+• More clicking (expand L1 → expand L2 → edit)</div>
+</div>
+</div>
+
+<div class="screen">
+<div style="padding: 16px;">
+  <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px; margin-bottom: 16px;">Rate Cards</h1>
+
+  <!-- Vendor card: HaleSun -->
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 12px; overflow: hidden;">
+    <div style="padding: 10px 12px; background: #fff; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e5e7eb;">
+      <div>
+        <div style="font-size: 13px; font-weight: 700; color: #111827;">HaleSun</div>
+        <div style="font-size: 10px; color: #9ca3af;">3 routes · 2 services · 5 L2 fees configured</div>
+      </div>
+      <div style="display: flex; gap: 4px;">
+        <span class="chip" style="background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.12); color: #152CFF;">FM</span>
+        <span class="chip" style="background: rgba(37,99,235,0.06); border: 1px solid rgba(37,99,235,0.12); color: #2563eb;">CR</span>
+      </div>
+    </div>
+
+    <!-- L1 accordion: FM -->
+    <div style="padding: 0 12px;">
+      <div style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+        <span style="color: #152CFF; font-weight: 600; font-size: 11px;">▾ FM Trucking</span>
+        <span style="font-size: 9px; color: #9ca3af;">3 L2 fees</span>
+      </div>
+      <!-- L2 fees -->
+      <div style="padding: 4px 0 4px 16px;">
+        <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 10px;">
+          <span class="mono" style="color: #9ca3af; font-size: 8px; width: 40px;">FM001</span>
+          <span style="flex: 1; color: #374151;">Warehouse Transfer Fee</span>
+          <span class="mono" style="font-weight: 600; color: #111827;">RM 450 <span style="color: #9ca3af; font-weight: 400;">/trip</span></span>
+          <span style="font-size: 9px; color: #9ca3af;">3 routes</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 10px;">
+          <span class="mono" style="color: #9ca3af; font-size: 8px; width: 40px;">FM002</span>
+          <span style="flex: 1; color: #374151;">Pickup Fee</span>
+          <span class="mono" style="font-weight: 600; color: #111827;">RM 30 <span style="color: #9ca3af; font-weight: 400;">/trip</span></span>
+          <span style="font-size: 9px; color: #9ca3af;">3 routes</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 10px;">
+          <span class="mono" style="color: #9ca3af; font-size: 8px; width: 40px;">FM003</span>
+          <span style="flex: 1; color: #374151;">Cross-Border Handling</span>
+          <span class="mono" style="font-weight: 600; color: #111827;">RM 45 <span style="color: #9ca3af; font-weight: 400;">/trip</span></span>
+          <span style="font-size: 9px; color: #9ca3af;">1 route</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- VERDICT -->
+<div class="verdict">
+<h3>Verdict: Option A — Vendor Rate Sheet</h3>
+<p style="font-size: 12px; line-height: 1.6; color: #374151;">
+<strong>Recommended because:</strong> Logistics ops already thinks in rate card spreadsheets. The grid format is the native language of rate management — rows are fee types, columns are routes. Bulk editing means configuring a vendor's entire rate card takes minutes, not hours of one-by-one form submissions.
+</p>
+<ul style="font-size: 11px; color: #374151; margin-top: 8px; padding-left: 16px; line-height: 1.8;">
+<li><strong>L2 fee taxonomy</strong> lives in master data (Services tab) — 20 Cost IDs across 5 L1 services</li>
+<li><strong>Rate sheet per vendor</strong> — grid of L2 fees × routes/locations, inline editable</li>
+<li><strong>Dark column headers</strong> with route info — matches the Teleport brand nav aesthetic</li>
+<li><strong>"+ Route" button</strong> to add new route columns</li>
+<li><strong>Unit type per L2 fee</strong> — /trip, /bag, /kg are fixed per Cost ID, not per rate</li>
+<li><strong>Currency per cell</strong> — some routes are CNY, others MYR</li>
+<li><strong>Empty cells = not applicable</strong> — sparse grids are fine, not every vendor charges every fee on every route</li>
+<li><strong>Save all at once</strong> — no individual form submissions</li>
+</ul>
+<p style="font-size: 11px; color: #6b7280; margin-top: 12px;">
+<strong>Master data connection:</strong> The Services tab in Master Data needs to be updated to show the L1/L2 hierarchy with Cost IDs. This is the source of truth that generates the rate sheet rows. Adding a new L2 fee in master data automatically adds a new row to all vendor rate sheets.
+</p>
+</div>
+
+</div>
+</body>
+</html>
