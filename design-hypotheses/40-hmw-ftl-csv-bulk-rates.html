@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-40: FTL Bulk Rate Management via CSV</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.page { max-width: 1400px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+h3 { font-size: 14px; font-weight: 700; margin: 20px 0 8px; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.verdict { background: rgba(21,44,255,0.04); border: 2px solid rgba(21,44,255,0.2); border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #152CFF; font-size: 14px; margin-bottom: 6px; }
+.nav { height: 40px; background: #111827; display: flex; align-items: center; padding: 0 16px; gap: 16px; }
+.nav .logo { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; }
+.nav .brand { font-weight: 700; font-size: 13px; color: #fff; }
+.nav .link { font-size: 12px; color: rgba(255,255,255,0.5); }
+.nav .link.active { color: #fff; font-weight: 600; padding: 4px 10px; background: rgba(255,255,255,0.1); border-radius: 4px; }
+.th-dark { padding: 6px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; background: #111827; color: #fff; border-bottom: 1px solid #374151; text-align: right; white-space: nowrap; }
+.th-dark.left { text-align: left; }
+.td { padding: 6px 10px; font-size: 11px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+.rate-cell { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; color: #111827; text-align: right; padding: 6px 10px; border-bottom: 1px solid #f3f4f6; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-40: FTL Bulk Rate Management via CSV</h1>
+
+<div class="hmw">
+How might we let rates admins bulk manage FTL trucking rates via CSV upload/download — matching the Excel workflow they already use — while the web UI serves as a read-only dashboard for viewing and verifying rates?
+</div>
+
+<div class="context">
+<strong>The real workflow today:</strong> Vendors send rate cards as Excel spreadsheets. Ops admin receives the Excel, reviews it, and wants to load it into the system. Making them manually type 164 routes × 8 truck types = 1,300+ cells is not viable.
+<br><br>
+<strong>The insight:</strong> The web grid should be for <em>viewing and verifying</em>, not for <em>data entry</em>. CSV upload/download is the data entry mechanism. The grid is the dashboard.
+<br><br>
+<strong>The flow:</strong>
+<ol style="margin-top: 6px; padding-left: 16px;">
+<li>Download CSV template (or download current rates as CSV)</li>
+<li>Edit in Excel (paste vendor's rate card data)</li>
+<li>Upload CSV → system validates, shows preview of changes</li>
+<li>Confirm → rates are created/updated in bulk</li>
+<li>View the rate sheet grid to verify everything looks right</li>
+</ol>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- THE FULL FLOW                                                -->
+<!-- ============================================================ -->
+
+<h2>The Rates Page — View + Upload Flow</h2>
+
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link">Delivery Orders</span>
+  <span class="link active">Rates</span>
+  <span class="link">Master Data</span>
+</div>
+
+<div style="padding: 16px 16px 0;">
+  <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">Rate Cards</h1>
+
+  <!-- Rate type tabs -->
+  <div style="display: flex; gap: 2px; margin: 12px 0 0; border-bottom: 1px solid #e5e7eb;">
+    <button style="padding: 6px 14px; border-radius: 4px 4px 0 0; border: none; border-bottom: 2px solid #152CFF; background: transparent; color: #152CFF; font-weight: 600; font-size: 12px; cursor: pointer;">🚛 Trucking (FTL)</button>
+    <button style="padding: 6px 14px; border-radius: 4px 4px 0 0; border: none; border-bottom: 2px solid transparent; background: transparent; color: #9ca3af; font-size: 12px; cursor: pointer;">📦 Services (L2 Fees)</button>
+  </div>
+</div>
+
+<div style="padding: 12px 16px 0;">
+  <!-- Vendor + Destination + Actions row -->
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+    <span style="font-size: 11px; color: #9ca3af;">Vendor:</span>
+    <button style="padding: 4px 12px; border-radius: 99px; font-size: 11px; font-weight: 600; border: 1px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; cursor: pointer;">HaleSun</button>
+    <button style="padding: 4px 12px; border-radius: 99px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">Gonda</button>
+
+    <span style="margin-left: 12px; font-size: 11px; color: #9ca3af;">Destination:</span>
+    <select style="font-size: 11px; padding: 4px 8px; border: 1px solid #e5e7eb; border-radius: 4px;">
+      <option>All destinations</option>
+      <option selected>深圳机场 ShenZhen Hub (440306)</option>
+    </select>
+
+    <!-- CSV actions -->
+    <div style="margin-left: auto; display: flex; gap: 6px;">
+      <button style="padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #374151; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+        ↓ Download CSV
+      </button>
+      <button style="padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: none; background: #152CFF; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+        ↑ Upload CSV
+      </button>
+    </div>
+  </div>
+
+  <!-- Search within routes -->
+  <div style="margin-bottom: 8px;">
+    <input type="text" placeholder="Search district... 福田, Futian, 440304" style="font-size: 11px; padding: 4px 8px; border: 1px solid #e5e7eb; border-radius: 4px; width: 250px; outline: none;" />
+  </div>
+
+  <!-- Read-only rate grid (for viewing/verifying) -->
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+    <div style="overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; min-width: 850px;">
+        <thead>
+          <tr>
+            <th class="th-dark left" style="min-width: 220px; position: sticky; left: 0; z-index: 2;">Origin</th>
+            <th class="th-dark" style="width: 40px;">CCY</th>
+            <th class="th-dark"><div>1.5T</div><div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">&lt;1500kg</div></th>
+            <th class="th-dark"><div>3T</div><div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">&lt;2500kg</div></th>
+            <th class="th-dark"><div>5T</div><div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">&lt;4500kg</div></th>
+            <th class="th-dark"><div>8T</div><div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">&lt;7500kg</div></th>
+            <th class="th-dark"><div>10T</div><div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">&lt;10000kg</div></th>
+            <th class="th-dark"><div>40HQ</div><div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">&lt;20000kg</div></th>
+            <th class="th-dark"><div>45HQ</div><div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">&lt;20000kg</div></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="9" style="padding: 5px 10px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 10px; font-weight: 600; color: #152CFF; cursor: pointer;">▾ 深圳市 Shenzhen <span style="font-weight: 400; color: #9ca3af;">52 routes</span></td></tr>
+          <tr>
+            <td class="td" style="position: sticky; left: 0; background: #fff; padding-left: 16px;"><span style="font-size: 11px; font-weight: 500;">罗湖区 · 桂园街道</span><br><span class="mono" style="font-size: 8px; color: #9ca3af;">440303</span></td>
+            <td class="td" style="text-align: center;"><span class="mono" style="font-size: 9px; color: #9ca3af;">RMB</span></td>
+            <td class="rate-cell">310</td><td class="rate-cell">360</td><td class="rate-cell">530</td><td class="rate-cell">630</td><td class="rate-cell">780</td><td class="rate-cell">1,330</td><td class="rate-cell">1,430</td>
+          </tr>
+          <tr>
+            <td class="td" style="position: sticky; left: 0; background: #fff; padding-left: 16px;"><span style="font-size: 11px; font-weight: 500;">福田区 · 南园街道</span><br><span class="mono" style="font-size: 8px; color: #9ca3af;">440304</span></td>
+            <td class="td" style="text-align: center;"><span class="mono" style="font-size: 9px; color: #9ca3af;">RMB</span></td>
+            <td class="rate-cell">260</td><td class="rate-cell">310</td><td class="rate-cell">430</td><td class="rate-cell">630</td><td class="rate-cell">680</td><td class="rate-cell">1,280</td><td class="rate-cell">1,380</td>
+          </tr>
+          <tr>
+            <td class="td" style="position: sticky; left: 0; background: #fff; padding-left: 16px;"><span style="font-size: 11px; font-weight: 500;">宝安区 · 福永街道</span><br><span class="mono" style="font-size: 8px; color: #9ca3af;">440306</span></td>
+            <td class="td" style="text-align: center;"><span class="mono" style="font-size: 9px; color: #9ca3af;">RMB</span></td>
+            <td class="rate-cell" style="color: #059669; font-weight: 600;">160</td><td class="rate-cell" style="color: #059669; font-weight: 600;">210</td><td class="rate-cell" style="color: #059669; font-weight: 600;">280</td><td class="rate-cell">430</td><td class="rate-cell">530</td><td class="rate-cell">1,080</td><td class="rate-cell">1,230</td>
+          </tr>
+          <tr style="font-size: 10px; color: #d1d5db;"><td colspan="9" style="padding: 4px 16px; font-style: italic; border-bottom: 1px solid #f3f4f6;">+ 49 more...</td></tr>
+          <tr><td colspan="9" style="padding: 5px 10px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 10px; font-weight: 600; color: #152CFF; cursor: pointer;">▸ 东莞市 Dongguan <span style="font-weight: 400; color: #9ca3af;">28 routes</span></td></tr>
+          <tr><td colspan="9" style="padding: 5px 10px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 10px; font-weight: 600; color: #152CFF; cursor: pointer;">▸ 珠三角 Other PRD <span style="font-weight: 400; color: #9ca3af;">12 routes</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="padding: 8px 10px; background: #f9fafb; border-top: 1px solid #e5e7eb; font-size: 10px; color: #9ca3af; display: flex; justify-content: space-between;">
+      <span>HaleSun → 深圳机场: <strong style="color: #111827;">92</strong> routes · <strong style="color: #111827;">7</strong> truck types</span>
+      <span>Last updated: 01 Mar 2026</span>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- CSV UPLOAD FLOW                                              -->
+<!-- ============================================================ -->
+
+<h2>CSV Upload Flow</h2>
+
+<h3>Step 1: Download Template or Current Rates</h3>
+<div class="screen">
+<div style="padding: 16px;">
+  <div style="font-size: 11px; font-weight: 600; color: #111827; margin-bottom: 8px;">Download options:</div>
+  <div style="display: flex; gap: 8px;">
+    <button style="padding: 8px 14px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #374151; cursor: pointer;">↓ Blank Template</button>
+    <button style="padding: 8px 14px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid #152CFF; background: rgba(21,44,255,0.04); color: #152CFF; cursor: pointer;">↓ Current Rates (HaleSun)</button>
+  </div>
+  <div style="margin-top: 12px; font-size: 10px; color: #9ca3af;">
+    CSV format:
+  </div>
+  <pre class="mono" style="margin-top: 6px; padding: 10px; background: #111827; color: #a7f3d0; border-radius: 6px; font-size: 10px; overflow-x: auto; line-height: 1.6;">vendor,origin_city,origin_district,origin_code,destination,dest_code,currency,1.5T,3T,5T,8T,10T,12T,40HQ,45HQ
+HaleSun,深圳,桂园街道,440303,深圳机场,440306,RMB,310,360,530,630,780,,1330,1430
+HaleSun,深圳,福田街道,440304,深圳机场,440306,RMB,260,310,430,630,680,,1280,1380
+HaleSun,深圳,福永街道,440306,深圳机场,440306,RMB,160,210,280,430,530,,1080,1230
+HaleSun,东莞,洪梅镇,441900125,深圳机场,440306,RMB,410,510,650,780,880,,1580,1680</pre>
+</div>
+</div>
+
+<h3>Step 2: Upload + Preview Changes</h3>
+<div class="screen">
+<div style="padding: 16px;">
+  <!-- Upload area -->
+  <div style="padding: 24px; border: 2px dashed #e5e7eb; border-radius: 6px; text-align: center; margin-bottom: 16px; background: #fafbfc;">
+    <div style="font-size: 13px; font-weight: 600; color: #111827; margin-bottom: 4px;">Drop CSV here or click to browse</div>
+    <div style="font-size: 11px; color: #9ca3af;">Accepts .csv files. Max 10,000 rows.</div>
+  </div>
+
+  <!-- Validation summary (after upload) -->
+  <div style="padding: 12px; background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); border-radius: 6px; margin-bottom: 12px;">
+    <div style="font-size: 12px; font-weight: 700; color: #152CFF; margin-bottom: 6px;">Upload Preview — HaleSun_rates_mar2026.csv</div>
+    <div style="display: flex; gap: 16px; font-size: 11px;">
+      <span><strong style="color: #111827;">164</strong> rows parsed</span>
+      <span style="color: #059669; font-weight: 600;">87 new rates</span>
+      <span style="color: #152CFF; font-weight: 600;">72 updated</span>
+      <span style="color: #9ca3af;">5 unchanged</span>
+      <span style="color: #dc2626; font-weight: 600;">0 errors</span>
+    </div>
+  </div>
+
+  <!-- Change preview table -->
+  <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 6px;">Changes Preview</div>
+  <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 10px;">
+    <thead>
+      <tr>
+        <th style="padding: 4px 8px; text-align: left; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">Route</th>
+        <th style="padding: 4px 8px; text-align: left; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">Type</th>
+        <th style="padding: 4px 8px; text-align: left; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">Truck</th>
+        <th style="padding: 4px 8px; text-align: right; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">Old</th>
+        <th style="padding: 4px 8px; text-align: right; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">New</th>
+        <th style="padding: 4px 8px; text-align: right; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">Δ</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6;">深圳·福田 → 深圳机场</td>
+        <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6;"><span style="padding: 1px 4px; border-radius: 3px; font-size: 8px; font-weight: 600; color: #152CFF; background: rgba(21,44,255,0.06);">Updated</span></td>
+        <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6;" class="mono">5T</td>
+        <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: right;" class="mono" style="color: #9ca3af;">430</td>
+        <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: right; font-weight: 600;" class="mono">450</td>
+        <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: right; color: #dc2626;" class="mono">+20</td>
+      </tr>
+      <tr>
+        <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6;">东莞·洪梅 → 深圳机场</td>
+        <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6;"><span style="padding: 1px 4px; border-radius: 3px; font-size: 8px; font-weight: 600; color: #059669; background: #f0fdf4;">New</span></td>
+        <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6;" class="mono">12T</td>
+        <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: right; color: #d1d5db;">—</td>
+        <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: right; font-weight: 600;" class="mono">980</td>
+        <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: right; color: #059669;" class="mono">new</td>
+      </tr>
+      <tr>
+        <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6;">深圳·南山 → 深圳机场</td>
+        <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6;"><span style="padding: 1px 4px; border-radius: 3px; font-size: 8px; font-weight: 600; color: #6b7280; background: #f3f4f6;">No change</span></td>
+        <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6;" class="mono">3T</td>
+        <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: right;" class="mono">240</td>
+        <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: right;" class="mono">240</td>
+        <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: right; color: #d1d5db;">—</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Confirm actions -->
+  <div style="display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end;">
+    <button style="padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">Cancel</button>
+    <button style="padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 600; border: none; background: #152CFF; color: #fff; cursor: pointer;">Apply 159 Changes</button>
+  </div>
+</div>
+</div>
+
+<h3>Step 3: Error Handling</h3>
+<div class="screen">
+<div style="padding: 16px;">
+  <div style="padding: 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; margin-bottom: 12px;">
+    <div style="font-size: 11px; font-weight: 600; color: #dc2626; margin-bottom: 4px;">3 errors found in upload</div>
+    <div style="font-size: 10px; color: #dc2626;">
+      <div>Row 45: origin_code "999999" not found in Regions master data</div>
+      <div>Row 72: rate value "abc" is not a number for column 5T</div>
+      <div>Row 103: missing required field "currency"</div>
+    </div>
+  </div>
+  <div style="font-size: 10px; color: #9ca3af;">Fix the errors in your CSV and re-upload. Valid rows (161/164) can be applied without the error rows.</div>
+</div>
+</div>
+
+
+<!-- VERDICT -->
+<div class="verdict">
+<h3>Design Decisions</h3>
+<ul style="font-size: 11px; color: #374151; padding-left: 16px; line-height: 2;">
+<li><strong>Rate sheet grid = read-only dashboard.</strong> View and verify, not data entry. Search + filter within grid rows.</li>
+<li><strong>CSV is the primary editing mechanism.</strong> Download current rates → edit in Excel → re-upload. Matches the vendor rate card workflow.</li>
+<li><strong>CSV format</strong> = vendor, origin_city, origin_district, origin_code (GB/T), destination, dest_code, currency, 1.5T, 3T, 5T, 8T, 10T, 12T, 40HQ, 45HQ. Empty cells = not available.</li>
+<li><strong>Upload preview</strong> shows change summary: new / updated / unchanged / errors. Diff view with old vs new values.</li>
+<li><strong>Validation</strong> checks: origin_code exists in Regions master data, dest_code exists, rate values are numbers, currency is valid, vendor exists.</li>
+<li><strong>Partial apply:</strong> Valid rows can be applied even if some rows have errors.</li>
+<li><strong>Download options:</strong> "Blank template" (column headers only) or "Current rates" (pre-filled with existing data for editing).</li>
+<li><strong>Destination dropdown</strong> above the grid filters by destination district. Supports vendors with multiple hubs.</li>
+<li><strong>District search</strong> above grid rows for finding specific routes in a 92-row table.</li>
+</ul>
+</div>
+
+</div>
+</body>
+</html>

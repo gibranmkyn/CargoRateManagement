@@ -78,7 +78,8 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 - **US-014:** As a vendor, I want to view trips assigned to me and update status/upload proofs from a vendor portal.
 - **US-015:** As an ops admin, I want a validation dashboard to review completed trips and approve them for payment.
 - **US-016:** As an ops admin, I want to manage master data (vendors, customers, facilities, service types) from the admin portal.
-- **US-032:** As a rates admin, I want to import vendor rate cards from Excel/CSV, so I can onboard rates without manual data entry.
+- **US-032:** As a rates admin, I want to upload a CSV to bulk create/update FTL rates, so I can onboard a vendor's 100+ routes in seconds instead of typing them one by one.
+- **US-034:** As a rates admin, I want to download the current rate sheet as CSV, edit it in Excel, and re-upload to update rates in bulk.
 - **US-033:** As an ops planner, I want the system to auto-resolve a pickup address to its district using geocoding, so I don't have to manually look up which district the pickup is in.
 
 ## Key Design Decisions
