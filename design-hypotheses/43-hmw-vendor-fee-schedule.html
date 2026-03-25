@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-43: Vendor Fee Schedules — Auto-Populate, Deselect Exceptions</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+h3 { font-size: 14px; font-weight: 700; margin: 20px 0 8px; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.verdict { background: rgba(21,44,255,0.04); border: 2px solid rgba(21,44,255,0.2); border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #152CFF; font-size: 14px; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-43: Vendor Fee Schedules</h1>
+
+<div class="hmw">
+How might we let each vendor have their own fee schedule (not forced into fixed L2 codes), auto-populate all applicable fees on job creation, and let ops remove the exceptions — so managing fees is subtractive, not additive?
+</div>
+
+<div class="context">
+<strong>What the real vendor rate cards look like:</strong>
+<br><br>
+<strong>HaleSun (Origin Handling at Shenzhen Hub):</strong> 15+ fees — 前置仓操作费 0.30/kg, 转仓费 100-300/truck, 提单费 50/awb, 仓储费 0.10/kg/day, 装卸费 0.20/kg, 安检费 0.30/kg, 托盘费 120-150/plt, 包装膜 6-8/ctn, 贴标费 1.50/ctn...
+<br><br>
+<strong>Gonda (HKG Warehouse):</strong> 10+ fees — 装板服务 1.95/kg (all-in ULD build-up), 提单打单费 150/份, 登记费 350/票, X-Ray 0.80/kg, 仓→货运站运输 0.60/kg...
+<br><br>
+<strong>Key insight:</strong> Every vendor has their own fee names, their own units, their own granularity. Forcing them into OH001-OH005 loses information. The system should accept vendor fee schedules as-is.
+<br><br>
+<strong>Second insight:</strong> 90% of jobs for the same vendor+location need the same fees. Don't make ops select 5 fees 50 times/day. Auto-populate all, let ops remove exceptions.
+</div>
+
+
+<!-- ============================================================ -->
+<!-- PART 1: THE RATE CARD — VENDOR FEE SCHEDULE                 -->
+<!-- ============================================================ -->
+
+<h2>Part 1: Rate Card = Vendor Fee Schedule</h2>
+
+<p style="font-size: 12px; color: #374151; margin-bottom: 12px;">Each vendor's service rate card at a location is a list of fees — their names, their units, their rates. Not mapped to standard L2 codes.</p>
+
+<div class="screen">
+<div style="padding: 16px;">
+  <div style="font-size: 11px; color: #9ca3af; margin-bottom: 4px;">Rate Cards → HaleSun → Origin Handling</div>
+  <div style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">HaleSun — Origin Handling at 深圳前置仓</div>
+
+  <!-- The fee schedule — vendor's own terms -->
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+    <div style="padding: '6px 12px'; background: #111827; color: #fff; display: flex; justify-content: space-between; align-items: center; padding: 8px 12px;">
+      <span style="font-size: 12px; font-weight: 600;">深圳前置仓 Shenzhen Pre-position WH</span>
+      <span style="font-size: 9px; color: rgba(255,255,255,0.5);">15 fees · RMB · Updated 01 Sep 2024</span>
+    </div>
+
+    <table style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr>
+          <th style="text-align: left; padding: 5px 12px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">Fee Name</th>
+          <th style="text-align: left; padding: 5px 12px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; width: 80px;">Unit</th>
+          <th style="text-align: right; padding: 5px 12px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; width: 90px;">Rate</th>
+          <th style="text-align: right; padding: 5px 12px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; width: 80px;">Min</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="padding: 5px 12px; font-size: 11px; border-bottom: 1px solid #f3f4f6;">前置仓操作费 <span style="font-size: 9px; color: #9ca3af;">Pre-position handling</span></td><td style="padding: 5px 12px; font-size: 10px; color: #6b7280; border-bottom: 1px solid #f3f4f6;">/kg</td><td style="padding: 5px 12px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono" style="font-size: 11px; font-weight: 600;">0.30</td><td style="padding: 5px 12px; text-align: right; border-bottom: 1px solid #f3f4f6; font-size: 10px; color: #9ca3af;">50/shpt</td></tr>
+        <tr><td style="padding: 5px 12px; font-size: 11px; border-bottom: 1px solid #f3f4f6;">提单费 <span style="font-size: 9px; color: #9ca3af;">AWB fee</span></td><td style="padding: 5px 12px; font-size: 10px; color: #6b7280; border-bottom: 1px solid #f3f4f6;">/awb</td><td style="padding: 5px 12px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono" style="font-size: 11px; font-weight: 600;">50.00</td><td style="padding: 5px 12px; text-align: right; border-bottom: 1px solid #f3f4f6; font-size: 10px; color: #9ca3af;">50</td></tr>
+        <tr><td style="padding: 5px 12px; font-size: 11px; border-bottom: 1px solid #f3f4f6;">仓储费 <span style="font-size: 9px; color: #9ca3af;">Storage (3 days free)</span></td><td style="padding: 5px 12px; font-size: 10px; color: #6b7280; border-bottom: 1px solid #f3f4f6;">/kg/day</td><td style="padding: 5px 12px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono" style="font-size: 11px; font-weight: 600;">0.10</td><td style="padding: 5px 12px; text-align: right; border-bottom: 1px solid #f3f4f6; font-size: 10px; color: #9ca3af;">30/shpt</td></tr>
+        <tr><td style="padding: 5px 12px; font-size: 11px; border-bottom: 1px solid #f3f4f6;">装卸费 <span style="font-size: 9px; color: #9ca3af;">Loading/unloading</span></td><td style="padding: 5px 12px; font-size: 10px; color: #6b7280; border-bottom: 1px solid #f3f4f6;">/kg</td><td style="padding: 5px 12px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono" style="font-size: 11px; font-weight: 600;">0.20</td><td style="padding: 5px 12px; text-align: right; border-bottom: 1px solid #f3f4f6; font-size: 10px; color: #9ca3af;">50/shpt</td></tr>
+        <tr><td style="padding: 5px 12px; font-size: 11px; border-bottom: 1px solid #f3f4f6;">安检费 <span style="font-size: 9px; color: #9ca3af;">Security X-ray</span></td><td style="padding: 5px 12px; font-size: 10px; color: #6b7280; border-bottom: 1px solid #f3f4f6;">/kg</td><td style="padding: 5px 12px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono" style="font-size: 11px; font-weight: 600;">0.30</td><td style="padding: 5px 12px; text-align: right; border-bottom: 1px solid #f3f4f6; font-size: 10px; color: #9ca3af;">100/shpt</td></tr>
+        <tr><td style="padding: 5px 12px; font-size: 11px; border-bottom: 1px solid #f3f4f6;">托盘费 <span style="font-size: 9px; color: #9ca3af;">Pallet (standard wood)</span></td><td style="padding: 5px 12px; font-size: 10px; color: #6b7280; border-bottom: 1px solid #f3f4f6;">/plt</td><td style="padding: 5px 12px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono" style="font-size: 11px; font-weight: 600;">120.00</td><td style="padding: 5px 12px; text-align: right; border-bottom: 1px solid #f3f4f6; font-size: 10px; color: #9ca3af;">—</td></tr>
+        <tr><td style="padding: 5px 12px; font-size: 11px; border-bottom: 1px solid #f3f4f6;">包装膜 <span style="font-size: 9px; color: #9ca3af;">Wrapping (≤15kg/ctn)</span></td><td style="padding: 5px 12px; font-size: 10px; color: #6b7280; border-bottom: 1px solid #f3f4f6;">/ctn</td><td style="padding: 5px 12px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono" style="font-size: 11px; font-weight: 600;">6.00</td><td style="padding: 5px 12px; text-align: right; border-bottom: 1px solid #f3f4f6; font-size: 10px; color: #9ca3af;">20/shpt</td></tr>
+        <tr><td style="padding: 5px 12px; font-size: 11px; border-bottom: 1px solid #f3f4f6;">贴标费 <span style="font-size: 9px; color: #9ca3af;">Labeling</span></td><td style="padding: 5px 12px; font-size: 10px; color: #6b7280; border-bottom: 1px solid #f3f4f6;">/ctn</td><td style="padding: 5px 12px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono" style="font-size: 11px; font-weight: 600;">1.50</td><td style="padding: 5px 12px; text-align: right; border-bottom: 1px solid #f3f4f6; font-size: 10px; color: #9ca3af;">30/shpt</td></tr>
+        <tr style="color: #d1d5db; font-size: 10px;"><td colspan="4" style="padding: 4px 12px; font-style: italic; border-bottom: 1px solid #f3f4f6;">+ 7 more fees (复磅费, 分货费, 开箱查货, 货物拍照, 人工费, 场地费, 编织袋)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- PART 2: JOB FEE SELECTION — SUBTRACTIVE                     -->
+<!-- ============================================================ -->
+
+<h2>Part 2: Job Fees — Auto-Populate, Remove Exceptions</h2>
+
+<p style="font-size: 12px; color: #374151; margin-bottom: 12px;">When a job is created for HaleSun OH at Shenzhen WH, all 15 fees auto-populate. Ops removes the ones that don't apply (no pallets? remove pallet fee), edits quantities on the rest.</p>
+
+<div class="screen">
+<div style="padding: 16px; width: 380px;">
+  <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px;">
+    Fees — HaleSun · 深圳前置仓
+    <span style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: #152CFF; margin-left: 4px;">8 of 15 from rate card</span>
+  </div>
+
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; margin-bottom: 8px;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr>
+          <th style="text-align: left; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; width: 20px;"></th>
+          <th style="text-align: left; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb;">Fee</th>
+          <th style="text-align: center; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; width: 50px;">Qty</th>
+          <th style="text-align: right; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; width: 70px;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Active fees (included) -->
+        <tr>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: center;"><span style="color: #152CFF; font-size: 12px;">✓</span></td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; font-size: 10px;">前置仓操作费 <span style="color: #9ca3af; font-size: 8px;">0.30/kg</span></td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: center;"><input type="number" value="1240" style="width: 45px; font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;"></td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: right;" class="mono" style="font-size: 10px; font-weight: 600;">372.00</td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: center;"><span style="color: #152CFF; font-size: 12px;">✓</span></td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; font-size: 10px;">提单费 <span style="color: #9ca3af; font-size: 8px;">50/awb</span></td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: center;"><input type="number" value="1" style="width: 45px; font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;"></td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: right;" class="mono" style="font-size: 10px; font-weight: 600;">50.00</td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: center;"><span style="color: #152CFF; font-size: 12px;">✓</span></td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; font-size: 10px;">装卸费 <span style="color: #9ca3af; font-size: 8px;">0.20/kg</span></td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: center;"><input type="number" value="1240" style="width: 45px; font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;"></td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: right;" class="mono" style="font-size: 10px; font-weight: 600;">248.00</td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: center;"><span style="color: #152CFF; font-size: 12px;">✓</span></td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; font-size: 10px;">安检费 <span style="color: #9ca3af; font-size: 8px;">0.30/kg</span></td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: center;"><input type="number" value="1240" style="width: 45px; font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;"></td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: right;" class="mono" style="font-size: 10px; font-weight: 600;">372.00</td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: center;"><span style="color: #152CFF; font-size: 12px;">✓</span></td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; font-size: 10px;">贴标费 <span style="color: #9ca3af; font-size: 8px;">1.50/ctn</span></td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: center;"><input type="number" value="24" style="width: 45px; font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;"></td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: right;" class="mono" style="font-size: 10px; font-weight: 600;">36.00</td>
+        </tr>
+
+        <!-- Removed fees (crossed out, still visible) -->
+        <tr style="opacity: 0.4;">
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: center;"><span style="color: #d1d5db; font-size: 10px; cursor: pointer;" title="Click to re-add">+</span></td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; font-size: 10px; text-decoration: line-through;">托盘费 <span style="color: #9ca3af; font-size: 8px;">120/plt</span></td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: center; color: #d1d5db;">—</td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: right; color: #d1d5db;">—</td>
+        </tr>
+        <tr style="opacity: 0.4;">
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: center;"><span style="color: #d1d5db; font-size: 10px; cursor: pointer;">+</span></td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; font-size: 10px; text-decoration: line-through;">仓储费 <span style="color: #9ca3af; font-size: 8px;">0.10/kg/day</span></td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: center; color: #d1d5db;">—</td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: right; color: #d1d5db;">—</td>
+        </tr>
+        <tr style="opacity: 0.4;">
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: center;"><span style="color: #d1d5db; font-size: 10px; cursor: pointer;">+</span></td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; font-size: 10px; text-decoration: line-through;">包装膜 <span style="color: #9ca3af; font-size: 8px;">6/ctn</span></td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: center; color: #d1d5db;">—</td>
+          <td style="padding: 4px 8px; border-bottom: 1px solid #f3f4f6; text-align: right; color: #d1d5db;">—</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Total -->
+    <div style="padding: 6px 8px; background: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between;">
+      <span style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Job Total (5 active fees)</span>
+      <span class="mono" style="font-size: 12px; font-weight: 700; color: #152CFF;">RMB 1,078.00</span>
+    </div>
+  </div>
+
+  <!-- Re-add removed fees -->
+  <div style="font-size: 10px; color: #9ca3af; text-align: center;">
+    3 fees removed · <span style="color: #152CFF; cursor: pointer;">click + to re-add</span>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- PART 3: HOW IT ALL CONNECTS                                  -->
+<!-- ============================================================ -->
+
+<h2>Part 3: The Full Picture</h2>
+
+<div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 16px; font-size: 12px; color: #374151; line-height: 1.8;">
+<strong>Rate card (admin uploads via CSV):</strong>
+<div style="padding: 8px 0 8px 16px; font-size: 11px;">
+  Vendor + Service + Location → list of fees (name, unit, rate, min charge)
+  <br>Each fee is the vendor's own term. No forced L2 mapping.
+  <br>CSV format: <code class="mono" style="font-size: 10px; background: #f3f4f6; padding: 1px 4px; border-radius: 3px;">fee_name, unit, rate, min_charge, currency</code>
+</div>
+
+<strong>Job creation (auto-populate):</strong>
+<div style="padding: 8px 0 8px 16px; font-size: 11px;">
+  Ops picks vendor + service + location → all fees from rate card auto-populate
+  <br>Each fee starts as ✓ included with qty auto-calculated from order data
+  <br>Ops removes exceptions (click ✓ to toggle off)
+  <br>Ops edits quantities where needed
+</div>
+
+<strong>Slide-out panel (during job lifecycle):</strong>
+<div style="padding: 8px 0 8px 16px; font-size: 11px;">
+  Shows active fees with locked rates + editable quantities
+  <br>Removed fees shown as muted line-through (can re-add with + click)
+  <br>Rate is locked from card, only qty changes
+  <br>When job is validated → all fees lock (read-only)
+</div>
+
+<strong>What this replaces:</strong>
+<div style="padding: 8px 0 0 16px; font-size: 11px;">
+  ~~Fixed L2 Cost IDs (OH001-OH005)~~ → vendor-specific fee names
+  <br>~~Rigid 20 sub-services~~ → flexible per-vendor fee schedules
+  <br>~~"All fees auto-populate, can't remove"~~ → "All fees auto-populate, remove exceptions"
+</div>
+</div>
+
+
+<!-- VERDICT -->
+<div class="verdict">
+<h3>Design Decisions</h3>
+<ul style="font-size: 11px; color: #374151; padding-left: 16px; line-height: 2;">
+<li><strong>Rate card = vendor's own fee schedule.</strong> No forced mapping to standard L2 codes. Each vendor can have their own fee names, units, and granularity.</li>
+<li><strong>Fee schedule is per vendor + service + location.</strong> HaleSun's OH fees at Shenzhen WH are different from Gonda's OH fees at HKG Warehouse.</li>
+<li><strong>CSV upload for fee schedules.</strong> Format: fee_name, unit, rate, min_charge, currency. Same simple pattern as FTL trucking CSV.</li>
+<li><strong>Auto-populate all on job creation.</strong> When a job is created for vendor+service+location, all fees from the schedule appear as active fee line items.</li>
+<li><strong>Subtractive: remove exceptions.</strong> Ops clicks ✓ to toggle a fee off. Removed fees show as muted line-through (can re-add). This is faster than selecting from a menu.</li>
+<li><strong>Quantity editing.</strong> Auto-calculated from order data (/kg → weight, /ctn → carton count, /plt → pallet count, /awb → 1). Ops can override.</li>
+<li><strong>Minimum charges.</strong> The rate card supports min_charge per fee. If qty × rate < min, the min applies.</li>
+<li><strong>L2 Cost IDs become optional tags.</strong> Admin CAN tag a fee with a Cost ID for reporting/billing. But it's not required and doesn't constrain the fee name or unit.</li>
+</ul>
+</div>
+
+</div>
+</body>
+</html>
