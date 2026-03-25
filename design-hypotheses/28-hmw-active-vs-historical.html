@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-28: Active vs Historical Delivery Orders</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+h3 { font-size: 14px; font-weight: 700; margin: 20px 0 8px; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: rgba(21,44,255,0.04); border: 2px solid rgba(21,44,255,0.2); border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #152CFF; font-size: 14px; margin-bottom: 6px; }
+
+/* Mockup shared */
+.nav { height: 40px; background: #111827; display: flex; align-items: center; padding: 0 16px; gap: 16px; }
+.nav .logo { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; }
+.nav .brand { font-weight: 700; font-size: 13px; color: #fff; }
+.nav .link { font-size: 12px; color: rgba(255,255,255,0.5); }
+.nav .link.active { color: #fff; font-weight: 600; padding: 4px 10px; background: rgba(255,255,255,0.1); border-radius: 4px; }
+.stats { padding: 8px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 11px; color: #6b7280; display: flex; gap: 16px; }
+.stats strong { color: #111827; }
+.th { text-align: left; padding: 6px 12px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+.td { padding: 8px 12px; font-size: 11px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+.chip { padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+.chip-green { border: 1px solid #a7f3d0; background: #f0fdf4; color: #059669; }
+.chip-gray { border: 1px solid #e5e7eb; background: #fff; color: #6b7280; }
+.chip-red { border: 1px solid #fecaca; background: #fef2f2; color: #dc2626; }
+.dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+.pill { padding: 4px 10px; border-radius: 4px; border: none; font-size: 12px; cursor: pointer; font-family: inherit; }
+.pill-active { background: rgba(21,44,255,0.06); color: #152CFF; font-weight: 600; }
+.pill-inactive { background: transparent; color: #9ca3af; font-weight: 400; }
+.filter-chip { padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 600; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-28: Active vs Historical Delivery Orders</h1>
+
+<div class="hmw">
+How might we help ops planners focus on the orders that need attention right now, while keeping historical orders accessible when needed for reference or billing?
+</div>
+
+<div class="context">
+<strong>The daily reality:</strong> An ops planner managing 30 orders/day cares about ~15-20 active orders (Pending + In Progress). Completed orders pile up — after a week there are 100+. Right now everything is in one flat list. The planner scrolls past completed TikTok orders from last week to find the Shopee order that needs attention now. The mental model is: "Show me what needs work. Let me check old stuff when I need to."
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION A: SMART DEFAULT FILTER               -->
+<!-- ============================================ -->
+
+<h2>Option A: Smart Default Filter — "Needs Attention" as Default</h2>
+<span class="label" style="background: rgba(21,44,255,0.06); color: #152CFF;">Recommended</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> The filter bar gets a new row of status filter chips: <strong>Active</strong> (default, auto-selected on page load) | All | Completed. "Active" shows orders that have at least one job NOT completed. The existing MAWB/Customer/Vendor filters work on top. No tabs, no separate pages — just a pre-applied filter that matches the daily workflow.
+
+<p style="margin-top: 8px;"><strong>Why "Active" not "Needs Attention":</strong> "Needs Attention" implies urgency/problems. Most active orders are normal — they just aren't done yet. "Active" is neutral and accurate.</p>
+
+<div class="pros-cons">
+<div class="pros"><strong>✓ Pros</strong><br>
+• Zero learning curve — it's just a filter, already familiar<br>
+• Default matches 90% use case (active orders)<br>
+• One click to see "All" or just "Completed"<br>
+• Stats bar updates to reflect filtered view<br>
+• URL can encode filter state (?status=active)</div>
+<div class="cons"><strong>✗ Cons</strong><br>
+• New users might wonder "where are my completed orders?"<br>
+• Filter state resets on page reload (unless persisted)</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link active">Delivery Orders</span>
+  <span class="link">Rates</span>
+  <span class="link">Billing</span>
+  <span class="link">Master Data</span>
+</div>
+
+<!-- Stats bar — reflects "Active" filter -->
+<div class="stats">
+  <span><strong>6</strong> active orders</span>
+  <span style="color: #152CFF; font-weight: 600;">3 in progress</span>
+  <span>3 pending</span>
+  <span style="color: #dc2626; font-weight: 600;">2 rejected</span>
+</div>
+
+<div style="padding: 16px 16px 0;">
+  <!-- Page header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <div>
+      <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">Delivery Orders</h1>
+      <p style="font-size: 11px; color: #9ca3af; margin-top: 2px;">Monitor and manage delivery orders across vendors</p>
+    </div>
+    <div style="display: flex; gap: 6px;">
+      <button style="padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; background: #fff; color: #374151; border: 1px solid #e5e7eb; cursor: pointer;">Export</button>
+      <button style="padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; background: #152CFF; color: #fff; border: none; cursor: pointer;">+ New Order</button>
+    </div>
+  </div>
+
+  <!-- Status filter chips (NEW) + existing filters -->
+  <div style="display: flex; align-items: center; gap: 6px; padding: 6px 0; border-bottom: 1px solid #e5e7eb; margin-bottom: 0;">
+    <!-- Status filter chips -->
+    <span class="filter-chip" style="border: 1px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF;">Active (6)</span>
+    <span class="filter-chip" style="border: 1px solid #e5e7eb; background: #fff; color: #6b7280;">All (10)</span>
+    <span class="filter-chip" style="border: 1px solid #e5e7eb; background: #fff; color: #6b7280;">Completed (4)</span>
+
+    <!-- Separator -->
+    <span style="width: 1px; height: 16px; background: #e5e7eb; margin: 0 6px;"></span>
+
+    <!-- Existing filters -->
+    <span style="font-size: 11px; color: #9ca3af;">MAWB</span>
+    <input type="text" placeholder="Search..." style="font-size: 11px; padding: 3px 8px; border: 1px solid #e5e7eb; border-radius: 4px; width: 120px; outline: none;">
+    <span style="font-size: 11px; color: #9ca3af; margin-left: 4px;">Customer</span>
+    <select style="font-size: 11px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 4px; color: #374151;"><option>All</option></select>
+    <span style="font-size: 11px; color: #9ca3af; margin-left: 4px;">Vendor</span>
+    <select style="font-size: 11px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 4px; color: #374151;"><option>All</option></select>
+  </div>
+</div>
+
+<!-- Table showing ONLY active orders -->
+<div style="padding: 0 16px 16px;">
+<table style="width: 100%; border-collapse: collapse;">
+<thead>
+<tr>
+  <th class="th" style="width: 30px;"></th>
+  <th class="th">Customer</th>
+  <th class="th">MAWB</th>
+  <th class="th">Pickup Date</th>
+  <th class="th">Route</th>
+  <th class="th">Cargo</th>
+  <th class="th">Jobs</th>
+</tr>
+</thead>
+<tbody>
+<!-- Active orders only — no completed TikTok DO-001 or Shopee DO-007 shown -->
+<tr style="cursor: pointer;">
+  <td class="td" style="color: #d1d5db;">▸</td>
+  <td class="td"><strong style="color: #111827; font-size: 13px;">Shopee</strong><br><span class="mono" style="font-size: 10px; color: #9ca3af;">DO-20260309-002</span></td>
+  <td class="td mono" style="font-size: 10px; color: #9ca3af;">160-33121632</td>
+  <td class="td mono" style="font-size: 11px;">09 Mar<br><span style="color: #9ca3af;">10:00</span></td>
+  <td class="td" style="font-size: 10px;">Yantian Port → Dongguan → Shenzhen Airport</td>
+  <td class="td" style="font-size: 10px; color: #6b7280;">16 bags · 890 kg</td>
+  <td class="td">
+    <span class="chip chip-green"><span class="dot" style="background: #059669;"></span>HaleSun·CR</span>
+    <span class="chip chip-gray"><span class="dot" style="background: #152CFF;"></span>HaleSun·FM</span>
+    <span class="chip chip-gray"><span class="dot" style="background: #9ca3af;"></span>SevenSeas·EC</span>
+  </td>
+</tr>
+<tr style="cursor: pointer; background: #fefafa;">
+  <td class="td" style="color: #dc2626; font-weight: 700;">!</td>
+  <td class="td"><strong style="color: #111827; font-size: 13px;">TikTok</strong><br><span class="mono" style="font-size: 10px; color: #9ca3af;">DO-20260310-003</span></td>
+  <td class="td mono" style="font-size: 10px; color: #9ca3af;">160-98765421</td>
+  <td class="td mono" style="font-size: 11px;">10 Mar<br><span style="color: #9ca3af;">08:00</span></td>
+  <td class="td" style="font-size: 10px;">Qianhai FTZ → Huanggang Port</td>
+  <td class="td" style="font-size: 10px; color: #6b7280;">36 bags · 1,500 kg</td>
+  <td class="td">
+    <span class="chip chip-red"><span class="dot" style="background: #dc2626;"></span>HaleSun·FM</span>
+    <span class="chip chip-gray"><span class="dot" style="background: #9ca3af;"></span>Gonda·EC</span>
+  </td>
+</tr>
+<tr style="cursor: pointer;">
+  <td class="td" style="color: #d1d5db;">▸</td>
+  <td class="td"><strong style="color: #111827; font-size: 13px;">Shein</strong><br><span class="mono" style="font-size: 10px; color: #9ca3af;">DO-20260310-004</span></td>
+  <td class="td mono" style="font-size: 10px; color: #9ca3af;">160-11456287</td>
+  <td class="td mono" style="font-size: 11px;">10 Mar<br><span style="color: #9ca3af;">14:00</span></td>
+  <td class="td" style="font-size: 10px;">Guangzhou Baiyun Airport</td>
+  <td class="td" style="font-size: 10px; color: #6b7280;">10 bags · 520 kg</td>
+  <td class="td">
+    <span class="chip chip-green"><span class="dot" style="background: #059669;"></span>ThaiKee·FM</span>
+    <span class="chip chip-gray"><span class="dot" style="background: #152CFF;"></span>ThaiKee·OH</span>
+  </td>
+</tr>
+<tr style="cursor: pointer;">
+  <td class="td" style="color: #d1d5db;">▸</td>
+  <td class="td"><strong style="color: #111827; font-size: 13px;">Temu</strong><br><span class="mono" style="font-size: 10px; color: #9ca3af;">DO-20260311-005</span></td>
+  <td class="td mono" style="font-size: 10px; color: #9ca3af;">160-77654321</td>
+  <td class="td mono" style="font-size: 11px;">11 Mar<br><span style="color: #9ca3af;">08:00</span></td>
+  <td class="td" style="font-size: 10px;">SZ Bao An → Shekou → Lantau</td>
+  <td class="td" style="font-size: 10px; color: #6b7280;">48 bags · 2,450 kg</td>
+  <td class="td">
+    <span class="chip chip-gray"><span class="dot" style="background: #9ca3af;"></span>SevenSeas·CR</span>
+    <span class="chip chip-gray"><span class="dot" style="background: #9ca3af;"></span>Lorry·FM</span>
+    <span class="chip chip-gray"><span class="dot" style="background: #9ca3af;"></span>Gonda·EC</span>
+    <span class="chip chip-gray"><span class="dot" style="background: #9ca3af;"></span>Gonda·CS</span>
+  </td>
+</tr>
+</tbody>
+</table>
+<div style="font-size: 10px; color: #9ca3af; text-align: center; padding: 12px 0; font-style: italic;">
+  Showing 6 active orders · Click "All" to see completed orders too
+</div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION B: TABS — Active | History            -->
+<!-- ============================================ -->
+
+<h2>Option B: Tabs — Active | History</h2>
+<span class="label" style="background: #f3f4f6; color: #6b7280;">Tab Pattern</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Two tabs at the top of the page: <strong>Active</strong> (default) and <strong>History</strong>. Active shows orders with at least one non-completed job. History shows only fully completed orders. Separate views, separate mental modes. Similar to how email has Inbox vs Archive.
+
+<div class="pros-cons">
+<div class="pros"><strong>✓ Pros</strong><br>
+• Clear mental separation: "work" vs "archive"<br>
+• History tab can have different columns (e.g., completion date, total billed)<br>
+• Familiar pattern (email inbox/archive)<br>
+• Stats bar shows different metrics per tab</div>
+<div class="cons"><strong>✗ Cons</strong><br>
+• Tabs add a navigation layer — slightly more complex<br>
+• "Where did my order go?" when it moves from Active to History<br>
+• 2 views to maintain (different table layouts)</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link active">Delivery Orders</span>
+  <span class="link">Rates</span>
+  <span class="link">Billing</span>
+  <span class="link">Master Data</span>
+</div>
+
+<div style="padding: 16px 16px 0;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+    <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">Delivery Orders</h1>
+    <button style="padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; background: #152CFF; color: #fff; border: none; cursor: pointer;">+ New Order</button>
+  </div>
+
+  <!-- Tabs -->
+  <div style="display: flex; gap: 2px; margin-bottom: 12px;">
+    <button class="pill pill-active">Active (6)</button>
+    <button class="pill pill-inactive">History (4)</button>
+  </div>
+
+  <!-- Filter bar (same for both tabs) -->
+  <div style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #e5e7eb;">
+    <span style="font-size: 11px; color: #9ca3af;">MAWB</span>
+    <input type="text" placeholder="Search..." style="font-size: 11px; padding: 3px 8px; border: 1px solid #e5e7eb; border-radius: 4px; width: 120px;">
+    <span style="font-size: 11px; color: #9ca3af;">Customer</span>
+    <select style="font-size: 11px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 4px;"><option>All</option></select>
+  </div>
+</div>
+
+<div style="padding: 8px 16px;">
+  <div style="font-size: 10px; color: #9ca3af; margin-bottom: 8px;">6 active orders — orders move to History when all jobs are completed</div>
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+    <table style="width: 100%; border-collapse: collapse;">
+    <thead>
+    <tr>
+      <th class="th">Customer</th>
+      <th class="th">MAWB</th>
+      <th class="th">Route</th>
+      <th class="th">Progress</th>
+      <th class="th">Total Cost</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+      <td class="td"><strong>Shopee</strong></td>
+      <td class="td mono" style="font-size: 10px; color: #9ca3af;">160-33121632</td>
+      <td class="td" style="font-size: 10px;">Yantian → Shenzhen Airport</td>
+      <td class="td">
+        <!-- Progress bar -->
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <div style="flex: 1; height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden;">
+            <div style="width: 33%; height: 100%; background: #152CFF; border-radius: 2px;"></div>
+          </div>
+          <span style="font-size: 9px; color: #6b7280; white-space: nowrap;">1/3 done</span>
+        </div>
+      </td>
+      <td class="td mono" style="font-size: 10px; font-weight: 600;">RM 1,500.00</td>
+    </tr>
+    <tr style="background: #fefafa;">
+      <td class="td"><strong>TikTok</strong> <span style="font-size: 9px; color: #dc2626; font-weight: 600;">REJECTED</span></td>
+      <td class="td mono" style="font-size: 10px; color: #9ca3af;">160-98765421</td>
+      <td class="td" style="font-size: 10px;">Qianhai → Huanggang</td>
+      <td class="td">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <div style="flex: 1; height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden;">
+            <div style="width: 0%; height: 100%; background: #dc2626;"></div>
+          </div>
+          <span style="font-size: 9px; color: #dc2626;">0/2 · blocked</span>
+        </div>
+      </td>
+      <td class="td mono" style="font-size: 10px; font-weight: 600;">RM 130.00</td>
+    </tr>
+    <tr>
+      <td class="td"><strong>Temu</strong></td>
+      <td class="td mono" style="font-size: 10px; color: #9ca3af;">160-77654321</td>
+      <td class="td" style="font-size: 10px;">SZ Bao An → Lantau</td>
+      <td class="td">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <div style="flex: 1; height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden;">
+            <div style="width: 0%; height: 100%;"></div>
+          </div>
+          <span style="font-size: 9px; color: #6b7280;">0/4 done</span>
+        </div>
+      </td>
+      <td class="td mono" style="font-size: 10px; font-weight: 600;">CNY 4,920.00</td>
+    </tr>
+    </tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION C: GROUPED — Active on top, Done below -->
+<!-- ============================================ -->
+
+<h2>Option C: Grouped — Active First, Completed Collapsed Below</h2>
+<span class="label" style="background: #fffbeb; color: #b45309;">Single View</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> One continuous list, but orders are grouped: Active orders at the top (sorted by pickup date), then a collapsible "Completed" section at the bottom. Similar to how task managers show active tasks above and completed tasks in a muted, collapsed section. No context switching — scroll down to find old stuff.
+
+<div class="pros-cons">
+<div class="pros"><strong>✓ Pros</strong><br>
+• Everything on one page — no "where did it go?"<br>
+• Completed section is naturally de-emphasized<br>
+• Can peek at completed without switching views<br>
+• Simple mental model: top = work, bottom = done</div>
+<div class="cons"><strong>✗ Cons</strong><br>
+• Completed section grows unbounded over time<br>
+• Page gets long as history accumulates<br>
+• Grouping logic adds rendering complexity<br>
+• Collapsed section might never be opened</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link active">Delivery Orders</span>
+  <span class="link">Rates</span>
+  <span class="link">Billing</span>
+  <span class="link">Master Data</span>
+</div>
+
+<div style="padding: 16px;">
+  <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px; margin-bottom: 12px;">Delivery Orders</h1>
+
+  <!-- Active section -->
+  <div style="margin-bottom: 24px;">
+    <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #152CFF; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+      <span style="width: 6px; height: 6px; border-radius: 50%; background: #152CFF;"></span>
+      Active (6 orders)
+    </div>
+    <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+      <table style="width: 100%; border-collapse: collapse;">
+      <tbody>
+      <tr><td class="td"><strong>Shopee</strong></td><td class="td" style="font-size: 10px;">Yantian → Shenzhen</td><td class="td"><span class="chip chip-gray"><span class="dot" style="background: #152CFF;"></span> In Progress</span></td><td class="td mono" style="font-size: 10px; font-weight: 600;">RM 1,500</td></tr>
+      <tr style="background: #fefafa;"><td class="td"><strong>TikTok</strong></td><td class="td" style="font-size: 10px;">Qianhai → Huanggang</td><td class="td"><span class="chip chip-red"><span class="dot" style="background: #dc2626;"></span> Rejected</span></td><td class="td mono" style="font-size: 10px; font-weight: 600;">RM 130</td></tr>
+      <tr><td class="td"><strong>Shein</strong></td><td class="td" style="font-size: 10px;">Guangzhou Baiyun</td><td class="td"><span class="chip chip-gray"><span class="dot" style="background: #152CFF;"></span> In Progress</span></td><td class="td mono" style="font-size: 10px; font-weight: 600;">RM 618</td></tr>
+      <tr><td class="td"><strong>Temu</strong></td><td class="td" style="font-size: 10px;">SZ Bao An → Lantau</td><td class="td"><span class="chip chip-gray"><span class="dot" style="background: #9ca3af;"></span> Pending</span></td><td class="td mono" style="font-size: 10px; font-weight: 600;">CNY 4,920</td></tr>
+      </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Completed section (collapsed) -->
+  <div>
+    <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+      <span style="color: #d1d5db;">▸</span>
+      Completed (4 orders)
+      <span style="font-weight: 400; text-transform: none; letter-spacing: 0; font-style: italic;">— click to expand</span>
+    </div>
+    <div style="border: 1px dashed #e5e7eb; border-radius: 6px; padding: 16px; text-align: center; color: #d1d5db; font-size: 10px;">
+      4 completed orders hidden · click section header to show
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- VERDICT -->
+<div class="verdict">
+<h3>Verdict: Option A — Smart Default Filter</h3>
+<p style="font-size: 12px; line-height: 1.6; color: #374151;">
+<strong>Recommended because:</strong> It's the smallest change with the biggest impact. The table, columns, and interactions stay exactly the same — we just add status filter chips to the existing filter bar and default to "Active." Ops planners already understand filters. No new patterns to learn, no mental model shift, no "where did my order go?" confusion.
+</p>
+<ul style="font-size: 11px; color: #374151; margin-top: 8px; padding-left: 16px; line-height: 1.8;">
+<li><strong>"Active"</strong> = orders where at least 1 job is NOT Completed (Pending, In Progress, or Rejected)</li>
+<li><strong>"Completed"</strong> = all jobs in the order are Completed</li>
+<li><strong>"All"</strong> = everything (current behavior)</li>
+<li><strong>Stats bar updates</strong> to reflect the filtered count</li>
+<li><strong>Default on page load:</strong> Active. Persists in URL as ?status=active</li>
+<li><strong>Count badges</strong> on each chip: Active (6) | All (10) | Completed (4)</li>
+</ul>
+</div>
+
+</div>
+</body>
+</html>

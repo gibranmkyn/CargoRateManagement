@@ -31,6 +31,7 @@ export default function TripsPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const { trips, updateJobStatus, addProofDocument, removeProofDocument, addActivityLog, updateJob, addFee, removeFee, updateFeeQty, updateJobQty } = useTrips();
+  const [statusFilter, setStatusFilter] = useState<'active' | 'all' | 'completed'>('active');
   const [mawbSearch, setMawbSearch] = useState('');
   const [customerFilter, setCustomerFilter] = useState('');
   const [vendorFilter, setVendorFilter] = useState('');
@@ -42,7 +43,16 @@ export default function TripsPage() {
   const panelJob = panelTrip ? panelTrip.jobs.find((j) => j.id === panelIds.jobId) : null;
   const panelJobIdx = panelTrip && panelJob ? panelTrip.jobs.indexOf(panelJob) : -1;
 
+  // Status counts
+  const isOrderActive = (t: Trip) => t.jobs.some((j) => j.status !== 'Completed');
+  const activeCount = trips.filter(isOrderActive).length;
+  const completedCount = trips.filter((t) => !isOrderActive(t)).length;
+
   const filtered = trips.filter((t) => {
+    // Status filter
+    if (statusFilter === 'active' && !isOrderActive(t)) return false;
+    if (statusFilter === 'completed' && isOrderActive(t)) return false;
+    // Existing filters
     if (mawbSearch && !t.mawb.toLowerCase().includes(mawbSearch.toLowerCase())) return false;
     if (customerFilter && t.customer.code !== customerFilter) return false;
     if (vendorFilter && !t.jobs.some((j) => j.vendor.code === vendorFilter)) return false;
@@ -99,7 +109,7 @@ export default function TripsPage() {
 
       {/* -- Stats bar -- */}
       <div style={{ display: 'flex', alignItems: 'center', padding: '8px 16px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontSize: 12, gap: 0 }}>
-        <span style={{ color: '#111827', fontWeight: 600 }}>{stats.orders} orders</span>
+        <span style={{ color: '#111827', fontWeight: 600 }}>{filtered.length} orders</span>
         <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
         <span style={{ color: '#111827', fontWeight: 600 }}>{stats.inProgress} in progress</span>
         <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
@@ -129,6 +139,16 @@ export default function TripsPage() {
 
       {/* -- Filter bar -- */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 16px', borderBottom: '1px solid #e5e7eb' }}>
+        {/* Status filter chips */}
+        {([['active', `Active (${activeCount})`], ['all', `All (${trips.length})`], ['completed', `Completed (${completedCount})`]] as const).map(([key, label]) => (
+          <button key={key} onClick={() => setStatusFilter(key as any)} style={{
+            padding: '3px 10px', borderRadius: 99, fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+            border: statusFilter === key ? '1px solid #152CFF' : '1px solid #e5e7eb',
+            background: statusFilter === key ? 'rgba(21,44,255,0.06)' : '#fff',
+            color: statusFilter === key ? '#152CFF' : '#6b7280',
+          }}>{label}</button>
+        ))}
+        <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
         <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#9ca3af' }}>
           MAWB
           <div style={{ position: 'relative' }}>
