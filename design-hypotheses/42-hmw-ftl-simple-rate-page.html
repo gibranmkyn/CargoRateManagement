@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-42: Simple FTL Rate Page</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.page { max-width: 1400px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.verdict { background: rgba(21,44,255,0.04); border: 2px solid rgba(21,44,255,0.2); border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #152CFF; font-size: 14px; margin-bottom: 6px; }
+.nav { height: 40px; background: #111827; display: flex; align-items: center; padding: 0 16px; gap: 16px; }
+.nav .logo { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; }
+.nav .brand { font-weight: 700; font-size: 13px; color: #fff; }
+.nav .link { font-size: 12px; color: rgba(255,255,255,0.5); }
+.nav .link.active { color: #fff; font-weight: 600; padding: 4px 10px; background: rgba(255,255,255,0.1); border-radius: 4px; }
+.th-dark { padding: 6px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; background: #111827; color: #fff; border-bottom: 1px solid #374151; text-align: right; white-space: nowrap; }
+.th-dark.left { text-align: left; }
+.td { padding: 6px 10px; font-size: 11px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+.rc { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; color: #111827; text-align: right; padding: 6px 10px; border-bottom: 1px solid #f3f4f6; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-42: Simple FTL Rate Page</h1>
+
+<div class="hmw">
+What is the simplest, most intuitive design for managing FTL trucking rates — stripped of all unnecessary complexity?
+</div>
+
+<div class="context">
+<strong>What was over-engineered in HMW-41:</strong> version numbers, card grid landing page, dark banner, dual editing modes, expandable city-grouped preview. All removed.
+<br><br>
+<strong>What stays:</strong> vendor selector, rate table, CSV upload/download, activity log. One page, one table, done.
+</div>
+
+<!-- ============================================================ -->
+<!-- THE FULL PAGE — SIMPLE                                       -->
+<!-- ============================================================ -->
+
+<h2>The Whole Page</h2>
+
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link">Delivery Orders</span>
+  <span class="link active">Rates</span>
+  <span class="link">Master Data</span>
+</div>
+
+<!-- Stats bar -->
+<div style="padding: 8px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 11px; color: #6b7280; display: flex; gap: 16px;">
+  <span><strong style="color: #111827;">3</strong> vendors</span>
+  <span><strong style="color: #111827;">144</strong> FTL routes</span>
+  <span>Last updated: 01 Mar 2026</span>
+</div>
+
+<div style="padding: 16px;">
+  <!-- Header — just text -->
+  <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 14px;">
+    <div>
+      <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">FTL Trucking Rates</h1>
+      <p style="font-size: 11px; color: #9ca3af; margin-top: 2px;">Origin district → Destination district · per truck type</p>
+    </div>
+    <div style="display: flex; gap: 6px;">
+      <button style="padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #374151; cursor: pointer;">↓ Download CSV</button>
+      <button style="padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: none; background: #152CFF; color: #fff; cursor: pointer;">↑ Upload CSV</button>
+    </div>
+  </div>
+
+  <!-- Vendor pills -->
+  <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+    <button style="padding: 4px 12px; border-radius: 99px; font-size: 11px; font-weight: 600; border: 1px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; cursor: pointer;">HaleSun <span style="font-size: 9px; color: #9ca3af; margin-left: 2px;">92</span></button>
+    <button style="padding: 4px 12px; border-radius: 99px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">Gonda <span style="font-size: 9px; color: #d1d5db; margin-left: 2px;">44</span></button>
+    <button style="padding: 4px 12px; border-radius: 99px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">The Lorry <span style="font-size: 9px; color: #d1d5db; margin-left: 2px;">8</span></button>
+  </div>
+
+  <!-- Search -->
+  <div style="margin-bottom: 8px;">
+    <input type="text" placeholder="Search origin... 福田, Futian, 440304" style="font-size: 11px; padding: 5px 10px; border: 1px solid #e5e7eb; border-radius: 4px; width: 280px; outline: none;" />
+  </div>
+
+  <!-- THE TABLE — that's it -->
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+    <div style="overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; min-width: 820px;">
+        <thead>
+          <tr>
+            <th class="th-dark left" style="min-width: 200px; position: sticky; left: 0; z-index: 2;">Origin</th>
+            <th class="th-dark left" style="min-width: 140px;">Destination</th>
+            <th class="th-dark" style="width: 36px;">CCY</th>
+            <th class="th-dark"><div>1.5T</div></th>
+            <th class="th-dark"><div>3T</div></th>
+            <th class="th-dark"><div>5T</div></th>
+            <th class="th-dark"><div>8T</div></th>
+            <th class="th-dark"><div>10T</div></th>
+            <th class="th-dark"><div>40HQ</div></th>
+            <th class="th-dark"><div>45HQ</div></th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- City group -->
+          <tr><td colspan="11" style="padding: 5px 10px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 10px; font-weight: 600; color: #152CFF; cursor: pointer;">▾ 深圳 Shenzhen <span style="font-weight: 400; color: #9ca3af;">52</span></td></tr>
+
+          <tr>
+            <td class="td" style="position: sticky; left: 0; background: #fff;">
+              <span style="font-weight: 500;">罗湖区 桂园街道</span>
+              <span class="mono" style="font-size: 8px; color: #d1d5db; margin-left: 4px;">440303</span>
+            </td>
+            <td class="td" style="font-size: 10px; color: #9ca3af;">宝安区 深圳机场</td>
+            <td class="td" style="text-align: center;"><span class="mono" style="font-size: 9px; color: #9ca3af;">RMB</span></td>
+            <td class="rc">310</td><td class="rc">360</td><td class="rc">530</td><td class="rc">630</td><td class="rc">780</td><td class="rc">1,330</td><td class="rc">1,430</td>
+          </tr>
+          <tr>
+            <td class="td" style="position: sticky; left: 0; background: #fff;">
+              <span style="font-weight: 500;">福田区 南园街道</span>
+              <span class="mono" style="font-size: 8px; color: #d1d5db; margin-left: 4px;">440304</span>
+            </td>
+            <td class="td" style="font-size: 10px; color: #9ca3af;">宝安区 深圳机场</td>
+            <td class="td" style="text-align: center;"><span class="mono" style="font-size: 9px; color: #9ca3af;">RMB</span></td>
+            <td class="rc">260</td><td class="rc">310</td><td class="rc">430</td><td class="rc">630</td><td class="rc">680</td><td class="rc">1,280</td><td class="rc">1,380</td>
+          </tr>
+          <tr>
+            <td class="td" style="position: sticky; left: 0; background: #fff;">
+              <span style="font-weight: 500;">宝安区 福永街道</span>
+              <span class="mono" style="font-size: 8px; color: #d1d5db; margin-left: 4px;">440306</span>
+            </td>
+            <td class="td" style="font-size: 10px; color: #9ca3af;">宝安区 深圳机场</td>
+            <td class="td" style="text-align: center;"><span class="mono" style="font-size: 9px; color: #9ca3af;">RMB</span></td>
+            <td class="rc">160</td><td class="rc">210</td><td class="rc">280</td><td class="rc">430</td><td class="rc">530</td><td class="rc">1,080</td><td class="rc">1,230</td>
+          </tr>
+          <tr style="font-size: 10px; color: #d1d5db;"><td colspan="11" style="padding: 4px 10px; font-style: italic;">+ 49 more...</td></tr>
+
+          <tr><td colspan="11" style="padding: 5px 10px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; border-top: 1px solid #e5e7eb; font-size: 10px; font-weight: 600; color: #152CFF; cursor: pointer;">▸ 东莞 Dongguan <span style="font-weight: 400; color: #9ca3af;">28</span></td></tr>
+          <tr><td colspan="11" style="padding: 5px 10px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 10px; font-weight: 600; color: #152CFF; cursor: pointer;">▸ 珠三角 Other <span style="font-weight: 400; color: #9ca3af;">12</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Activity log — simple, at the bottom -->
+  <div style="margin-top: 16px;">
+    <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px;">Recent Activity</div>
+    <div style="font-size: 10px; color: #6b7280; display: flex; flex-direction: column; gap: 4px;">
+      <div>
+        <span class="mono" style="color: #9ca3af;">01 Mar 09:15</span>
+        <span style="margin-left: 6px;">CSV uploaded — 92 routes, 87 updated, 5 new</span>
+        <span style="color: #9ca3af; margin-left: 4px;">by Ops Admin</span>
+      </div>
+      <div>
+        <span class="mono" style="color: #9ca3af;">01 Jan 11:00</span>
+        <span style="margin-left: 6px;">CSV uploaded — 80 routes, 80 new (initial load)</span>
+        <span style="color: #9ca3af; margin-left: 4px;">by Ops Admin</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- CSV UPLOAD — MINIMAL                                         -->
+<!-- ============================================================ -->
+
+<h2>CSV Upload — Minimal</h2>
+
+<div class="screen">
+<div style="padding: 16px;">
+  <!-- Drop zone -->
+  <div style="padding: 20px; border: 2px dashed #e5e7eb; border-radius: 6px; text-align: center; margin-bottom: 12px;">
+    <div style="font-size: 13px; font-weight: 600; color: #111827;">Drop CSV here or click to browse</div>
+    <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">Format: origin_city, origin_district, origin_code, dest_city, dest_district, dest_code, currency, 1.5T, 3T, 5T, 8T, 10T, 12T, 40HQ, 45HQ</div>
+  </div>
+
+  <!-- After upload — just the numbers -->
+  <div style="padding: 10px 12px; background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.12); border-radius: 6px; margin-bottom: 12px;">
+    <div style="font-size: 11px; font-weight: 600; color: #111827; margin-bottom: 4px;">HaleSun_Q2_2026.csv</div>
+    <div style="font-size: 11px; display: flex; gap: 12px;">
+      <span><strong>164</strong> rows</span>
+      <span style="color: #059669; font-weight: 600;">12 new</span>
+      <span style="color: #152CFF; font-weight: 600;">87 updated</span>
+      <span style="color: #9ca3af;">65 unchanged</span>
+      <span style="color: #dc2626; font-weight: 600;">0 errors</span>
+    </div>
+  </div>
+
+  <!-- Just apply -->
+  <div style="display: flex; gap: 8px; justify-content: flex-end;">
+    <button style="padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">Cancel</button>
+    <button style="padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 600; border: none; background: #152CFF; color: #fff; cursor: pointer;">Apply 99 Changes</button>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- CSV FORMAT REFERENCE                                         -->
+<!-- ============================================================ -->
+
+<h2>CSV Format</h2>
+
+<div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 16px;">
+<pre class="mono" style="font-size: 10px; line-height: 1.6; overflow-x: auto; color: #374151;">origin_city,origin_district,origin_code,dest_city,dest_district,dest_code,currency,1.5T,3T,5T,8T,10T,12T,40HQ,45HQ
+深圳,桂园街道,440303,深圳,宝安区,440306,RMB,310,360,530,630,780,,1330,1430
+深圳,福田街道,440304,深圳,宝安区,440306,RMB,260,310,430,630,680,,1280,1380
+东莞,洪梅镇,441900125,深圳,宝安区,440306,RMB,410,510,650,780,880,,1580,1680
+广州,从化区,440117,香港,离岛区,810118,HKD,,2400,2600,2800,3000,3200,4350,</pre>
+<div style="font-size: 10px; color: #9ca3af; margin-top: 8px;">
+  Empty cells = truck type not available on this route. Origin/dest codes must match Regions master data (GB/T 2260).
+</div>
+</div>
+
+
+<!-- VERDICT -->
+<div class="verdict">
+<h3>What's in, what's out</h3>
+<table style="width: 100%; font-size: 11px; border-collapse: collapse; margin-top: 8px;">
+<tr><td style="padding: 4px 0; color: #059669; font-weight: 600; width: 30px;">✓</td><td style="padding: 4px 0;">Vendor selector pills</td></tr>
+<tr><td style="padding: 4px 0; color: #059669; font-weight: 600;">✓</td><td style="padding: 4px 0;">Rate table with origin, destination, currency, truck type columns</td></tr>
+<tr><td style="padding: 4px 0; color: #059669; font-weight: 600;">✓</td><td style="padding: 4px 0;">City group collapse (Shenzhen, Dongguan, etc.)</td></tr>
+<tr><td style="padding: 4px 0; color: #059669; font-weight: 600;">✓</td><td style="padding: 4px 0;">Search within routes</td></tr>
+<tr><td style="padding: 4px 0; color: #059669; font-weight: 600;">✓</td><td style="padding: 4px 0;">Download CSV (current rates for selected vendor)</td></tr>
+<tr><td style="padding: 4px 0; color: #059669; font-weight: 600;">✓</td><td style="padding: 4px 0;">Upload CSV (bulk create/update with simple summary)</td></tr>
+<tr><td style="padding: 4px 0; color: #059669; font-weight: 600;">✓</td><td style="padding: 4px 0;">Activity log (flat list at bottom — timestamp, action, user)</td></tr>
+<tr><td style="padding: 4px 0; color: #059669; font-weight: 600;">✓</td><td style="padding: 4px 0;">Destination as a table column (district to district)</td></tr>
+<tr style="color: #9ca3af;"><td style="padding: 4px 0;">✗</td><td style="padding: 4px 0;">Version numbers / version history UI</td></tr>
+<tr style="color: #9ca3af;"><td style="padding: 4px 0;">✗</td><td style="padding: 4px 0;">Card grid landing page</td></tr>
+<tr style="color: #9ca3af;"><td style="padding: 4px 0;">✗</td><td style="padding: 4px 0;">Dark banner header</td></tr>
+<tr style="color: #9ca3af;"><td style="padding: 4px 0;">✗</td><td style="padding: 4px 0;">Inline cell editing</td></tr>
+<tr style="color: #9ca3af;"><td style="padding: 4px 0;">✗</td><td style="padding: 4px 0;">City-grouped upload preview</td></tr>
+<tr style="color: #9ca3af;"><td style="padding: 4px 0;">✗</td><td style="padding: 4px 0;">Destination dropdown/selector</td></tr>
+</table>
+</div>
+
+</div>
+</body>
+</html>
