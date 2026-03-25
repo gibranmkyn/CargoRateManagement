@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-38: China Regions in Master Data</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+h3 { font-size: 14px; font-weight: 700; margin: 20px 0 8px; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: rgba(21,44,255,0.04); border: 2px solid rgba(21,44,255,0.2); border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #152CFF; font-size: 14px; margin-bottom: 6px; }
+.nav { height: 40px; background: #111827; display: flex; align-items: center; padding: 0 16px; gap: 16px; }
+.nav .logo { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; }
+.nav .brand { font-weight: 700; font-size: 13px; color: #fff; }
+.nav .link { font-size: 12px; color: rgba(255,255,255,0.5); }
+.nav .link.active { color: #fff; font-weight: 600; padding: 4px 10px; background: rgba(255,255,255,0.1); border-radius: 4px; }
+.th { text-align: left; padding: 6px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+.td { padding: 8px 10px; font-size: 11px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-38: China Regions in Master Data</h1>
+
+<div class="hmw">
+How might we integrate the standardized China city/district hierarchy into the Master Data module so it connects cleanly to both FTL trucking rates (district-to-district) and facility-based service rates?
+</div>
+
+<div class="context">
+<strong>Two address systems coexist:</strong>
+<br><br>
+<strong>1. Facilities (current Locations tab):</strong> Specific places like "TikTok WH, Shenzhen" or "SZX Airport Cargo Terminal". Used by EC, CS, CR, OH services. A facility sits WITHIN a district.
+<br><br>
+<strong>2. Districts (new China Regions data):</strong> Standardized admin divisions like "宝安区, 深圳" or "洪梅镇, 东莞". Used by FM Trucking for FTL pricing. A district contains many facilities.
+<br><br>
+<strong>The relationship:</strong> Facility ∈ District ∈ City ∈ Province. TikTok WH is in 洪梅镇 which is in 东莞市 which is in 广东省. The FTL rate from 洪梅镇 → 宝安区 covers trucking from TikTok WH to Shenzhen Airport.
+<br><br>
+<strong>The question:</strong> How should the Locations tab, Regions data, and rate cards connect in the Master Data UI?
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION A: TWO TABS — LOCATIONS + REGIONS     -->
+<!-- ============================================ -->
+
+<h2>Option A: Two Tabs — Facilities + Regions</h2>
+<span class="label" style="background: rgba(21,44,255,0.06); color: #152CFF;">Recommended</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Rename "Locations" to "Facilities" and add a new "Regions" tab showing the China city/district hierarchy. Each facility gets a <code>districtCode</code> field linking it to a region. FTL rates use district codes; service rates use facility IDs. Both live in Master Data but serve different purposes.
+
+<p style="margin-top: 10px;"><strong>Master Data tabs become:</strong></p>
+<div style="display: flex; gap: 4px; margin: 8px 0;">
+  <span style="padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; background: rgba(21,44,255,0.06); color: #152CFF;">Facilities</span>
+  <span style="padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; background: rgba(21,44,255,0.06); color: #152CFF;">Regions</span>
+  <span style="padding: 4px 10px; border-radius: 4px; font-size: 11px; color: #9ca3af;">Vendors</span>
+  <span style="padding: 4px 10px; border-radius: 4px; font-size: 11px; color: #9ca3af;">Customers</span>
+  <span style="padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; background: rgba(21,44,255,0.06); color: #152CFF;">Services</span>
+</div>
+
+<ul style="font-size: 11px; padding-left: 16px; line-height: 1.8; margin-top: 8px;">
+<li><strong>Facilities tab</strong> (renamed from Locations): Warehouses, airports, ports, hubs. Each now has an optional <code>districtCode</code> field linking to the Regions hierarchy. The existing zone/type fields stay.</li>
+<li><strong>Regions tab</strong>: Read-only view of the China city/district hierarchy. Expandable tree: Province → City → Districts. Shows GB/T 2260 codes, bilingual names, and counts (facilities in district, FTL routes using this district).</li>
+<li><strong>Connection</strong>: When creating an FTL job, ops picks origin district + destination district (from Regions). The specific pickup/delivery facility is a detail within the order, not the rate lookup key.</li>
+</ul>
+
+<div class="pros-cons">
+<div class="pros"><strong>✓ Pros</strong><br>
+• Clean separation: facilities = where stuff happens, regions = standardized addresses<br>
+• FTL rate lookup by district code is unambiguous<br>
+• Facilities can be linked to districts for reporting<br>
+• Regions data is read-only (from GB/T standard) — no user editing needed<br>
+• Each tab does one job</div>
+<div class="cons"><strong>✗ Cons</strong><br>
+• One more tab in Master Data<br>
+• User needs to understand the facility → district relationship<br>
+• Linking facilities to districts requires a new field</div>
+</div>
+</div>
+
+<!-- Mockup: Regions tab -->
+<h3>Regions Tab — City/District Tree</h3>
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link">Delivery Orders</span>
+  <span class="link">Rates</span>
+  <span class="link active">Master Data</span>
+</div>
+
+<div style="padding: 16px 16px 0;">
+  <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">Master Data</h1>
+  <div style="display: flex; gap: 2px; margin: 12px 0;">
+    <button style="padding: 4px 10px; border-radius: 4px; border: none; background: transparent; color: #9ca3af; font-size: 12px; cursor: pointer;">Facilities</button>
+    <button style="padding: 4px 10px; border-radius: 4px; border: none; background: rgba(21,44,255,0.06); color: #152CFF; font-weight: 600; font-size: 12px; cursor: pointer;">Regions</button>
+    <button style="padding: 4px 10px; border-radius: 4px; border: none; background: transparent; color: #9ca3af; font-size: 12px; cursor: pointer;">Vendors</button>
+    <button style="padding: 4px 10px; border-radius: 4px; border: none; background: transparent; color: #9ca3af; font-size: 12px; cursor: pointer;">Customers</button>
+    <button style="padding: 4px 10px; border-radius: 4px; border: none; background: transparent; color: #9ca3af; font-size: 12px; cursor: pointer;">Services</button>
+  </div>
+</div>
+
+<div style="padding: 0 16px 16px;">
+  <div style="font-size: 11px; color: #6b7280; margin-bottom: 12px;">
+    <strong style="color: #111827;">2</strong> provinces · <strong style="color: #111827;">10</strong> cities · <strong style="color: #111827;">95</strong> districts/towns
+    <span style="margin-left: 8px; font-size: 10px; color: #9ca3af;">Source: GB/T 2260 standard</span>
+  </div>
+
+  <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 6px;">
+  <thead>
+    <tr>
+      <th class="th" style="width: 30px;"></th>
+      <th class="th" style="width: 100px;">Code</th>
+      <th class="th">Name</th>
+      <th class="th">English</th>
+      <th class="th" style="width: 80px;">Facilities</th>
+      <th class="th" style="width: 80px;">FTL Routes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- Province: Guangdong -->
+    <tr style="background: #f9fafb;">
+      <td class="td" style="color: #152CFF; cursor: pointer;">▾</td>
+      <td class="td"><span class="mono" style="font-size: 10px; color: #9ca3af;">44</span></td>
+      <td class="td" style="font-weight: 700; color: #111827;">广东省</td>
+      <td class="td">Guangdong</td>
+      <td class="td" style="color: #6b7280;">23</td>
+      <td class="td" style="color: #6b7280;">—</td>
+    </tr>
+    <!-- City: Shenzhen -->
+    <tr>
+      <td class="td" style="padding-left: 20px; color: #152CFF; cursor: pointer;">▾</td>
+      <td class="td"><span class="mono" style="font-size: 10px; color: #9ca3af;">4403</span></td>
+      <td class="td" style="font-weight: 600; padding-left: 20px;">深圳市</td>
+      <td class="td">Shenzhen</td>
+      <td class="td" style="color: #6b7280;">12</td>
+      <td class="td" style="color: #6b7280;">5</td>
+    </tr>
+    <!-- Districts -->
+    <tr>
+      <td class="td"></td>
+      <td class="td"><span class="mono" style="font-size: 10px; color: #9ca3af;">440303</span></td>
+      <td class="td" style="padding-left: 40px;">罗湖区</td>
+      <td class="td">Luohu</td>
+      <td class="td" style="color: #6b7280;">2</td>
+      <td class="td" style="color: #6b7280;">1</td>
+    </tr>
+    <tr>
+      <td class="td"></td>
+      <td class="td"><span class="mono" style="font-size: 10px; color: #9ca3af;">440304</span></td>
+      <td class="td" style="padding-left: 40px;">福田区</td>
+      <td class="td">Futian</td>
+      <td class="td" style="color: #6b7280;">1</td>
+      <td class="td" style="color: #6b7280;">1</td>
+    </tr>
+    <tr>
+      <td class="td"></td>
+      <td class="td"><span class="mono" style="font-size: 10px; color: #9ca3af;">440306</span></td>
+      <td class="td" style="padding-left: 40px;">宝安区</td>
+      <td class="td">Baoan</td>
+      <td class="td" style="color: #152CFF; font-weight: 600;">5</td>
+      <td class="td" style="color: #152CFF; font-weight: 600;">3</td>
+    </tr>
+    <tr>
+      <td class="td"></td>
+      <td class="td"><span class="mono" style="font-size: 10px; color: #9ca3af;">440308</span></td>
+      <td class="td" style="padding-left: 40px;">盐田区</td>
+      <td class="td">Yantian</td>
+      <td class="td" style="color: #6b7280;">1</td>
+      <td class="td" style="color: #6b7280;">0</td>
+    </tr>
+    <tr style="color: #d1d5db; font-size: 10px;">
+      <td class="td"></td>
+      <td class="td" colspan="5" style="padding-left: 40px; font-style: italic;">+ 5 more districts</td>
+    </tr>
+
+    <!-- City: Dongguan (district-free) -->
+    <tr>
+      <td class="td" style="padding-left: 20px; color: #9ca3af; cursor: pointer;">▸</td>
+      <td class="td"><span class="mono" style="font-size: 10px; color: #9ca3af;">4419</span></td>
+      <td class="td" style="font-weight: 600; padding-left: 20px;">
+        东莞市
+        <span style="font-size: 9px; font-weight: 400; color: #b45309; background: #fefce8; padding: 1px 4px; border-radius: 3px; border: 1px solid #fde68a; margin-left: 4px;">No districts — uses towns</span>
+      </td>
+      <td class="td">Dongguan</td>
+      <td class="td" style="color: #6b7280;">2</td>
+      <td class="td" style="color: #6b7280;">12</td>
+    </tr>
+
+    <!-- City: Guangzhou -->
+    <tr>
+      <td class="td" style="padding-left: 20px; color: #9ca3af; cursor: pointer;">▸</td>
+      <td class="td"><span class="mono" style="font-size: 10px; color: #9ca3af;">4401</span></td>
+      <td class="td" style="font-weight: 600; padding-left: 20px;">广州市</td>
+      <td class="td">Guangzhou</td>
+      <td class="td" style="color: #6b7280;">4</td>
+      <td class="td" style="color: #6b7280;">8</td>
+    </tr>
+
+    <!-- Province: HK -->
+    <tr style="background: #f9fafb;">
+      <td class="td" style="color: #9ca3af; cursor: pointer;">▸</td>
+      <td class="td"><span class="mono" style="font-size: 10px; color: #9ca3af;">81</span></td>
+      <td class="td" style="font-weight: 700; color: #111827;">香港特别行政区</td>
+      <td class="td">Hong Kong SAR</td>
+      <td class="td" style="color: #6b7280;">2</td>
+      <td class="td" style="color: #6b7280;">—</td>
+    </tr>
+  </tbody>
+  </table>
+</div>
+</div>
+
+<!-- Mockup: Facilities tab with district link -->
+<h3>Facilities Tab — Now With District Link</h3>
+<div class="screen">
+<div style="padding: 16px;">
+  <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; font-size: 11px;">
+  <thead>
+    <tr>
+      <th class="th">Facility Name</th>
+      <th class="th">Type</th>
+      <th class="th">District</th>
+      <th class="th">City</th>
+      <th class="th" style="width: 80px;">Rates</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="td" style="font-weight: 600; color: #111827;">TikTok WH, Shenzhen</td>
+      <td class="td"><span style="padding: 1px 5px; border-radius: 4px; font-size: 9px; font-weight: 600; color: #6b7280; background: #f3f4f6; border: 1px solid #e5e7eb;">Warehouse</span></td>
+      <td class="td">
+        <span class="mono" style="font-size: 9px; color: #9ca3af;">440306</span>
+        宝安区
+      </td>
+      <td class="td">深圳市</td>
+      <td class="td" style="color: #6b7280;">3</td>
+    </tr>
+    <tr>
+      <td class="td" style="font-weight: 600; color: #111827;">SZX Airport Cargo Terminal</td>
+      <td class="td"><span style="padding: 1px 5px; border-radius: 4px; font-size: 9px; font-weight: 600; color: #6b7280; background: #f3f4f6; border: 1px solid #e5e7eb;">Airport</span></td>
+      <td class="td">
+        <span class="mono" style="font-size: 9px; color: #9ca3af;">440306</span>
+        宝安区
+      </td>
+      <td class="td">深圳市</td>
+      <td class="td" style="color: #6b7280;">5</td>
+    </tr>
+    <tr>
+      <td class="td" style="font-weight: 600; color: #111827;">Dongguan Cross-dock</td>
+      <td class="td"><span style="padding: 1px 5px; border-radius: 4px; font-size: 9px; font-weight: 600; color: #6b7280; background: #f3f4f6; border: 1px solid #e5e7eb;">Hub</span></td>
+      <td class="td">
+        <span class="mono" style="font-size: 9px; color: #9ca3af;">441900125</span>
+        洪梅镇
+      </td>
+      <td class="td">东莞市</td>
+      <td class="td" style="color: #6b7280;">1</td>
+    </tr>
+  </tbody>
+  </table>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION B: MERGE INTO LOCATIONS TAB           -->
+<!-- ============================================ -->
+
+<h2>Option B: Merge — Location = District + Facility in One Tab</h2>
+<span class="label" style="background: #f3f4f6; color: #6b7280;">Unified</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> No separate Regions tab. Instead, the Locations tab shows a tree: City → District → Facilities. Districts are auto-populated from the China regions dataset. Facilities sit under their district. Everything in one view.
+
+<div class="pros-cons">
+<div class="pros"><strong>✓ Pros</strong><br>
+• One tab for everything location-related<br>
+• The hierarchy is visible in one tree<br>
+• No separate linking step</div>
+<div class="cons"><strong>✗ Cons</strong><br>
+• 95 districts + facilities = very long tree<br>
+• Mixing standardized data (districts) with user data (facilities)<br>
+• District tree is read-only but facility rows are editable — confusing</div>
+</div>
+</div>
+
+
+<!-- VERDICT -->
+<div class="verdict">
+<h3>Verdict: Option A — Two Tabs (Facilities + Regions)</h3>
+<p style="font-size: 12px; line-height: 1.6; color: #374151;">
+<strong>Recommended because:</strong> Facilities and regions serve different purposes. Facilities are user-managed operational locations. Regions are a standardized reference dataset from the government. Mixing them in one view creates confusion about what's editable and what's not. Two tabs keeps each concept clean.
+</p>
+<ul style="font-size: 11px; color: #374151; margin-top: 8px; padding-left: 16px; line-height: 1.8;">
+<li><strong>Regions tab:</strong> Read-only tree. Province → City → District. Shows GB/T codes, bilingual names. Counts of facilities and FTL routes per district.</li>
+<li><strong>Facilities tab:</strong> Existing CRUD table. New column: "District" showing the linked region code + name. Optional — not all facilities need a district link.</li>
+<li><strong>FM Trucking rates:</strong> Use district codes for origin/destination (from Regions)</li>
+<li><strong>EC/CS/CR/OH rates:</strong> Use facility IDs for location (from Facilities)</li>
+<li><strong>Create order:</strong> For FM jobs, ops picks origin district + destination district. For other jobs, ops picks a facility.</li>
+<li><strong>Rename:</strong> "Locations" tab → "Facilities" tab to avoid confusion with "Regions"</li>
+</ul>
+</div>
+
+</div>
+</body>
+</html>

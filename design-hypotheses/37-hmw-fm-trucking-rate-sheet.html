@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-37: FM Trucking Rate Sheet — Route × Truck Type Matrix</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.page { max-width: 1400px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+h3 { font-size: 14px; font-weight: 700; margin: 20px 0 8px; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: rgba(21,44,255,0.04); border: 2px solid rgba(21,44,255,0.2); border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #152CFF; font-size: 14px; margin-bottom: 6px; }
+.nav { height: 40px; background: #111827; display: flex; align-items: center; padding: 0 16px; gap: 16px; }
+.nav .logo { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; }
+.nav .brand { font-weight: 700; font-size: 13px; color: #fff; }
+.nav .link { font-size: 12px; color: rgba(255,255,255,0.5); }
+.nav .link.active { color: #fff; font-weight: 600; padding: 4px 10px; background: rgba(255,255,255,0.1); border-radius: 4px; }
+.th-dark { padding: 6px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; background: #111827; color: #fff; border-bottom: 1px solid #374151; text-align: right; white-space: nowrap; }
+.th-dark.left { text-align: left; }
+.td { padding: 6px 10px; font-size: 11px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+.rate-input { width: 72px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 3px; font-weight: 600; color: #111827; text-align: right; outline: none; }
+.rate-input:focus { border-color: #152CFF; box-shadow: 0 0 0 2px rgba(21,44,255,0.08); }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-37: FM Trucking Rate Sheet</h1>
+
+<div class="hmw">
+How might we design the FM Trucking rate card to match the real-world pricing structure — a route × truck type matrix — separate from the L2 fee-based rate sheets used by other services?
+</div>
+
+<div class="context">
+<strong>What the real rate cards look like (from Hale-sun & Gonda Excel sheets):</strong>
+<br><br>
+FM Trucking (FTL) pricing is fundamentally different from other services:
+<ul style="margin-top: 6px; padding-left: 16px;">
+<li><strong>Rows</strong> = Origin → Destination routes, often with district-level granularity (Guangzhou-Conghua, Guangzhou-Fangcun, etc.)</li>
+<li><strong>Columns</strong> = Truck types by tonnage: <strong>1.5T, 3T, 5T, 8T, 10T, 12T, 40HQ, 45HQ</strong></li>
+<li>Each truck type has capacity specs: weight cap (kg), volume cap (CBM), and dimensions</li>
+<li>Rate = <strong>flat per trip</strong> for that truck type on that route</li>
+<li>Not all truck types available on all routes (some cells empty)</li>
+<li>Currency varies: HKD for cross-border (China→HK), RMB for domestic China routes</li>
+</ul>
+<br>
+<strong>Contrast with EC/CS/CR/OH:</strong> These use the L2 Cost ID structure (fee type × location). FM doesn't have L2 sub-fees in the same way — the "sub-fee" dimension is truck type, not fee category.
+
+<br><br>
+<table style="width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 10px;">
+<tr><td style="padding: 4px 8px; border: 1px solid #e5e7eb; background: #f9fafb; font-weight: 600;" colspan="2">Real data from rate sheets</td><td style="padding: 4px 8px; border: 1px solid #e5e7eb; background: #f9fafb;" class="mono">1.5T</td><td style="padding: 4px 8px; border: 1px solid #e5e7eb; background: #f9fafb;" class="mono">3T</td><td style="padding: 4px 8px; border: 1px solid #e5e7eb; background: #f9fafb;" class="mono">5T</td><td style="padding: 4px 8px; border: 1px solid #e5e7eb; background: #f9fafb;" class="mono">8T</td><td style="padding: 4px 8px; border: 1px solid #e5e7eb; background: #f9fafb;" class="mono">10T</td><td style="padding: 4px 8px; border: 1px solid #e5e7eb; background: #f9fafb;" class="mono">40HQ</td></tr>
+<tr><td style="padding: 4px 8px; border: 1px solid #e5e7eb;" colspan="2">TikTok洪梅仓 → 深圳前置仓</td><td style="padding: 4px 8px; border: 1px solid #e5e7eb;" class="mono">¥410</td><td style="padding: 4px 8px; border: 1px solid #e5e7eb;" class="mono">¥510</td><td style="padding: 4px 8px; border: 1px solid #e5e7eb;" class="mono">¥650</td><td style="padding: 4px 8px; border: 1px solid #e5e7eb;" class="mono">¥780</td><td style="padding: 4px 8px; border: 1px solid #e5e7eb;" class="mono">¥880</td><td style="padding: 4px 8px; border: 1px solid #e5e7eb;" class="mono">¥1,580</td></tr>
+<tr><td style="padding: 4px 8px; border: 1px solid #e5e7eb;" colspan="2">Guangzhou-Conghua → HKG Airport</td><td style="padding: 4px 8px; border: 1px solid #e5e7eb; color: #d1d5db;">—</td><td style="padding: 4px 8px; border: 1px solid #e5e7eb;" class="mono">$2,400</td><td style="padding: 4px 8px; border: 1px solid #e5e7eb;" class="mono">$2,600</td><td style="padding: 4px 8px; border: 1px solid #e5e7eb;" class="mono">$2,800</td><td style="padding: 4px 8px; border: 1px solid #e5e7eb;" class="mono">$3,000</td><td style="padding: 4px 8px; border: 1px solid #e5e7eb;" class="mono">$4,350</td></tr>
+</table>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION A: SPLIT RATE PAGE — TWO MODES        -->
+<!-- ============================================ -->
+
+<h2>Option A: Split Rate Page — FM Tab + Services Tab</h2>
+<span class="label" style="background: rgba(21,44,255,0.06); color: #152CFF;">Recommended</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> The Rates page gets two top-level tabs: <strong>Trucking</strong> and <strong>Services</strong>. Trucking shows the route × truck type matrix (FM-specific). Services shows the L2 fee × location grid (EC, CS, CR, OH). Each tab has the vendor selector. This reflects the fundamental structural difference in how these rates are priced.
+
+<p style="margin-top: 8px;"><strong>FM Trucking tab:</strong></p>
+<ul style="font-size: 11px; padding-left: 16px; line-height: 1.8;">
+<li>Rows = routes (origin → destination), grouped by origin zone</li>
+<li>Columns = truck types (1.5T, 3T, 5T, 8T, 10T, 12T, 40HQ, 45HQ)</li>
+<li>Column sub-headers show capacity specs: "< 2500kg / 18CBM"</li>
+<li>Each cell = flat rate per trip. Currency shown per row (route-level)</li>
+<li>Inline editable, tab between cells</li>
+<li>"+ Add route" to add new rows</li>
+</ul>
+
+<p style="margin-top: 8px;"><strong>Services tab:</strong> Same as current L2 fee × location/route grid for EC/CS/CR/OH.</p>
+
+<div class="pros-cons">
+<div class="pros"><strong>✓ Pros</strong><br>
+• Matches actual rate card format from Excel sheets<br>
+• Truck type columns are intuitive for trucking ops<br>
+• Clean separation — FM and other services don't compete<br>
+• Can add truck type specs (weight/volume caps) in column headers<br>
+• District-level route granularity supported naturally</div>
+<div class="cons"><strong>✗ Cons</strong><br>
+• Two tabs = two mental models for managing rates<br>
+• "Services" tab name might confuse (EC is also a "service")</div>
+</div>
+</div>
+
+<!-- FULL MOCKUP -->
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link">Delivery Orders</span>
+  <span class="link active">Rates</span>
+  <span class="link">Master Data</span>
+</div>
+
+<div style="padding: 16px 16px 0;">
+  <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">Rate Cards</h1>
+  <p style="font-size: 11px; color: #9ca3af; margin-top: 2px;">Manage vendor rate cards</p>
+
+  <!-- Top-level tabs: Trucking vs Services -->
+  <div style="display: flex; gap: 2px; margin: 12px 0 0;">
+    <button style="padding: 6px 14px; border-radius: 4px 4px 0 0; border: none; border-bottom: 2px solid #152CFF; background: transparent; color: #152CFF; font-weight: 600; font-size: 12px; cursor: pointer;">
+      🚛 Trucking (FM)
+    </button>
+    <button style="padding: 6px 14px; border-radius: 4px 4px 0 0; border: none; border-bottom: 2px solid transparent; background: transparent; color: #9ca3af; font-size: 12px; cursor: pointer;">
+      📦 Services (EC, CS, CR, OH)
+    </button>
+  </div>
+</div>
+
+<div style="border-top: 1px solid #e5e7eb; padding: 12px 16px 0;">
+  <!-- Vendor selector -->
+  <div style="display: flex; gap: 6px; margin-bottom: 12px; align-items: center;">
+    <span style="font-size: 11px; color: #9ca3af;">Vendor:</span>
+    <button style="padding: 4px 12px; border-radius: 99px; font-size: 11px; font-weight: 600; border: 1px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; cursor: pointer;">HaleSun <span style="font-size: 9px; color: #9ca3af;">12</span></button>
+    <button style="padding: 4px 12px; border-radius: 99px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">Gonda <span style="font-size: 9px; color: #d1d5db;">8</span></button>
+    <button style="padding: 4px 12px; border-radius: 99px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">The Lorry <span style="font-size: 9px; color: #d1d5db;">4</span></button>
+  </div>
+
+  <!-- FM Trucking Rate Matrix -->
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+    <div style="overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; min-width: 900px;">
+        <thead>
+          <!-- Truck type headers -->
+          <tr>
+            <th class="th-dark left" style="min-width: 260px; position: sticky; left: 0; z-index: 2;">
+              Route
+            </th>
+            <th class="th-dark" style="width: 40px;">CCY</th>
+            <th class="th-dark" style="min-width: 80px;">
+              <div>1.5T</div>
+              <div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">< 1,500kg</div>
+            </th>
+            <th class="th-dark" style="min-width: 80px;">
+              <div>3T</div>
+              <div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">< 2,500kg</div>
+            </th>
+            <th class="th-dark" style="min-width: 80px;">
+              <div>5T</div>
+              <div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">< 4,500kg</div>
+            </th>
+            <th class="th-dark" style="min-width: 80px;">
+              <div>8T</div>
+              <div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">< 7,500kg</div>
+            </th>
+            <th class="th-dark" style="min-width: 80px;">
+              <div>10T</div>
+              <div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">< 10,000kg</div>
+            </th>
+            <th class="th-dark" style="min-width: 80px;">
+              <div>12T</div>
+              <div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">< 12,000kg</div>
+            </th>
+            <th class="th-dark" style="min-width: 80px;">
+              <div>40HQ</div>
+              <div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">< 20,000kg</div>
+            </th>
+            <th class="th-dark" style="min-width: 80px;">
+              <div>45HQ</div>
+              <div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">Container</div>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Zone header: Shenzhen -->
+          <tr>
+            <td colspan="11" style="padding: 5px 10px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 10px; font-weight: 600; color: #152CFF;">
+              <span style="cursor: pointer;">▾ Shenzhen</span>
+              <span style="font-weight: 400; color: #9ca3af; margin-left: 4px;">4 routes</span>
+            </td>
+          </tr>
+          <!-- Route rows -->
+          <tr>
+            <td class="td" style="position: sticky; left: 0; background: #fff; font-weight: 500; min-width: 260px;">
+              <div style="font-size: 11px; color: #111827;">TikTok WH, Shenzhen → SZ Bay Checkpoint</div>
+              <div style="font-size: 9px; color: #9ca3af;">洪梅 → 深圳</div>
+            </td>
+            <td class="td" style="text-align: center;"><span class="mono" style="font-size: 9px; color: #9ca3af;">RMB</span></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="410" /></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="510" /></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="650" /></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="780" /></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="880" /></td>
+            <td class="td" style="text-align: right;"><span style="color: #d1d5db;">—</span></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="1,580" /></td>
+            <td class="td" style="text-align: right;"><span style="color: #d1d5db;">—</span></td>
+          </tr>
+          <tr>
+            <td class="td" style="position: sticky; left: 0; background: #fff; font-weight: 500;">
+              <div style="font-size: 11px; color: #111827;">TikTok WH, Shenzhen → SZX Cargo Terminal</div>
+              <div style="font-size: 9px; color: #9ca3af;">洪梅 → 深圳机场</div>
+            </td>
+            <td class="td" style="text-align: center;"><span class="mono" style="font-size: 9px; color: #9ca3af;">RMB</span></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="450" /></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="580" /></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="720" /></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="850" /></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="950" /></td>
+            <td class="td" style="text-align: right;"><span style="color: #d1d5db;">—</span></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="1,780" /></td>
+            <td class="td" style="text-align: right;"><span style="color: #d1d5db;">—</span></td>
+          </tr>
+          <tr>
+            <td class="td" style="position: sticky; left: 0; background: #fff; font-weight: 500;">
+              <div style="font-size: 11px; color: #111827;">Dongguan Cross-dock → Shenzhen Airport</div>
+              <div style="font-size: 9px; color: #9ca3af;">东莞 → 深圳机场</div>
+            </td>
+            <td class="td" style="text-align: center;"><span class="mono" style="font-size: 9px; color: #9ca3af;">RMB</span></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="480" /></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="600" /></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="750" /></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="900" /></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="1,000" /></td>
+            <td class="td" style="text-align: right;"><span style="color: #d1d5db;">—</span></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="1,680" /></td>
+            <td class="td" style="text-align: right;"><span style="color: #d1d5db;">—</span></td>
+          </tr>
+
+          <!-- Zone header: Guangzhou -->
+          <tr>
+            <td colspan="11" style="padding: 5px 10px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; border-top: 1px solid #e5e7eb; font-size: 10px; font-weight: 600; color: #152CFF;">
+              <span style="cursor: pointer;">▸ Guangzhou</span>
+              <span style="font-weight: 400; color: #9ca3af; margin-left: 4px;">2 routes — click to expand</span>
+            </td>
+          </tr>
+
+          <!-- Cross-border zone -->
+          <tr>
+            <td colspan="11" style="padding: 5px 10px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 10px; font-weight: 600; color: #b45309;">
+              <span style="cursor: pointer;">▾ Cross-Border (China → HK)</span>
+              <span style="font-weight: 400; color: #9ca3af; margin-left: 4px;">1 route · HKD</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="td" style="position: sticky; left: 0; background: #fff; font-weight: 500;">
+              <div style="font-size: 11px; color: #111827;">Guangzhou WH → Huangpu Port</div>
+              <div style="font-size: 9px; color: #9ca3af;">广州 → 黄埔港</div>
+            </td>
+            <td class="td" style="text-align: center;"><span class="mono" style="font-size: 9px; color: #b45309;">HKD</span></td>
+            <td class="td" style="text-align: right;"><span style="color: #d1d5db;">—</span></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="2,300" /></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="2,500" /></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="2,700" /></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="2,900" /></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="3,100" /></td>
+            <td class="td" style="text-align: right;"><input class="rate-input" value="4,050" /></td>
+            <td class="td" style="text-align: right;"><span style="color: #d1d5db;">—</span></td>
+          </tr>
+
+          <!-- Add route row -->
+          <tr>
+            <td colspan="11" style="padding: 8px 10px; text-align: center;">
+              <button style="padding: 4px 12px; border-radius: 4px; border: 1px dashed #e5e7eb; background: none; color: #9ca3af; font-size: 10px; cursor: pointer; font-family: inherit;">+ Add route</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Summary footer -->
+    <div style="padding: 8px 10px; background: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; font-size: 10px; color: #9ca3af;">
+      <span>HaleSun FM Trucking: <strong style="color: #111827;">4</strong> routes · <strong style="color: #111827;">8</strong> truck types</span>
+      <button style="padding: 4px 12px; border-radius: 6px; border: none; background: #152CFF; color: #fff; font-size: 10px; font-weight: 600; cursor: pointer;">Save Changes</button>
+    </div>
+  </div>
+
+  <!-- Truck type reference -->
+  <div style="margin-top: 12px; padding: 10px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
+    <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 6px;">Truck Type Reference</div>
+    <div style="display: flex; gap: 12px; flex-wrap: wrap; font-size: 10px;">
+      <span><strong>1.5T:</strong> < 1,500kg / 15 CBM · 420×190×190cm</span>
+      <span><strong>3T:</strong> < 2,500kg / 18 CBM · 420×210×210cm</span>
+      <span><strong>5T:</strong> < 4,500kg / 30 CBM · 620×220×220cm</span>
+      <span><strong>8T:</strong> < 7,500kg / 43 CBM · 760×240×240cm</span>
+      <span><strong>10T:</strong> < 10,000kg / 50 CBM · 960×240×240cm</span>
+      <span><strong>40HQ:</strong> < 20,000kg / 96 CBM · 1650×280×290cm</span>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION B: UNIFIED GRID, FM AS SPECIAL ROWS   -->
+<!-- ============================================ -->
+
+<h2>Option B: Unified Grid — FM Truck Types as L2 Rows</h2>
+<span class="label" style="background: #f3f4f6; color: #6b7280;">Force-Fit</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Treat each truck type as an L2 sub-service: FM-1.5T, FM-3T, FM-5T, FM-8T, FM-10T, FM-40HQ. Then the existing L2 × route grid works — FM rows are truck types, columns are routes, same as EC/CS. One unified rate sheet for everything.
+
+<div class="pros-cons">
+<div class="pros"><strong>✓ Pros</strong><br>
+• One rate sheet design for all services<br>
+• No need for a separate FM tab<br>
+• Simpler to build — reuses existing grid</div>
+<div class="cons"><strong>✗ Cons</strong><br>
+• Conceptually wrong — a truck type is NOT a fee category<br>
+• Loses truck specs in headers (weight/volume caps)<br>
+• Column headers become awkward — route columns mixed with L2 fee rows<br>
+• When ops creates a job, they pick ONE truck type, not multiple<br>
+• Breaks the mental model: in real rate cards, truck types are COLUMNS</div>
+</div>
+</div>
+
+<div class="screen">
+<div style="padding: 16px;">
+  <div style="font-size: 10px; color: #dc2626; font-weight: 600; margin-bottom: 8px;">⚠ This option forces truck types into the L2 row structure where they don't belong</div>
+  <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; font-size: 10px;">
+    <thead>
+      <tr>
+        <th class="th-dark left" style="width: 200px;">L2 Fee / Truck Type</th>
+        <th class="th-dark">TikTok WH → SZ Bay</th>
+        <th class="th-dark">DG XD → SZX Airport</th>
+        <th class="th-dark">GZ WH → Huangpu</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="4" style="padding: 5px 8px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #152CFF;"><span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.12);">FM</span> Trucking</td></tr>
+      <tr><td class="td" style="padding-left: 20px;"><span class="mono" style="color: #9ca3af; font-size: 8px;">FM-1.5T</span> 1.5 Ton Truck</td><td class="td" style="text-align: right;" class="mono">RM 410</td><td class="td" style="text-align: right;" class="mono">RM 480</td><td class="td" style="text-align: right; color: #d1d5db;">—</td></tr>
+      <tr><td class="td" style="padding-left: 20px;"><span class="mono" style="color: #9ca3af; font-size: 8px;">FM-3T</span> 3 Ton Truck</td><td class="td" style="text-align: right;" class="mono">RM 510</td><td class="td" style="text-align: right;" class="mono">RM 600</td><td class="td" style="text-align: right;" class="mono">RM 380</td></tr>
+      <tr><td class="td" style="padding-left: 20px;"><span class="mono" style="color: #9ca3af; font-size: 8px;">FM-5T</span> 5 Ton Truck</td><td class="td" style="text-align: right;" class="mono">RM 650</td><td class="td" style="text-align: right;" class="mono">RM 750</td><td class="td" style="text-align: right;" class="mono">RM 520</td></tr>
+      <tr><td class="td" style="padding-left: 20px;"><span class="mono" style="color: #9ca3af; font-size: 8px;">FM-8T</span> 8 Ton Truck</td><td class="td" style="text-align: right;" class="mono">RM 780</td><td class="td" style="text-align: right;" class="mono">RM 900</td><td class="td" style="text-align: right; color: #d1d5db;">—</td></tr>
+      <tr><td class="td" style="padding-left: 20px;"><span class="mono" style="color: #9ca3af; font-size: 8px;">FM-10T</span> 10 Ton Truck</td><td class="td" style="text-align: right;" class="mono">RM 880</td><td class="td" style="text-align: right;" class="mono">RM 1,000</td><td class="td" style="text-align: right; color: #d1d5db;">—</td></tr>
+      <tr><td class="td" style="padding-left: 20px;"><span class="mono" style="color: #9ca3af; font-size: 8px;">FM-40HQ</span> 40ft HQ Container</td><td class="td" style="text-align: right;" class="mono">RM 1,580</td><td class="td" style="text-align: right;" class="mono">RM 1,680</td><td class="td" style="text-align: right; color: #d1d5db;">—</td></tr>
+    </tbody>
+  </table>
+  <div style="font-size: 10px; color: #9ca3af; margin-top: 8px; font-style: italic;">
+    Problem: when creating an FM job, ops selects a truck type (1 of 8). With this model, all 8 "L2 fees" would auto-populate — that's wrong. The job should have ONE fee for the selected truck type.
+  </div>
+</div>
+</div>
+
+
+<!-- VERDICT -->
+<div class="verdict">
+<h3>Verdict: Option A — Split Rate Page with FM Tab</h3>
+<p style="font-size: 12px; line-height: 1.6; color: #374151;">
+<strong>Recommended because:</strong> FM Trucking pricing is structurally a different beast. The rate dimension is truck type, not fee category. Forcing truck types into L2 rows (Option B) breaks the mental model — ops picks ONE truck type per trip, not multiple fees. The split tab approach mirrors reality: trucking rate cards are route × truck type matrices, and that's exactly what the FM tab shows.
+</p>
+<ul style="font-size: 11px; color: #374151; margin-top: 8px; padding-left: 16px; line-height: 1.8;">
+<li><strong>Rates page tabs:</strong> 🚛 Trucking (FM) | 📦 Services (EC, CS, CR, OH)</li>
+<li><strong>FM tab grid:</strong> Rows = routes (grouped by zone). Columns = truck types (1.5T through 45HQ)</li>
+<li><strong>Truck type specs</strong> in column sub-headers: weight cap, volume cap</li>
+<li><strong>Currency per route:</strong> RMB for domestic, HKD for cross-border</li>
+<li><strong>Zone grouping + collapse</strong> for scalability (same pattern as HMW-32)</li>
+<li><strong>Create form impact:</strong> When creating an FM job, ops also selects a truck type → system looks up the rate for that route + truck type combination</li>
+<li><strong>Data model:</strong> FM rates use <code>truckType</code> field instead of <code>costId</code>. Or reuse costId as "FM-3T", "FM-5T" etc.</li>
+<li><strong>Accessorials</strong> (FM001 Warehouse Transfer, FM002 Pickup Fee, FM003 Cross-Border) become <strong>optional add-on fees</strong> below the main trucking rate — not the primary pricing dimension</li>
+</ul>
+</div>
+
+</div>
+</body>
+</html>
