@@ -201,8 +201,7 @@ export default function TripsPage() {
                       const firstDate = trip.jobs[0]?.origin.date;
                       if (!firstDate) return <span style={{ fontSize: 11, color: '#d1d5db' }}>—</span>;
                       const d = new Date(firstDate.replace(' ', 'T'));
-                      const hoursUntil = (d.getTime() - Date.now()) / 3600000;
-                      const dateColor = hoursUntil < 2 ? '#dc2626' : hoursUntil <= 24 ? '#374151' : '#9ca3af';
+                      const dateColor = '#374151';
                       return (
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: dateColor }}>
                           {d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
