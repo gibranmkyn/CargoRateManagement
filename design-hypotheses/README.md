@@ -123,6 +123,11 @@ Every design decision starts with a **"How Might We"** question. We generate 2-3
 **Decision:** Option B (per-job quantities) with locked rates — quantities live at job level (default from order, editable per job). Rates come from rate card and are immutable. Only quantity is editable. Amount = locked rate × editable quantity.
 **File:** `26-hmw-fee-quantity-model.html`
 
+### HMW-27: How might we simplify the sub-table so it's fast to scan?
+**Options:** A) Flat sub-table — click row opens slide-out, B) Flat + cost hover tooltip
+**Decision:** Option A — flat sub-table, no inline fee expansion. Fee details in slide-out only. Priority tags removed.
+**File:** `27-hmw-simplified-subtable.html`
+
 ## Open (backlog)
 
 ### HMW-03: How might we make the "assign vendors to services" step feel natural instead of like filling a form?

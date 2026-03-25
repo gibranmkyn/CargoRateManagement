@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-27: Simplified Sub-Table</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: rgba(21,44,255,0.04); border: 2px solid rgba(21,44,255,0.2); border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #152CFF; font-size: 14px; margin-bottom: 6px; }
+.th { text-align: left; padding: 4px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; }
+.td { padding: 6px 10px; font-size: 11px; color: #374151; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-27: Simplified Sub-Table</h1>
+
+<div class="hmw">
+How might we simplify the delivery orders sub-table so it's fast to scan, with fee details available only in the slide-out — and remove the priority tag feature?
+</div>
+
+<div class="context">
+<strong>What changed:</strong> The current sub-table has expandable job rows that reveal an L2 fee breakdown table — 3 levels of nesting (order → jobs → fees). This is too much depth for daily scanning. Fee details are already in the slide-out panel. Priority tags add visual noise for an edge case. Both should be removed to keep the table focused on the most common ops workflow: scan jobs, check status, click to act.
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION A: FLAT SUB-TABLE + CLICK TO SLIDE-OUT -->
+<!-- ============================================ -->
+
+<h2>Option A: Flat Sub-Table — Click Row Opens Slide-Out</h2>
+<span class="label" style="background: rgba(21,44,255,0.06); color: #152CFF;">Recommended</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Sub-table rows are flat (no expand). Total Cost column shows the fee sum. Clicking any row opens the slide-out which has the full fee breakdown. This is how the app worked before the fee expansion was added — but now with the Total Cost column showing the aggregate. Simplest, fastest to scan.
+
+<div class="pros-cons">
+<div class="pros"><strong>✓ Pros</strong><br>
+• 2 levels only (order → jobs) — fast to scan<br>
+• One click action: click row = open slide-out with all details<br>
+• Total Cost gives the number ops needs at a glance<br>
+• Fee breakdown is already excellent in the slide-out</div>
+<div class="cons"><strong>✗ Cons</strong><br>
+• Can't see fee details without opening slide-out<br>
+• Comparing fees across jobs requires opening each one</div>
+</div>
+</div>
+
+<div class="screen">
+<!-- Dark nav -->
+<div style="height: 40px; background: #111827; display: flex; align-items: center; padding: 0 16px; gap: 16px;">
+  <div style="display: flex; align-items: center; gap: 8px;">
+    <div style="width: 20px; height: 20px; background: #152CFF; border-radius: 5px;"></div>
+    <span style="font-weight: 700; font-size: 13px; color: #fff;">Teleport OS</span>
+  </div>
+  <span style="font-size: 12px; color: #fff; font-weight: 600; padding: 4px 10px; background: rgba(255,255,255,0.1); border-radius: 4px;">Delivery Orders</span>
+  <span style="font-size: 12px; color: rgba(255,255,255,0.5);">Rates</span>
+  <span style="font-size: 12px; color: rgba(255,255,255,0.5);">Billing</span>
+  <span style="font-size: 12px; color: rgba(255,255,255,0.5);">Master Data</span>
+</div>
+
+<div style="padding: 16px;">
+<!-- Parent row (expanded) -->
+<div style="font-size: 11px; color: #9ca3af; margin-bottom: 8px;">
+  <span style="color: #152CFF; font-weight: 600;">▾</span>
+  <strong style="color: #111827; font-size: 13px; margin-left: 4px;">TikTok</strong>
+  <span class="mono" style="font-size: 10px; margin-left: 6px; padding: 1px 5px; background: #f3f4f6; border-radius: 4px; border: 1px solid #e5e7eb;">160-84329871</span>
+  <span style="margin-left: 8px;">24 bags · 1,240 kg</span>
+</div>
+
+<!-- Flat sub-table — NO expand chevrons -->
+<table style="width: 100%; border-collapse: collapse;">
+<thead>
+<tr>
+  <th class="th" style="width: 50px;">Job</th>
+  <th class="th">Vendor</th>
+  <th class="th">Service</th>
+  <th class="th">Route</th>
+  <th class="th" style="width: 100px;">Total Cost</th>
+  <th class="th" style="width: 90px;">Status</th>
+  <th class="th" style="width: 40px;">Proofs</th>
+</tr>
+</thead>
+<tbody>
+<tr style="cursor: pointer;">
+  <td class="td" style="font-weight: 600; color: #152CFF;">J01</td>
+  <td class="td" style="font-weight: 600; color: #111827;">HaleSun</td>
+  <td class="td"><span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; font-weight: 600; color: #152CFF; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.12);">FM Trucking</span></td>
+  <td class="td" style="font-size: 10px;">TikTok WH → SZ Bay Checkpoint</td>
+  <td class="td mono" style="font-weight: 600; color: #111827; font-size: 10px;">RM 525.00</td>
+  <td class="td">
+    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; border: 1px solid #a7f3d0; background: #f0fdf4; color: #059669;">
+      <span style="width: 5px; height: 5px; border-radius: 50%; background: #059669;"></span>
+      Completed
+    </span>
+  </td>
+  <td class="td" style="font-size: 12px; font-weight: 700; color: #059669;">✓</td>
+</tr>
+<tr style="cursor: pointer;">
+  <td class="td" style="font-weight: 600; color: #152CFF;">J02</td>
+  <td class="td" style="font-weight: 600; color: #111827;">Gonda</td>
+  <td class="td"><span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; font-weight: 600; color: #7c3aed; background: rgba(124,58,237,0.06); border: 1px solid rgba(124,58,237,0.12);">EC Export Customs</span></td>
+  <td class="td" style="font-size: 10px;">SZ Bay Checkpoint</td>
+  <td class="td mono" style="font-weight: 600; color: #111827; font-size: 10px;">RM 145.00</td>
+  <td class="td">
+    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; border: 1px solid #a7f3d0; background: #f0fdf4; color: #059669;">
+      <span style="width: 5px; height: 5px; border-radius: 50%; background: #059669;"></span>
+      Completed
+    </span>
+  </td>
+  <td class="td" style="font-size: 12px; font-weight: 700; color: #059669;">✓</td>
+</tr>
+<tr style="cursor: pointer;">
+  <td class="td" style="font-weight: 600; color: #152CFF;">J03</td>
+  <td class="td" style="font-weight: 600; color: #111827;">Gonda</td>
+  <td class="td"><span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; font-weight: 600; color: #b45309; background: rgba(180,83,9,0.06); border: 1px solid rgba(180,83,9,0.12);">CS Submission</span></td>
+  <td class="td" style="font-size: 10px;">SZX Airport Cargo Terminal</td>
+  <td class="td mono" style="font-weight: 600; color: #111827; font-size: 10px;">RM 80.00</td>
+  <td class="td">
+    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #6b7280;">
+      <span style="width: 5px; height: 5px; border-radius: 50%; background: #9ca3af;"></span>
+      Pending
+    </span>
+  </td>
+  <td class="td" style="font-size: 12px; font-weight: 700; color: #9ca3af;">○</td>
+</tr>
+</tbody>
+</table>
+
+<!-- Order total row -->
+<div style="display: flex; justify-content: flex-end; padding: 6px 10px; border-top: 1px solid #e5e7eb; margin-top: 4px;">
+  <span style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-right: 8px;">Order Total</span>
+  <span class="mono" style="font-size: 11px; font-weight: 700; color: #111827;">RM 750.00</span>
+</div>
+
+<div style="font-size: 10px; color: #9ca3af; margin-top: 8px; font-style: italic;">Click any row → slide-out opens with fee breakdown, quantities, proofs, activity log</div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION B: COST TOOLTIP ON HOVER              -->
+<!-- ============================================ -->
+
+<h2>Option B: Flat Sub-Table + Cost Tooltip on Hover</h2>
+<span class="label" style="background: #f3f4f6; color: #6b7280;">Middle Ground</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Same flat sub-table as Option A. But hovering over the Total Cost cell shows a small tooltip with the fee breakdown — no click required. The slide-out still has the full editable breakdown.
+
+<div class="pros-cons">
+<div class="pros"><strong>✓ Pros</strong><br>
+• Quick peek at fee breakdown without opening slide-out<br>
+• Still flat and scannable<br>
+• Doesn't clutter the table</div>
+<div class="cons"><strong>✗ Cons</strong><br>
+• Hover tooltips aren't discoverable — ops may never find this<br>
+• Tooltips are read-only — can't edit fees there<br>
+• More implementation complexity for marginal value</div>
+</div>
+</div>
+
+<div class="screen">
+<div style="padding: 16px; position: relative;">
+<table style="width: 100%; border-collapse: collapse;">
+<thead>
+<tr>
+  <th class="th" style="width: 50px;">Job</th>
+  <th class="th">Vendor</th>
+  <th class="th">Service</th>
+  <th class="th">Route</th>
+  <th class="th" style="width: 100px;">Total Cost</th>
+  <th class="th" style="width: 90px;">Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td class="td" style="font-weight: 600; color: #152CFF;">J01</td>
+  <td class="td" style="font-weight: 600;">HaleSun</td>
+  <td class="td" style="font-size: 10px;">FM Trucking</td>
+  <td class="td" style="font-size: 10px;">TikTok WH → SZ Bay</td>
+  <td class="td" style="position: relative;">
+    <span class="mono" style="font-weight: 600; color: #111827; font-size: 10px; cursor: help; border-bottom: 1px dotted #9ca3af;">RM 525.00</span>
+    <!-- Tooltip -->
+    <div style="position: absolute; top: -4px; left: 100%; margin-left: 8px; background: #111827; color: #fff; padding: 8px 10px; border-radius: 6px; font-size: 10px; width: 200px; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+        <span style="color: rgba(255,255,255,0.6);">Base rate</span>
+        <span class="mono" style="font-weight: 600;">RM 450.00</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+        <span style="color: rgba(255,255,255,0.6);">Fuel surcharge</span>
+        <span class="mono" style="font-weight: 600;">RM 45.00</span>
+      </div>
+      <div style="display: flex; justify-content: space-between;">
+        <span style="color: rgba(255,255,255,0.6);">Toll fees</span>
+        <span class="mono" style="font-weight: 600;">RM 30.00</span>
+      </div>
+      <div style="border-top: 1px solid rgba(255,255,255,0.2); margin-top: 6px; padding-top: 4px; display: flex; justify-content: space-between; font-weight: 700;">
+        <span style="color: rgba(255,255,255,0.6); font-size: 9px; text-transform: uppercase;">Total</span>
+        <span style="color: #152CFF;">RM 525.00</span>
+      </div>
+    </div>
+  </td>
+  <td class="td"><span style="padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; border: 1px solid #a7f3d0; background: #f0fdf4; color: #059669;">● Completed</span></td>
+</tr>
+</tbody>
+</table>
+<div style="font-size: 10px; color: #9ca3af; margin-top: 8px; font-style: italic;">Hover over cost → tooltip shows fee breakdown. Click row → full slide-out.</div>
+</div>
+</div>
+
+
+<!-- VERDICT -->
+<div class="verdict">
+<h3>Verdict: Option A — Flat Sub-Table, No Inline Fees</h3>
+<p style="font-size: 12px; line-height: 1.6; color: #374151;">
+<strong>Recommended because:</strong> The sub-table's job is scanning — "which jobs, what status, how much." The slide-out's job is acting — "change status, view fees, edit quantities, upload proofs." Mixing these (inline fee expansion) blurs the boundary. Option A keeps each surface doing one thing well.
+</p>
+<p style="font-size: 12px; line-height: 1.6; color: #374151; margin-top: 8px;">
+<strong>Changes from current design:</strong>
+</p>
+<ul style="font-size: 11px; color: #374151; margin-top: 4px; padding-left: 16px; line-height: 1.8;">
+<li><strong>Remove:</strong> Expandable fee rows (L2 breakdown) from sub-table</li>
+<li><strong>Remove:</strong> Expand chevrons (▸/▾) on job rows</li>
+<li><strong>Remove:</strong> <code>expandedJobId</code> state</li>
+<li><strong>Remove:</strong> Priority tag on orders (overdesign for current scope)</li>
+<li><strong>Keep:</strong> Total Cost column (sum of fees)</li>
+<li><strong>Keep:</strong> Click row → opens slide-out with full fee breakdown</li>
+<li><strong>Keep:</strong> Order Total at bottom of expanded sub-table</li>
+</ul>
+</div>
+
+</div>
+</body>
+</html>

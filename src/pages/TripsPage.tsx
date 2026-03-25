@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Search, Download, Plus, Ship, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { customers, vendors, formatCurrency } from '../data/mockData';
@@ -34,7 +34,6 @@ export default function TripsPage() {
   const [mawbSearch, setMawbSearch] = useState('');
   const [customerFilter, setCustomerFilter] = useState('');
   const [vendorFilter, setVendorFilter] = useState('');
-  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [panelIds, setPanelIds] = useState<{ tripId: string; jobId: string } | null>(null);
 
@@ -191,7 +190,6 @@ export default function TripsPage() {
                   <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', letterSpacing: '-0.2px', marginBottom: 2 }}>
                       {trip.customer.name}
-                      {trip.priority && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 3, color: '#b45309', background: '#fefce8', border: '1px solid #fde68a' }}>PRIORITY</span>}
                     </div>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#9ca3af', background: '#f3f4f6', padding: '1px 5px', borderRadius: 4, border: '1px solid #e5e7eb' }}>{trip.id}</span>
                   </td>
@@ -271,103 +269,56 @@ export default function TripsPage() {
                             {trip.jobs.map((job, i) => {
                               const proofCount = (job.proofDocuments ?? []).length;
                               const fees = job.fees ?? [];
-                              // Calculate total cost from fees
                               const costMap = new Map<string, number>();
                               fees.forEach((f) => costMap.set(f.currency, (costMap.get(f.currency) ?? 0) + f.amount));
-                              const isJobExpanded = expandedJobId === job.id;
-                              const isCompleted = job.status === 'Completed';
 
                               return (
-                                <React.Fragment key={job.id}>
-                                  <tr
-                                    onClick={(e) => { e.stopPropagation(); setExpandedJobId(isJobExpanded ? null : job.id); }}
-                                    style={{ cursor: 'pointer', transition: 'background 0.1s' }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f6'; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
-                                  >
-                                    <td style={{ padding: '6px 10px', fontSize: 11, fontWeight: 600, color: '#152CFF' }}>
-                                      {isJobExpanded ? '▾' : '▸'} J{String(i + 1).padStart(2, '0')}
-                                    </td>
-                                    <td style={{ padding: '6px 10px', fontSize: 11, fontWeight: 600, color: '#111827' }}>
-                                      {job.vendor.name}
-                                    </td>
-                                    <td style={{ padding: '6px 10px' }}>
-                                      <ServiceTag service={job.service} />
-                                    </td>
-                                    <td style={{ padding: '6px 10px', fontSize: 10, color: '#374151' }}>
-                                      {job.origin.location === job.destination.location ? job.origin.location : `${job.origin.location} → ${job.destination.location}`}
-                                    </td>
-                                    <td style={{ padding: '6px 10px', fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 600, color: '#111827' }}>
-                                      {costMap.size > 0
-                                        ? Array.from(costMap.entries()).map(([curr, total]) => (
-                                            <div key={curr}>{formatCurrency(curr as any, total)}</div>
-                                          ))
-                                        : <span style={{ color: '#9ca3af', fontWeight: 400 }}>&mdash;</span>
-                                      }
-                                    </td>
-                                    <td style={{ padding: '6px 10px' }} onClick={(e) => { e.stopPropagation(); setPanelIds({ tripId: trip.id, jobId: job.id }); }}>
-                                      {(() => {
-                                        const sc = getChipColor(job.status);
-                                        return (
-                                          <span style={{
-                                            display: 'inline-flex', alignItems: 'center', gap: 4,
-                                            padding: '1px 7px', borderRadius: 4, fontSize: 10, fontWeight: 600,
-                                            border: `1px solid ${sc.border}`, background: sc.bg, color: sc.text,
-                                            cursor: 'pointer',
-                                          }}>
-                                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: sc.dot, display: 'inline-block' }} />
-                                            {job.status}
-                                          </span>
-                                        );
-                                      })()}
-                                    </td>
-                                    <td style={{ padding: '6px 10px', fontSize: 12, fontWeight: 700, color: proofCount > 0 ? '#059669' : '#9ca3af' }}>
-                                      {proofCount > 0 ? '✓' : '○'}
-                                    </td>
-                                  </tr>
-                                  {/* L2 Fee breakdown (expanded) */}
-                                  {isJobExpanded && fees.length > 0 && (
-                                    <tr>
-                                      <td colSpan={7} style={{ padding: 0, background: '#fff' }}>
-                                        <div style={{ paddingLeft: 52, paddingRight: 10, paddingTop: 2, paddingBottom: 8 }}>
-                                          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                            <thead>
-                                              <tr>
-                                                <th style={{ textAlign: 'left', padding: '3px 8px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' }}>Fee</th>
-                                                <th style={{ textAlign: 'left', padding: '3px 8px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' }}>Rate</th>
-                                                <th style={{ textAlign: 'center', padding: '3px 8px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', width: 50 }}>Qty</th>
-                                                <th style={{ textAlign: 'right', padding: '3px 8px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', width: 80 }}>Amount</th>
-                                              </tr>
-                                            </thead>
-                                            <tbody>
-                                              {fees.map((fee) => (
-                                                <tr key={fee.id}>
-                                                  <td style={{ padding: '3px 8px', fontSize: 10, color: '#374151' }}>{fee.name}</td>
-                                                  <td style={{ padding: '3px 8px', fontSize: 10, fontFamily: "'JetBrains Mono', monospace", color: '#9ca3af' }}>
-                                                    {formatCurrency(fee.currency, fee.rate)} /{fee.unit === 'flat' ? 'trip' : fee.unit.replace('per-', '')}
-                                                  </td>
-                                                  <td style={{ padding: '3px 8px', fontSize: 10, fontFamily: "'JetBrains Mono', monospace", color: '#6b7280', textAlign: 'center' }}>
-                                                    {fee.quantity}
-                                                  </td>
-                                                  <td style={{ padding: '3px 8px', fontSize: 10, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: '#111827', textAlign: 'right' }}>
-                                                    {formatCurrency(fee.currency, fee.amount)}
-                                                  </td>
-                                                </tr>
-                                              ))}
-                                            </tbody>
-                                          </table>
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  )}
-                                  {isJobExpanded && fees.length === 0 && (
-                                    <tr>
-                                      <td colSpan={7} style={{ padding: '6px 52px', fontSize: 10, color: '#9ca3af', fontStyle: 'italic', background: '#fff' }}>
-                                        No fee line items — click ⋯ to add fees in the slide-out
-                                      </td>
-                                    </tr>
-                                  )}
-                                </React.Fragment>
+                                <tr
+                                  key={job.id}
+                                  onClick={(e) => { e.stopPropagation(); setPanelIds({ tripId: trip.id, jobId: job.id }); }}
+                                  style={{ cursor: 'pointer', transition: 'background 0.1s' }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f6'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
+                                >
+                                  <td style={{ padding: '6px 10px', fontSize: 11, fontWeight: 600, color: '#152CFF' }}>
+                                    J{String(i + 1).padStart(2, '0')}
+                                  </td>
+                                  <td style={{ padding: '6px 10px', fontSize: 11, fontWeight: 600, color: '#111827' }}>
+                                    {job.vendor.name}
+                                  </td>
+                                  <td style={{ padding: '6px 10px' }}>
+                                    <ServiceTag service={job.service} />
+                                  </td>
+                                  <td style={{ padding: '6px 10px', fontSize: 10, color: '#374151' }}>
+                                    {job.origin.location === job.destination.location ? job.origin.location : `${job.origin.location} → ${job.destination.location}`}
+                                  </td>
+                                  <td style={{ padding: '6px 10px', fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 600, color: '#111827' }}>
+                                    {costMap.size > 0
+                                      ? Array.from(costMap.entries()).map(([curr, total]) => (
+                                          <div key={curr}>{formatCurrency(curr as any, total)}</div>
+                                        ))
+                                      : <span style={{ color: '#9ca3af', fontWeight: 400 }}>&mdash;</span>
+                                    }
+                                  </td>
+                                  <td style={{ padding: '6px 10px' }}>
+                                    {(() => {
+                                      const sc = getChipColor(job.status);
+                                      return (
+                                        <span style={{
+                                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                                          padding: '1px 7px', borderRadius: 4, fontSize: 10, fontWeight: 600,
+                                          border: `1px solid ${sc.border}`, background: sc.bg, color: sc.text,
+                                        }}>
+                                          <span style={{ width: 5, height: 5, borderRadius: '50%', background: sc.dot, display: 'inline-block' }} />
+                                          {job.status}
+                                        </span>
+                                      );
+                                    })()}
+                                  </td>
+                                  <td style={{ padding: '6px 10px', fontSize: 12, fontWeight: 700, color: proofCount > 0 ? '#059669' : '#9ca3af' }}>
+                                    {proofCount > 0 ? '✓' : '○'}
+                                  </td>
+                                </tr>
                               );
                             })}
                           </tbody>
