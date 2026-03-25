@@ -308,33 +308,48 @@ Unit, Qty visible in slide-out panel detail, not in sub-table.
 | 2026-03-25 | Auto-migrate localStorage | Old multi-service data auto-resets to seed. No manual clearing needed. |
 | 2026-03-25 | Pickup Date column | Added to main table — earliest job origin date. Critical for ops scheduling. |
 | 2026-03-25 | Realistic seed data | 10 orders with real vendors (HaleSun, SevenSeas, Gonda, ThaiKee, The Lorry) and real customers (TikTok, Shopee, Shein, AliExpress, Temu). |
-| 2026-03-25 | Priority tag on orders | Amber "PRIORITY" tag next to customer name. Non-priority stays clean. |
-| 2026-03-25 | Color-coded pickup urgency | Red for <2h, default for today, muted for >24h. Table sorted soonest-first. |
+| 2026-03-25 | ~~Priority tag~~ | Removed — overdesign. (HMW-27) |
+| 2026-03-25 | ~~Pickup urgency coloring~~ | Removed — visual noise without clear value. |
 | 2026-03-25 | Duplicate order button | Copy icon on row hover → pre-fills create form with same pattern. |
 | 2026-03-25 | Vendor filter dropdown | Added to filter bar alongside MAWB and Customer. Filters orders by vendor. |
 | 2026-03-25 | Proof status icon | Green ✓ = proof uploaded, gray ○ = missing. Replaces "N docs" text in sub-table. |
 | 2026-03-25 | Location master data | Dropdown + "Add new" replaces free-text locations. Prerequisite for rate lookups. |
 | 2026-03-25 | Rate + unit pricing | Each rate has a unit (flat/per-kg/per-bag/per-CBM). Cost = rate × quantity. |
 | 2026-03-25 | Vendor comparison popover | During order creation, compare vendors by rate + reliability before assigning. |
-| 2026-03-25 | Invoice variance detection | "Invoice Amount" field per job, auto-compared to agreed rate. Red flag for discrepancies. |
+| 2026-03-25 | ~~Invoice variance detection~~ | Removed — billing module dropped. Proof-centric model replaces billing validation. |
 | 2026-03-25 | Quick-add service bar in create form | Horizontal [+FM] [+EC] [+CS] etc. bar. Click = add job with service pre-filled. Service-first thinking restored. |
 | 2026-03-25 | Empty state: inline CTA | Teal icon + message + [+ New Order] button in empty table body. No hand-holding. |
 | 2026-03-25 | Reactive slide-out panel | Panel stores tripId+jobId, derives data from context. Always fresh after mutations. |
-| 2026-03-25 | Persona-split navigation | Delivery Orders / Rates / Billing / Master Data. "New Order" is a button, not nav item. Billing is its own section for admin persona. |
-| 2026-03-25 | Persona-specific sub-table columns | Ops sees Job/Vendor/Service/Route/Rate/Cost/Status/Proofs. Billing sees Job/Vendor/Service/Route/Agreed/Invoice/Variance/Action. |
+| 2026-03-25 | ~~Persona-split navigation~~ → Simplified nav | Delivery Orders / Rates / Master Data. Billing dropped (redundant with proof-centric). |
+| 2026-03-25 | ~~Persona-specific sub-table columns~~ → Flat sub-table | Job/Vendor/Service/Route/Total Cost/Proof. Click row → slide-out for details. (HMW-27) |
 | 2026-03-25 | Service config: FM=route, rest=location | FM Trucking uses origin+destination. EC/CS/CR/OH use single location. Determines form layout per job. |
 | 2026-03-25 | Multi-currency (MYR/CNY/USD) | Currency is per-rate. Display: "CNY 3,200". Mixed totals show separate line per currency. |
-| 2026-03-25 | Add Rate form in slide-out | 380px slide-out with vendor, service, rate type toggle, location/route, amount, unit, currency, effective date. |
-| 2026-03-25 | Auto-end previous rate | New rate auto-sets old rate's effectiveTo to day before. Lookup returns latest effectiveFrom on or before job date. |
-| 2026-03-25 | Billing severity sort | Over-invoiced first, then no-rate, then under, then match. Filter row: All/Flagged/No rate. |
-| 2026-03-25 | Bulk match for billing | "Apply agreed rates as invoiced" button per order. Eliminates ~70% of manual invoice entry. |
+| 2026-03-25 | ~~Add Rate slide-out~~ → CSV upload | Rate management via CSV upload/download, not one-by-one forms. (HMW-42) |
+| 2026-03-25 | ~~Billing severity sort~~ | Removed — billing module dropped. |
+| 2026-03-25 | ~~Bulk match for billing~~ | Removed — billing module dropped. |
 | 2026-03-25 | Location dropdown by zone | Grouped by zone/city (Shenzhen, Guangzhou, HK), not by type. Type shown as badge within group. |
 | 2026-03-25 | Add Location inline form behavior | Focus management: expand form → focus Name → on save auto-select + fire rate lookup → on error stay in form. |
 | 2026-03-25 | One popover at a time | Vendor comparison: opening new closes existing. Click outside/Escape/select vendor all close. |
 | 2026-03-25 | Full interaction state table | Loading/Empty/Error/Success/Partial specified for all Phase 2 features. |
 | 2026-03-25 | Desktop a11y + keyboard nav | Arrow keys for dropdowns, tab for popovers, focus trapping in slide-outs, Escape to close. Min viewport 1200px. |
-| 2026-03-25 | Multi-fee jobs (HMW-25) | Each job has N fee line items (L2). Fee = locked rate × editable quantity = calculated amount. Sub-table shows Total Cost (sum of fees). Expanding job row reveals L2 fee breakdown. |
-| 2026-03-25 | Inline quick status (HMW-25) | 3 inline buttons on sub-table row: Pending / In Prog / Done. Reject + Cancel stay in slide-out. 1-click status change for most common actions. |
-| 2026-03-25 | Per-job quantities (HMW-26) | Bags/weight/volume live at job level, default from order. Editable until job Completed. Drive fee qty multipliers. Locked rate × editable qty. |
-| 2026-03-25 | Fee catalog | Fuel surcharge, Toll fees, Waiting time, Special handling, Overtime, Insurance. Hardcoded for now, configurable Phase 3. |
-| 2026-03-25 | Lock on complete | When job = Completed, all fees and quantities become read-only. Must change status back to edit. |
+| 2026-03-25 | Multi-fee jobs (HMW-25) | Each job has N fee line items (L2). Fee = locked rate × editable quantity = calculated amount. Sub-table shows Total Cost (sum of fees). |
+| 2026-03-25 | ~~Inline quick status~~ → Proof-centric | Replaced manual status with proof lifecycle: Awaiting → Uploaded (auto) → Validated → Disputed. (HMW-30) |
+| 2026-03-25 | Per-job quantities (HMW-26) | Bags/weight/volume live at job level, default from order. Editable until validated. |
+| 2026-03-25 | ~~Fee catalog (free-text)~~ → Rate-locked fees | All fees from rate cards only. No free-text entry. "Fees are configured in Rates →" link. (HMW-30) |
+| 2026-03-25 | Lock on validate | When job proofStatus = validated, all fees and quantities become read-only. |
+| 2026-03-25 | Flat sub-table (HMW-27) | No inline fee expansion. Fee details in slide-out only. Sub-table scans, slide-out acts. |
+| 2026-03-25 | Smart default filter (HMW-28) | Active/All/Completed chips. Active = any job NOT validated. Default on page load. |
+| 2026-03-25 | Date period picker (HMW-29) | Today/This week/This month/Last month/All time. Only for All/Completed views. Active has no date constraint. |
+| 2026-03-25 | ~~Billing module~~ dropped | Redundant with proof-centric delivery orders. Validated = ready for payment. |
+| 2026-03-25 | Teleport Future Blue `#152CFF` | Brand color from teleport.it. Dark nav `#111827`. |
+| 2026-03-25 | L1/L2 service hierarchy | 5 L1 services → 20 L2 sub-services with Cost IDs from CR Trip Management reference. |
+| 2026-03-25 | Unit type fixed per Cost ID (HMW-35) | /trip, /kg, /bag defined once in master data. All rates for that Cost ID use the same unit. |
+| 2026-03-25 | Fee auto-population (HMW-34) | All L2 fees with rates auto-populate on job creation. Rate in the sheet = fee on the job. |
+| 2026-03-25 | China regions master data | GB/T 2260 standard. 33 provinces, 344 cities, 3,077 districts. For FTL district-to-district pricing. |
+| 2026-03-25 | Facilities vs Regions | Facilities = operational locations (warehouses, airports). Regions = standardized admin divisions. Separate master data tabs. |
+| 2026-03-25 | FTL trucking rates (HMW-37/39) | Origin district → Destination district × truck type. 8 types: 1.5T/3T/5T/8T/10T/12T/40HQ/45HQ. |
+| 2026-03-25 | CSV as primary rate editing (HMW-42) | CSV upload/download for bulk rate management. Grid is read-only dashboard. Accepts district names, not codes. |
+| 2026-03-25 | Rate activity log | Every CSV upload tracked: timestamp, user, filename, summary (new/updated/unchanged). |
+| 2026-03-25 | Unified vendor selector on Rates page | Single dropdown at top, shared across all service tabs. Not separate pills per tab. |
+| 2026-03-25 | Service-based rate tabs | FM Trucking / Export Customs / Cargo Submission / Cargo Retrieval / Origin Handling. Each service has its own rate structure. |
+| 2026-03-25 | Services rates: vertical by location | Each location as a card with fees listed vertically underneath. Scrolls down, not right. |
