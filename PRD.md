@@ -70,8 +70,9 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 - **US-029:** As a rates admin, I want origin and destination to be standardized China districts (GB/T 2260 codes) from the Regions master data, so rate lookup is unambiguous regardless of how the address is written.
 
 ### Service-Based Rate Management (EC, CS, CR, OH)
-- **US-030:** As a rates admin, I want to manage service fees in an L2 Cost ID × location grid per vendor, so I can set rates for each sub-service (e.g., EC001 Customs Declaration, EC002 Inspection) at each facility.
-- **US-031:** As a rates admin, I want service rates to auto-populate as fee line items when a job is created matching the vendor + service + location, so all applicable L2 fees are included automatically.
+- **US-030:** As a rates admin, I want to manage each vendor's fee schedule per service and location — using the vendor's own fee names, units, and rates — so rates match exactly what the vendor quotes us. (HMW-43)
+- **US-031:** As an ops planner, I want all fees from the vendor's schedule to auto-populate when a job is created, and I can remove the exceptions that don't apply to this specific shipment, so fee management is subtractive (remove what doesn't apply) not additive (search and select each fee). (HMW-43)
+- **US-035:** As a rates admin, I want to upload vendor fee schedules via CSV (fee_name, unit, rate, min_charge, currency), so I can onboard a vendor's 15+ fees in one upload.
 
 ### Future (Phase 3+)
 - **US-013:** As an ops planner, I want to save trip configurations as templates, so I can quickly create similar trips.
