@@ -174,7 +174,7 @@ export default function CreateTripPage() {
         origin: { location: originName, date: draft.originDate || '' },
         destination: { location: destName, date: draft.destinationDate || '' },
         service: svc,
-        status: 'Pending' as const,
+        status: 'Pending' as const, proofStatus: 'awaiting' as const,
         duration: null,
         execution: null,
         activityLog: [{ id: `log-${Date.now()}-${i}`, timestamp: now.toISOString().replace('T', ' ').slice(0, 16), action: 'Job created', user: 'Ops Admin', details: `Assigned to ${vendor.name}` }],

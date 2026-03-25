@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useEffect, useCallback, type ReactNode } from 'react';
-import type { Trip, Job, JobStatus, TripTemplate, ActivityLogEntry, ProofDocument, Currency, FeeLineItem, RateUnit } from '../data/mockData';
+import type { Trip, Job, JobStatus, ProofStatus, TripTemplate, ActivityLogEntry, ProofDocument, Currency, FeeLineItem, RateUnit } from '../data/mockData';
 import { seedTrips, seedTemplates, calcFeeAmount } from '../data/mockData';
 
 // --- State ---
@@ -37,7 +37,9 @@ type TripAction =
   | { type: 'ADD_FEE'; payload: { tripId: string; jobId: string; fee: FeeLineItem } }
   | { type: 'REMOVE_FEE'; payload: { tripId: string; jobId: string; feeId: string } }
   | { type: 'UPDATE_FEE_QTY'; payload: { tripId: string; jobId: string; feeId: string; quantity: number } }
-  | { type: 'UPDATE_JOB_QTY'; payload: { tripId: string; jobId: string; jobBags?: number; jobWeight?: number; jobVolume?: number } };
+  | { type: 'UPDATE_JOB_QTY'; payload: { tripId: string; jobId: string; jobBags?: number; jobWeight?: number; jobVolume?: number } }
+  | { type: 'VALIDATE_JOB'; payload: { tripId: string; jobId: string } }
+  | { type: 'DISPUTE_JOB'; payload: { tripId: string; jobId: string; reason: string } };
 
 // --- Reducer ---
 
@@ -134,7 +136,7 @@ function tripReducer(state: TripState, action: TripAction): TripState {
                 ...t,
                 jobs: t.jobs.map((j) =>
                   j.id === action.payload.jobId
-                    ? { ...j, proofDocuments: [...j.proofDocuments, action.payload.doc] }
+                    ? { ...j, proofDocuments: [...j.proofDocuments, action.payload.doc], proofStatus: (j.proofStatus === 'awaiting' || j.proofStatus === 'disputed') ? 'uploaded' as const : j.proofStatus }
                     : j
                 ),
               }
@@ -245,6 +247,26 @@ function tripReducer(state: TripState, action: TripAction): TripState {
       };
     }
 
+    case 'VALIDATE_JOB':
+      return {
+        ...state,
+        trips: state.trips.map((t) =>
+          t.id === action.payload.tripId
+            ? { ...t, jobs: t.jobs.map((j) => j.id === action.payload.jobId ? { ...j, proofStatus: 'validated' as const, status: 'Completed' as const } : j) }
+            : t
+        ),
+      };
+
+    case 'DISPUTE_JOB':
+      return {
+        ...state,
+        trips: state.trips.map((t) =>
+          t.id === action.payload.tripId
+            ? { ...t, jobs: t.jobs.map((j) => j.id === action.payload.jobId ? { ...j, proofStatus: 'disputed' as const, status: 'Rejected' as const, disputeReason: action.payload.reason } : j) }
+            : t
+        ),
+      };
+
     default:
       return state;
   }
@@ -287,6 +309,8 @@ interface TripContextValue {
   removeFee: (tripId: string, jobId: string, feeId: string) => void;
   updateFeeQty: (tripId: string, jobId: string, feeId: string, quantity: number) => void;
   updateJobQty: (tripId: string, jobId: string, qtys: { jobBags?: number; jobWeight?: number; jobVolume?: number }) => void;
+  validateJob: (tripId: string, jobId: string) => void;
+  disputeJob: (tripId: string, jobId: string, reason: string) => void;
 }
 
 const TripContext = createContext<TripContextValue | null>(null);
@@ -300,7 +324,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
 
   // Hydrate from localStorage on mount
   // Version key: bump this to force reseed when seed data changes
-  const SEED_VERSION = 'v3-fees';
+  const SEED_VERSION = 'v4-proof-centric';
 
   useEffect(() => {
     try {
@@ -346,6 +370,8 @@ export function TripProvider({ children }: { children: ReactNode }) {
   const removeFee = useCallback((tripId: string, jobId: string, feeId: string) => dispatch({ type: 'REMOVE_FEE', payload: { tripId, jobId, feeId } }), []);
   const updateFeeQty = useCallback((tripId: string, jobId: string, feeId: string, quantity: number) => dispatch({ type: 'UPDATE_FEE_QTY', payload: { tripId, jobId, feeId, quantity } }), []);
   const updateJobQty = useCallback((tripId: string, jobId: string, qtys: { jobBags?: number; jobWeight?: number; jobVolume?: number }) => dispatch({ type: 'UPDATE_JOB_QTY', payload: { tripId, jobId, ...qtys } }), []);
+  const validateJob = useCallback((tripId: string, jobId: string) => dispatch({ type: 'VALIDATE_JOB', payload: { tripId, jobId } }), []);
+  const disputeJob = useCallback((tripId: string, jobId: string, reason: string) => dispatch({ type: 'DISPUTE_JOB', payload: { tripId, jobId, reason } }), []);
 
   const value: TripContextValue = {
     trips: state.trips,
@@ -357,6 +383,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
     saveTemplate, deleteTemplate,
     setJobInvoice, bulkApplyAgreedRates,
     addFee, removeFee, updateFeeQty, updateJobQty,
+    validateJob, disputeJob,
   };
 
   return <TripContext.Provider value={value}>{children}</TripContext.Provider>;
