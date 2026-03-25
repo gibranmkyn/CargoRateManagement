@@ -57,11 +57,29 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 ### Dashboard
 - **US-012:** As an ops planner, I want to see summary cards (total trips, active jobs, completed jobs, pending jobs) at the top of the trip list, so I get an instant health check of operations.
 
-### Future (Phase 2+)
+### FTL Trucking Rate Management
+- **US-020:** As a rates admin, I want to manage FTL trucking rates in a route × truck type matrix, so I can see and edit all rates for a vendor at a glance — like the Excel rate cards vendors send us.
+- **US-021:** As a rates admin, I want to select a vendor and see their full FTL rate sheet with rows as origin district → destination district routes and columns as truck types (1.5T, 3T, 5T, 8T, 10T, 12T, 40HQ, 45HQ), so I can manage rates in the same format vendors quote them.
+- **US-022:** As a rates admin, I want to add rates in bulk by filling in a spreadsheet-style grid, so I don't have to add 100+ rates one by one when onboarding a new vendor.
+- **US-023:** As a rates admin, I want to group routes by origin city/zone (Shenzhen, Dongguan, Guangzhou) with collapsible sections, so the rate sheet stays manageable with 50+ routes.
+- **US-024:** As a rates admin, I want each truck type column to show capacity specs (weight cap, volume cap, dimensions), so I know what each truck type means when setting rates.
+- **US-025:** As a rates admin, I want to see the currency per route (RMB for domestic, HKD for cross-border), so rates are quoted in the correct currency.
+- **US-026:** As an ops planner, when creating an FM Trucking job, I want to select a truck type in addition to vendor and route, so the system can look up the correct FTL rate.
+- **US-027:** As an ops planner, I want the FTL rate to auto-populate as a fee line item when I select vendor + origin district + destination district + truck type, so I see the cost before submitting the order.
+- **US-028:** As a rates admin, I want FM accessorial fees (FM001 Warehouse Transfer, FM002 Pickup, FM003 Cross-Border Handling) to be managed separately from the base FTL rate, so the base trucking rate and surcharges are distinct.
+- **US-029:** As a rates admin, I want origin and destination to be standardized China districts (GB/T 2260 codes) from the Regions master data, so rate lookup is unambiguous regardless of how the address is written.
+
+### Service-Based Rate Management (EC, CS, CR, OH)
+- **US-030:** As a rates admin, I want to manage service fees in an L2 Cost ID × location grid per vendor, so I can set rates for each sub-service (e.g., EC001 Customs Declaration, EC002 Inspection) at each facility.
+- **US-031:** As a rates admin, I want service rates to auto-populate as fee line items when a job is created matching the vendor + service + location, so all applicable L2 fees are included automatically.
+
+### Future (Phase 3+)
 - **US-013:** As an ops planner, I want to save trip configurations as templates, so I can quickly create similar trips.
 - **US-014:** As a vendor, I want to view trips assigned to me and update status/upload proofs from a vendor portal.
 - **US-015:** As an ops admin, I want a validation dashboard to review completed trips and approve them for payment.
 - **US-016:** As an ops admin, I want to manage master data (vendors, customers, facilities, service types) from the admin portal.
+- **US-032:** As a rates admin, I want to import vendor rate cards from Excel/CSV, so I can onboard rates without manual data entry.
+- **US-033:** As an ops planner, I want the system to auto-resolve a pickup address to its district using geocoding, so I don't have to manually look up which district the pickup is in.
 
 ## Key Design Decisions
 1. **1 job = 1 service:** Each job has exactly 1 vendor + 1 service code + origin/destination. Same vendor can appear multiple times. Each job is a billable line item.
