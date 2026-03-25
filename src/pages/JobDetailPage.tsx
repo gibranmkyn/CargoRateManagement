@@ -2,11 +2,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useRef } from 'react';
 import { ArrowLeft, ArrowRight, Upload, FileText, Image, X, Clock, MapPin, User, Briefcase, ChevronRight } from 'lucide-react';
 import { useTrips } from '../context/TripContext';
-import type { JobStatus, ProofDocument } from '../data/mockData';
+import type { ProofDocument } from '../data/mockData';
+import { formatCurrency } from '../data/mockData';
 import ServiceTag from '../components/trips/ServiceTag';
-import StatusBadge from '../components/trips/StatusBadge';
-
-const allStatuses: JobStatus[] = ['Pending', 'In Progress', 'Completed', 'Rejected', 'Cancelled'];
 
 function fmtDateTime(dt: string) {
   if (!dt) return '\u2014';
@@ -28,7 +26,7 @@ function fmtDateShort(dt: string) {
 export default function JobDetailPage() {
   const { tripId, jobId } = useParams<{ tripId: string; jobId: string }>();
   const navigate = useNavigate();
-  const { trips, updateJobStatus, addProofDocument, removeProofDocument, addActivityLog } = useTrips();
+  const { trips, addProofDocument, removeProofDocument, addActivityLog, validateJob, disputeJob } = useTrips();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const trip = trips.find((t) => t.id === tripId);
@@ -85,15 +83,12 @@ export default function JobDetailPage() {
     );
   }
 
-  function handleStatusChange(newStatus: JobStatus) {
-    updateJobStatus(trip!.id, job!.id, newStatus);
-    addActivityLog(trip!.id, job!.id, {
-      id: `log-${Date.now()}`,
-      timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
-      action: `Status \u2192 ${newStatus}`,
-      user: 'Ops Admin',
-    });
-  }
+  const PROOF_LABELS: Record<string, { label: string; color: string; bg: string; border: string; icon: string }> = {
+    awaiting: { label: 'Awaiting proof', color: '#9ca3af', bg: '#f3f4f6', border: '#e5e7eb', icon: '○' },
+    uploaded: { label: 'Proof uploaded', color: '#152CFF', bg: 'rgba(21,44,255,0.04)', border: 'rgba(21,44,255,0.15)', icon: '📄' },
+    validated: { label: 'Validated', color: '#059669', bg: '#f0fdf4', border: '#a7f3d0', icon: '✓' },
+    disputed: { label: 'Disputed', color: '#dc2626', bg: '#fef2f2', border: '#fecaca', icon: '✕' },
+  };
 
   function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -199,7 +194,7 @@ export default function JobDetailPage() {
             >
               {job.vendor.name}
             </h1>
-            <StatusBadge status={job.status} />
+            {(() => { const ps = PROOF_LABELS[job.proofStatus] ?? PROOF_LABELS.awaiting; return <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600, background: ps.bg, border: `1px solid ${ps.border}`, color: ps.color }}>{ps.icon} {ps.label}</span>; })()}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#9ca3af' }}>
             <span
@@ -551,64 +546,48 @@ export default function JobDetailPage() {
 
         {/* Right column */}
         <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 16 }}>
-          {/* Status management card */}
-          <div
-            style={{
-              background: '#fff',
-              border: '1px solid #e5e7eb',
-              borderRadius: 6,
-              padding: 16,
-            }}
-          >
-            <h3 style={sectionTitle}>Status</h3>
-            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
-              {allStatuses.map((s) => {
-                const isActive = s === job.status;
-                return (
-                  <button
-                    key={s}
-                    onClick={() => handleStatusChange(s)}
-                    style={{
-                      width: '100%',
-                      textAlign: 'left' as const,
-                      padding: '6px 10px',
-                      borderRadius: 4,
-                      border: isActive
-                        ? '1.5px solid #152CFF'
-                        : '1.5px solid transparent',
-                      background: isActive
-                        ? 'rgba(21,44,255,0.06)'
-                        : 'transparent',
-                      fontWeight: isActive ? 600 : 400,
-                      fontSize: 11,
-                      color: '#374151',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      transition: 'all 150ms',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (s !== job.status) {
-                        e.currentTarget.style.background = '#f9fafb';
-                        e.currentTarget.style.borderColor = '#e5e7eb';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (s !== job.status) {
-                        e.currentTarget.style.background = 'transparent';
-                        e.currentTarget.style.borderColor = 'transparent';
-                      }
-                    }}
-                  >
-                    <StatusBadge status={s} />
-                  </button>
-                );
-              })}
-            </div>
+          {/* Proof Actions + Fee Breakdown */}
+          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: 16 }}>
+            {/* Validate / Dispute */}
+            {job.proofStatus === 'uploaded' && (
+              <div style={{ marginBottom: 16 }}>
+                <h3 style={sectionTitle}>Validate Proof</h3>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button onClick={() => { validateJob(trip.id, job.id); addActivityLog(trip.id, job.id, { id: `l${Date.now()}`, timestamp: new Date().toISOString().replace('T',' ').slice(0,16), action: 'Proof validated', user: 'Ops Admin' }); }} style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: 'none', background: '#059669', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>✓ Validate</button>
+                  <button onClick={() => { disputeJob(trip.id, job.id, 'Proof insufficient'); addActivityLog(trip.id, job.id, { id: `l${Date.now()}`, timestamp: new Date().toISOString().replace('T',' ').slice(0,16), action: 'Proof disputed', user: 'Ops Admin' }); }} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>Dispute</button>
+                </div>
+              </div>
+            )}
+            {job.proofStatus === 'validated' && (
+              <div style={{ padding: '8px 12px', background: '#f0fdf4', border: '1px solid #a7f3d0', borderRadius: 6, fontSize: 11, fontWeight: 600, color: '#059669', textAlign: 'center' as const, marginBottom: 16 }}>✓ Validated — ready for payment</div>
+            )}
+
+            {/* Fee Breakdown */}
+            <h3 style={sectionTitle}>Fees — from rate card</h3>
+            {(job.fees ?? []).length > 0 ? (
+              <div style={{ border: '1px solid #e5e7eb', borderRadius: 6, overflow: 'hidden', marginBottom: 12 }}>
+                {(job.fees ?? []).map((fee) => (
+                  <div key={fee.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', borderBottom: '1px solid #f3f4f6', fontSize: 10 }}>
+                    <div>
+                      <div style={{ color: '#374151' }}>{fee.name}</div>
+                      <div style={{ color: '#9ca3af', fontSize: 9 }}>{formatCurrency(fee.currency, fee.rate)} /{fee.unit === 'flat' ? 'trip' : fee.unit.replace('per-', '')} × {fee.quantity}</div>
+                    </div>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: '#111827' }}>{formatCurrency(fee.currency, fee.amount)}</div>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', background: '#f9fafb', borderTop: '1px solid #e5e7eb' }}>
+                  <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: '#9ca3af' }}>Total</span>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, color: '#152CFF' }}>
+                    {(() => { const totals = new Map<string, number>(); (job.fees ?? []).forEach(f => totals.set(f.currency, (totals.get(f.currency) ?? 0) + f.amount)); return Array.from(totals.entries()).map(([c, t]) => formatCurrency(c as any, t)).join(' + '); })()}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div style={{ padding: 12, textAlign: 'center' as const, fontSize: 10, color: '#d1d5db', fontStyle: 'italic', border: '1px dashed #e5e7eb', borderRadius: 6, marginBottom: 12 }}>No fees configured</div>
+            )}
 
             {/* Trip metadata */}
-            <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+            <div style={{ paddingTop: 12, borderTop: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
                 <Briefcase size={11} style={{ color: '#d1d5db' }} />
                 <span style={{ color: '#9ca3af' }}>Vendor</span>
