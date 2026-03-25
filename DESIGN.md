@@ -158,6 +158,128 @@
 - Status buttons: 6px 10px, 4px radius
 - Timeline dots: 8px
 
+## Phase 2 — Rate Management & Billing
+
+### Navigation (Phase 2)
+- **Canonical nav:** `Delivery Orders | Rates | Billing | Master Data`
+- "New Order" is a button on the Delivery Orders page, NOT a nav item
+- **Rates** sub-tabs: `By Vendor | By Service`
+- **Billing** sub-tabs: `Ready | Validation | Approved`
+- **Master Data** sub-tabs: `Locations | Vendors | Customers | Services`
+- Personas: ops planner uses Delivery Orders + create form. Billing admin uses Billing page. Both share Rates (read) and Master Data.
+
+### Service Config
+| Code | Name | Rate Type | Form Fields |
+|------|------|-----------|-------------|
+| FM | FM Trucking | route | Origin dropdown + Destination dropdown |
+| EC | Export Customs | location | Single location dropdown |
+| CS | Cargo Submission | location | Single location dropdown |
+| CR | Cargo Reception | location | Single location dropdown |
+| OH | Origin Handling | location | Single location dropdown |
+
+### Currency
+- Phase 2 supports MYR, CNY, USD
+- Currency is per-rate (set in Add Rate form)
+- Rate display: `CNY 3,200` or `RM 450` — currency prefix before amount, same weight
+- Mixed-currency totals: `Order total: RM 1,050 + CNY 3,200` — separate line per currency
+- Billing variance: calculated within same currency only. Cross-currency comparisons flagged as "Currency mismatch" in amber
+
+### Sub-Table Columns (Persona-Specific)
+
+**Ops view** (Delivery Orders page):
+| Job | Vendor | Service | Route | Rate | Cost | Status | Proofs |
+
+**Billing view** (Billing page):
+| Job | Vendor | Service | Route | Agreed Cost | Invoice | Variance | Action |
+
+Unit, Qty visible in slide-out panel detail, not in sub-table.
+
+### Rate Badges
+- **Rate found:** teal text `#0D9488`, no background. Format: `RM 450 /trip`
+- **No rate on file:** amber text `#b45309`, `#fefce8` bg. "No rate"
+- **Rate loading:** gray text `#9ca3af`, animated shimmer bg
+- **Rate error:** red text `#dc2626`. "Rate error"
+
+### Unit Badges
+| Unit | Text | Background | Border |
+|------|------|-----------|--------|
+| Flat (per trip) | `#6b7280` | `#f3f4f6` | `#e5e7eb` |
+| Per kg | `#2563eb` | `#eff6ff` | `#bfdbfe` |
+| Per bag | `#7c3aed` | `#f5f3ff` | `#ddd6fe` |
+| Per CBM | `#d97706` | `#fffbeb` | `#fde68a` |
+
+### Variance Badges
+| State | Text | Background | Border | When |
+|-------|------|-----------|--------|------|
+| Match | `#059669` | `#f0fdf4` | `#a7f3d0` | Invoice = agreed rate |
+| Over | `#dc2626` | `#fef2f2` | `#fecaca` | Invoice > agreed rate |
+| Under | `#2563eb` | `#eff6ff` | `#bfdbfe` | Invoice < agreed rate |
+| No rate | `#b45309` | `#fefce8` | `#fde68a` | No agreed rate to compare |
+
+### Add Rate Form
+- Uses slide-out panel pattern (380px, same as job slide-out)
+- Fields: Vendor dropdown, Service dropdown, Rate Type toggle (Route/Location), Origin+Destination OR single Location dropdown (based on rate type), Rate amount input with currency dropdown, Unit dropdown, Effective date picker
+- Rate type toggle dynamically shows/hides Origin/Destination vs Location fields based on SERVICE_CONFIG
+- Labels: 9px/600 uppercase (matches existing form pattern)
+- Save → toast "Rate saved for [Vendor] [Service]: [Route/Location]"
+- Error → inline red text below conflicting field
+
+### Rate Versioning
+- When a new rate is added for an existing vendor/service/route combination, the system auto-sets the previous rate's `effectiveTo` to the day before the new rate's `effectiveFrom`
+- Rate lookup returns the rate with the latest `effectiveFrom` on or before the job's date
+- Rates page shows rate history per vendor/service — current rate prominent, previous rates in muted text
+
+### Location Dropdown (Create Form)
+- Grouped by zone/city (Shenzhen, Guangzhou, Hong Kong, etc.), NOT by type
+- Type shown as badge within each group: `[Warehouse]` `[Airport]` `[Port]`
+- Fuzzy search filters across all zones
+- "**+ Add new location**" at bottom of dropdown
+
+### "Add New Location" Inline Form Behavior
+1. Click "+ Add new location" → inline form expands below dropdown, dropdown closes, focus moves to Name input
+2. Fill fields (Name, Zone, Type), click "Add" → location created, inline form collapses, dropdown re-opens with new location auto-selected, rate lookup fires with new location
+3. Click "Cancel" → inline form collapses, dropdown re-opens with no selection
+4. Creation error (duplicate name) → inline form stays open, red text below Name field: "A location named [X] already exists in [Zone]"
+
+### Vendor Comparison Popover
+- Max-width: 480px, responsive down to 360px
+- Positioned: left-aligned to job row by default
+- If popover exceeds right viewport edge → flip to right-aligned
+- Below 1200px viewport width → full-width below job row
+- **One popover at a time.** Opening a new popover closes the existing one
+- Click outside → close. Escape → close. Select vendor → close and update dropdown
+- If reliability data unavailable → show rates only, hide reliability columns, add "Reliability data unavailable" footnote
+
+### Billing Validation Page
+- Default sort: severity-first. Over-invoiced (red) → No rate (amber) → Under-invoiced (blue) → All match (green)
+- Filter row: `All (N) | Flagged (N) | No rate (N)`
+- **"Apply agreed rates as invoiced"** button per order — one click marks all matching jobs as invoiced at the agreed rate. Only discrepancies need manual entry
+- Invoice input: number field with currency prefix. Red border + "Enter a valid amount" on blur if non-numeric
+- Dispute/Accept buttons per variance → toast confirmation on action
+
+### Phase 2 Interaction States
+
+| Feature | Loading | Empty | Error | Success | Partial |
+|---------|---------|-------|-------|---------|---------|
+| Rate lookup | Gray shimmer in badge area | Amber "No rate" badge | Red "Rate error" | Teal rate badge with amount | "RM X *partial — N jobs missing rate" |
+| Location dropdown | "Loading..." placeholder | "No locations — add one" | Red toast | Auto-select new location | N/A |
+| Vendor comparison | Skeleton rows in popover | "No vendors for this service" | "Data unavailable" footnote | Full popover with rates | Some rates missing — show "—" |
+| Rate CRUD | Save spinner on button | "No rates yet" + [+ Add Rate] CTA | Inline red text below field | Toast "Rate saved for..." | N/A |
+| Invoice variance | N/A | "No invoice" in muted text | Red border "Invalid amount" | Variance badge (match/over/under) | "N/A" for jobs without rates |
+| Billing validation | Page skeleton (table rows shimmer) | "No orders ready for billing" | Red banner at top | Toast "Order approved" | Mixed match/flagged within order |
+
+### Dependency Banner
+- When Rates page is opened with zero locations in the system:
+- Amber banner: "Add locations first. Rate cards require managed locations for lookups to work. [Go to Locations]"
+- Same style as rejection banner (amber variant): `#b45309` text, `#fefce8` bg, `#fde68a` border
+
+### Keyboard Navigation (Desktop A11y)
+- Location dropdown: Arrow keys navigate, Enter selects, Escape closes
+- Vendor comparison popover: Tab between vendors, Enter selects, Escape closes
+- Slide-out panel (Add Rate / Job): Focus trapped inside when open, Escape closes
+- Add Rate form: Tab order top-to-bottom, Enter on Save
+- Minimum viewport: 1200px
+
 ## Global CSS Rules
 1. Body font: Instrument Sans via `--font-sans` CSS variable
 2. All input/select: 1px border #e5e7eb, 4px radius, 5px 8px padding, 12px font
@@ -198,3 +320,16 @@
 | 2026-03-25 | Quick-add service bar in create form | Horizontal [+FM] [+EC] [+CS] etc. bar. Click = add job with service pre-filled. Service-first thinking restored. |
 | 2026-03-25 | Empty state: inline CTA | Teal icon + message + [+ New Order] button in empty table body. No hand-holding. |
 | 2026-03-25 | Reactive slide-out panel | Panel stores tripId+jobId, derives data from context. Always fresh after mutations. |
+| 2026-03-25 | Persona-split navigation | Delivery Orders / Rates / Billing / Master Data. "New Order" is a button, not nav item. Billing is its own section for admin persona. |
+| 2026-03-25 | Persona-specific sub-table columns | Ops sees Job/Vendor/Service/Route/Rate/Cost/Status/Proofs. Billing sees Job/Vendor/Service/Route/Agreed/Invoice/Variance/Action. |
+| 2026-03-25 | Service config: FM=route, rest=location | FM Trucking uses origin+destination. EC/CS/CR/OH use single location. Determines form layout per job. |
+| 2026-03-25 | Multi-currency (MYR/CNY/USD) | Currency is per-rate. Display: "CNY 3,200". Mixed totals show separate line per currency. |
+| 2026-03-25 | Add Rate form in slide-out | 380px slide-out with vendor, service, rate type toggle, location/route, amount, unit, currency, effective date. |
+| 2026-03-25 | Auto-end previous rate | New rate auto-sets old rate's effectiveTo to day before. Lookup returns latest effectiveFrom on or before job date. |
+| 2026-03-25 | Billing severity sort | Over-invoiced first, then no-rate, then under, then match. Filter row: All/Flagged/No rate. |
+| 2026-03-25 | Bulk match for billing | "Apply agreed rates as invoiced" button per order. Eliminates ~70% of manual invoice entry. |
+| 2026-03-25 | Location dropdown by zone | Grouped by zone/city (Shenzhen, Guangzhou, HK), not by type. Type shown as badge within group. |
+| 2026-03-25 | Add Location inline form behavior | Focus management: expand form → focus Name → on save auto-select + fire rate lookup → on error stay in form. |
+| 2026-03-25 | One popover at a time | Vendor comparison: opening new closes existing. Click outside/Escape/select vendor all close. |
+| 2026-03-25 | Full interaction state table | Loading/Empty/Error/Success/Partial specified for all Phase 2 features. |
+| 2026-03-25 | Desktop a11y + keyboard nav | Arrow keys for dropdowns, tab for popovers, focus trapping in slide-outs, Escape to close. Min viewport 1200px. |

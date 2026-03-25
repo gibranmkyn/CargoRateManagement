@@ -52,3 +52,13 @@ html { scroll-behavior: smooth; }
 .status-pulse { animation: statusPulse 2s ease-in-out infinite; }
 @keyframes slideIn { from { transform: translateX(12px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @keyframes slideInPanel { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
+.rate-shimmer {
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 400px 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+  display: inline-block;
+  width: 60px;
+  height: 14px;
+}

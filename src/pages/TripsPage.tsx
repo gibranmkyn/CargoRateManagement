@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react';
 import { Search, Download, Plus, Ship, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { customers, vendors } from '../data/mockData';
-import type { Job, Trip, JobStatus } from '../data/mockData';
+import { customers, vendors, formatCurrency } from '../data/mockData';
+import type { Trip, JobStatus } from '../data/mockData';
+import { useRates } from '../context/RateContext';
 import { useTrips } from '../context/TripContext';
 import { useToast } from '../components/Toast';
 import SlideOutPanel from '../components/SlideOutPanel';
@@ -31,6 +32,7 @@ export default function TripsPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const { trips, updateJobStatus, addProofDocument, removeProofDocument, addActivityLog, updateJob } = useTrips();
+  const { lookupRate, getLocationByName } = useRates();
   const [mawbSearch, setMawbSearch] = useState('');
   const [customerFilter, setCustomerFilter] = useState('');
   const [vendorFilter, setVendorFilter] = useState('');
@@ -261,6 +263,8 @@ export default function TripsPage() {
                               <th style={subTh}>Vendor</th>
                               <th style={subTh}>Service</th>
                               <th style={subTh}>Origin &rarr; Destination</th>
+                              <th style={{ ...subTh, width: 90 }}>Rate</th>
+                              <th style={{ ...subTh, width: 90 }}>Cost</th>
                               <th style={subTh}>Status</th>
                               <th style={subTh}>Proofs</th>
                             </tr>
@@ -288,6 +292,23 @@ export default function TripsPage() {
                                   </td>
                                   <td style={{ padding: '6px 10px', fontSize: 11, color: '#374151' }}>
                                     {job.origin.location} &rarr; {job.destination.location}
+                                  </td>
+                                  <td style={{ padding: '6px 10px', fontSize: 10, fontFamily: "'JetBrains Mono', monospace" }}>
+                                    {(() => {
+                                      if (job.agreedRate) return <span style={{ color: '#0D9488', fontWeight: 600 }}>{formatCurrency(job.agreedRate.currency, job.agreedRate.amount)}</span>;
+                                      // Live lookup for legacy orders
+                                      const originLoc = getLocationByName(job.origin.location);
+                                      const destLoc = getLocationByName(job.destination.location);
+                                      const rate = originLoc || destLoc ? lookupRate(job.vendor.code, job.service.code, originLoc?.id === destLoc?.id ? originLoc?.id : undefined, originLoc?.id, destLoc?.id) : null;
+                                      if (rate) return <span style={{ color: '#0D9488', fontWeight: 600 }}>{formatCurrency(rate.currency, rate.amount)}</span>;
+                                      return <span style={{ color: '#b45309', fontSize: 9 }}>No rate</span>;
+                                    })()}
+                                  </td>
+                                  <td style={{ padding: '6px 10px', fontSize: 10, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: '#111827' }}>
+                                    {(() => {
+                                      if (job.agreedCost) return formatCurrency(job.agreedCost.currency, job.agreedCost.amount);
+                                      return <span style={{ color: '#9ca3af', fontWeight: 400 }}>&mdash;</span>;
+                                    })()}
                                   </td>
                                   <td style={{ padding: '6px 10px' }}>
                                     <span style={{

@@ -1,19 +1,22 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, ArrowRight, ArrowLeft } from 'lucide-react';
-import { customers, vendors, serviceTypes } from '../data/mockData';
-import type { Job, Trip, ServiceType } from '../data/mockData';
+import { customers, vendors, serviceTypes, SERVICE_CONFIG, formatCurrency } from '../data/mockData';
+import type { Job, Trip, ServiceType, Currency } from '../data/mockData';
 import { useTrips, generateTripId, generateJobId } from '../context/TripContext';
+import { useRates } from '../context/RateContext';
 import { useToast } from '../components/Toast';
+import LocationDropdown from '../components/shared/LocationDropdown';
 
 interface JobDraft {
   key: string;
   serviceCode: string;
   vendorCode: string;
-  originLocation: string;
+  originLocationId: string;
   originDate: string;
-  destinationLocation: string;
+  destinationLocationId: string;
   destinationDate: string;
+  locationId: string; // for location-type services
 }
 
 const svcColors: Record<string, string> = {
@@ -23,6 +26,7 @@ const svcColors: Record<string, string> = {
 export default function CreateTripPage() {
   const navigate = useNavigate();
   const { addTrip } = useTrips();
+  const { lookupRate, getLocationById } = useRates();
   const toast = useToast();
 
   const [customerCode, setCustomerCode] = useState('');
@@ -38,10 +42,11 @@ export default function CreateTripPage() {
       key: crypto.randomUUID(),
       serviceCode: svc.code,
       vendorCode: '',
-      originLocation: '',
+      originLocationId: '',
       originDate: '',
-      destinationLocation: '',
+      destinationLocationId: '',
       destinationDate: '',
+      locationId: '',
     }]);
   }
 
@@ -53,6 +58,45 @@ export default function CreateTripPage() {
     setJobs((prev) => prev.filter((j) => j.key !== key));
   }
 
+  // Rate lookup for a job draft
+  function getJobRate(job: JobDraft) {
+    if (!job.vendorCode || !job.serviceCode) return null;
+    const cfg = SERVICE_CONFIG[job.serviceCode];
+    if (!cfg) return null;
+    if (cfg.rateType === 'route') {
+      if (!job.originLocationId || !job.destinationLocationId) return null;
+      return lookupRate(job.vendorCode, job.serviceCode, undefined, job.originLocationId, job.destinationLocationId);
+    } else {
+      if (!job.locationId) return null;
+      return lookupRate(job.vendorCode, job.serviceCode, job.locationId);
+    }
+  }
+
+  // Cost calculation
+  function calcCost(job: JobDraft): { currency: Currency; amount: number } | null {
+    const rate = getJobRate(job);
+    if (!rate) return null;
+    let amount = rate.amount;
+    if (rate.unit === 'per-kg') amount *= Number(weight) || 0;
+    else if (rate.unit === 'per-bag') amount *= Number(bags) || 0;
+    return { currency: rate.currency, amount };
+  }
+
+  // Order totals grouped by currency
+  function orderTotals(): Map<Currency, { total: number; jobCount: number }> {
+    const totals = new Map<Currency, { total: number; jobCount: number }>();
+    for (const job of jobs) {
+      const cost = calcCost(job);
+      if (cost) {
+        const existing = totals.get(cost.currency) ?? { total: 0, jobCount: 0 };
+        existing.total += cost.amount;
+        existing.jobCount += 1;
+        totals.set(cost.currency, existing);
+      }
+    }
+    return totals;
+  }
+
   function validate(): string[] {
     const errs: string[] = [];
     if (!customerCode) errs.push('Customer is required');
@@ -60,8 +104,13 @@ export default function CreateTripPage() {
     jobs.forEach((job, i) => {
       const label = `J${String(i + 1).padStart(2, '0')}`;
       if (!job.vendorCode) errs.push(`${label}: select a vendor`);
-      if (!job.originLocation) errs.push(`${label}: enter origin`);
-      if (!job.destinationLocation) errs.push(`${label}: enter destination`);
+      const cfg = SERVICE_CONFIG[job.serviceCode];
+      if (cfg?.rateType === 'route') {
+        if (!job.originLocationId) errs.push(`${label}: select origin`);
+        if (!job.destinationLocationId) errs.push(`${label}: select destination`);
+      } else {
+        if (!job.locationId) errs.push(`${label}: select location`);
+      }
     });
     return errs;
   }
@@ -80,17 +129,38 @@ export default function CreateTripPage() {
     const tripJobs: Job[] = jobs.map((draft, i) => {
       const vendor = vendors.find((v) => v.code === draft.vendorCode)!;
       const svc = serviceTypes.find((s) => s.code === draft.serviceCode)!;
+      const cfg = SERVICE_CONFIG[draft.serviceCode];
+      const isRoute = cfg?.rateType === 'route';
+
+      // Resolve location names
+      let originName = '';
+      let destName = '';
+      if (isRoute) {
+        originName = getLocationById(draft.originLocationId)?.name ?? draft.originLocationId;
+        destName = getLocationById(draft.destinationLocationId)?.name ?? draft.destinationLocationId;
+      } else {
+        const locName = getLocationById(draft.locationId)?.name ?? draft.locationId;
+        originName = locName;
+        destName = locName;
+      }
+
+      const rate = getJobRate(draft);
+      const cost = calcCost(draft);
+
       return {
-        id: generateJobId(tripId, jobs.slice(0, i)),
+        id: generateJobId(tripId, jobs.slice(0, i).map((_, idx) => ({ id: `${tripId}-J${String(idx + 1).padStart(2, '0')}` }))),
         vendor: { code: vendor.code, name: vendor.name },
-        origin: { location: draft.originLocation, date: draft.originDate || '' },
-        destination: { location: draft.destinationLocation, date: draft.destinationDate || '' },
+        origin: { location: originName, date: draft.originDate || '' },
+        destination: { location: destName, date: draft.destinationDate || '' },
         service: svc,
         status: 'Pending' as const,
         duration: null,
         execution: null,
         activityLog: [{ id: `log-${Date.now()}-${i}`, timestamp: now.toISOString().replace('T', ' ').slice(0, 16), action: 'Job created', user: 'Ops Admin', details: `Assigned to ${vendor.name}` }],
         proofDocuments: [],
+        rateId: rate?.id,
+        agreedRate: rate ? { currency: rate.currency, amount: rate.amount, unit: rate.unit } : undefined,
+        agreedCost: cost ?? undefined,
       };
     });
 
@@ -115,6 +185,9 @@ export default function CreateTripPage() {
   // Count jobs per service
   const svcCounts: Record<string, number> = {};
   jobs.forEach((j) => { svcCounts[j.serviceCode] = (svcCounts[j.serviceCode] || 0) + 1; });
+
+  const totals = orderTotals();
+  const jobsMissingRate = jobs.filter((j) => j.vendorCode && !getJobRate(j)).length;
 
   return (
     <div style={{ padding: '24px', maxWidth: 900, margin: '0 auto' }}>
@@ -206,9 +279,15 @@ export default function CreateTripPage() {
               {jobs.map((job, i) => {
                 const svc = serviceTypes.find((s) => s.code === job.serviceCode);
                 const color = svcColors[job.serviceCode] || '#0D9488';
+                const cfg = SERVICE_CONFIG[job.serviceCode];
+                const isRoute = cfg?.rateType === 'route';
+                const rate = getJobRate(job);
+                const cost = calcCost(job);
+                const hasVendorAndLocation = job.vendorCode && (isRoute ? job.originLocationId && job.destinationLocationId : job.locationId);
+
                 return (
                   <div key={job.key} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 6, padding: 12 }}>
-                    {/* Job header: number + service badge + remove */}
+                    {/* Job header */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 11, fontWeight: 700, color }}>J{String(i + 1).padStart(2, '0')}</span>
@@ -220,24 +299,75 @@ export default function CreateTripPage() {
                         <X size={12} />
                       </button>
                     </div>
-                    {/* Vendor + Route */}
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+
+                    {/* Vendor + Location/Route */}
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'flex-start' }}>
                       <select value={job.vendorCode} onChange={(e) => updateJob(job.key, { vendorCode: e.target.value })} style={{ width: 140, fontSize: 11 }}>
                         <option value="">Vendor...</option>
                         {vendors.map((v) => <option key={v.code} value={v.code}>{v.name}</option>)}
                       </select>
-                      <input type="text" value={job.originLocation} onChange={(e) => updateJob(job.key, { originLocation: e.target.value })} placeholder="Origin" style={{ flex: 1, fontSize: 11 }} />
-                      <ArrowRight size={12} style={{ color: '#d1d5db', flexShrink: 0, alignSelf: 'center' }} />
-                      <input type="text" value={job.destinationLocation} onChange={(e) => updateJob(job.key, { destinationLocation: e.target.value })} placeholder="Destination" style={{ flex: 1, fontSize: 11 }} />
+                      {isRoute ? (
+                        <>
+                          <div style={{ flex: 1 }}>
+                            <LocationDropdown value={job.originLocationId} onChange={(id) => updateJob(job.key, { originLocationId: id })} placeholder="Origin..." excludeId={job.destinationLocationId} />
+                          </div>
+                          <ArrowRight size={12} style={{ color: '#d1d5db', flexShrink: 0, alignSelf: 'center', marginTop: 4 }} />
+                          <div style={{ flex: 1 }}>
+                            <LocationDropdown value={job.destinationLocationId} onChange={(id) => updateJob(job.key, { destinationLocationId: id })} placeholder="Destination..." excludeId={job.originLocationId} />
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ flex: 1 }}>
+                          <LocationDropdown value={job.locationId} onChange={(id) => updateJob(job.key, { locationId: id })} placeholder="Location..." />
+                        </div>
+                      )}
                     </div>
+
                     {/* Dates */}
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
                       <input type="datetime-local" value={job.originDate} onChange={(e) => updateJob(job.key, { originDate: e.target.value })} style={{ fontSize: 10, color: '#9ca3af' }} />
-                      <input type="datetime-local" value={job.destinationDate} onChange={(e) => updateJob(job.key, { destinationDate: e.target.value })} style={{ fontSize: 10, color: '#9ca3af' }} />
+                      {isRoute && <input type="datetime-local" value={job.destinationDate} onChange={(e) => updateJob(job.key, { destinationDate: e.target.value })} style={{ fontSize: 10, color: '#9ca3af' }} />}
                     </div>
+
+                    {/* Rate badge */}
+                    {hasVendorAndLocation && (
+                      <div style={{ marginTop: 4 }}>
+                        {rate ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 10, fontWeight: 600, color: '#0D9488', fontFamily: "'JetBrains Mono', monospace" }}>
+                              {formatCurrency(rate.currency, rate.amount)} /{rate.unit === 'flat' ? 'trip' : rate.unit.replace('per-', '')}
+                            </span>
+                            {cost && (
+                              <span style={{ fontSize: 10, color: '#6b7280' }}>
+                                = <strong style={{ color: '#111827', fontFamily: "'JetBrains Mono', monospace" }}>{formatCurrency(cost.currency, cost.amount)}</strong>
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: 10, fontWeight: 600, color: '#b45309', padding: '1px 6px', background: '#fefce8', borderRadius: 4, border: '1px solid #fde68a' }}>No rate on file</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* Order totals */}
+          {jobs.length > 0 && totals.size > 0 && (
+            <div style={{ marginTop: 12, padding: '8px 12px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' }}>Order Total</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {Array.from(totals.entries()).map(([curr, { total }]) => (
+                  <span key={curr} style={{ fontSize: 12, fontWeight: 700, color: '#111827', fontFamily: "'JetBrains Mono', monospace" }}>
+                    {formatCurrency(curr, total)}
+                  </span>
+                ))}
+                {jobsMissingRate > 0 && (
+                  <span style={{ fontSize: 10, color: '#b45309' }}>*{jobsMissingRate} job{jobsMissingRate > 1 ? 's' : ''} missing rate</span>
+                )}
+              </div>
             </div>
           )}
         </div>

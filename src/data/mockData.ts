@@ -34,6 +34,11 @@ export interface Job {
   rejectionReason?: string;
   activityLog: ActivityLogEntry[];
   proofDocuments: ProofDocument[];
+  // Phase 2: Rate & billing
+  rateId?: string;
+  agreedRate?: { currency: Currency; amount: number; unit: RateUnit };
+  agreedCost?: { currency: Currency; amount: number };
+  invoiceAmount?: { currency: Currency; amount: number };
 }
 
 export interface Trip {
@@ -59,6 +64,53 @@ export interface TripTemplate {
     service: ServiceType;
   }[];
   createdAt: string;
+}
+
+// --- Phase 2: Rate Management & Billing ---
+
+export type LocationType = 'warehouse' | 'airport' | 'port' | 'checkpoint' | 'hub';
+export type Currency = 'MYR' | 'CNY' | 'USD';
+export type RateUnit = 'flat' | 'per-kg' | 'per-bag' | 'per-cbm';
+export type RateType = 'route' | 'location';
+
+export interface Location {
+  id: string;
+  name: string;
+  code: string;
+  zone: string;
+  type: LocationType;
+}
+
+export interface VendorRate {
+  id: string;
+  vendorCode: string;
+  serviceCode: string;
+  rateType: RateType;
+  originLocationId?: string;
+  destinationLocationId?: string;
+  locationId?: string;
+  currency: Currency;
+  amount: number;
+  unit: RateUnit;
+  effectiveFrom: string;
+  effectiveTo?: string;
+  isActive: boolean;
+}
+
+export const SERVICE_CONFIG: Record<string, { rateType: RateType; label: string }> = {
+  FM: { rateType: 'route', label: 'FM Trucking' },
+  EC: { rateType: 'location', label: 'Export Customs' },
+  CS: { rateType: 'location', label: 'Cargo Submission' },
+  CR: { rateType: 'location', label: 'Cargo Reception' },
+  OH: { rateType: 'location', label: 'Origin Handling' },
+};
+
+export const CURRENCY_SYMBOLS: Record<Currency, string> = {
+  MYR: 'RM', CNY: 'CNY', USD: 'USD',
+};
+
+export function formatCurrency(currency: Currency, amount: number): string {
+  return `${CURRENCY_SYMBOLS[currency]} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export const vendors = [
@@ -241,6 +293,77 @@ export const seedTrips: Trip[] = [
       { id: 'DO-20260313-010-J01', vendor: { code: 'V-005', name: 'The Lorry' }, origin: { location: 'Shenzhen Nanshan WH', date: '2026-03-13 10:00' }, destination: { location: 'Shekou Port', date: '2026-03-13 13:00' }, service: { code: 'FM', label: 'Trucking' }, status: 'In Progress', duration: null, execution: '2026-03-13 10:05', activityLog: [log('l1','2026-03-13 09:00','Job created'), log('l2','2026-03-13 10:05','Status → In Progress')], proofDocuments: [] },
     ],
   },
+];
+
+// --- Seed Locations (Phase 2) ---
+// Names must exactly match location strings used in seedTrips above.
+export const seedLocations: Location[] = [
+  // Shenzhen zone
+  { id: 'LOC-001', name: 'TikTok WH, Shenzhen', code: 'SZ-TTWH', zone: 'Shenzhen', type: 'warehouse' },
+  { id: 'LOC-002', name: 'Shenzhen Bay Checkpoint', code: 'SZ-BAY', zone: 'Shenzhen', type: 'checkpoint' },
+  { id: 'LOC-003', name: 'SZX Airport Cargo Terminal', code: 'SZX-CT', zone: 'Shenzhen', type: 'airport' },
+  { id: 'LOC-004', name: 'Qianhai Free Trade Zone', code: 'SZ-QH', zone: 'Shenzhen', type: 'hub' },
+  { id: 'LOC-005', name: 'Huanggang Port', code: 'SZ-HG', zone: 'Shenzhen', type: 'port' },
+  { id: 'LOC-006', name: 'Shenzhen Bao An Airport', code: 'SZX-BA', zone: 'Shenzhen', type: 'airport' },
+  { id: 'LOC-007', name: 'Shekou Port', code: 'SZ-SK', zone: 'Shenzhen', type: 'port' },
+  { id: 'LOC-008', name: 'Shenzhen Nanshan WH', code: 'SZ-NS', zone: 'Shenzhen', type: 'warehouse' },
+  { id: 'LOC-009', name: 'Shenzhen Bay Hub', code: 'SZ-BH', zone: 'Shenzhen', type: 'hub' },
+  { id: 'LOC-010', name: 'SZX Cargo Terminal', code: 'SZX-CG', zone: 'Shenzhen', type: 'airport' },
+  { id: 'LOC-011', name: 'Shenzhen Airport', code: 'SZX', zone: 'Shenzhen', type: 'airport' },
+  { id: 'LOC-012', name: 'SZX Airport', code: 'SZX-AP', zone: 'Shenzhen', type: 'airport' },
+  // Guangzhou zone
+  { id: 'LOC-013', name: 'Guangzhou Baiyun Airport', code: 'CAN-BY', zone: 'Guangzhou', type: 'airport' },
+  { id: 'LOC-014', name: 'Guangzhou Warehouse', code: 'GZ-WH', zone: 'Guangzhou', type: 'warehouse' },
+  { id: 'LOC-015', name: 'Huangpu Port', code: 'GZ-HP', zone: 'Guangzhou', type: 'port' },
+  { id: 'LOC-016', name: 'Guangzhou Region Airport', code: 'CAN-RG', zone: 'Guangzhou', type: 'airport' },
+  // Hong Kong zone
+  { id: 'LOC-017', name: 'Lantau Terminals', code: 'HK-LT', zone: 'Hong Kong', type: 'port' },
+  { id: 'LOC-018', name: 'Hong Kong Airport', code: 'HKG', zone: 'Hong Kong', type: 'airport' },
+  // Dongguan zone
+  { id: 'LOC-019', name: 'Dongguan Cross-dock', code: 'DG-CD', zone: 'Dongguan', type: 'hub' },
+  { id: 'LOC-020', name: 'Dongguan Factory', code: 'DG-FC', zone: 'Dongguan', type: 'warehouse' },
+  // Yantian zone
+  { id: 'LOC-021', name: 'Yantian Port', code: 'YT-PT', zone: 'Yantian', type: 'port' },
+  // Yiwu zone
+  { id: 'LOC-022', name: 'Yiwu Warehouse', code: 'YW-WH', zone: 'Yiwu', type: 'warehouse' },
+  // Ningbo zone
+  { id: 'LOC-023', name: 'Ningbo Port', code: 'NB-PT', zone: 'Ningbo', type: 'port' },
+];
+
+// --- Seed Rates (Phase 2) ---
+export const seedRates: VendorRate[] = [
+  // HaleSun FM routes (MYR)
+  { id: 'RT-001', vendorCode: 'V-001', serviceCode: 'FM', rateType: 'route', originLocationId: 'LOC-001', destinationLocationId: 'LOC-002', currency: 'MYR', amount: 450, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-002', vendorCode: 'V-001', serviceCode: 'FM', rateType: 'route', originLocationId: 'LOC-019', destinationLocationId: 'LOC-011', currency: 'MYR', amount: 520, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-003', vendorCode: 'V-001', serviceCode: 'FM', rateType: 'route', originLocationId: 'LOC-014', destinationLocationId: 'LOC-015', currency: 'MYR', amount: 380, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-004', vendorCode: 'V-001', serviceCode: 'FM', rateType: 'route', originLocationId: 'LOC-001', destinationLocationId: 'LOC-010', currency: 'MYR', amount: 470, unit: 'flat', effectiveFrom: '2026-03-01', isActive: true },
+  // HaleSun CR (per-bag, CNY)
+  { id: 'RT-005', vendorCode: 'V-001', serviceCode: 'CR', rateType: 'location', locationId: 'LOC-021', currency: 'CNY', amount: 25, unit: 'per-bag', effectiveFrom: '2026-01-01', isActive: true },
+  // Gonda EC locations (MYR)
+  { id: 'RT-006', vendorCode: 'V-003', serviceCode: 'EC', rateType: 'location', locationId: 'LOC-002', currency: 'MYR', amount: 120, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-007', vendorCode: 'V-003', serviceCode: 'EC', rateType: 'location', locationId: 'LOC-005', currency: 'MYR', amount: 130, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-008', vendorCode: 'V-003', serviceCode: 'EC', rateType: 'location', locationId: 'LOC-015', currency: 'MYR', amount: 150, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-009', vendorCode: 'V-003', serviceCode: 'EC', rateType: 'location', locationId: 'LOC-007', currency: 'CNY', amount: 680, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  // Gonda CS locations (MYR)
+  { id: 'RT-010', vendorCode: 'V-003', serviceCode: 'CS', rateType: 'location', locationId: 'LOC-003', currency: 'MYR', amount: 80, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-011', vendorCode: 'V-003', serviceCode: 'CS', rateType: 'location', locationId: 'LOC-017', currency: 'MYR', amount: 95, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  // SevenSeas EC locations (CNY)
+  { id: 'RT-012', vendorCode: 'V-002', serviceCode: 'EC', rateType: 'location', locationId: 'LOC-011', currency: 'CNY', amount: 580, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-013', vendorCode: 'V-002', serviceCode: 'EC', rateType: 'location', locationId: 'LOC-012', currency: 'CNY', amount: 600, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  // SevenSeas OH (per-kg, MYR)
+  { id: 'RT-014', vendorCode: 'V-002', serviceCode: 'OH', rateType: 'location', locationId: 'LOC-023', currency: 'MYR', amount: 0.85, unit: 'per-kg', effectiveFrom: '2026-01-01', isActive: true },
+  // SevenSeas CR (per-bag, CNY)
+  { id: 'RT-015', vendorCode: 'V-002', serviceCode: 'CR', rateType: 'location', locationId: 'LOC-006', currency: 'CNY', amount: 30, unit: 'per-bag', effectiveFrom: '2026-01-01', isActive: true },
+  // ThaiKee FM route (MYR)
+  { id: 'RT-016', vendorCode: 'V-004', serviceCode: 'FM', rateType: 'route', originLocationId: 'LOC-013', destinationLocationId: 'LOC-013', currency: 'MYR', amount: 280, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  // ThaiKee OH (per-kg, MYR)
+  { id: 'RT-017', vendorCode: 'V-004', serviceCode: 'OH', rateType: 'location', locationId: 'LOC-013', currency: 'MYR', amount: 0.65, unit: 'per-kg', effectiveFrom: '2026-01-01', isActive: true },
+  // The Lorry FM routes (CNY)
+  { id: 'RT-018', vendorCode: 'V-005', serviceCode: 'FM', rateType: 'route', originLocationId: 'LOC-006', destinationLocationId: 'LOC-007', currency: 'CNY', amount: 2800, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-019', vendorCode: 'V-005', serviceCode: 'FM', rateType: 'route', originLocationId: 'LOC-022', destinationLocationId: 'LOC-023', currency: 'CNY', amount: 3200, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-020', vendorCode: 'V-005', serviceCode: 'FM', rateType: 'route', originLocationId: 'LOC-008', destinationLocationId: 'LOC-007', currency: 'MYR', amount: 320, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  // Expired rate example: old HaleSun FM rate for TikTok WH -> SZ Bay (replaced by RT-001)
+  { id: 'RT-021', vendorCode: 'V-001', serviceCode: 'FM', rateType: 'route', originLocationId: 'LOC-001', destinationLocationId: 'LOC-002', currency: 'MYR', amount: 420, unit: 'flat', effectiveFrom: '2025-06-01', effectiveTo: '2025-12-31', isActive: false },
 ];
 
 export const seedTemplates: TripTemplate[] = [

@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW: Billing Validation v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+  .mono { font-family: 'JetBrains Mono', 'SF Mono', monospace; }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     DECISION SECTION
+     ════════════════════════════════════════════════════════════════════ -->
+<div style="max-width:1300px;margin:0 auto;padding:32px 24px 16px;">
+  <div style="font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px;">Billing Validation v2</div>
+  <div style="font-size:15px;font-weight:700;color:#111827;font-style:italic;margin-bottom:20px;padding:12px 16px;background:#fff;border-left:3px solid #0D9488;border-radius:0 6px 6px 0;">
+    "How might we refine billing validation to handle severity sorting, bulk actions, multi-currency, and persona-specific columns?"
+  </div>
+
+  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px 16px;margin-bottom:24px;">
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px;">Decisions incorporated in this revision:</div>
+    <ul style="font-size:12px;color:#374151;line-height:1.8;padding-left:20px;">
+      <li><strong>Severity sort:</strong> Orders sorted by worst variance first &mdash; Over (red) &rarr; No rate (amber) &rarr; Under (blue) &rarr; All match (green). Billing admin works top-down through highest-risk items.</li>
+      <li><strong>Filter row:</strong> <code style="font-family:'JetBrains Mono',monospace;font-size:11px;background:#f3f4f6;padding:1px 4px;border-radius:3px;">All (24) | Flagged (8) | No rate (3)</code> &mdash; quick toggles to narrow the validation queue. "Flagged" = over + under + no rate.</li>
+      <li><strong>Bulk match:</strong> "Apply agreed rates" button per order &mdash; one click auto-fills all matching jobs as invoiced at the agreed cost. Only discrepancies require manual invoice entry. Eliminates ~70% of data entry.</li>
+      <li><strong>Multi-currency:</strong> Rates are per-currency (MYR, CNY, USD). Display as "RM 450" or "CNY 3,200". Cross-currency comparisons flagged as "Currency mismatch" in amber. Variance calculated within same currency only.</li>
+      <li><strong>Persona-specific columns:</strong> Billing sub-table shows <strong>Job | Vendor | Service | Route | Agreed Cost | Invoice | Variance | Action</strong> (not the ops columns with Rate/Unit/Qty/Status/Proofs).</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     FULL-PAGE MOCKUP
+     ════════════════════════════════════════════════════════════════════ -->
+<div style="border:1px solid #d1d5db;border-radius:6px;overflow:hidden;max-width:1300px;margin:0 auto 60px;background:#fff;">
+
+  <!-- ──────────────────── NAV BAR (40px) ──────────────────── -->
+  <div style="height:40px;padding:0 16px;background:#fff;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:2px;font-size:12px;">
+    <div style="display:flex;align-items:center;gap:6px;margin-right:16px;font-weight:700;font-size:13px;color:#111827;">
+      <span style="width:20px;height:20px;background:#0D9488;border-radius:5px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800;">T</span>
+      Teleport OS
+    </div>
+    <a href="#" style="padding:4px 10px;border-radius:4px;color:#9ca3af;text-decoration:none;font-size:12px;">Delivery Orders</a>
+    <a href="#" style="padding:4px 10px;border-radius:4px;color:#9ca3af;text-decoration:none;font-size:12px;">Rates</a>
+    <a href="#" style="padding:4px 10px;border-radius:4px;color:#0D9488;background:rgba(13,148,136,0.06);text-decoration:none;font-size:12px;font-weight:600;">Billing</a>
+    <a href="#" style="padding:4px 10px;border-radius:4px;color:#9ca3af;text-decoration:none;font-size:12px;">Master Data</a>
+  </div>
+
+  <!-- ──────────────────── PAGE CONTENT ──────────────────── -->
+  <div style="background:#f3f4f6;padding:16px;">
+
+    <!-- Page header -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;">
+      <div>
+        <div style="font-size:16px;font-weight:800;letter-spacing:-0.3px;">Billing Validation</div>
+        <div style="font-size:11px;color:#9ca3af;">Compare vendor invoices against agreed rate cards</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <select style="border:1px solid #e5e7eb;border-radius:4px;padding:4px 8px;font-size:11px;font-family:inherit;">
+          <option>All vendors</option>
+          <option>HaleSun</option>
+          <option>Gonda</option>
+          <option>SevenSeas</option>
+          <option>ThaiKee</option>
+          <option>The Lorry</option>
+        </select>
+        <select style="border:1px solid #e5e7eb;border-radius:4px;padding:4px 8px;font-size:11px;font-family:inherit;">
+          <option>Mar 2026</option>
+          <option>Feb 2026</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ──────────────────── STATS BAR ──────────────────── -->
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:8px 16px;margin-bottom:10px;display:flex;align-items:center;gap:6px;font-size:11px;">
+      <span style="font-weight:700;color:#111827;">24 orders</span>
+      <span style="color:#d1d5db;">|</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#374151;">87 job lines</span>
+      <span style="color:#d1d5db;">|</span>
+      <span style="font-weight:600;color:#dc2626;">5 over</span>
+      <span style="color:#d1d5db;">|</span>
+      <span style="font-weight:600;color:#b45309;">3 no rate</span>
+      <span style="color:#d1d5db;">|</span>
+      <span style="font-weight:600;color:#2563eb;">2 under</span>
+      <span style="color:#d1d5db;">|</span>
+      <span style="font-weight:600;color:#059669;">64 match</span>
+    </div>
+
+    <!-- ──────────────────── FILTER CHIPS ──────────────────── -->
+    <div style="display:flex;gap:4px;margin-bottom:14px;">
+      <span style="padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(13,148,136,0.06);color:#0D9488;cursor:pointer;">All (24)</span>
+      <span style="padding:4px 10px;border-radius:4px;font-size:11px;color:#9ca3af;cursor:pointer;border:1px solid #e5e7eb;">Flagged (8)</span>
+      <span style="padding:4px 10px;border-radius:4px;font-size:11px;color:#9ca3af;cursor:pointer;border:1px solid #e5e7eb;">No rate (3)</span>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         ORDER 1: OVER (expanded) — post-"Apply agreed rates"
+         ══════════════════════════════════════════════════════ -->
+    <div style="border:2px solid #fecaca;border-radius:6px;overflow:hidden;margin-bottom:12px;background:#fff;">
+      <!-- Order header -->
+      <div style="padding:8px 12px;background:#fef2f2;border-bottom:1px solid #fecaca;display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:10px;color:#dc2626;cursor:pointer;user-select:none;">&#9660;</span>
+          <span style="font-weight:700;font-size:12px;">Temu</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;">DO-20260312-007</span>
+          <span style="font-size:10px;color:#9ca3af;">38 bags &middot; 1,980 kg</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #fecaca;background:#fef2f2;color:#dc2626;">
+            <span style="width:5px;height:5px;border-radius:50%;background:#dc2626;display:inline-block;"></span> 1 Over
+          </span>
+          <span style="font-size:10px;color:#9ca3af;">3 Match</span>
+        </div>
+      </div>
+      <!-- Applied rates notice -->
+      <div style="padding:5px 12px;background:#f0fdf4;border-bottom:1px solid #a7f3d0;font-size:10px;color:#059669;display:flex;align-items:center;gap:6px;">
+        <span style="font-weight:600;">&#10003; Agreed rates applied</span>
+        <span style="color:#6b7280;">&mdash; 3 jobs auto-matched. Review flagged item below.</span>
+      </div>
+      <!-- Sub-table: Billing columns -->
+      <table style="width:100%;border-collapse:collapse;font-size:11px;">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:6px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Job</th>
+            <th style="text-align:left;padding:6px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Vendor</th>
+            <th style="text-align:left;padding:6px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Service</th>
+            <th style="text-align:left;padding:6px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Route</th>
+            <th style="text-align:right;padding:6px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Agreed Cost</th>
+            <th style="text-align:right;padding:6px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Invoice</th>
+            <th style="text-align:right;padding:6px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Variance</th>
+            <th style="text-align:right;padding:6px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- J01: Match (auto-filled) -->
+          <tr>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-weight:600;color:#0D9488;font-size:11px;">J01</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-weight:600;font-size:11px;">HaleSun</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:11px;">
+              <span style="padding:1px 5px;border-radius:99px;font-size:9px;font-weight:600;background:rgba(13,148,136,0.06);border:1px solid rgba(13,148,136,0.1);color:#0D9488;">FM</span>
+            </td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:11px;">TikTok WH &rarr; Shekou Port</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;">RM 430</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;">RM 430</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;">
+              <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #a7f3d0;background:#f0fdf4;color:#059669;">Match</span>
+            </td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;font-size:10px;color:#9ca3af;">&mdash;</td>
+          </tr>
+          <!-- J02: Match (auto-filled) -->
+          <tr>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-weight:600;color:#0D9488;font-size:11px;">J02</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-weight:600;font-size:11px;">HaleSun</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:11px;">
+              <span style="padding:1px 5px;border-radius:99px;font-size:9px;font-weight:600;background:rgba(13,148,136,0.06);border:1px solid rgba(13,148,136,0.1);color:#0D9488;">CR</span>
+            </td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:11px;">@ Shekou Port</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;">RM 950</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;">RM 950</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;">
+              <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #a7f3d0;background:#f0fdf4;color:#059669;">Match</span>
+            </td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;font-size:10px;color:#9ca3af;">&mdash;</td>
+          </tr>
+          <!-- J03: Match (auto-filled) -->
+          <tr>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-weight:600;color:#0D9488;font-size:11px;">J03</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-weight:600;font-size:11px;">Gonda</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:11px;">
+              <span style="padding:1px 5px;border-radius:99px;font-size:9px;font-weight:600;background:rgba(13,148,136,0.06);border:1px solid rgba(13,148,136,0.1);color:#0D9488;">CS</span>
+            </td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:11px;">@ Shekou Port</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;">RM 80</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;">RM 80</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;">
+              <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #a7f3d0;background:#f0fdf4;color:#059669;">Match</span>
+            </td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;font-size:10px;color:#9ca3af;">&mdash;</td>
+          </tr>
+          <!-- J04: OVER (flagged) -->
+          <tr style="background:#fef2f2;">
+            <td style="padding:8px 12px;border-bottom:1px solid #fecaca;font-weight:600;color:#0D9488;font-size:11px;">J04</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #fecaca;font-weight:600;font-size:11px;">Gonda</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #fecaca;font-size:11px;">
+              <span style="padding:1px 5px;border-radius:99px;font-size:9px;font-weight:600;background:rgba(13,148,136,0.06);border:1px solid rgba(13,148,136,0.1);color:#0D9488;">EC</span>
+            </td>
+            <td style="padding:8px 12px;border-bottom:1px solid #fecaca;font-size:11px;">@ Shekou Port</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #fecaca;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;">RM 150</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #fecaca;text-align:right;">
+              <input type="text" value="180" style="border:1px solid #dc2626;border-radius:4px;padding:4px 8px;font-size:10px;font-family:'JetBrains Mono',monospace;width:80px;text-align:right;background:#fef2f2;">
+            </td>
+            <td style="padding:8px 12px;border-bottom:1px solid #fecaca;text-align:right;">
+              <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #fecaca;background:#fef2f2;color:#dc2626;">
+                <span style="width:5px;height:5px;border-radius:50%;background:#dc2626;display:inline-block;"></span> +RM 30
+              </span>
+            </td>
+            <td style="padding:8px 12px;border-bottom:1px solid #fecaca;text-align:right;">
+              <div style="display:flex;gap:4px;justify-content:flex-end;">
+                <button style="padding:3px 8px;border-radius:4px;font-size:9px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid #fecaca;background:transparent;color:#dc2626;">Dispute</button>
+                <button style="padding:3px 8px;border-radius:4px;font-size:9px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid #e5e7eb;background:transparent;color:#6b7280;">Accept</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <!-- Order footer with flagged summary -->
+      <div style="padding:6px 12px;background:#fef2f2;border-top:1px solid #fecaca;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:10px;color:#dc2626;font-weight:600;">
+          J04: Gonda EC invoiced RM 180 vs agreed RM 150 (+RM 30 / +20%)
+        </div>
+        <button style="padding:4px 10px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;background:#0D9488;color:#fff;border:none;">Approve 3 matched</button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         ORDER 2: NO RATE (collapsed) — amber border
+         ══════════════════════════════════════════════════════ -->
+    <div style="border:2px solid #fde68a;border-radius:6px;overflow:hidden;margin-bottom:12px;background:#fff;">
+      <div style="padding:8px 12px;background:#fffbeb;border-bottom:1px solid #fde68a;display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:10px;color:#b45309;cursor:pointer;user-select:none;">&#9654;</span>
+          <span style="font-weight:700;font-size:12px;">Shein</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;">DO-20260315-018</span>
+          <span style="font-size:10px;color:#9ca3af;">56 bags &middot; 2,840 kg</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #fde68a;background:#fefce8;color:#b45309;">
+            <span style="width:5px;height:5px;border-radius:50%;background:#b45309;display:inline-block;"></span> 2 No rate
+          </span>
+          <span style="font-size:10px;color:#9ca3af;">3 Match</span>
+          <button style="padding:4px 10px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:#0D9488;border:1px solid #0D9488;">Apply agreed rates</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         ORDER 3: UNDER (collapsed) — blue border
+         ══════════════════════════════════════════════════════ -->
+    <div style="border:2px solid #bfdbfe;border-radius:6px;overflow:hidden;margin-bottom:12px;background:#fff;">
+      <div style="padding:8px 12px;background:#eff6ff;border-bottom:1px solid #bfdbfe;display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:10px;color:#2563eb;cursor:pointer;user-select:none;">&#9654;</span>
+          <span style="font-weight:700;font-size:12px;">AliExpress</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;">DO-20260316-021</span>
+          <span style="font-size:10px;color:#9ca3af;">30 bags &middot; 1,520 kg</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #bfdbfe;background:#eff6ff;color:#2563eb;">
+            <span style="width:5px;height:5px;border-radius:50%;background:#2563eb;display:inline-block;"></span> 1 Under
+          </span>
+          <span style="font-size:10px;color:#9ca3af;">4 Match</span>
+          <button style="padding:4px 10px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:#0D9488;border:1px solid #0D9488;">Apply agreed rates</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         ORDER 4: MULTI-CURRENCY (expanded) — CNY + RM mix
+         ══════════════════════════════════════════════════════ -->
+    <div style="border:2px solid #fde68a;border-radius:6px;overflow:hidden;margin-bottom:12px;background:#fff;">
+      <!-- Order header -->
+      <div style="padding:8px 12px;background:#fffbeb;border-bottom:1px solid #fde68a;display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:10px;color:#b45309;cursor:pointer;user-select:none;">&#9660;</span>
+          <span style="font-weight:700;font-size:12px;">Shopee</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;">DO-20260318-025</span>
+          <span style="font-size:10px;color:#9ca3af;">44 bags &middot; 2,200 kg</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #fde68a;background:#fefce8;color:#b45309;">
+            <span style="width:5px;height:5px;border-radius:50%;background:#b45309;display:inline-block;"></span> Currency mismatch
+          </span>
+          <span style="font-size:10px;color:#9ca3af;">3 Match &middot; 1 Mismatch</span>
+        </div>
+      </div>
+      <!-- Sub-table -->
+      <table style="width:100%;border-collapse:collapse;font-size:11px;">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:6px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Job</th>
+            <th style="text-align:left;padding:6px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Vendor</th>
+            <th style="text-align:left;padding:6px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Service</th>
+            <th style="text-align:left;padding:6px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Route</th>
+            <th style="text-align:right;padding:6px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Agreed Cost</th>
+            <th style="text-align:right;padding:6px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Invoice</th>
+            <th style="text-align:right;padding:6px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Variance</th>
+            <th style="text-align:right;padding:6px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- J01: CNY Match -->
+          <tr>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-weight:600;color:#0D9488;font-size:11px;">J01</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-weight:600;font-size:11px;">ThaiKee</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:11px;">
+              <span style="padding:1px 5px;border-radius:99px;font-size:9px;font-weight:600;background:rgba(13,148,136,0.06);border:1px solid rgba(13,148,136,0.1);color:#0D9488;">OH</span>
+            </td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:11px;">@ Shopee WH, Guangzhou</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;">CNY 3,200</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;">CNY 3,200</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;">
+              <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #a7f3d0;background:#f0fdf4;color:#059669;">Match</span>
+            </td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;font-size:10px;color:#9ca3af;">&mdash;</td>
+          </tr>
+          <!-- J02: RM Match -->
+          <tr>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-weight:600;color:#0D9488;font-size:11px;">J02</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-weight:600;font-size:11px;">SevenSeas</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:11px;">
+              <span style="padding:1px 5px;border-radius:99px;font-size:9px;font-weight:600;background:rgba(13,148,136,0.06);border:1px solid rgba(13,148,136,0.1);color:#0D9488;">FM</span>
+            </td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:11px;">Shopee WH &rarr; Nansha Port</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;">RM 480</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;">RM 480</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;">
+              <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #a7f3d0;background:#f0fdf4;color:#059669;">Match</span>
+            </td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;font-size:10px;color:#9ca3af;">&mdash;</td>
+          </tr>
+          <!-- J03: RM Match -->
+          <tr>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-weight:600;color:#0D9488;font-size:11px;">J03</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-weight:600;font-size:11px;">Gonda</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:11px;">
+              <span style="padding:1px 5px;border-radius:99px;font-size:9px;font-weight:600;background:rgba(13,148,136,0.06);border:1px solid rgba(13,148,136,0.1);color:#0D9488;">EC</span>
+            </td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:11px;">@ Nansha Port</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;">RM 160</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;">RM 160</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;">
+              <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #a7f3d0;background:#f0fdf4;color:#059669;">Match</span>
+            </td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;font-size:10px;color:#9ca3af;">&mdash;</td>
+          </tr>
+          <!-- J04: Currency mismatch — Agreed in CNY, Invoice in RM -->
+          <tr style="background:#fffbeb;">
+            <td style="padding:8px 12px;border-bottom:1px solid #fde68a;font-weight:600;color:#0D9488;font-size:11px;">J04</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #fde68a;font-weight:600;font-size:11px;">ThaiKee</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #fde68a;font-size:11px;">
+              <span style="padding:1px 5px;border-radius:99px;font-size:9px;font-weight:600;background:rgba(13,148,136,0.06);border:1px solid rgba(13,148,136,0.1);color:#0D9488;">CS</span>
+            </td>
+            <td style="padding:8px 12px;border-bottom:1px solid #fde68a;font-size:11px;">@ Shopee WH, Guangzhou</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #fde68a;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;">CNY 280</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #fde68a;text-align:right;">
+              <input type="text" value="RM 65" style="border:1px solid #b45309;border-radius:4px;padding:4px 8px;font-size:10px;font-family:'JetBrains Mono',monospace;width:80px;text-align:right;background:#fffbeb;">
+            </td>
+            <td style="padding:8px 12px;border-bottom:1px solid #fde68a;text-align:right;">
+              <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #fde68a;background:#fefce8;color:#b45309;">
+                <span style="width:5px;height:5px;border-radius:50%;background:#b45309;display:inline-block;"></span> Currency mismatch
+              </span>
+            </td>
+            <td style="padding:8px 12px;border-bottom:1px solid #fde68a;text-align:right;">
+              <div style="display:flex;gap:4px;justify-content:flex-end;">
+                <button style="padding:3px 8px;border-radius:4px;font-size:9px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid #fde68a;background:transparent;color:#b45309;">Flag</button>
+                <button style="padding:3px 8px;border-radius:4px;font-size:9px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid #e5e7eb;background:transparent;color:#6b7280;">Accept</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <!-- Order footer: multi-currency totals -->
+      <div style="padding:6px 12px;background:#fffbeb;border-top:1px solid #fde68a;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:10px;color:#374151;">
+          <span style="color:#9ca3af;">Order total:</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-weight:600;margin-left:4px;">RM 640</span>
+          <span style="color:#d1d5db;margin:0 4px;">+</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-weight:600;">CNY 3,480</span>
+          <span style="color:#9ca3af;margin-left:12px;">|</span>
+          <span style="color:#b45309;font-weight:600;margin-left:8px;font-size:10px;">J04: Agreed CNY, invoiced RM &mdash; cannot compare</span>
+        </div>
+        <button style="padding:4px 10px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;background:#0D9488;color:#fff;border:none;">Approve 3 matched</button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         ORDER 5: ALL MATCH (collapsed) — green border
+         ══════════════════════════════════════════════════════ -->
+    <div style="border:2px solid #a7f3d0;border-radius:6px;overflow:hidden;margin-bottom:12px;background:#fff;">
+      <div style="padding:8px 12px;background:#f0fdf4;border-bottom:1px solid #a7f3d0;display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:10px;color:#059669;cursor:pointer;user-select:none;">&#9654;</span>
+          <span style="font-weight:700;font-size:12px;">TikTok</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;">DO-20260314-011</span>
+          <span style="font-size:10px;color:#9ca3af;">24 bags &middot; 1,240 kg</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #a7f3d0;background:#f0fdf4;color:#059669;">
+            <span style="width:5px;height:5px;border-radius:50%;background:#059669;display:inline-block;"></span> All match
+          </span>
+          <span style="font-size:10px;color:#9ca3af;">3 jobs</span>
+          <button style="padding:4px 10px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;background:#0D9488;color:#fff;border:none;">Approve</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end page content -->
+</div><!-- end full-page mockup -->
+
+</body>
+</html>

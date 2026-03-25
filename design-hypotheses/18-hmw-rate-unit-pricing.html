@@ -8,7 +8,7 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
-  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .mono { font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace; }
   .page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
   h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
   h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #0D9488; }
@@ -26,7 +26,7 @@
   .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
   .verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
 
-  .model { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; margin: 12px 0; font-family: 'SF Mono', monospace; font-size: 11px; line-height: 1.8; color: #374151; white-space: pre; overflow-x: auto; }
+  .model { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; margin: 12px 0; font-family: 'JetBrains Mono', 'SF Mono', monospace; font-size: 11px; line-height: 1.8; color: #374151; white-space: pre; overflow-x: auto; }
 
   table { width: 100%; border-collapse: collapse; font-size: 11px; }
   th { text-align: left; padding: 5px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
@@ -34,11 +34,11 @@
   tr:hover { background: #f9fafb; }
 
   .svc-p { padding: 1px 5px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.1); display: inline-flex; align-items: center; gap: 3px; }
-  .svc-p .c { color: #0D9488; font-family: monospace; }
-  .rate { font-family: 'SF Mono', monospace; font-weight: 600; color: #111827; }
-  .rate-muted { font-family: 'SF Mono', monospace; color: #9ca3af; }
-  .cost-total { font-family: 'SF Mono', monospace; font-weight: 700; font-size: 13px; color: #0D9488; }
-  .unit-badge { padding: 1px 5px; border-radius: 3px; font-size: 9px; font-weight: 600; font-family: 'SF Mono', monospace; }
+  .svc-p .c { color: #0D9488; font-family: 'JetBrains Mono', 'SF Mono', monospace; }
+  .rate { font-family: 'JetBrains Mono', 'SF Mono', monospace; font-weight: 600; color: #111827; }
+  .rate-muted { font-family: 'JetBrains Mono', 'SF Mono', monospace; color: #9ca3af; }
+  .cost-total { font-family: 'JetBrains Mono', 'SF Mono', monospace; font-weight: 700; font-size: 13px; color: #0D9488; }
+  .unit-badge { padding: 1px 5px; border-radius: 3px; font-size: 9px; font-weight: 600; font-family: 'JetBrains Mono', 'SF Mono', monospace; }
   .unit-flat { background: #f3f4f6; color: #6b7280; }
   .unit-kg { background: #eff6ff; color: #2563eb; }
   .unit-bag { background: #faf5ff; color: #7c3aed; }
@@ -58,7 +58,7 @@
   .calc-row { display: flex; align-items: center; gap: 6px; font-size: 11px; padding: 4px 0; }
   .calc-label { color: #9ca3af; min-width: 50px; }
   .calc-op { color: #d1d5db; font-weight: 700; }
-  .calc-val { font-family: 'SF Mono', monospace; font-weight: 600; }
+  .calc-val { font-family: 'JetBrains Mono', 'SF Mono', monospace; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -213,7 +213,7 @@
     <div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:12px;">
       <div style="padding:8px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
         <span style="font-weight:700;font-size:12px;">HaleSun</span>
-        <span style="font-size:10px;color:#9ca3af;">4 rates</span>
+        <span style="font-size:10px;color:#9ca3af;">5 rates</span>
       </div>
       <table>
         <thead>
@@ -222,7 +222,6 @@
             <th>Location / Route</th>
             <th>Rate</th>
             <th>Unit</th>
-            <th>Currency</th>
             <th>Effective</th>
             <th style="width:40px;"></th>
           </tr>
@@ -231,36 +230,40 @@
           <tr>
             <td><span class="svc-p"><span class="c">FM</span> Trucking</span></td>
             <td>TikTok WH &rarr; SZX Airport</td>
-            <td><span class="rate">450.00</span></td>
+            <td><span class="rate">RM 450.00</span></td>
             <td><span class="unit-badge unit-flat">flat</span></td>
-            <td>MYR</td>
             <td class="mono" style="font-size:10px;color:#9ca3af;">01 Jan 2026</td>
             <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
           </tr>
           <tr>
             <td><span class="svc-p"><span class="c">FM</span> Trucking</span></td>
             <td>Yiwu Warehouse &rarr; Ningbo Port</td>
-            <td><span class="rate">520.00</span></td>
+            <td><span class="rate">RM 520.00</span></td>
             <td><span class="unit-badge unit-flat">flat</span></td>
-            <td>MYR</td>
             <td class="mono" style="font-size:10px;color:#9ca3af;">01 Jan 2026</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-p"><span class="c">FM</span> Trucking</span></td>
+            <td>Guangzhou WH &rarr; Baiyun Airport</td>
+            <td><span class="rate">CNY 3,200.00</span></td>
+            <td><span class="unit-badge unit-flat">flat</span></td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">01 Feb 2026</td>
             <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
           </tr>
           <tr>
             <td><span class="svc-p"><span class="c">CR</span> Cargo Retrieval</span></td>
             <td>Yantian Port</td>
-            <td><span class="rate">25.00</span></td>
+            <td><span class="rate">RM 25.00</span></td>
             <td><span class="unit-badge unit-bag">/bag</span></td>
-            <td>MYR</td>
             <td class="mono" style="font-size:10px;color:#9ca3af;">15 Feb 2026</td>
             <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
           </tr>
           <tr>
             <td><span class="svc-p"><span class="c">OH</span> Origin Handling</span></td>
             <td>TikTok WH, Shenzhen</td>
-            <td><span class="rate">12.00</span></td>
+            <td><span class="rate">RM 12.00</span></td>
             <td><span class="unit-badge unit-kg">/kg</span></td>
-            <td>MYR</td>
             <td class="mono" style="font-size:10px;color:#9ca3af;">01 Mar 2026</td>
             <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
           </tr>
@@ -281,7 +284,6 @@
             <th>Location / Route</th>
             <th>Rate</th>
             <th>Unit</th>
-            <th>Currency</th>
             <th>Effective</th>
             <th style="width:40px;"></th>
           </tr>
@@ -290,27 +292,24 @@
           <tr>
             <td><span class="svc-p"><span class="c">EC</span> Export Customs</span></td>
             <td>SZX Airport Cargo Terminal</td>
-            <td><span class="rate">150.00</span></td>
+            <td><span class="rate">RM 150.00</span></td>
             <td><span class="unit-badge unit-flat">flat</span></td>
-            <td>MYR</td>
             <td class="mono" style="font-size:10px;color:#9ca3af;">01 Jan 2026</td>
             <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
           </tr>
           <tr>
             <td><span class="svc-p"><span class="c">CS</span> Submission</span></td>
             <td>SZX Airport Cargo Terminal</td>
-            <td><span class="rate">80.00</span></td>
+            <td><span class="rate">CNY 600.00</span></td>
             <td><span class="unit-badge unit-flat">flat</span></td>
-            <td>MYR</td>
             <td class="mono" style="font-size:10px;color:#9ca3af;">01 Jan 2026</td>
             <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
           </tr>
           <tr>
             <td><span class="svc-p"><span class="c">EC</span> Export Customs</span></td>
             <td>Shenzhen Bay Checkpoint</td>
-            <td><span class="rate">160.00</span></td>
+            <td><span class="rate">RM 160.00</span></td>
             <td><span class="unit-badge unit-flat">flat</span></td>
-            <td>MYR</td>
             <td class="mono" style="font-size:10px;color:#9ca3af;">01 Mar 2026</td>
             <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
           </tr>
@@ -331,7 +330,6 @@
             <th>Location / Route</th>
             <th>Rate</th>
             <th>Unit</th>
-            <th>Currency</th>
             <th>Effective</th>
             <th style="width:40px;"></th>
           </tr>
@@ -340,18 +338,16 @@
           <tr>
             <td><span class="svc-p"><span class="c">OH</span> Origin Handling</span></td>
             <td>TikTok WH, Shenzhen</td>
-            <td><span class="rate">10.50</span></td>
+            <td><span class="rate">RM 10.50</span></td>
             <td><span class="unit-badge unit-kg">/kg</span></td>
-            <td>MYR</td>
             <td class="mono" style="font-size:10px;color:#9ca3af;">01 Feb 2026</td>
             <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
           </tr>
           <tr>
             <td><span class="svc-p"><span class="c">CR</span> Cargo Retrieval</span></td>
             <td>Shekou Port</td>
-            <td><span class="rate">30.00</span></td>
+            <td><span class="rate">RM 30.00</span></td>
             <td><span class="unit-badge unit-bag">/bag</span></td>
-            <td>MYR</td>
             <td class="mono" style="font-size:10px;color:#9ca3af;">01 Feb 2026</td>
             <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
           </tr>
@@ -455,7 +451,7 @@
       </div>
 
       <!-- Job 4: EC flat -->
-      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;">
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin-bottom:8px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
           <div style="display:flex;align-items:center;gap:6px;">
             <span style="font-size:11px;font-weight:700;color:#0D9488;">J04</span>
@@ -474,10 +470,33 @@
         </div>
       </div>
 
-      <!-- Order total -->
-      <div style="display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-top:14px;padding-top:14px;border-top:2px solid #e5e7eb;">
+      <!-- Job 5: FM flat CNY (China-based vendor) -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:11px;font-weight:700;color:#0D9488;">J05</span>
+            <span class="svc-p"><span class="c">FM</span> Trucking</span>
+            <span style="font-size:11px;font-weight:600;color:#374151;">HaleSun</span>
+            <span style="font-size:10px;color:#9ca3af;">Guangzhou WH &rarr; Baiyun Airport</span>
+          </div>
+          <div style="background:rgba(13,148,136,0.06);border:1px solid rgba(13,148,136,0.12);padding:3px 8px;border-radius:4px;">
+            <span class="mono" style="font-size:11px;font-weight:700;color:#0D9488;">CNY 3,200.00</span>
+          </div>
+        </div>
+        <div class="calc-row" style="padding-left:26px;">
+          <span class="calc-val">CNY 3,200.00</span>
+          <span class="unit-badge unit-flat">flat</span>
+          <span style="color:#9ca3af;font-size:10px;margin-left:4px;">= CNY 3,200.00</span>
+        </div>
+      </div>
+
+      <!-- Order total — separate lines per currency -->
+      <div style="display:flex;justify-content:flex-end;align-items:flex-end;gap:12px;margin-top:14px;padding-top:14px;border-top:2px solid #e5e7eb;">
         <span style="font-size:12px;color:#6b7280;font-weight:600;">Estimated Order Total:</span>
-        <span class="cost-total" style="font-size:16px;">RM 20,820.00</span>
+        <div style="text-align:right;">
+          <div class="cost-total" style="font-size:16px;">RM 20,820.00</div>
+          <div class="cost-total" style="font-size:16px;margin-top:2px;">CNY 3,200.00</div>
+        </div>
       </div>
     </div>
   </div>
@@ -490,7 +509,7 @@
     <span style="font-weight:700;font-size:12px;">TikTok</span>
     <span class="mono" style="font-size:9px;color:#9ca3af;margin-left:6px;">DO-20260315-003</span>
     <span style="font-size:11px;color:#9ca3af;margin-left:12px;">36 bags &middot; 1,840 kg</span>
-    <span style="float:right;font-size:11px;font-weight:700;color:#0D9488;" class="mono">Total: RM 20,820.00</span>
+    <span style="float:right;font-size:11px;font-weight:700;color:#0D9488;" class="mono">Total: RM 20,820.00 &middot; CNY 3,200.00</span>
   </div>
   <table>
     <thead>
@@ -512,10 +531,10 @@
         <td style="font-weight:600;">HaleSun</td>
         <td><span class="svc-p"><span class="c">FM</span></span></td>
         <td>TikTok WH &rarr; SZX Airport</td>
-        <td><span class="rate">450.00</span></td>
+        <td><span class="rate">RM 450.00</span></td>
         <td><span class="unit-badge unit-flat">flat</span></td>
         <td class="mono" style="color:#9ca3af;">&#8212;</td>
-        <td><span class="rate">450.00</span></td>
+        <td><span class="rate">RM 450.00</span></td>
         <td><span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #a7f3d0;background:#f0fdf4;color:#059669;"><span style="width:5px;height:5px;border-radius:50%;background:#059669;display:inline-block;"></span>Done</span></td>
       </tr>
       <tr>
@@ -523,10 +542,10 @@
         <td style="font-weight:600;">HaleSun</td>
         <td><span class="svc-p"><span class="c">CR</span></span></td>
         <td>@ Yantian Port</td>
-        <td><span class="rate">25.00</span></td>
+        <td><span class="rate">RM 25.00</span></td>
         <td><span class="unit-badge unit-bag">/bag</span></td>
         <td class="mono">36</td>
-        <td><span class="rate">900.00</span></td>
+        <td><span class="rate">RM 900.00</span></td>
         <td><span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #e5e7eb;background:#f9fafb;color:#6b7280;"><span style="width:5px;height:5px;border-radius:50%;background:#9ca3af;display:inline-block;"></span>In Progress</span></td>
       </tr>
       <tr>
@@ -534,10 +553,10 @@
         <td style="font-weight:600;">ThaiKee</td>
         <td><span class="svc-p"><span class="c">OH</span></span></td>
         <td>@ TikTok WH, Shenzhen</td>
-        <td><span class="rate">10.50</span></td>
+        <td><span class="rate">RM 10.50</span></td>
         <td><span class="unit-badge unit-kg">/kg</span></td>
         <td class="mono">1,840</td>
-        <td><span class="rate">19,320.00</span></td>
+        <td><span class="rate">RM 19,320.00</span></td>
         <td><span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #a7f3d0;background:#f0fdf4;color:#059669;"><span style="width:5px;height:5px;border-radius:50%;background:#059669;display:inline-block;"></span>Done</span></td>
       </tr>
       <tr>
@@ -545,14 +564,29 @@
         <td style="font-weight:600;">Gonda</td>
         <td><span class="svc-p"><span class="c">EC</span></span></td>
         <td>@ SZX Airport Cargo Terminal</td>
-        <td><span class="rate">150.00</span></td>
+        <td><span class="rate">RM 150.00</span></td>
         <td><span class="unit-badge unit-flat">flat</span></td>
         <td class="mono" style="color:#9ca3af;">&#8212;</td>
-        <td><span class="rate">150.00</span></td>
+        <td><span class="rate">RM 150.00</span></td>
+        <td><span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #e5e7eb;background:#f9fafb;color:#6b7280;"><span style="width:5px;height:5px;border-radius:50%;background:#9ca3af;display:inline-block;"></span>Pending</span></td>
+      </tr>
+      <tr>
+        <td style="font-weight:600;color:#0D9488;">J05</td>
+        <td style="font-weight:600;">HaleSun</td>
+        <td><span class="svc-p"><span class="c">FM</span></span></td>
+        <td>Guangzhou WH &rarr; Baiyun Airport</td>
+        <td><span class="rate">CNY 3,200.00</span></td>
+        <td><span class="unit-badge unit-flat">flat</span></td>
+        <td class="mono" style="color:#9ca3af;">&#8212;</td>
+        <td><span class="rate">CNY 3,200.00</span></td>
         <td><span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #e5e7eb;background:#f9fafb;color:#6b7280;"><span style="width:5px;height:5px;border-radius:50%;background:#9ca3af;display:inline-block;"></span>Pending</span></td>
       </tr>
     </tbody>
   </table>
+</div>
+
+<div class="context" style="background:#fffbeb;border:1px solid #fde68a;">
+  <strong>Multi-currency design note:</strong> Phase 2 supports MYR, CNY, USD. Currency is per-rate. Mixed totals show separate lines per currency.
 </div>
 
 <!-- ═══════════════════════════════════════════════════ -->

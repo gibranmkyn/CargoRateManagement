@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useEffect, useCallback, type ReactNode } from 'react';
-import type { Trip, Job, JobStatus, TripTemplate, ActivityLogEntry, ProofDocument } from '../data/mockData';
+import type { Trip, Job, JobStatus, TripTemplate, ActivityLogEntry, ProofDocument, Currency } from '../data/mockData';
 import { seedTrips, seedTemplates } from '../data/mockData';
 
 // --- State ---
@@ -31,7 +31,9 @@ type TripAction =
   | { type: 'ADD_PROOF_DOCUMENT'; payload: { tripId: string; jobId: string; doc: ProofDocument } }
   | { type: 'REMOVE_PROOF_DOCUMENT'; payload: { tripId: string; jobId: string; docId: string } }
   | { type: 'SAVE_TEMPLATE'; payload: TripTemplate }
-  | { type: 'DELETE_TEMPLATE'; payload: { templateId: string } };
+  | { type: 'DELETE_TEMPLATE'; payload: { templateId: string } }
+  | { type: 'SET_JOB_INVOICE'; payload: { tripId: string; jobId: string; invoiceAmount: { currency: Currency; amount: number } } }
+  | { type: 'BULK_APPLY_AGREED_RATES'; payload: { tripId: string } };
 
 // --- Reducer ---
 
@@ -162,6 +164,36 @@ function tripReducer(state: TripState, action: TripAction): TripState {
         templates: state.templates.filter((t) => t.id !== action.payload.templateId),
       };
 
+    case 'SET_JOB_INVOICE':
+      return {
+        ...state,
+        trips: state.trips.map((t) =>
+          t.id === action.payload.tripId
+            ? {
+                ...t,
+                jobs: t.jobs.map((j) =>
+                  j.id === action.payload.jobId ? { ...j, invoiceAmount: action.payload.invoiceAmount } : j
+                ),
+              }
+            : t
+        ),
+      };
+
+    case 'BULK_APPLY_AGREED_RATES':
+      return {
+        ...state,
+        trips: state.trips.map((t) =>
+          t.id === action.payload.tripId
+            ? {
+                ...t,
+                jobs: t.jobs.map((j) =>
+                  j.agreedCost && !j.invoiceAmount ? { ...j, invoiceAmount: { ...j.agreedCost } } : j
+                ),
+              }
+            : t
+        ),
+      };
+
     default:
       return state;
   }
@@ -198,6 +230,8 @@ interface TripContextValue {
   removeProofDocument: (tripId: string, jobId: string, docId: string) => void;
   saveTemplate: (template: TripTemplate) => void;
   deleteTemplate: (templateId: string) => void;
+  setJobInvoice: (tripId: string, jobId: string, invoiceAmount: { currency: Currency; amount: number }) => void;
+  bulkApplyAgreedRates: (tripId: string) => void;
 }
 
 const TripContext = createContext<TripContextValue | null>(null);
@@ -250,6 +284,8 @@ export function TripProvider({ children }: { children: ReactNode }) {
   const removeProofDocument = useCallback((tripId: string, jobId: string, docId: string) => dispatch({ type: 'REMOVE_PROOF_DOCUMENT', payload: { tripId, jobId, docId } }), []);
   const saveTemplate = useCallback((template: TripTemplate) => dispatch({ type: 'SAVE_TEMPLATE', payload: template }), []);
   const deleteTemplate = useCallback((templateId: string) => dispatch({ type: 'DELETE_TEMPLATE', payload: { templateId } }), []);
+  const setJobInvoice = useCallback((tripId: string, jobId: string, invoiceAmount: { currency: Currency; amount: number }) => dispatch({ type: 'SET_JOB_INVOICE', payload: { tripId, jobId, invoiceAmount } }), []);
+  const bulkApplyAgreedRates = useCallback((tripId: string) => dispatch({ type: 'BULK_APPLY_AGREED_RATES', payload: { tripId } }), []);
 
   const value: TripContextValue = {
     trips: state.trips,
@@ -259,6 +295,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
     addJob, updateJob, deleteJob, updateJobStatus,
     addActivityLog, addProofDocument, removeProofDocument,
     saveTemplate, deleteTemplate,
+    setJobInvoice, bulkApplyAgreedRates,
   };
 
   return <TripContext.Provider value={value}>{children}</TripContext.Provider>;
