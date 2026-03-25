@@ -138,7 +138,7 @@ export default function LocationDropdown({ value, onChange, placeholder = 'Selec
 
       {/* Inline add form (replaces dropdown when active) */}
       {showAddForm && (
-        <div style={{ marginTop: 4, padding: 8, border: '1px solid #e5e7eb', borderRadius: 4, background: '#f0fdfa' }}>
+        <div style={{ marginTop: 4, padding: 8, border: '1px solid #e5e7eb', borderRadius: 4, background: 'rgba(21,44,255,0.04)' }}>
           <div style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#152CFF', marginBottom: 6 }}>Add new location</div>
           <input ref={nameRef} type="text" placeholder="Name" value={newName} onChange={(e) => setNewName(e.target.value)} style={{ width: '100%', fontSize: 11, padding: '4px 6px', border: '1px solid #e5e7eb', borderRadius: 4, marginBottom: 4, outline: 'none' }} />
           {addError && <div style={{ fontSize: 10, color: '#dc2626', marginBottom: 4 }}>{addError}</div>}

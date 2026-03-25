@@ -134,7 +134,7 @@ export default function LocationsTab() {
         <tbody>
           {/* Inline add form */}
           {showAddForm && (
-            <tr style={{ background: '#f0fdfa' }}>
+            <tr style={{ background: 'rgba(21,44,255,0.04)' }}>
               <td style={td}>
                 <input autoFocus type="text" placeholder="Location name" value={newName} onChange={(e) => setNewName(e.target.value)} style={{ ...inputStyle, width: '100%' }} />
                 {addError && <div style={{ fontSize: 10, color: '#dc2626', marginTop: 2 }}>{addError}</div>}

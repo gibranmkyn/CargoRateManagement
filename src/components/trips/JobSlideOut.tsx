@@ -300,7 +300,7 @@ export default function JobSlideOut({ job, trip, jobIndex, onStatusChange, onUpl
           </button>
         )}
         {!isCompleted && showAddFee && (
-          <div style={{ padding: 10, background: '#f0fdfa', border: '1px solid rgba(21,44,255,0.15)', borderRadius: 6 }}>
+          <div style={{ padding: 10, background: 'rgba(21,44,255,0.04)', border: '1px solid rgba(21,44,255,0.15)', borderRadius: 6 }}>
             <div style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#152CFF', marginBottom: 6 }}>New fee</div>
             <div style={{ marginBottom: 4 }}>
               <select value={newFeeName} onChange={(e) => setNewFeeName(e.target.value)} style={{ width: '100%', fontSize: 10, padding: '4px 6px', border: '1px solid #e5e7eb', borderRadius: 4 }}>
