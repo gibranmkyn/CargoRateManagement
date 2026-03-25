@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-26: Fee Line Items & Quantity Model</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #0D9488; }
+h3 { font-size: 14px; font-weight: 700; margin: 20px 0 8px; color: #111827; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #0D9488; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+.sec-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-26: Fee Line Items & Quantity Model</h1>
+
+<div class="hmw">
+How might we structure fee line items and quantities so that each job's cost accurately reflects multiple charges, quantities can differ per job, and the data flows correctly into billing?
+</div>
+
+<div class="context">
+<strong>The real scenario:</strong> TikTok ships 24 bags / 1,240 kg. FM Trucking handles all 24 bags. But at customs, 4 bags are held for inspection — only 20 bags clear. The EC job should calculate customs fees on 20 bags, not 24. Meanwhile, the FM job has 3 fee items: base rate (flat), fuel surcharge (per-km), and toll fees (flat). The quantity multiplier differs per fee type — bags for per-bag rates, weight for per-kg rates, distance for per-km rates. How do we model this without overwhelming the ops planner?
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION A: ORDER-LEVEL QTY + PER-FEE OVERRIDE -->
+<!-- ============================================ -->
+
+<h2>Option A: Order-Level Quantities + Per-Fee Override</h2>
+<span class="label" style="background: rgba(13,148,136,0.06); color: #0D9488;">Recommended</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Bags and weight live at the order level (where they belong logistically — you ship 24 bags total). Each job inherits order quantities as default. But each fee line item has its own quantity field that CAN be overridden. The fee's rate unit determines what the quantity means: bags for /bag, kg for /kg, trips for /trip.
+
+<p style="margin-top: 10px;"><strong>Data model:</strong></p>
+<pre style="font-family: 'JetBrains Mono', monospace; font-size: 10px; background: #f9fafb; padding: 10px; border-radius: 4px; margin-top: 4px; border: 1px solid #e5e7eb; overflow-x: auto;">
+Job {
+  fees: FeeLineItem[]     // 1..N fee line items per job
+}
+
+FeeLineItem {
+  id: string
+  name: string            // "Base rate", "Fuel surcharge", "Toll fees"
+  rateId?: string         // linked to VendorRate if auto-populated
+  currency: Currency
+  rate: number            // unit price
+  unit: RateUnit          // flat, per-kg, per-bag, per-cbm, per-km
+  quantity: number        // defaults from order, overridable per fee
+  amount: number          // = rate × quantity (calculated)
+}
+</pre>
+
+<strong>Fee creation flow:</strong>
+<ol style="font-size: 11px; margin-top: 8px; padding-left: 16px; line-height: 1.8;">
+  <li><strong>Auto-populated from rate card:</strong> When vendor + service + location are selected, the system creates a FeeLineItem from the matched VendorRate. Quantity auto-fills from the order (bags for /bag, weight for /kg, 1 for /trip).</li>
+  <li><strong>"+ Add fee" for surcharges:</strong> Opens an inline form with: Name (dropdown of common fees OR free text), Rate amount + currency, Unit type, Quantity (defaults from order). For a fee catalog, use a small predefined list: fuel surcharge, toll fees, waiting time, special handling, overtime, insurance.</li>
+  <li><strong>Manual override:</strong> Ops can edit any fee's quantity (e.g., change bags from 24 to 20 for customs). The amount recalculates immediately.</li>
+</ol>
+
+<div class="pros-cons">
+<div class="pros"><strong>✓ Pros</strong><br>
+• Order-level bags/weight stays as the source of truth<br>
+• Per-fee override handles edge cases (partial shipments)<br>
+• Fee catalog keeps surcharge names consistent<br>
+• Amount always = rate × quantity (transparent, auditable)</div>
+<div class="cons"><strong>✗ Cons</strong><br>
+• More fields per fee (rate + unit + qty + amount)<br>
+• Ops must know to override qty for partial shipments<br>
+• Fee catalog needs maintenance as new fee types emerge</div>
+</div>
+</div>
+
+<div class="screen">
+<div style="padding: 16px;">
+<h3 style="font-size: 13px; margin-bottom: 12px;">Slide-Out: Job Fee Editor</h3>
+
+<!-- Quantity bar -->
+<div class="sec-title">Quantities <span style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: #b45309;">(from order · editable per fee)</span></div>
+<div style="display: flex; gap: 12px; padding: 8px 10px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 16px;">
+  <div>
+    <span style="font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Bags</span>
+    <div class="mono" style="font-size: 12px; font-weight: 600;">24</div>
+  </div>
+  <div>
+    <span style="font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Weight</span>
+    <div class="mono" style="font-size: 12px; font-weight: 600;">1,240 kg</div>
+  </div>
+  <div>
+    <span style="font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Volume</span>
+    <div class="mono" style="font-size: 12px; font-weight: 600;">2.4 CBM</div>
+  </div>
+</div>
+
+<!-- Fee table -->
+<div class="sec-title">Fees (3 items)</div>
+<table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 6px;">
+<thead>
+<tr>
+  <th style="text-align: left; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb;">Fee</th>
+  <th style="text-align: left; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb;">Rate</th>
+  <th style="text-align: center; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; width: 60px;">Qty</th>
+  <th style="text-align: right; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; width: 80px;">Amount</th>
+  <th style="width: 20px; background: #f9fafb;"></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td style="padding: 6px 8px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6;">
+    <div>Base rate</div>
+    <div style="font-size: 8px; color: #9ca3af;">From rate card · RT-001</div>
+  </td>
+  <td style="padding: 6px 8px; font-size: 10px; border-bottom: 1px solid #f3f4f6;" class="mono">
+    RM 450.00 <span style="color: #9ca3af;">/trip</span>
+  </td>
+  <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid #f3f4f6;">
+    <span class="mono" style="font-size: 10px; color: #6b7280;">1</span>
+  </td>
+  <td style="padding: 6px 8px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono" >
+    <strong>RM 450.00</strong>
+  </td>
+  <td style="padding: 6px 8px; border-bottom: 1px solid #f3f4f6; text-align: center;">
+    <span style="color: #d1d5db; cursor: pointer;">×</span>
+  </td>
+</tr>
+<tr>
+  <td style="padding: 6px 8px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6;">
+    <div>Fuel surcharge</div>
+    <div style="font-size: 8px; color: #9ca3af;">Manual entry</div>
+  </td>
+  <td style="padding: 6px 8px; font-size: 10px; border-bottom: 1px solid #f3f4f6;" class="mono">
+    RM 1.875 <span style="color: #9ca3af;">/km</span>
+  </td>
+  <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid #f3f4f6;">
+    <input type="number" value="24" style="width: 40px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 2px 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center; color: #111827; font-weight: 600;">
+  </td>
+  <td style="padding: 6px 8px; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono">
+    <strong>RM 45.00</strong>
+  </td>
+  <td style="padding: 6px 8px; border-bottom: 1px solid #f3f4f6; text-align: center;">
+    <span style="color: #d1d5db; cursor: pointer;">×</span>
+  </td>
+</tr>
+<tr>
+  <td style="padding: 6px 8px; font-size: 10px; color: #374151;">
+    <div>Toll fees</div>
+    <div style="font-size: 8px; color: #9ca3af;">Manual entry</div>
+  </td>
+  <td style="padding: 6px 8px; font-size: 10px;" class="mono">
+    RM 30.00 <span style="color: #9ca3af;">/trip</span>
+  </td>
+  <td style="padding: 6px 8px; text-align: center;">
+    <span class="mono" style="font-size: 10px; color: #6b7280;">1</span>
+  </td>
+  <td style="padding: 6px 8px; text-align: right;" class="mono">
+    <strong>RM 30.00</strong>
+  </td>
+  <td style="padding: 6px 8px; text-align: center;">
+    <span style="color: #d1d5db; cursor: pointer;">×</span>
+  </td>
+</tr>
+</tbody>
+<tfoot>
+<tr style="background: #f9fafb; border-top: 1px solid #e5e7eb;">
+  <td colspan="3" style="padding: 6px 8px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Total</td>
+  <td style="padding: 6px 8px; text-align: right;" class="mono"><strong style="color: #0D9488; font-size: 11px;">RM 525.00</strong></td>
+  <td></td>
+</tr>
+</tfoot>
+</table>
+
+<!-- Add fee button -->
+<button style="display: flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 4px; border: 1px dashed #e5e7eb; background: none; color: #9ca3af; font-size: 10px; cursor: pointer; width: 100%; justify-content: center; margin-top: 8px;">
+  + Add fee line item
+</button>
+
+<!-- Add fee expanded (example) -->
+<div style="margin-top: 8px; padding: 10px; background: #f0fdfa; border: 1px solid rgba(13,148,136,0.15); border-radius: 6px;">
+  <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #0D9488; margin-bottom: 6px;">New fee</div>
+  <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+    <select style="flex: 1; font-size: 10px; padding: 4px 6px; border: 1px solid #e5e7eb; border-radius: 4px;">
+      <option>Select fee type...</option>
+      <option>Fuel surcharge</option>
+      <option>Toll fees</option>
+      <option>Waiting time</option>
+      <option>Special handling</option>
+      <option>Overtime</option>
+      <option>Insurance</option>
+      <option selected>Custom...</option>
+    </select>
+  </div>
+  <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+    <input type="text" placeholder="Fee name" value="Waiting time" style="flex: 1; font-size: 10px; padding: 4px 6px; border: 1px solid #e5e7eb; border-radius: 4px;">
+  </div>
+  <div style="display: flex; gap: 6px;">
+    <select style="width: 50px; font-size: 10px; padding: 4px 4px; border: 1px solid #e5e7eb; border-radius: 4px;">
+      <option>MYR</option>
+    </select>
+    <input type="number" placeholder="Rate" value="50" style="width: 60px; font-size: 10px; padding: 4px 6px; border: 1px solid #e5e7eb; border-radius: 4px; font-family: 'JetBrains Mono', monospace;">
+    <select style="width: 70px; font-size: 10px; padding: 4px 4px; border: 1px solid #e5e7eb; border-radius: 4px;">
+      <option>/trip</option>
+      <option>/hr</option>
+      <option>/bag</option>
+      <option>/kg</option>
+    </select>
+    <input type="number" placeholder="Qty" value="2" style="width: 40px; font-size: 10px; padding: 4px 6px; border: 1px solid #e5e7eb; border-radius: 4px; font-family: 'JetBrains Mono', monospace; text-align: center;">
+    <button style="padding: 4px 8px; border-radius: 4px; border: none; background: #0D9488; color: #fff; font-size: 9px; font-weight: 600; cursor: pointer;">Add</button>
+  </div>
+</div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION B: PER-JOB QUANTITIES (INDEPENDENT)  -->
+<!-- ============================================ -->
+
+<h2>Option B: Per-Job Independent Quantities</h2>
+<span class="label" style="background: #f3f4f6; color: #6b7280;">Maximum Flexibility</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Each job has its own bags/weight/volume fields, independent from the order. When a job is created, it inherits from the order, but after that it's independent. Fee quantities are derived from the job's quantities (not the order's). This means each job tracks exactly how much cargo it handled.
+
+<div class="pros-cons">
+<div class="pros"><strong>✓ Pros</strong><br>
+• Each job accurately reflects actual cargo handled<br>
+• Partial shipments naturally supported<br>
+• Billing is per-job accurate — no overcharging</div>
+<div class="cons"><strong>✗ Cons</strong><br>
+• More fields to fill per job (3 qty fields × N jobs)<br>
+• Order-level bags/weight becomes decorative<br>
+• Ops must update quantities on every job individually<br>
+• Inconsistency: order says 24 bags, sum of jobs might say 20+24+24</div>
+</div>
+</div>
+
+<div class="screen">
+<div style="padding: 16px;">
+<h3 style="font-size: 13px; margin-bottom: 12px;">Sub-table with Per-Job Quantities</h3>
+<table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; font-size: 11px;">
+<thead>
+<tr>
+  <th style="text-align: left; padding: 5px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb;">Job</th>
+  <th style="text-align: left; padding: 5px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb;">Vendor / Service</th>
+  <th style="text-align: center; padding: 5px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; width: 50px;">Bags</th>
+  <th style="text-align: center; padding: 5px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; width: 60px;">Weight</th>
+  <th style="text-align: right; padding: 5px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; width: 80px;">Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td style="padding: 5px 8px; font-weight: 600; color: #0D9488;">J01</td>
+  <td style="padding: 5px 8px;">HaleSun · FM</td>
+  <td style="padding: 5px 8px; text-align: center;">
+    <input type="number" value="24" style="width: 36px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 2px 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+  </td>
+  <td style="padding: 5px 8px; text-align: center;">
+    <input type="number" value="1240" style="width: 48px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 2px 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+  </td>
+  <td style="padding: 5px 8px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 600;">RM 525.00</td>
+</tr>
+<tr>
+  <td style="padding: 5px 8px; font-weight: 600; color: #0D9488;">J02</td>
+  <td style="padding: 5px 8px;">Gonda · EC</td>
+  <td style="padding: 5px 8px; text-align: center;">
+    <input type="number" value="20" style="width: 36px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 2px 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center; color: #b45309; border-color: #fde68a;">
+  </td>
+  <td style="padding: 5px 8px; text-align: center;">
+    <input type="number" value="1050" style="width: 48px; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 2px 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center; color: #b45309; border-color: #fde68a;">
+  </td>
+  <td style="padding: 5px 8px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 600;">RM 120.00</td>
+</tr>
+</tbody>
+</table>
+<div style="font-size: 9px; color: #b45309; margin-top: 4px;">⚠ J02 quantities differ from order (24 bags / 1,240 kg)</div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION C: SIMPLE — ORDER QTY ONLY           -->
+<!-- ============================================ -->
+
+<h2>Option C: Simple — Order Quantities Only, No Override</h2>
+<span class="label" style="background: #fffbeb; color: #b45309;">Minimum Viable</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Keep it simple. Order-level bags/weight apply to ALL jobs. Each fee's quantity is calculated from the order's quantities based on the fee's unit type. No per-job or per-fee overrides. If a partial shipment happens, ops adjusts the order quantities.
+
+<div class="pros-cons">
+<div class="pros"><strong>✓ Pros</strong><br>
+• Simplest model — one place to edit quantities<br>
+• No confusion about which quantity is "real"<br>
+• Fastest to implement</div>
+<div class="cons"><strong>✗ Cons</strong><br>
+• Can't handle partial shipments per job<br>
+• Changing order qty affects ALL jobs retroactively<br>
+• Not accurate for billing if different jobs handle different amounts</div>
+</div>
+</div>
+
+
+<!-- VERDICT -->
+<div class="verdict">
+<h3>Verdict: Option A — Order-Level Qty + Per-Fee Override</h3>
+<p style="font-size: 12px; line-height: 1.6; color: #374151;">
+<strong>Recommended because:</strong> It gets the default right (order quantities flow down to all fees) while allowing surgical overrides when reality differs. The fee catalog (fuel, tolls, waiting time, special handling, overtime, insurance) keeps data clean. The "+ Add fee" inline form is small and focused. This model handles 95% of cases automatically and the 5% edge cases with a single quantity edit.
+</p>
+<ul style="font-size: 11px; color: #374151; margin-top: 8px; padding-left: 16px; line-height: 1.8;">
+<li><strong>Quantities:</strong> Live at order level. Each FeeLineItem has a qty field that defaults from order but can be overridden.</li>
+<li><strong>Auto-populate:</strong> Rate card match → creates base FeeLineItem automatically. Qty determined by unit type (/bag → bags count, /kg → weight, /trip → 1).</li>
+<li><strong>Manual fees:</strong> "+ Add fee" offers a dropdown of 6 common surcharges + free text for custom. Each needs: name, rate, unit, qty.</li>
+<li><strong>Lock on complete:</strong> When job status = Completed, all fees and quantities become read-only. Edit requires changing status back.</li>
+<li><strong>Fee catalog:</strong> Fuel surcharge, Toll fees, Waiting time, Special handling, Overtime, Insurance. Hardcoded initially, configurable in Phase 3.</li>
+</ul>
+</div>
+
+</div>
+</body>
+</html>

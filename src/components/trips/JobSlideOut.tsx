@@ -1,12 +1,21 @@
-import { useRef } from 'react';
-import { ArrowRight, MapPin, Upload, FileText, Image, X, Clock, ExternalLink } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { ArrowRight, MapPin, Upload, FileText, Image, X, Clock, ExternalLink, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import type { Job, Trip, JobStatus, ProofDocument } from '../../data/mockData';
-import { vendors } from '../../data/mockData';
+import type { Job, Trip, JobStatus, ProofDocument, FeeLineItem, Currency, RateUnit } from '../../data/mockData';
+import { vendors, formatCurrency, FEE_CATALOG, calcFeeAmount } from '../../data/mockData';
 import ServiceTag from './ServiceTag';
 import StatusBadge from './StatusBadge';
 
 const allStatuses: JobStatus[] = ['Pending', 'In Progress', 'Completed', 'Rejected', 'Cancelled'];
+const primaryStatuses: { label: string; value: JobStatus }[] = [
+  { label: 'Pending', value: 'Pending' },
+  { label: 'In Progress', value: 'In Progress' },
+  { label: 'Completed', value: 'Completed' },
+];
+const secondaryStatuses: { label: string; value: JobStatus }[] = [
+  { label: 'Reject', value: 'Rejected' },
+  { label: 'Cancel', value: 'Cancelled' },
+];
 
 function fmtDateTime(dt: string) {
   if (!dt) return '\u2014';
@@ -30,23 +39,58 @@ interface Props {
   onUploadProof: (file: File) => void;
   onRemoveProof: (docId: string) => void;
   onReassign?: (vendorCode: string) => void;
+  onAddFee?: (fee: FeeLineItem) => void;
+  onRemoveFee?: (feeId: string) => void;
+  onUpdateFeeQty?: (feeId: string, quantity: number) => void;
+  onUpdateJobQty?: (qtys: { jobBags?: number; jobWeight?: number; jobVolume?: number }) => void;
 }
 
 function docIcon(doc: ProofDocument) {
   return doc.type.startsWith('image/') ? <Image size={12} style={{ color: '#0D9488' }} /> : <FileText size={12} style={{ color: '#0D9488' }} />;
 }
 
-export default function JobSlideOut({ job, trip, jobIndex, onStatusChange, onUploadProof, onRemoveProof, onReassign }: Props) {
+export default function JobSlideOut({ job, trip, jobIndex, onStatusChange, onUploadProof, onRemoveProof, onReassign, onAddFee, onRemoveFee, onUpdateFeeQty, onUpdateJobQty }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const log = job.activityLog ?? [];
   const proofs = job.proofDocuments ?? [];
+  const fees = job.fees ?? [];
   const isRejected = job.status === 'Rejected';
+  const isCompleted = job.status === 'Completed';
+  const [showAddFee, setShowAddFee] = useState(false);
+  const [newFeeName, setNewFeeName] = useState('');
+  const [newFeeRate, setNewFeeRate] = useState('');
+  const [newFeeUnit, setNewFeeUnit] = useState<RateUnit>('flat');
+  const [newFeeQty, setNewFeeQty] = useState('1');
+  const [newFeeCurrency, setNewFeeCurrency] = useState<Currency>('MYR');
 
   function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (f) onUploadProof(f);
     if (fileRef.current) fileRef.current.value = '';
   }
+
+  function handleAddFee() {
+    if (!newFeeName || !newFeeRate || !onAddFee) return;
+    const rate = parseFloat(newFeeRate);
+    const qty = parseFloat(newFeeQty) || 1;
+    if (isNaN(rate) || rate <= 0) return;
+    onAddFee({
+      id: `F-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      name: newFeeName,
+      currency: newFeeCurrency,
+      rate,
+      unit: newFeeUnit,
+      quantity: qty,
+      amount: calcFeeAmount(rate, newFeeUnit, qty),
+    });
+    setNewFeeName(''); setNewFeeRate(''); setNewFeeQty('1'); setShowAddFee(false);
+  }
+
+  // Calculate fee totals
+  const feeTotals = new Map<Currency, number>();
+  fees.forEach((f) => feeTotals.set(f.currency, (feeTotals.get(f.currency) ?? 0) + f.amount));
+
+  const inputStyle: React.CSSProperties = { fontSize: 10, padding: '3px 6px', border: '1px solid #e5e7eb', borderRadius: 3, outline: 'none', fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -88,26 +132,50 @@ export default function JobSlideOut({ job, trip, jobIndex, onStatusChange, onUpl
         <ServiceTag service={job.service} />
       </div>
 
-      {/* Status picker */}
+      {/* Status — compact progress bar */}
       <div>
         <div style={sectionTitle}>{isRejected ? 'Reassign or Change Status' : 'Status'}</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {allStatuses.map((s) => {
-            const isActive = s === job.status;
+        <div style={{ display: 'flex', gap: 2, marginBottom: 6 }}>
+          {primaryStatuses.map((s) => {
+            const isActive = s.value === job.status;
+            const isCompletedBtn = s.value === 'Completed';
+            const activeColor = isCompletedBtn ? '#059669' : '#0D9488';
+            const activeBg = isCompletedBtn ? '#f0fdf4' : 'rgba(13,148,136,0.06)';
+            const activeBorder = isCompletedBtn ? '#a7f3d0' : '#0D9488';
             return (
               <button
-                key={s}
-                onClick={() => onStatusChange(s)}
+                key={s.value}
+                onClick={() => onStatusChange(s.value)}
                 style={{
-                  width: '100%', textAlign: 'left', padding: '6px 10px', borderRadius: 4,
-                  border: isActive ? '1.5px solid #0D9488' : '1.5px solid transparent',
-                  background: isActive ? 'rgba(13,148,136,0.06)' : 'transparent',
-                  fontWeight: isActive ? 600 : 400, fontSize: 11, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: 8, transition: 'all 150ms',
-                  fontFamily: 'inherit',
+                  flex: 1, padding: '5px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600,
+                  border: isActive ? `1.5px solid ${activeBorder}` : '1px solid #e5e7eb',
+                  background: isActive ? activeBg : '#f3f4f6',
+                  color: isActive ? activeColor : '#9ca3af',
+                  cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >
-                <StatusBadge status={s} />
+                {s.label}
+              </button>
+            );
+          })}
+        </div>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {secondaryStatuses.map((s) => {
+            const isActive = s.value === job.status;
+            const isReject = s.value === 'Rejected';
+            return (
+              <button
+                key={s.value}
+                onClick={() => onStatusChange(s.value)}
+                style={{
+                  padding: '3px 8px', borderRadius: 4, fontSize: 9, fontWeight: 600,
+                  border: isActive ? `1px solid ${isReject ? '#fecaca' : '#e5e7eb'}` : '1px solid #e5e7eb',
+                  background: isActive ? (isReject ? '#fef2f2' : '#f3f4f6') : 'transparent',
+                  color: isActive ? (isReject ? '#dc2626' : '#6b7280') : '#9ca3af',
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                {s.label}
               </button>
             );
           })}
@@ -128,9 +196,133 @@ export default function JobSlideOut({ job, trip, jobIndex, onStatusChange, onUpl
               <option key={v.code} value={v.code}>{v.name}</option>
             ))}
           </select>
-          <div style={{ fontSize: 10, color: '#9ca3af', textAlign: 'center' }}>Sets status to Pending and logs reassignment</div>
         </div>
       )}
+
+      {/* Editable Quantities */}
+      <div>
+        <div style={sectionTitle}>
+          Quantities
+          {!isCompleted && <span style={{ fontSize: 8, fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: '#b45309', marginLeft: 4 }}>(editable until completed)</span>}
+        </div>
+        <div style={{ display: 'flex', gap: 8, padding: '8px 10px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 6 }}>
+          <div>
+            <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Bags</div>
+            {isCompleted
+              ? <div style={{ ...inputStyle, border: 'none', padding: 0, background: 'none' }}>{job.jobBags ?? trip.bags}</div>
+              : <input type="number" value={job.jobBags ?? trip.bags} onChange={(e) => onUpdateJobQty?.({ jobBags: Number(e.target.value) || 0 })} style={{ ...inputStyle, width: 50 }} />
+            }
+          </div>
+          <div>
+            <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Weight (kg)</div>
+            {isCompleted
+              ? <div style={{ ...inputStyle, border: 'none', padding: 0, background: 'none' }}>{job.jobWeight ?? trip.weight}</div>
+              : <input type="number" value={job.jobWeight ?? trip.weight} onChange={(e) => onUpdateJobQty?.({ jobWeight: Number(e.target.value) || 0 })} style={{ ...inputStyle, width: 70 }} />
+            }
+          </div>
+          <div>
+            <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Volume (CBM)</div>
+            {isCompleted
+              ? <div style={{ ...inputStyle, border: 'none', padding: 0, background: 'none' }}>{job.jobVolume ?? 0}</div>
+              : <input type="number" step="0.1" value={job.jobVolume ?? 0} onChange={(e) => onUpdateJobQty?.({ jobVolume: Number(e.target.value) || 0 })} style={{ ...inputStyle, width: 60 }} />
+            }
+          </div>
+        </div>
+      </div>
+
+      {/* Fee Breakdown */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <span style={sectionTitle as React.CSSProperties}>Fee Breakdown ({fees.length})</span>
+        </div>
+        {fees.length > 0 ? (
+          <div style={{ border: '1px solid #e5e7eb', borderRadius: 6, overflow: 'hidden', marginBottom: 8 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '4px 8px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb' }}>Fee</th>
+                  <th style={{ textAlign: 'left', padding: '4px 8px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb' }}>Rate</th>
+                  <th style={{ textAlign: 'center', padding: '4px 8px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', width: 50 }}>Qty</th>
+                  <th style={{ textAlign: 'right', padding: '4px 8px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', width: 80 }}>Amount</th>
+                  {!isCompleted && <th style={{ width: 20, background: '#f9fafb' }}></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {fees.map((fee) => (
+                  <tr key={fee.id}>
+                    <td style={{ padding: '5px 8px', fontSize: 10, color: '#374151', borderBottom: '1px solid #f3f4f6' }}>
+                      <div>{fee.name}</div>
+                      {fee.rateId && <div style={{ fontSize: 8, color: '#9ca3af' }}>Rate card</div>}
+                    </td>
+                    <td style={{ padding: '5px 8px', fontSize: 10, fontFamily: "'JetBrains Mono', monospace", color: '#9ca3af', borderBottom: '1px solid #f3f4f6' }}>
+                      {formatCurrency(fee.currency, fee.rate)} <span style={{ fontSize: 8 }}>/{fee.unit === 'flat' ? 'trip' : fee.unit.replace('per-', '')}</span>
+                    </td>
+                    <td style={{ padding: '5px 8px', textAlign: 'center', borderBottom: '1px solid #f3f4f6' }}>
+                      {isCompleted
+                        ? <span style={{ ...inputStyle, border: 'none', padding: 0, background: 'none' }}>{fee.quantity}</span>
+                        : <input type="number" value={fee.quantity} onChange={(e) => onUpdateFeeQty?.(fee.id, Number(e.target.value) || 0)} style={{ ...inputStyle, width: 40, textAlign: 'center' }} />
+                      }
+                    </td>
+                    <td style={{ padding: '5px 8px', fontSize: 10, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: '#111827', textAlign: 'right', borderBottom: '1px solid #f3f4f6' }}>
+                      {formatCurrency(fee.currency, fee.amount)}
+                    </td>
+                    {!isCompleted && (
+                      <td style={{ padding: '5px 4px', textAlign: 'center', borderBottom: '1px solid #f3f4f6' }}>
+                        <button onClick={() => onRemoveFee?.(fee.id)} style={{ border: 'none', background: 'none', color: '#d1d5db', cursor: 'pointer', padding: 0 }}><X size={10} /></button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {/* Total */}
+            <div style={{ padding: '6px 8px', background: '#f9fafb', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' }}>Job Total</span>
+              <div>
+                {Array.from(feeTotals.entries()).map(([curr, total]) => (
+                  <div key={curr} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700, color: '#0D9488', textAlign: 'right' }}>
+                    {formatCurrency(curr, total)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ padding: 12, textAlign: 'center', fontSize: 10, color: '#d1d5db', fontStyle: 'italic', border: '1px dashed #e5e7eb', borderRadius: 6, marginBottom: 8 }}>
+            No fee line items
+          </div>
+        )}
+
+        {/* + Add fee */}
+        {!isCompleted && !showAddFee && (
+          <button onClick={() => setShowAddFee(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 4, border: '1px dashed #e5e7eb', background: 'none', color: '#9ca3af', fontSize: 10, cursor: 'pointer', width: '100%', justifyContent: 'center' }}>
+            <Plus size={10} /> Add fee line item
+          </button>
+        )}
+        {!isCompleted && showAddFee && (
+          <div style={{ padding: 10, background: '#f0fdfa', border: '1px solid rgba(13,148,136,0.15)', borderRadius: 6 }}>
+            <div style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#0D9488', marginBottom: 6 }}>New fee</div>
+            <div style={{ marginBottom: 4 }}>
+              <select value={newFeeName} onChange={(e) => setNewFeeName(e.target.value)} style={{ width: '100%', fontSize: 10, padding: '4px 6px', border: '1px solid #e5e7eb', borderRadius: 4 }}>
+                <option value="">Select fee type...</option>
+                {FEE_CATALOG.map((f) => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <select value={newFeeCurrency} onChange={(e) => setNewFeeCurrency(e.target.value as Currency)} style={{ width: 50, fontSize: 10, padding: '4px 4px', border: '1px solid #e5e7eb', borderRadius: 4 }}>
+                <option>MYR</option><option>CNY</option><option>USD</option>
+              </select>
+              <input type="number" placeholder="Rate" value={newFeeRate} onChange={(e) => setNewFeeRate(e.target.value)} style={{ width: 60, ...inputStyle }} />
+              <select value={newFeeUnit} onChange={(e) => setNewFeeUnit(e.target.value as RateUnit)} style={{ width: 65, fontSize: 10, padding: '4px 4px', border: '1px solid #e5e7eb', borderRadius: 4 }}>
+                <option value="flat">/trip</option><option value="per-km">/km</option><option value="per-bag">/bag</option><option value="per-kg">/kg</option>
+              </select>
+              <input type="number" placeholder="Qty" value={newFeeQty} onChange={(e) => setNewFeeQty(e.target.value)} style={{ width: 40, ...inputStyle, textAlign: 'center' }} />
+              <button onClick={handleAddFee} style={{ padding: '4px 8px', borderRadius: 4, border: 'none', background: '#0D9488', color: '#fff', fontSize: 9, fontWeight: 600, cursor: 'pointer' }}>Add</button>
+              <button onClick={() => setShowAddFee(false)} style={{ padding: '4px 6px', borderRadius: 4, border: '1px solid #e5e7eb', background: '#fff', color: '#9ca3af', fontSize: 9, cursor: 'pointer' }}><X size={10} /></button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Proof of Service */}
       <div>

@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer, useEffect, useCallback, type ReactNode } from 'react';
-import type { Trip, Job, JobStatus, TripTemplate, ActivityLogEntry, ProofDocument, Currency } from '../data/mockData';
-import { seedTrips, seedTemplates } from '../data/mockData';
+import type { Trip, Job, JobStatus, TripTemplate, ActivityLogEntry, ProofDocument, Currency, FeeLineItem, RateUnit } from '../data/mockData';
+import { seedTrips, seedTemplates, calcFeeAmount } from '../data/mockData';
 
 // --- State ---
 
@@ -33,7 +33,11 @@ type TripAction =
   | { type: 'SAVE_TEMPLATE'; payload: TripTemplate }
   | { type: 'DELETE_TEMPLATE'; payload: { templateId: string } }
   | { type: 'SET_JOB_INVOICE'; payload: { tripId: string; jobId: string; invoiceAmount: { currency: Currency; amount: number } } }
-  | { type: 'BULK_APPLY_AGREED_RATES'; payload: { tripId: string } };
+  | { type: 'BULK_APPLY_AGREED_RATES'; payload: { tripId: string } }
+  | { type: 'ADD_FEE'; payload: { tripId: string; jobId: string; fee: FeeLineItem } }
+  | { type: 'REMOVE_FEE'; payload: { tripId: string; jobId: string; feeId: string } }
+  | { type: 'UPDATE_FEE_QTY'; payload: { tripId: string; jobId: string; feeId: string; quantity: number } }
+  | { type: 'UPDATE_JOB_QTY'; payload: { tripId: string; jobId: string; jobBags?: number; jobWeight?: number; jobVolume?: number } };
 
 // --- Reducer ---
 
@@ -194,6 +198,53 @@ function tripReducer(state: TripState, action: TripAction): TripState {
         ),
       };
 
+    case 'ADD_FEE':
+      return {
+        ...state,
+        trips: state.trips.map((t) =>
+          t.id === action.payload.tripId
+            ? { ...t, jobs: t.jobs.map((j) => j.id === action.payload.jobId ? { ...j, fees: [...(j.fees ?? []), action.payload.fee] } : j) }
+            : t
+        ),
+      };
+
+    case 'REMOVE_FEE':
+      return {
+        ...state,
+        trips: state.trips.map((t) =>
+          t.id === action.payload.tripId
+            ? { ...t, jobs: t.jobs.map((j) => j.id === action.payload.jobId ? { ...j, fees: (j.fees ?? []).filter((f) => f.id !== action.payload.feeId) } : j) }
+            : t
+        ),
+      };
+
+    case 'UPDATE_FEE_QTY': {
+      const { tripId, jobId, feeId, quantity } = action.payload;
+      return {
+        ...state,
+        trips: state.trips.map((t) =>
+          t.id === tripId
+            ? { ...t, jobs: t.jobs.map((j) => j.id === jobId ? {
+                ...j,
+                fees: (j.fees ?? []).map((f) => f.id === feeId ? { ...f, quantity, amount: calcFeeAmount(f.rate, f.unit, quantity) } : f),
+              } : j) }
+            : t
+        ),
+      };
+    }
+
+    case 'UPDATE_JOB_QTY': {
+      const { tripId, jobId, ...qtys } = action.payload;
+      return {
+        ...state,
+        trips: state.trips.map((t) =>
+          t.id === tripId
+            ? { ...t, jobs: t.jobs.map((j) => j.id === jobId ? { ...j, ...qtys } : j) }
+            : t
+        ),
+      };
+    }
+
     default:
       return state;
   }
@@ -232,6 +283,10 @@ interface TripContextValue {
   deleteTemplate: (templateId: string) => void;
   setJobInvoice: (tripId: string, jobId: string, invoiceAmount: { currency: Currency; amount: number }) => void;
   bulkApplyAgreedRates: (tripId: string) => void;
+  addFee: (tripId: string, jobId: string, fee: FeeLineItem) => void;
+  removeFee: (tripId: string, jobId: string, feeId: string) => void;
+  updateFeeQty: (tripId: string, jobId: string, feeId: string, quantity: number) => void;
+  updateJobQty: (tripId: string, jobId: string, qtys: { jobBags?: number; jobWeight?: number; jobVolume?: number }) => void;
 }
 
 const TripContext = createContext<TripContextValue | null>(null);
@@ -245,7 +300,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
 
   // Hydrate from localStorage on mount
   // Version key: bump this to force reseed when seed data changes
-  const SEED_VERSION = 'v2-rates';
+  const SEED_VERSION = 'v3-fees';
 
   useEffect(() => {
     try {
@@ -287,6 +342,10 @@ export function TripProvider({ children }: { children: ReactNode }) {
   const deleteTemplate = useCallback((templateId: string) => dispatch({ type: 'DELETE_TEMPLATE', payload: { templateId } }), []);
   const setJobInvoice = useCallback((tripId: string, jobId: string, invoiceAmount: { currency: Currency; amount: number }) => dispatch({ type: 'SET_JOB_INVOICE', payload: { tripId, jobId, invoiceAmount } }), []);
   const bulkApplyAgreedRates = useCallback((tripId: string) => dispatch({ type: 'BULK_APPLY_AGREED_RATES', payload: { tripId } }), []);
+  const addFee = useCallback((tripId: string, jobId: string, fee: FeeLineItem) => dispatch({ type: 'ADD_FEE', payload: { tripId, jobId, fee } }), []);
+  const removeFee = useCallback((tripId: string, jobId: string, feeId: string) => dispatch({ type: 'REMOVE_FEE', payload: { tripId, jobId, feeId } }), []);
+  const updateFeeQty = useCallback((tripId: string, jobId: string, feeId: string, quantity: number) => dispatch({ type: 'UPDATE_FEE_QTY', payload: { tripId, jobId, feeId, quantity } }), []);
+  const updateJobQty = useCallback((tripId: string, jobId: string, qtys: { jobBags?: number; jobWeight?: number; jobVolume?: number }) => dispatch({ type: 'UPDATE_JOB_QTY', payload: { tripId, jobId, ...qtys } }), []);
 
   const value: TripContextValue = {
     trips: state.trips,
@@ -297,6 +356,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
     addActivityLog, addProofDocument, removeProofDocument,
     saveTemplate, deleteTemplate,
     setJobInvoice, bulkApplyAgreedRates,
+    addFee, removeFee, updateFeeQty, updateJobQty,
   };
 
   return <TripContext.Provider value={value}>{children}</TripContext.Provider>;

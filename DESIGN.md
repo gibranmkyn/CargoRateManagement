@@ -333,3 +333,8 @@ Unit, Qty visible in slide-out panel detail, not in sub-table.
 | 2026-03-25 | One popover at a time | Vendor comparison: opening new closes existing. Click outside/Escape/select vendor all close. |
 | 2026-03-25 | Full interaction state table | Loading/Empty/Error/Success/Partial specified for all Phase 2 features. |
 | 2026-03-25 | Desktop a11y + keyboard nav | Arrow keys for dropdowns, tab for popovers, focus trapping in slide-outs, Escape to close. Min viewport 1200px. |
+| 2026-03-25 | Multi-fee jobs (HMW-25) | Each job has N fee line items (L2). Fee = locked rate × editable quantity = calculated amount. Sub-table shows Total Cost (sum of fees). Expanding job row reveals L2 fee breakdown. |
+| 2026-03-25 | Inline quick status (HMW-25) | 3 inline buttons on sub-table row: Pending / In Prog / Done. Reject + Cancel stay in slide-out. 1-click status change for most common actions. |
+| 2026-03-25 | Per-job quantities (HMW-26) | Bags/weight/volume live at job level, default from order. Editable until job Completed. Drive fee qty multipliers. Locked rate × editable qty. |
+| 2026-03-25 | Fee catalog | Fuel surcharge, Toll fees, Waiting time, Special handling, Overtime, Insurance. Hardcoded for now, configurable Phase 3. |
+| 2026-03-25 | Lock on complete | When job = Completed, all fees and quantities become read-only. Must change status back to edit. |

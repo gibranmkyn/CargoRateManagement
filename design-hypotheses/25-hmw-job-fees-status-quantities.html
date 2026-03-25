@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-25: Multi-Fee Jobs, Status Selection, Editable Quantities</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #0D9488; }
+h3 { font-size: 14px; font-weight: 700; margin: 20px 0 8px; color: #111827; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #0D9488; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+/* Mockup reusable styles */
+.nav { height: 40px; background: #fff; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; padding: 0 16px; gap: 16px; }
+.nav-logo { width: 20px; height: 20px; background: #0D9488; border-radius: 4px; }
+.nav-brand { font-size: 12px; font-weight: 700; color: #111827; letter-spacing: -0.3px; }
+.nav a { font-size: 11px; color: #9ca3af; text-decoration: none; font-weight: 400; }
+.nav a.active { color: #0D9488; font-weight: 600; }
+.th { text-align: left; padding: 6px 12px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+.td { padding: 8px 12px; font-size: 11px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+.badge { padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; display: inline-block; }
+.badge-teal { color: #0D9488; background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.12); }
+.badge-amber { color: #b45309; background: #fefce8; border: 1px solid #fde68a; }
+.badge-gray { color: #6b7280; background: #f3f4f6; border: 1px solid #e5e7eb; }
+.badge-green { color: #059669; background: #f0fdf4; border: 1px solid #a7f3d0; }
+.badge-red { color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; }
+.sec-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-25: Multi-Fee Jobs, Status & Editable Quantities</h1>
+
+<div class="hmw">
+How might we show that each job has multiple fee line items (L2 cost IDs), let ops planners edit quantities until a job is complete, and make status changes faster — so the billing total reflects reality and daily workflow feels effortless?
+</div>
+
+<div class="context">
+<strong>Why this matters:</strong> Currently, each job shows a single flat cost. But in reality, a trucking job might have 3 charges: base rate (RM 450), fuel surcharge (RM 45), toll fees (RM 30) = total RM 525. Ops planners need to see this breakdown, edit quantities (bags, weight) as they become known, and the billing total must reflect the sum of all fees. Additionally, the current status picker is a full 5-row vertical list in the slide-out — slow for the most common action (marking a job "In Progress" or "Completed").
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION A: INLINE FEE TABLE + QUICK STATUS   -->
+<!-- ============================================ -->
+
+<h2>Option A: Inline Fee Table + Quick Status Buttons</h2>
+<span class="label" style="background: rgba(13,148,136,0.06); color: #0D9488;">Recommended</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Each job row in the sub-table shows the total cost (sum of all fees). Expanding a job reveals the fee breakdown as an L2 table. Status changes happen via inline button chips on the sub-table row itself — no need to open the slide-out for the most common action. Quantities are editable inline until the job is Completed.
+
+<div class="pros-cons">
+<div class="pros"><strong>✓ Pros</strong><br>
+• Status change in 1 click (no slide-out needed)<br>
+• Fee breakdown visible without leaving the page<br>
+• Quantities editable right where costs are shown<br>
+• Sub-table total is always the sum of visible fees</div>
+<div class="cons"><strong>✗ Cons</strong><br>
+• Sub-table gets 3 levels deep (order → jobs → fees)<br>
+• Inline editing adds complexity to the table<br>
+• More visual density in an already dense UI</div>
+</div>
+</div>
+
+<div class="screen">
+<!-- Nav -->
+<div class="nav">
+<div class="nav-logo"></div>
+<span class="nav-brand">Teleport OS</span>
+<a href="#" class="active">Delivery Orders</a>
+<a href="#">Rates</a>
+<a href="#">Billing</a>
+<a href="#">Master Data</a>
+</div>
+
+<!-- Sub-table with fee breakdown -->
+<div style="padding: 16px;">
+<div style="font-size: 11px; color: #9ca3af; margin-bottom: 8px;">
+  <strong style="color: #111827;">DO-20260308-001</strong> · TikTok · <span class="mono" style="font-size: 10px;">160-84329871</span> · 24 bags · 1,240 kg
+</div>
+
+<!-- Job sub-table -->
+<table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb;">
+<thead>
+<tr>
+  <th class="th" style="width: 50px;">Job</th>
+  <th class="th">Vendor</th>
+  <th class="th">Service</th>
+  <th class="th">Route</th>
+  <th class="th" style="width: 100px;">Total Cost</th>
+  <th class="th" style="width: 130px;">Status</th>
+  <th class="th" style="width: 40px;">Proofs</th>
+</tr>
+</thead>
+<tbody>
+<!-- J01 - Collapsed -->
+<tr style="cursor: pointer;">
+  <td class="td" style="font-weight: 600; color: #0D9488;">J01</td>
+  <td class="td" style="font-weight: 600; color: #111827;">HaleSun</td>
+  <td class="td"><span class="badge badge-teal">FM Trucking</span></td>
+  <td class="td" style="font-size: 10px;">TikTok WH → SZ Bay Checkpoint</td>
+  <td class="td" style="font-family: 'JetBrains Mono', monospace; font-weight: 600; color: #111827; font-size: 10px;">RM 525.00</td>
+  <td class="td">
+    <!-- QUICK STATUS BUTTONS -->
+    <div style="display: flex; gap: 3px;">
+      <button style="padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; border: none; background: #f3f4f6; color: #9ca3af; cursor: pointer;">Pending</button>
+      <button style="padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; border: 1.5px solid #0D9488; background: rgba(13,148,136,0.06); color: #0D9488; cursor: pointer;">In Prog</button>
+      <button style="padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; border: none; background: #f3f4f6; color: #9ca3af; cursor: pointer;">Done</button>
+    </div>
+  </td>
+  <td class="td" style="text-align: center; color: #059669;">✓</td>
+</tr>
+
+<!-- J01 FEE BREAKDOWN (expanded L2) -->
+<tr>
+<td colspan="7" style="padding: 0; background: #f9fafb;">
+<div style="padding: 4px 12px 8px 52px;">
+  <table style="width: 100%; border-collapse: collapse;">
+    <thead>
+      <tr>
+        <th style="text-align: left; padding: 3px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Fee</th>
+        <th style="text-align: left; padding: 3px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Rate</th>
+        <th style="text-align: left; padding: 3px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Qty</th>
+        <th style="text-align: right; padding: 3px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding: 3px 8px; font-size: 10px; color: #374151;">Base rate</td>
+        <td style="padding: 3px 8px; font-size: 10px; font-family: 'JetBrains Mono', monospace; color: #374151;">RM 450.00 /trip</td>
+        <td style="padding: 3px 8px; font-size: 10px; font-family: 'JetBrains Mono', monospace; color: #374151;">1</td>
+        <td style="padding: 3px 8px; font-size: 10px; font-family: 'JetBrains Mono', monospace; color: #111827; text-align: right; font-weight: 600;">RM 450.00</td>
+      </tr>
+      <tr>
+        <td style="padding: 3px 8px; font-size: 10px; color: #374151;">Fuel surcharge</td>
+        <td style="padding: 3px 8px; font-size: 10px; font-family: 'JetBrains Mono', monospace; color: #374151;">RM 1.875 /km</td>
+        <td style="padding: 3px 8px; font-size: 10px; font-family: 'JetBrains Mono', monospace; color: #374151;">24</td>
+        <td style="padding: 3px 8px; font-size: 10px; font-family: 'JetBrains Mono', monospace; color: #111827; text-align: right; font-weight: 600;">RM 45.00</td>
+      </tr>
+      <tr>
+        <td style="padding: 3px 8px; font-size: 10px; color: #374151;">Toll fees</td>
+        <td style="padding: 3px 8px; font-size: 10px; font-family: 'JetBrains Mono', monospace; color: #374151;">RM 30.00 /trip</td>
+        <td style="padding: 3px 8px; font-size: 10px; font-family: 'JetBrains Mono', monospace; color: #374151;">1</td>
+        <td style="padding: 3px 8px; font-size: 10px; font-family: 'JetBrains Mono', monospace; color: #111827; text-align: right; font-weight: 600;">RM 30.00</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr style="border-top: 1px solid #e5e7eb;">
+        <td colspan="3" style="padding: 4px 8px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Total</td>
+        <td style="padding: 4px 8px; text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: #0D9488;">RM 525.00</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+</td>
+</tr>
+
+<!-- J02 - Completed with fees summary -->
+<tr style="cursor: pointer;">
+  <td class="td" style="font-weight: 600; color: #0D9488;">J02</td>
+  <td class="td" style="font-weight: 600; color: #111827;">Gonda</td>
+  <td class="td"><span class="badge" style="color: #7c3aed; background: rgba(124,58,237,0.06); border: 1px solid rgba(124,58,237,0.12);">EC Export Customs</span></td>
+  <td class="td" style="font-size: 10px;">SZ Bay Checkpoint</td>
+  <td class="td" style="font-family: 'JetBrains Mono', monospace; font-weight: 600; color: #111827; font-size: 10px;">RM 145.00</td>
+  <td class="td">
+    <div style="display: flex; gap: 3px;">
+      <button style="padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; border: none; background: #f3f4f6; color: #9ca3af; cursor: pointer;">Pending</button>
+      <button style="padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; border: none; background: #f3f4f6; color: #9ca3af; cursor: pointer;">In Prog</button>
+      <button style="padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; border: 1.5px solid #059669; background: #f0fdf4; color: #059669; cursor: pointer;">Done ✓</button>
+    </div>
+  </td>
+  <td class="td" style="text-align: center; color: #059669;">✓</td>
+</tr>
+
+<!-- J03 - Pending with editable quantities -->
+<tr style="cursor: pointer;">
+  <td class="td" style="font-weight: 600; color: #0D9488;">J03</td>
+  <td class="td" style="font-weight: 600; color: #111827;">Gonda</td>
+  <td class="td"><span class="badge" style="color: #b45309; background: rgba(180,83,9,0.06); border: 1px solid rgba(180,83,9,0.12);">CS Submission</span></td>
+  <td class="td" style="font-size: 10px;">SZX Airport Cargo Terminal</td>
+  <td class="td" style="font-family: 'JetBrains Mono', monospace; font-weight: 600; color: #111827; font-size: 10px;">RM 80.00</td>
+  <td class="td">
+    <div style="display: flex; gap: 3px;">
+      <button style="padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; border: 1.5px solid #9ca3af; background: #f3f4f6; color: #6b7280; cursor: pointer;">Pending ●</button>
+      <button style="padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; border: none; background: #f3f4f6; color: #9ca3af; cursor: pointer;">In Prog</button>
+      <button style="padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; border: none; background: #f3f4f6; color: #9ca3af; cursor: pointer;">Done</button>
+    </div>
+  </td>
+  <td class="td" style="text-align: center; color: #9ca3af;">○</td>
+</tr>
+</tbody>
+</table>
+
+<!-- Order total -->
+<div style="display: flex; justify-content: flex-end; padding: 8px 0; gap: 12px; align-items: center;">
+  <span style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Order Total</span>
+  <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: #111827;">RM 750.00</span>
+</div>
+</div>
+</div>
+
+<!-- SLIDE-OUT: Job Detail with Fee Breakdown + Editable Qty -->
+<h3>Slide-Out Panel: Fee Breakdown + Editable Quantities</h3>
+<div class="screen">
+<div style="width: 380px; padding: 16px; border-left: 1px solid #e5e7eb;">
+  <!-- Header -->
+  <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+    <span class="badge badge-teal">In Progress</span>
+    <span class="mono" style="font-size: 10px; padding: 1px 5px; background: #f3f4f6; border-radius: 4px; color: #9ca3af;">J01/3</span>
+  </div>
+  <div style="font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 12px;">HaleSun · FM Trucking</div>
+
+  <!-- Route -->
+  <div class="sec-title">Route</div>
+  <div style="font-size: 11px; color: #111827; margin-bottom: 12px;">TikTok WH, Shenzhen → SZ Bay Checkpoint</div>
+
+  <!-- Editable Quantities -->
+  <div class="sec-title">Quantities <span style="font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: #b45309;">(editable until completed)</span></div>
+  <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+    <div>
+      <div style="font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 2px;">Bags</div>
+      <input type="number" value="24" style="width: 60px; font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 4px 6px; border: 1px solid #e5e7eb; border-radius: 4px; font-weight: 600; color: #111827;">
+    </div>
+    <div>
+      <div style="font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 2px;">Weight (kg)</div>
+      <input type="number" value="1240" style="width: 80px; font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 4px 6px; border: 1px solid #e5e7eb; border-radius: 4px; font-weight: 600; color: #111827;">
+    </div>
+    <div>
+      <div style="font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 2px;">Volume (CBM)</div>
+      <input type="number" value="2.4" style="width: 70px; font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 4px 6px; border: 1px solid #e5e7eb; border-radius: 4px; font-weight: 600; color: #111827;">
+    </div>
+  </div>
+
+  <!-- Fee Breakdown -->
+  <div class="sec-title">Fee Breakdown (3 items)</div>
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; margin-bottom: 16px;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr>
+        <td style="padding: 6px 8px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6;">Base rate</td>
+        <td style="padding: 6px 8px; font-size: 10px; font-family: 'JetBrains Mono', monospace; color: #9ca3af; border-bottom: 1px solid #f3f4f6;">RM 450 /trip × 1</td>
+        <td style="padding: 6px 8px; font-size: 10px; font-family: 'JetBrains Mono', monospace; font-weight: 600; text-align: right; color: #111827; border-bottom: 1px solid #f3f4f6;">RM 450.00</td>
+      </tr>
+      <tr>
+        <td style="padding: 6px 8px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6;">Fuel surcharge</td>
+        <td style="padding: 6px 8px; font-size: 10px; font-family: 'JetBrains Mono', monospace; color: #9ca3af; border-bottom: 1px solid #f3f4f6;">RM 1.875 /km × 24</td>
+        <td style="padding: 6px 8px; font-size: 10px; font-family: 'JetBrains Mono', monospace; font-weight: 600; text-align: right; color: #111827; border-bottom: 1px solid #f3f4f6;">RM 45.00</td>
+      </tr>
+      <tr>
+        <td style="padding: 6px 8px; font-size: 10px; color: #374151;">Toll fees</td>
+        <td style="padding: 6px 8px; font-size: 10px; font-family: 'JetBrains Mono', monospace; color: #9ca3af;">RM 30 /trip × 1</td>
+        <td style="padding: 6px 8px; font-size: 10px; font-family: 'JetBrains Mono', monospace; font-weight: 600; text-align: right; color: #111827;">RM 30.00</td>
+      </tr>
+    </table>
+    <div style="padding: 6px 8px; background: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Job Total</span>
+      <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #0D9488;">RM 525.00</span>
+    </div>
+  </div>
+
+  <!-- + Add Fee button -->
+  <button style="display: flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 4px; border: 1px dashed #e5e7eb; background: none; color: #9ca3af; font-size: 10px; cursor: pointer; width: 100%; justify-content: center; margin-bottom: 16px;">
+    + Add fee line item
+  </button>
+
+  <!-- Proof of Service -->
+  <div class="sec-title">Proof of Service</div>
+  <div style="padding: 8px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 10px; color: #374151; margin-bottom: 16px;">
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <span style="color: #059669;">📄</span>
+      <span>POD-tiktok-szbay.jpg</span>
+      <span style="margin-left: auto; font-size: 9px; color: #9ca3af;">08 Mar</span>
+    </div>
+  </div>
+
+  <!-- Activity Log preview -->
+  <div class="sec-title">Activity Log (3)</div>
+  <div style="font-size: 10px; color: #9ca3af;">Latest: Status → In Progress · 08 Mar 10:05</div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION B: SLIDE-OUT ONLY + PROGRESS BAR     -->
+<!-- ============================================ -->
+
+<h2>Option B: Slide-Out Focus + Progress Bar Status</h2>
+<span class="label" style="background: #f3f4f6; color: #6b7280;">Current Pattern Enhanced</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Keep the sub-table minimal (total cost only, no inline status buttons). Status changes stay in the slide-out panel but use a compact progress-bar style instead of the current 5-row vertical list. Fee breakdown lives exclusively in the slide-out. Quantities are editable in the slide-out.
+
+<div class="pros-cons">
+<div class="pros"><strong>✓ Pros</strong><br>
+• Sub-table stays simple and scannable<br>
+• Consistent UX — actions always in slide-out<br>
+• Progress bar gives clear visual of job lifecycle<br>
+• Less risk of accidental status changes</div>
+<div class="cons"><strong>✗ Cons</strong><br>
+• 2 clicks for most common action (open slide-out → change status)<br>
+• Fee breakdown hidden behind a click<br>
+• No at-a-glance status comparison across jobs</div>
+</div>
+</div>
+
+<div class="screen">
+<!-- Sub-table: simple, no inline status -->
+<div style="padding: 16px;">
+<table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb;">
+<thead>
+<tr>
+  <th class="th" style="width: 50px;">Job</th>
+  <th class="th">Vendor</th>
+  <th class="th">Service</th>
+  <th class="th">Route</th>
+  <th class="th" style="width: 100px;">Total Cost</th>
+  <th class="th" style="width: 80px;">Status</th>
+  <th class="th" style="width: 40px;">Proofs</th>
+</tr>
+</thead>
+<tbody>
+<tr style="cursor: pointer;">
+  <td class="td" style="font-weight: 600; color: #0D9488;">J01</td>
+  <td class="td" style="font-weight: 600;">HaleSun</td>
+  <td class="td"><span class="badge badge-teal">FM</span></td>
+  <td class="td" style="font-size: 10px;">TikTok WH → SZ Bay</td>
+  <td class="td mono" style="font-weight: 600; font-size: 10px;">RM 525.00</td>
+  <td class="td"><span class="badge badge-teal">In Progress</span></td>
+  <td class="td" style="text-align: center; color: #059669;">✓</td>
+</tr>
+<tr style="cursor: pointer;">
+  <td class="td" style="font-weight: 600; color: #0D9488;">J02</td>
+  <td class="td" style="font-weight: 600;">Gonda</td>
+  <td class="td"><span class="badge" style="color: #7c3aed; background: rgba(124,58,237,0.06); border: 1px solid rgba(124,58,237,0.12);">EC</span></td>
+  <td class="td" style="font-size: 10px;">SZ Bay Checkpoint</td>
+  <td class="td mono" style="font-weight: 600; font-size: 10px;">RM 145.00</td>
+  <td class="td"><span class="badge badge-green">Completed</span></td>
+  <td class="td" style="text-align: center; color: #059669;">✓</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<!-- Progress Bar Status in Slide-Out -->
+<div style="width: 380px; padding: 16px; border-left: 1px solid #e5e7eb;">
+  <div style="font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 16px;">HaleSun · FM Trucking</div>
+
+  <div class="sec-title">Status</div>
+  <!-- Progress bar style -->
+  <div style="display: flex; gap: 2px; margin-bottom: 16px;">
+    <div style="flex: 1; height: 28px; border-radius: 4px 0 0 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; background: #f3f4f6; color: #9ca3af; cursor: pointer; border: 1px solid #e5e7eb;">Pending</div>
+    <div style="flex: 1; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; background: rgba(13,148,136,0.08); color: #0D9488; cursor: pointer; border: 1.5px solid #0D9488;">In Progress</div>
+    <div style="flex: 1; height: 28px; border-radius: 0 4px 4px 0; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; background: #f3f4f6; color: #9ca3af; cursor: pointer; border: 1px solid #e5e7eb;">Completed</div>
+  </div>
+  <div style="display: flex; gap: 4px; margin-bottom: 16px;">
+    <button style="padding: 3px 8px; border-radius: 4px; font-size: 9px; font-weight: 600; border: 1px solid #fecaca; background: #fef2f2; color: #dc2626; cursor: pointer;">Reject</button>
+    <button style="padding: 3px 8px; border-radius: 4px; font-size: 9px; font-weight: 600; border: 1px solid #e5e7eb; background: #f3f4f6; color: #9ca3af; cursor: pointer;">Cancel</button>
+  </div>
+
+  <!-- Fee table in slide-out -->
+  <div class="sec-title">Fee Breakdown</div>
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; margin-bottom: 16px; font-size: 10px;">
+    <div style="display: flex; padding: 5px 8px; border-bottom: 1px solid #f3f4f6;">
+      <span style="flex: 1; color: #374151;">Base rate</span>
+      <span class="mono" style="color: #111827; font-weight: 600;">RM 450.00</span>
+    </div>
+    <div style="display: flex; padding: 5px 8px; border-bottom: 1px solid #f3f4f6;">
+      <span style="flex: 1; color: #374151;">Fuel surcharge (24 km)</span>
+      <span class="mono" style="color: #111827; font-weight: 600;">RM 45.00</span>
+    </div>
+    <div style="display: flex; padding: 5px 8px;">
+      <span style="flex: 1; color: #374151;">Toll fees</span>
+      <span class="mono" style="color: #111827; font-weight: 600;">RM 30.00</span>
+    </div>
+    <div style="display: flex; padding: 6px 8px; background: #f9fafb; border-top: 1px solid #e5e7eb; font-weight: 600;">
+      <span style="flex: 1; font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Total</span>
+      <span class="mono" style="color: #0D9488; font-size: 11px;">RM 525.00</span>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION C: HYBRID — STATUS INLINE, FEES PANEL -->
+<!-- ============================================ -->
+
+<h2>Option C: Hybrid — Inline Status + Expandable Fee Panel</h2>
+<span class="label" style="background: #fffbeb; color: #b45309;">Compromise</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Status buttons are inline on the sub-table (like Option A), but the fee breakdown opens in the slide-out (like Option B). Click a job row → slide-out opens with fees + quantities. The sub-table shows Total Cost but no L2 detail. Best of both worlds, but the slide-out becomes required for fee editing.
+
+<div class="pros-cons">
+<div class="pros"><strong>✓ Pros</strong><br>
+• Fast status changes (1 click inline)<br>
+• Sub-table stays at 2 levels (order → job), not 3<br>
+• Fee detail in the slide-out is familiar<br>
+• Lower visual complexity in the main table</div>
+<div class="cons"><strong>✗ Cons</strong><br>
+• Inconsistent: some actions inline, some in panel<br>
+• Can't see fee breakdown and other jobs simultaneously<br>
+• Slide-out gets crowded with fees + quantities + proofs + activity</div>
+</div>
+</div>
+
+<div class="screen">
+<div style="padding: 16px;">
+<table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb;">
+<thead>
+<tr>
+  <th class="th" style="width: 50px;">Job</th>
+  <th class="th">Vendor</th>
+  <th class="th">Service</th>
+  <th class="th">Route</th>
+  <th class="th" style="width: 100px;">Total Cost</th>
+  <th class="th" style="width: 50px;">Fees</th>
+  <th class="th" style="width: 130px;">Status</th>
+  <th class="th" style="width: 40px;">Proofs</th>
+</tr>
+</thead>
+<tbody>
+<tr style="cursor: pointer;">
+  <td class="td" style="font-weight: 600; color: #0D9488;">J01</td>
+  <td class="td" style="font-weight: 600;">HaleSun</td>
+  <td class="td"><span class="badge badge-teal">FM</span></td>
+  <td class="td" style="font-size: 10px;">TikTok WH → SZ Bay</td>
+  <td class="td mono" style="font-weight: 600; font-size: 10px;">RM 525.00</td>
+  <td class="td" style="text-align: center;"><span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af;">3</span></td>
+  <td class="td">
+    <div style="display: flex; gap: 3px;">
+      <button style="padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; border: none; background: #f3f4f6; color: #9ca3af; cursor: pointer;">Pend</button>
+      <button style="padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; border: 1.5px solid #0D9488; background: rgba(13,148,136,0.06); color: #0D9488; cursor: pointer;">In Prog</button>
+      <button style="padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; border: none; background: #f3f4f6; color: #9ca3af; cursor: pointer;">Done</button>
+    </div>
+  </td>
+  <td class="td" style="text-align: center; color: #059669;">✓</td>
+</tr>
+</tbody>
+</table>
+<div style="font-size: 10px; color: #9ca3af; margin-top: 6px; font-style: italic;">Click row to open fee breakdown & quantity editor in slide-out →</div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- VERDICT                                      -->
+<!-- ============================================ -->
+
+<div class="verdict">
+<h3>Verdict: Option A — Inline Fee Table + Quick Status Buttons</h3>
+<p style="font-size: 12px; line-height: 1.6; color: #374151;">
+<strong>Recommended because:</strong> The two most frequent ops actions are (1) changing job status and (2) checking costs. Option A makes both zero-click actions — status is visible and changeable directly on the sub-table row, and fees are visible by expanding the job row. The 3-level depth (order → job → fees) mirrors the actual data model (1 order has N jobs, 1 job has N fees), which ops planners coming from Excel will find natural.
+</p>
+<p style="font-size: 12px; line-height: 1.6; color: #374151; margin-top: 8px;">
+<strong>Key design decisions:</strong>
+</p>
+<ul style="font-size: 11px; color: #374151; margin-top: 4px; padding-left: 16px; line-height: 1.8;">
+<li><strong>Quick status:</strong> 3 primary buttons inline (Pending / In Prog / Done). Reject + Cancel in slide-out only (rare actions, need confirmation).</li>
+<li><strong>Fee breakdown:</strong> Expandable L2 table under each job row. Shows Fee Name, Rate × Qty = Amount.</li>
+<li><strong>Editable quantities:</strong> Bags, Weight, Volume editable in slide-out until job status = Completed. Changes recalculate all per-unit fees instantly.</li>
+<li><strong>Total Cost:</strong> Sub-table column shows sum of all fee line items. Order total shows sum of all jobs.</li>
+<li><strong>"+ Add fee" button:</strong> In the slide-out, ops can add custom fee line items (e.g., waiting time, special handling).</li>
+</ul>
+</div>
+
+</div>
+</body>
+</html>

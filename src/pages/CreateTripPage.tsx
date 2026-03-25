@@ -146,6 +146,27 @@ export default function CreateTripPage() {
 
       const rate = getJobRate(draft);
       const cost = calcCost(draft);
+      const orderBags = Number(bags) || 0;
+      const orderWeight = Number(weight) || 0;
+
+      // Generate fee line items from rate lookup
+      const fees: import('../data/mockData').FeeLineItem[] = [];
+      if (rate) {
+        let qty = 1;
+        if (rate.unit === 'per-bag') qty = orderBags;
+        else if (rate.unit === 'per-kg') qty = orderWeight;
+        fees.push({
+          id: `F-${Date.now()}-${i}-01`,
+          name: 'Base rate',
+          rateId: rate.id,
+          currency: rate.currency,
+          rate: rate.amount,
+          unit: rate.unit,
+          quantity: qty,
+          amount: rate.amount * qty,
+        });
+      }
+      const feeTotal = fees.reduce((sum, f) => sum + f.amount, 0);
 
       return {
         id: generateJobId(tripId, jobs.slice(0, i).map((_, idx) => ({ id: `${tripId}-J${String(idx + 1).padStart(2, '0')}` }))),
@@ -160,7 +181,10 @@ export default function CreateTripPage() {
         proofDocuments: [],
         rateId: rate?.id,
         agreedRate: rate ? { currency: rate.currency, amount: rate.amount, unit: rate.unit } : undefined,
-        agreedCost: cost ?? undefined,
+        agreedCost: cost ? { currency: cost.currency, amount: feeTotal || cost.amount } : undefined,
+        fees,
+        jobBags: orderBags,
+        jobWeight: orderWeight,
       };
     });
 

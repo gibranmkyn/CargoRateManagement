@@ -1,9 +1,8 @@
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Search, Download, Plus, Ship, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { customers, vendors, formatCurrency } from '../data/mockData';
 import type { Trip, JobStatus } from '../data/mockData';
-import { useRates } from '../context/RateContext';
 import { useTrips } from '../context/TripContext';
 import { useToast } from '../components/Toast';
 import SlideOutPanel from '../components/SlideOutPanel';
@@ -31,11 +30,11 @@ function getChipColor(status: JobStatus): { border: string; bg: string; text: st
 export default function TripsPage() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { trips, updateJobStatus, addProofDocument, removeProofDocument, addActivityLog, updateJob } = useTrips();
-  const { lookupRate, getLocationByName } = useRates();
+  const { trips, updateJobStatus, addProofDocument, removeProofDocument, addActivityLog, updateJob, addFee, removeFee, updateFeeQty, updateJobQty } = useTrips();
   const [mawbSearch, setMawbSearch] = useState('');
   const [customerFilter, setCustomerFilter] = useState('');
   const [vendorFilter, setVendorFilter] = useState('');
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [panelIds, setPanelIds] = useState<{ tripId: string; jobId: string } | null>(null);
 
@@ -252,6 +251,11 @@ export default function TripsPage() {
 
               if (isExpanded) {
                 const subTh: React.CSSProperties = { textAlign: 'left', padding: '4px 10px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' };
+                const quickStatuses: { label: string; value: JobStatus; short: string }[] = [
+                  { label: 'Pending', value: 'Pending', short: 'Pend' },
+                  { label: 'In Progress', value: 'In Progress', short: 'In Prog' },
+                  { label: 'Completed', value: 'Completed', short: 'Done' },
+                ];
                 rows.push(
                   <tr key={`${trip.id}-exp`} style={{ background: '#f9fafb' }} onClick={(e) => e.stopPropagation()}>
                     <td colSpan={8} style={{ padding: 0, borderBottom: '1px solid #e5e7eb' }}>
@@ -262,78 +266,129 @@ export default function TripsPage() {
                               <th style={{ ...subTh, width: 50 }}>Job</th>
                               <th style={subTh}>Vendor</th>
                               <th style={subTh}>Service</th>
-                              <th style={subTh}>Origin &rarr; Destination</th>
-                              <th style={{ ...subTh, width: 90 }}>Rate</th>
-                              <th style={{ ...subTh, width: 90 }}>Cost</th>
-                              <th style={subTh}>Status</th>
-                              <th style={subTh}>Proofs</th>
+                              <th style={subTh}>Route</th>
+                              <th style={{ ...subTh, width: 100 }}>Total Cost</th>
+                              <th style={{ ...subTh, width: 140 }}>Status</th>
+                              <th style={{ ...subTh, width: 40 }}>Proofs</th>
                             </tr>
                           </thead>
                           <tbody>
                             {trip.jobs.map((job, i) => {
-                              const sc = getChipColor(job.status);
                               const proofCount = (job.proofDocuments ?? []).length;
+                              const fees = job.fees ?? [];
+                              // Calculate total cost from fees
+                              const costMap = new Map<string, number>();
+                              fees.forEach((f) => costMap.set(f.currency, (costMap.get(f.currency) ?? 0) + f.amount));
+                              const isJobExpanded = expandedJobId === job.id;
+                              const isCompleted = job.status === 'Completed';
+
                               return (
-                                <tr
-                                  key={job.id}
-                                  onClick={(e) => { e.stopPropagation(); setPanelIds({ tripId: trip.id, jobId: job.id }); }}
-                                  style={{ cursor: 'pointer', transition: 'background 0.1s' }}
-                                  onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f6'; }}
-                                  onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
-                                >
-                                  <td style={{ padding: '6px 10px', fontSize: 11, fontWeight: 600, color: '#0D9488' }}>
-                                    J{String(i + 1).padStart(2, '0')}
-                                  </td>
-                                  <td style={{ padding: '6px 10px', fontSize: 11, fontWeight: 600, color: '#111827' }}>
-                                    {job.vendor.name}
-                                  </td>
-                                  <td style={{ padding: '6px 10px' }}>
-                                    <ServiceTag service={job.service} />
-                                  </td>
-                                  <td style={{ padding: '6px 10px', fontSize: 11, color: '#374151' }}>
-                                    {job.origin.location} &rarr; {job.destination.location}
-                                  </td>
-                                  <td style={{ padding: '6px 10px', fontSize: 10, fontFamily: "'JetBrains Mono', monospace" }}>
-                                    {(() => {
-                                      if (job.agreedRate) return <span style={{ color: '#0D9488', fontWeight: 600 }}>{formatCurrency(job.agreedRate.currency, job.agreedRate.amount)}</span>;
-                                      // Live lookup for legacy orders
-                                      const originLoc = getLocationByName(job.origin.location);
-                                      const destLoc = getLocationByName(job.destination.location);
-                                      const rate = originLoc || destLoc ? lookupRate(job.vendor.code, job.service.code, originLoc?.id === destLoc?.id ? originLoc?.id : undefined, originLoc?.id, destLoc?.id) : null;
-                                      if (rate) return <span style={{ color: '#0D9488', fontWeight: 600 }}>{formatCurrency(rate.currency, rate.amount)}</span>;
-                                      return <span style={{ color: '#b45309', fontSize: 9 }}>No rate</span>;
-                                    })()}
-                                  </td>
-                                  <td style={{ padding: '6px 10px', fontSize: 10, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: '#111827' }}>
-                                    {(() => {
-                                      if (job.agreedCost) return formatCurrency(job.agreedCost.currency, job.agreedCost.amount);
-                                      // Calculate from live rate lookup
-                                      const originLoc = getLocationByName(job.origin.location);
-                                      const destLoc = getLocationByName(job.destination.location);
-                                      const liveRate = originLoc || destLoc ? lookupRate(job.vendor.code, job.service.code, originLoc?.id === destLoc?.id ? originLoc?.id : undefined, originLoc?.id, destLoc?.id) : null;
-                                      if (liveRate) {
-                                        let cost = liveRate.amount;
-                                        if (liveRate.unit === 'per-kg') cost *= trip.weight;
-                                        else if (liveRate.unit === 'per-bag') cost *= trip.bags;
-                                        return <span style={{ color: '#6b7280' }}>{formatCurrency(liveRate.currency, cost)}</span>;
+                                <React.Fragment key={job.id}>
+                                  <tr
+                                    onClick={(e) => { e.stopPropagation(); setExpandedJobId(isJobExpanded ? null : job.id); }}
+                                    style={{ cursor: 'pointer', transition: 'background 0.1s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f6'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
+                                  >
+                                    <td style={{ padding: '6px 10px', fontSize: 11, fontWeight: 600, color: '#0D9488' }}>
+                                      {isJobExpanded ? '▾' : '▸'} J{String(i + 1).padStart(2, '0')}
+                                    </td>
+                                    <td style={{ padding: '6px 10px', fontSize: 11, fontWeight: 600, color: '#111827' }}>
+                                      {job.vendor.name}
+                                    </td>
+                                    <td style={{ padding: '6px 10px' }}>
+                                      <ServiceTag service={job.service} />
+                                    </td>
+                                    <td style={{ padding: '6px 10px', fontSize: 10, color: '#374151' }}>
+                                      {job.origin.location === job.destination.location ? job.origin.location : `${job.origin.location} → ${job.destination.location}`}
+                                    </td>
+                                    <td style={{ padding: '6px 10px', fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 600, color: '#111827' }}>
+                                      {costMap.size > 0
+                                        ? Array.from(costMap.entries()).map(([curr, total]) => (
+                                            <div key={curr}>{formatCurrency(curr as any, total)}</div>
+                                          ))
+                                        : <span style={{ color: '#9ca3af', fontWeight: 400 }}>&mdash;</span>
                                       }
-                                      return <span style={{ color: '#9ca3af', fontWeight: 400 }}>&mdash;</span>;
-                                    })()}
-                                  </td>
-                                  <td style={{ padding: '6px 10px' }}>
-                                    <span style={{
-                                      display: 'inline-flex', alignItems: 'center', gap: 4,
-                                      padding: '1px 7px', borderRadius: 4, fontSize: 10, fontWeight: 600,
-                                      border: `1px solid ${sc.border}`, background: sc.bg, color: sc.text,
-                                    }}>
-                                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: sc.dot, display: 'inline-block' }} />
-                                      {job.status}
-                                    </span>
-                                  </td>
-                                  <td style={{ padding: '6px 10px', fontSize: 12, fontWeight: 700, color: proofCount > 0 ? '#059669' : '#9ca3af' }}>
-                                    {proofCount > 0 ? '✓' : '○'}
-                                  </td>
-                                </tr>
+                                    </td>
+                                    <td style={{ padding: '6px 10px' }} onClick={(e) => e.stopPropagation()}>
+                                      {/* Inline quick status buttons */}
+                                      <div style={{ display: 'flex', gap: 2 }}>
+                                        {quickStatuses.map((qs) => {
+                                          const isActive = job.status === qs.value;
+                                          const isCompletedBtn = qs.value === 'Completed';
+                                          const activeColor = isCompletedBtn ? '#059669' : '#0D9488';
+                                          const activeBg = isCompletedBtn ? '#f0fdf4' : 'rgba(13,148,136,0.06)';
+                                          const activeBorder = isCompletedBtn ? '#a7f3d0' : '#0D9488';
+                                          return (
+                                            <button
+                                              key={qs.value}
+                                              onClick={() => onStatus(trip.id, job.id, qs.value)}
+                                              style={{
+                                                padding: '2px 6px', borderRadius: 3, fontSize: 9, fontWeight: 600,
+                                                border: isActive ? `1.5px solid ${activeBorder}` : '1px solid transparent',
+                                                background: isActive ? activeBg : '#f3f4f6',
+                                                color: isActive ? activeColor : '#9ca3af',
+                                                cursor: 'pointer', fontFamily: 'inherit',
+                                              }}
+                                            >
+                                              {qs.short}{isActive && qs.value === 'Completed' ? ' ✓' : ''}
+                                            </button>
+                                          );
+                                        })}
+                                        <button
+                                          onClick={() => setPanelIds({ tripId: trip.id, jobId: job.id })}
+                                          title="More actions"
+                                          style={{ padding: '2px 4px', borderRadius: 3, fontSize: 9, border: 'none', background: 'transparent', color: '#9ca3af', cursor: 'pointer' }}
+                                        >⋯</button>
+                                      </div>
+                                    </td>
+                                    <td style={{ padding: '6px 10px', fontSize: 12, fontWeight: 700, color: proofCount > 0 ? '#059669' : '#9ca3af' }}>
+                                      {proofCount > 0 ? '✓' : '○'}
+                                    </td>
+                                  </tr>
+                                  {/* L2 Fee breakdown (expanded) */}
+                                  {isJobExpanded && fees.length > 0 && (
+                                    <tr>
+                                      <td colSpan={7} style={{ padding: 0, background: '#fff' }}>
+                                        <div style={{ paddingLeft: 52, paddingRight: 10, paddingTop: 2, paddingBottom: 8 }}>
+                                          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                            <thead>
+                                              <tr>
+                                                <th style={{ textAlign: 'left', padding: '3px 8px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' }}>Fee</th>
+                                                <th style={{ textAlign: 'left', padding: '3px 8px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' }}>Rate</th>
+                                                <th style={{ textAlign: 'center', padding: '3px 8px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', width: 50 }}>Qty</th>
+                                                <th style={{ textAlign: 'right', padding: '3px 8px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', width: 80 }}>Amount</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              {fees.map((fee) => (
+                                                <tr key={fee.id}>
+                                                  <td style={{ padding: '3px 8px', fontSize: 10, color: '#374151' }}>{fee.name}</td>
+                                                  <td style={{ padding: '3px 8px', fontSize: 10, fontFamily: "'JetBrains Mono', monospace", color: '#9ca3af' }}>
+                                                    {formatCurrency(fee.currency, fee.rate)} /{fee.unit === 'flat' ? 'trip' : fee.unit.replace('per-', '')}
+                                                  </td>
+                                                  <td style={{ padding: '3px 8px', fontSize: 10, fontFamily: "'JetBrains Mono', monospace", color: '#6b7280', textAlign: 'center' }}>
+                                                    {fee.quantity}
+                                                  </td>
+                                                  <td style={{ padding: '3px 8px', fontSize: 10, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: '#111827', textAlign: 'right' }}>
+                                                    {formatCurrency(fee.currency, fee.amount)}
+                                                  </td>
+                                                </tr>
+                                              ))}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  )}
+                                  {isJobExpanded && fees.length === 0 && (
+                                    <tr>
+                                      <td colSpan={7} style={{ padding: '6px 52px', fontSize: 10, color: '#9ca3af', fontStyle: 'italic', background: '#fff' }}>
+                                        No fee line items — click ⋯ to add fees in the slide-out
+                                      </td>
+                                    </tr>
+                                  )}
+                                </React.Fragment>
                               );
                             })}
                           </tbody>
@@ -383,6 +438,10 @@ export default function TripsPage() {
             onUploadProof={(f) => onUpload(panelTrip.id, panelJob.id, f)}
             onRemoveProof={(d) => onRemoveProof(panelTrip.id, panelJob.id, d)}
             onReassign={(vc) => onReassign(panelTrip.id, panelJob.id, vc)}
+            onAddFee={(fee) => addFee(panelTrip.id, panelJob.id, fee)}
+            onRemoveFee={(feeId) => removeFee(panelTrip.id, panelJob.id, feeId)}
+            onUpdateFeeQty={(feeId, qty) => updateFeeQty(panelTrip.id, panelJob.id, feeId, qty)}
+            onUpdateJobQty={(qtys) => updateJobQty(panelTrip.id, panelJob.id, qtys)}
           />
         )}
       </SlideOutPanel>

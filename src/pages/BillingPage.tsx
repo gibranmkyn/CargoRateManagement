@@ -17,11 +17,23 @@ const VARIANCE_STYLES: Record<VarianceState, { text: string; bg: string; border:
   'currency-mismatch': { text: '#b45309', bg: '#fefce8', border: '#fde68a', label: 'Currency mismatch' },
 };
 
+function getJobCost(job: Job): { currency: Currency; amount: number } | null {
+  // Prefer fee total over agreedCost
+  const fees = job.fees ?? [];
+  if (fees.length > 0) {
+    // Use first currency found (simplification — multi-currency fees handled later)
+    const total = fees.reduce((sum, f) => sum + f.amount, 0);
+    return { currency: fees[0].currency, amount: total };
+  }
+  return job.agreedCost ?? null;
+}
+
 function getVariance(job: Job): { state: VarianceState; diff?: number } {
-  if (!job.agreedCost) return { state: 'no-rate' };
+  const cost = getJobCost(job);
+  if (!cost) return { state: 'no-rate' };
   if (!job.invoiceAmount) return { state: 'no-rate' };
-  if (job.agreedCost.currency !== job.invoiceAmount.currency) return { state: 'currency-mismatch' };
-  const diff = job.invoiceAmount.amount - job.agreedCost.amount;
+  if (cost.currency !== job.invoiceAmount.currency) return { state: 'currency-mismatch' };
+  const diff = job.invoiceAmount.amount - cost.amount;
   if (Math.abs(diff) < 0.01) return { state: 'match', diff: 0 };
   return diff > 0 ? { state: 'over', diff } : { state: 'under', diff };
 }
@@ -153,7 +165,7 @@ export default function BillingPage() {
                       <td style={td}>{job.service.label}</td>
                       <td style={{ ...td, fontSize: 10 }}>{job.origin.location === job.destination.location ? job.origin.location : `${job.origin.location} → ${job.destination.location}`}</td>
                       <td style={{ ...td, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 }}>
-                        {job.agreedCost ? formatCurrency(job.agreedCost.currency, job.agreedCost.amount) : <span style={{ color: '#b45309', fontSize: 9 }}>No rate</span>}
+                        {(() => { const c = getJobCost(job); return c ? formatCurrency(c.currency, c.amount) : <span style={{ color: '#b45309', fontSize: 9 }}>No rate</span>; })()}
                       </td>
                       <td style={td}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>

@@ -113,6 +113,16 @@ Every design decision starts with a **"How Might We"** question. We generate 2-3
 **Decision:** Option A — panel stores tripId+jobId, derives job from context on every render. Always fresh, no stale data.
 **File:** `23-hmw-slideout-data-freshness.html`
 
+### HMW-25: How might we show multi-fee jobs, let ops edit quantities, and make status changes faster?
+**Options:** A) Inline Fee Table + Quick Status Buttons, B) Slide-Out Focus + Progress Bar Status, C) Hybrid — Inline Status + Expandable Fee Panel
+**Decision:** Option A — Inline 3-button quick status on sub-table (Pending/In Prog/Done), expandable L2 fee breakdown under each job, editable per-job quantities in slide-out until Completed.
+**File:** `25-hmw-job-fees-status-quantities.html`
+
+### HMW-26: How should fee line items and quantities be structured?
+**Options:** A) Order-level qty + per-fee override, B) Per-job independent quantities, C) Simple order qty only
+**Decision:** Option B (per-job quantities) with locked rates — quantities live at job level (default from order, editable per job). Rates come from rate card and are immutable. Only quantity is editable. Amount = locked rate × editable quantity.
+**File:** `26-hmw-fee-quantity-model.html`
+
 ## Open (backlog)
 
 ### HMW-03: How might we make the "assign vendors to services" step feel natural instead of like filling a form?
