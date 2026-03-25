@@ -7,6 +7,7 @@ import { useTrips, generateTripId, generateJobId } from '../context/TripContext'
 import { useRates } from '../context/RateContext';
 import { useToast } from '../components/Toast';
 import LocationDropdown from '../components/shared/LocationDropdown';
+import VendorComparisonPopover from '../components/shared/VendorComparisonPopover';
 
 interface JobDraft {
   key: string;
@@ -36,6 +37,7 @@ export default function CreateTripPage() {
   const [remarks, setRemarks] = useState('');
   const [jobs, setJobs] = useState<JobDraft[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
+  const [compareKey, setCompareKey] = useState<string | null>(null);
 
   function addJobForService(svc: ServiceType) {
     setJobs((prev) => [...prev, {
@@ -330,6 +332,25 @@ export default function CreateTripPage() {
                         <option value="">Vendor...</option>
                         {vendors.map((v) => <option key={v.code} value={v.code}>{v.name}</option>)}
                       </select>
+                      {/* Compare button */}
+                      {hasVendorAndLocation && (
+                        <div style={{ position: 'relative' }}>
+                          <button type="button" onClick={() => setCompareKey(compareKey === job.key ? null : job.key)} style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #e5e7eb', background: compareKey === job.key ? 'rgba(21,44,255,0.06)' : '#fff', color: compareKey === job.key ? '#152CFF' : '#9ca3af', fontSize: 9, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
+                            Compare
+                          </button>
+                          {compareKey === job.key && (
+                            <VendorComparisonPopover
+                              serviceCode={job.serviceCode}
+                              locationId={isRoute ? undefined : job.locationId}
+                              originLocationId={isRoute ? job.originLocationId : undefined}
+                              destinationLocationId={isRoute ? job.destinationLocationId : undefined}
+                              currentVendorCode={job.vendorCode}
+                              onSelect={(vc) => updateJob(job.key, { vendorCode: vc })}
+                              onClose={() => setCompareKey(null)}
+                            />
+                          )}
+                        </div>
+                      )}
                       {isRoute ? (
                         <>
                           <div style={{ flex: 1 }}>
