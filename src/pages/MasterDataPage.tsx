@@ -15,9 +15,9 @@ export default function MasterDataPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ padding: '12px 16px 0', display: 'flex', gap: 2, borderBottom: '1px solid #e5e7eb' }}>
+      <div style={{ padding: '12px 16px 0', display: 'flex', gap: 2 }}>
         {([['locations', 'Locations'], ['vendors', 'Vendors'], ['customers', 'Customers'], ['services', 'Services']] as const).map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} style={{ padding: '6px 12px', borderRadius: '4px 4px 0 0', border: 'none', borderBottom: tab === key ? '2px solid #152CFF' : '2px solid transparent', background: 'transparent', color: tab === key ? '#152CFF' : '#9ca3af', fontWeight: tab === key ? 600 : 400, fontSize: 12, cursor: 'pointer' }}>
+          <button key={key} onClick={() => setTab(key)} style={{ padding: '4px 10px', borderRadius: 4, border: 'none', background: tab === key ? 'rgba(21,44,255,0.06)' : 'transparent', color: tab === key ? '#152CFF' : '#9ca3af', fontWeight: tab === key ? 600 : 400, fontSize: 12, cursor: 'pointer' }}>
             {label}
           </button>
         ))}
