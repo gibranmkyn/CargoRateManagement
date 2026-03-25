@@ -1,665 +1,184 @@
-import { useState, useMemo } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { useState, useRef, useMemo } from 'react';
 import { useRates } from '../context/RateContext';
-import {
-  vendors,
-  SERVICE_HIERARCHY,
-  ALL_L2_SERVICES,
-  formatCurrency,
-} from '../data/mockData';
-import type { VendorRate, L1Service, L2SubService } from '../data/mockData';
-
-// ─── Unit badge styles (from DESIGN.md) ───
-
-const UNIT_LABELS: Record<string, string> = { flat: '/trip', 'per-kg': '/kg', 'per-bag': '/bag', 'per-cbm': '/CBM', 'per-km': '/km' };
-const UNIT_COLORS: Record<string, { text: string; bg: string; border: string }> = {
-  flat: { text: '#6b7280', bg: '#f3f4f6', border: '#e5e7eb' },
-  'per-kg': { text: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
-  'per-bag': { text: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
-  'per-cbm': { text: '#d97706', bg: '#fffbeb', border: '#fde68a' },
-  'per-km': { text: '#059669', bg: '#f0fdf4', border: '#a7f3d0' },
-};
-
-// ─── Types ───
-
-/** A column in the route-type grid: origin → destination */
-interface RouteColumn {
-  key: string;
-  originId: string;
-  destinationId: string;
-  originName: string;
-  destinationName: string;
-  zone: string; // derived from origin zone
-}
-
-/** A column in the location-type grid: single location */
-interface LocationColumn {
-  key: string;
-  locationId: string;
-  locationName: string;
-  zone: string;
-}
-
-// ─── Component ───
+import { vendors, TRUCK_TYPES } from '../data/mockData';
+import type { FtlRate, TruckType, Currency } from '../data/mockData';
+import { ALL_DISTRICTS } from '../data/chinaRegions';
 
 export default function RatesPage() {
-  const { rates, locations, getLocationById } = useRates();
-
+  const { ftlRates, ftlLogs, setFtlRates } = useRates();
   const [selectedVendor, setSelectedVendor] = useState(vendors[0].code);
-  const [collapsedZones, setCollapsedZones] = useState<Set<string>>(new Set());
-  const [showAllL2, setShowAllL2] = useState(false);
+  const [search, setSearch] = useState('');
+  const [collapsedCities, setCollapsedCities] = useState<Set<string>>(new Set());
+  const [uploadResult, setUploadResult] = useState<{ filename: string; newCount: number; updatedCount: number; unchangedCount: number; errorCount: number; errors: string[] } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  // ── Active rates for selected vendor ──
+  const vendorRates = useMemo(() => ftlRates.filter((r) => r.vendorCode === selectedVendor && r.isActive), [ftlRates, selectedVendor]);
+  const filtered = useMemo(() => {
+    if (!search) return vendorRates;
+    const q = search.toLowerCase();
+    return vendorRates.filter((r) => r.originCity.toLowerCase().includes(q) || r.originDistrict.toLowerCase().includes(q) || r.originCode.includes(q) || r.destDistrict.toLowerCase().includes(q));
+  }, [vendorRates, search]);
 
-  const vendorRates = useMemo(
-    () => rates.filter((r) => r.vendorCode === selectedVendor && r.isActive),
-    [rates, selectedVendor],
-  );
-
-  // ── Separate route-type L1s from location-type L1s ──
-
-  const routeL1s = SERVICE_HIERARCHY.filter((l1) => l1.rateType === 'route');
-  const locationL1s = SERVICE_HIERARCHY.filter((l1) => l1.rateType === 'location');
-
-  // ── Build route columns (origin→dest pairs) from vendor's route rates ──
-
-  const routeColumns = useMemo((): RouteColumn[] => {
-    const seen = new Set<string>();
-    const cols: RouteColumn[] = [];
-    for (const r of vendorRates) {
-      if (r.rateType !== 'route') continue;
-      const key = `${r.originLocationId}→${r.destinationLocationId}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      const o = getLocationById(r.originLocationId ?? '');
-      const d = getLocationById(r.destinationLocationId ?? '');
-      cols.push({
-        key,
-        originId: r.originLocationId ?? '',
-        destinationId: r.destinationLocationId ?? '',
-        originName: o?.name ?? '?',
-        destinationName: d?.name ?? '?',
-        zone: o?.zone ?? 'Unknown',
-      });
-    }
-    return cols;
-  }, [vendorRates, getLocationById]);
-
-  // ── Build location columns from vendor's location rates ──
-
-  const locationColumns = useMemo((): LocationColumn[] => {
-    const seen = new Set<string>();
-    const cols: LocationColumn[] = [];
-    for (const r of vendorRates) {
-      if (r.rateType !== 'location') continue;
-      const lid = r.locationId ?? '';
-      if (seen.has(lid)) continue;
-      seen.add(lid);
-      const loc = getLocationById(lid);
-      cols.push({
-        key: lid,
-        locationId: lid,
-        locationName: loc?.name ?? '?',
-        zone: loc?.zone ?? 'Unknown',
-      });
-    }
-    return cols;
-  }, [vendorRates, getLocationById]);
-
-  // ── Group columns by zone ──
-
-  const routeZoneGroups = useMemo(() => groupByZone(routeColumns), [routeColumns]);
-  const locationZoneGroups = useMemo(() => groupByZone(locationColumns), [locationColumns]);
-
-  // ── L2 rows that have at least one rate (for the "show configured only" default) ──
-
-  const configuredCostIds = useMemo(() => {
-    const s = new Set<string>();
-    for (const r of vendorRates) s.add(r.costId);
-    return s;
-  }, [vendorRates]);
-
-  // ── Rate lookup map: costId + columnKey → VendorRate ──
-
-  const rateLookup = useMemo(() => {
-    const map = new Map<string, VendorRate>();
-    for (const r of vendorRates) {
-      let colKey: string;
-      if (r.rateType === 'route') {
-        colKey = `${r.originLocationId}→${r.destinationLocationId}`;
-      } else {
-        colKey = r.locationId ?? '';
-      }
-      const mapKey = `${r.costId}::${colKey}`;
-      // Keep the one with the latest effectiveFrom
-      const existing = map.get(mapKey);
-      if (!existing || r.effectiveFrom > existing.effectiveFrom) {
-        map.set(mapKey, r);
-      }
-    }
+  const cityGroups = useMemo(() => {
+    const map = new Map<string, FtlRate[]>();
+    for (const r of filtered) map.set(r.originCity, [...(map.get(r.originCity) ?? []), r]);
     return map;
-  }, [vendorRates]);
+  }, [filtered]);
 
-  // ── Summary counts ──
+  function toggleCity(city: string) {
+    setCollapsedCities((prev) => { const next = new Set(prev); if (next.has(city)) next.delete(city); else next.add(city); return next; });
+  }
 
-  const configuredL2Count = configuredCostIds.size;
-  const routeCount = routeColumns.length;
-  const locationCount = locationColumns.length;
-
-  // ── Zone collapse toggle ──
-
-  function toggleZone(zone: string) {
-    setCollapsedZones((prev) => {
-      const next = new Set(prev);
-      if (next.has(zone)) next.delete(zone);
-      else next.add(zone);
-      return next;
+  function downloadCsv() {
+    const header = 'origin_city,origin_district,dest_city,dest_district,currency,' + TRUCK_TYPES.map((t) => t.type).join(',');
+    const rows = vendorRates.map((r) => {
+      const truckCols = TRUCK_TYPES.map((t) => r.rates[t.type] ?? '').join(',');
+      return `${r.originCity},${r.originDistrict},${r.destCity},${r.destDistrict},${r.currency},${truckCols}`;
     });
+    const blob = new Blob(['\ufeff' + [header, ...rows].join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `${vendors.find((v) => v.code === selectedVendor)?.name ?? 'vendor'}_FTL_rates.csv`;
+    a.click();
   }
 
-  // ── Dependency banner ──
+  function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+      if (lines.length < 2) { setUploadResult({ filename: file.name, newCount: 0, updatedCount: 0, unchangedCount: 0, errorCount: 1, errors: ['No data rows'] }); return; }
+      const header = lines[0].split(',').map((h) => h.trim().toLowerCase());
+      const truckCols = TRUCK_TYPES.map((t) => ({ type: t.type, idx: header.indexOf(t.type.toLowerCase()) })).filter((tc) => tc.idx >= 0);
+      const oci = header.findIndex((h) => h.includes('origin') && h.includes('city'));
+      const odi = header.findIndex((h) => h.includes('origin') && h.includes('district'));
+      const dci = header.findIndex((h) => h.includes('dest') && h.includes('city'));
+      const ddi = header.findIndex((h) => h.includes('dest') && h.includes('district'));
+      const cci = header.findIndex((h) => h.includes('currency') || h === 'ccy');
+      if (oci < 0 || odi < 0) { setUploadResult({ filename: file.name, newCount: 0, updatedCount: 0, unchangedCount: 0, errorCount: 1, errors: ['Missing origin_city or origin_district columns'] }); return; }
 
-  const noLocations = locations.length === 0;
-
-  // ── Determine which L2 rows to show ──
-
-  function shouldShowL2(l2: L2SubService, rateType: 'route' | 'location'): boolean {
-    if (showAllL2) return true;
-    // Only show if at least 1 rate exists for this costId in the current vendor's rates of the right type
-    return vendorRates.some((r) => r.costId === l2.costId && r.rateType === rateType);
-  }
-
-  // ── Count visible L2 rows for a section ──
-
-  function visibleL2Count(l1List: L1Service[], rateType: 'route' | 'location'): number {
-    let count = 0;
-    for (const l1 of l1List) {
-      for (const l2 of l1.l2Services) {
-        if (shouldShowL2(l2, rateType)) count++;
+      const newRates: FtlRate[] = []; const errors: string[] = [];
+      let newCount = 0, updatedCount = 0, unchangedCount = 0;
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(',').map((c) => c.trim());
+        const oc = cols[oci] || '', od = cols[odi] || '', dc = cols[dci] || '', dd = cols[ddi] || '';
+        const ccy = (cols[cci] || 'MYR') as Currency;
+        if (!oc || !od) { errors.push(`Row ${i + 1}: missing origin`); continue; }
+        const md = ALL_DISTRICTS.find((d) => d.name === od || d.name.includes(od) || od.includes(d.name.replace(/[区镇街道]/g, '')));
+        const mdd = ALL_DISTRICTS.find((d) => d.name === dd || d.name.includes(dd) || dd.includes(d.name.replace(/[区镇街道]/g, '')));
+        const rates: Partial<Record<TruckType, number>> = {};
+        for (const tc of truckCols) { const v = cols[tc.idx]; if (v) { const n = parseFloat(v.replace(/,/g, '')); if (!isNaN(n) && n > 0) rates[tc.type] = n; } }
+        if (Object.keys(rates).length === 0) { errors.push(`Row ${i + 1}: no valid rates`); continue; }
+        const existing = vendorRates.find((r) => r.originCity === oc && r.originDistrict === od && r.destCity === dc && r.destDistrict === dd);
+        if (existing) {
+          const changed = Object.entries(rates).some(([k, v]) => existing.rates[k as TruckType] !== v);
+          if (changed) { updatedCount++; newRates.push({ ...existing, rates: { ...existing.rates, ...rates }, currency: ccy }); }
+          else { unchangedCount++; newRates.push(existing); }
+        } else {
+          newCount++;
+          newRates.push({ id: `FTL-${Date.now()}-${i}`, vendorCode: selectedVendor, originCity: oc, originDistrict: od, originCode: md?.code ?? '', destCity: dc, destDistrict: dd, destCode: mdd?.code ?? '', currency: ccy, rates, effectiveFrom: new Date().toISOString().split('T')[0], isActive: true });
+        }
       }
-    }
-    return count;
+      const otherRates = ftlRates.filter((r) => r.vendorCode !== selectedVendor || !r.isActive);
+      setFtlRates([...otherRates, ...newRates], { id: `FL-${Date.now()}`, timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16), action: 'CSV uploaded', user: 'Ops Admin', details: `${newRates.length} routes — ${newCount} new, ${updatedCount} updated, ${unchangedCount} unchanged`, filename: file.name });
+      setUploadResult({ filename: file.name, newCount, updatedCount, unchangedCount, errorCount: errors.length, errors });
+    };
+    reader.readAsText(file);
+    if (fileRef.current) fileRef.current.value = '';
   }
 
-  // ───────────────────────────────────────
-  // RENDER
-  // ───────────────────────────────────────
+  const vendorName = vendors.find((v) => v.code === selectedVendor)?.name ?? selectedVendor;
 
   return (
-    <div style={{ maxWidth: 1800, margin: '0 auto' }}>
-      {/* Dependency banner */}
-      {noLocations && (
-        <div style={{ padding: '8px 16px', background: '#fefce8', borderBottom: '1px solid #fde68a', fontSize: 11, color: '#b45309', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontWeight: 600 }}>Add locations first.</span> Rate cards require managed locations for lookups to work.
-          <a href="/master-data" style={{ color: '#152CFF', fontWeight: 600, textDecoration: 'none', marginLeft: 4 }}>Go to Locations</a>
-        </div>
-      )}
-
-      {/* Page header */}
-      <div style={{ padding: '16px 16px 0' }}>
-        <h1 style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.3px', color: '#111827', margin: 0 }}>Rate Cards</h1>
-        <p style={{ fontSize: 11, color: '#9ca3af', margin: '2px 0 0' }}>Vendor rate sheet — view configured rates by L2 fee and route/location</p>
+    <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+      <div style={{ padding: '8px 16px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontSize: 11, color: '#6b7280', display: 'flex', gap: 16 }}>
+        <span><strong style={{ color: '#111827' }}>{vendors.filter((v) => ftlRates.some((r) => r.vendorCode === v.code)).length}</strong> vendors</span>
+        <span><strong style={{ color: '#111827' }}>{ftlRates.filter((r) => r.isActive).length}</strong> FTL routes</span>
       </div>
-
-      {/* Vendor selector pills */}
-      <div style={{ padding: '12px 16px 0', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {vendors.map((v) => {
-          const isActive = v.code === selectedVendor;
-          const vendorRateCount = rates.filter((r) => r.vendorCode === v.code && r.isActive).length;
-          return (
-            <button
-              key={v.code}
-              onClick={() => setSelectedVendor(v.code)}
-              style={{
-                padding: '4px 12px',
-                borderRadius: 99,
-                border: isActive ? '1px solid #152CFF' : '1px solid #e5e7eb',
-                background: isActive ? 'rgba(21,44,255,0.06)' : '#fff',
-                color: isActive ? '#152CFF' : '#374151',
-                fontWeight: isActive ? 600 : 400,
-                fontSize: 11,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                transition: 'all 0.15s',
-              }}
-            >
-              {v.name}
-              <span style={{ fontSize: 9, fontWeight: 600, color: isActive ? '#152CFF' : '#9ca3af' }}>{vendorRateCount}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ══════════ ROUTE-TYPE SECTION (FM) ══════════ */}
-      {routeColumns.length > 0 && visibleL2Count(routeL1s, 'route') > 0 && (
-        <div style={{ padding: '16px 16px 0' }}>
-          <div style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 8 }}>
-            Route-Based Services
+      <div style={{ padding: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 14 }}>
+          <div>
+            <h1 style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.3px', margin: 0 }}>FTL Trucking Rates</h1>
+            <p style={{ fontSize: 11, color: '#9ca3af', margin: '2px 0 0' }}>Origin district → Destination district · per truck type</p>
           </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={downloadCsv} style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, border: '1px solid #e5e7eb', background: '#fff', color: '#374151', cursor: 'pointer', fontFamily: 'inherit' }}>↓ Download CSV</button>
+            <label style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, border: 'none', background: '#152CFF', color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>↑ Upload CSV<input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleUpload} /></label>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+          {vendors.map((v) => {
+            const count = ftlRates.filter((r) => r.vendorCode === v.code && r.isActive).length;
+            if (count === 0 && v.code !== selectedVendor) return null;
+            const isAct = v.code === selectedVendor;
+            return <button key={v.code} onClick={() => { setSelectedVendor(v.code); setSearch(''); setUploadResult(null); }} style={{ padding: '4px 12px', borderRadius: 99, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', border: isAct ? '1px solid #152CFF' : '1px solid #e5e7eb', background: isAct ? 'rgba(21,44,255,0.06)' : '#fff', color: isAct ? '#152CFF' : '#6b7280', fontWeight: isAct ? 600 : 400 }}>{v.name} <span style={{ fontSize: 9, color: isAct ? '#152CFF' : '#d1d5db', marginLeft: 2 }}>{count}</span></button>;
+          })}
+        </div>
+
+        {uploadResult && (
+          <div style={{ padding: '10px 12px', marginBottom: 12, borderRadius: 6, background: uploadResult.errorCount > 0 && uploadResult.newCount + uploadResult.updatedCount === 0 ? '#fef2f2' : 'rgba(21,44,255,0.04)', border: `1px solid ${uploadResult.errorCount > 0 && uploadResult.newCount + uploadResult.updatedCount === 0 ? '#fecaca' : 'rgba(21,44,255,0.12)'}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}><span style={{ fontSize: 11, fontWeight: 600 }}>{uploadResult.filename}</span><button onClick={() => setUploadResult(null)} style={{ border: 'none', background: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: 14 }}>×</button></div>
+            <div style={{ fontSize: 11, display: 'flex', gap: 12 }}>
+              {uploadResult.newCount > 0 && <span style={{ color: '#059669', fontWeight: 600 }}>{uploadResult.newCount} new</span>}
+              {uploadResult.updatedCount > 0 && <span style={{ color: '#152CFF', fontWeight: 600 }}>{uploadResult.updatedCount} updated</span>}
+              {uploadResult.unchangedCount > 0 && <span style={{ color: '#9ca3af' }}>{uploadResult.unchangedCount} unchanged</span>}
+              {uploadResult.errorCount > 0 && <span style={{ color: '#dc2626', fontWeight: 600 }}>{uploadResult.errorCount} errors</span>}
+            </div>
+            {uploadResult.errors.length > 0 && <div style={{ marginTop: 6, fontSize: 10, color: '#dc2626' }}>{uploadResult.errors.slice(0, 5).map((e, i) => <div key={i}>{e}</div>)}</div>}
+          </div>
+        )}
+
+        <input type="text" placeholder="Search origin... 福田, 440304" value={search} onChange={(e) => setSearch(e.target.value)} style={{ fontSize: 11, padding: '5px 10px', border: '1px solid #e5e7eb', borderRadius: 4, width: 280, outline: 'none', marginBottom: 8 }} />
+
+        {filtered.length > 0 ? (
           <div style={{ border: '1px solid #e5e7eb', borderRadius: 6, overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: routeColumns.length * 120 + 260 }}>
-                {/* ── Zone group header row ── */}
-                <thead>
-                  <tr>
-                    <th style={{ ...stickyFirstColHeader, minWidth: 260, width: 260 }} />
-                    {routeZoneGroups.map(({ zone, columns: zoneCols }) => {
-                      const isCollapsed = collapsedZones.has(`route:${zone}`);
-                      return (
-                        <th
-                          key={zone}
-                          colSpan={isCollapsed ? 1 : zoneCols.length}
-                          style={{
-                            padding: '4px 10px',
-                            fontSize: 9,
-                            fontWeight: 600,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.06em',
-                            color: '#9ca3af',
-                            background: '#f9fafb',
-                            borderBottom: '1px solid #e5e7eb',
-                            borderLeft: '1px solid #e5e7eb',
-                            cursor: 'pointer',
-                            userSelect: 'none',
-                            textAlign: 'left',
-                            whiteSpace: 'nowrap',
-                          }}
-                          onClick={() => toggleZone(`route:${zone}`)}
-                        >
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            {isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
-                            {zone}
-                            <span style={{ fontWeight: 400, fontSize: 9, color: '#d1d5db' }}>({zoneCols.length})</span>
-                          </span>
-                        </th>
-                      );
-                    })}
-                  </tr>
-                  {/* ── Column headers (route names) ── */}
-                  <tr>
-                    <th style={{ ...stickyFirstColHeader, minWidth: 260, width: 260, background: '#111827', color: '#fff', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '6px 10px', borderBottom: '1px solid #374151' }}>
-                      L2 Fee
-                    </th>
-                    {routeZoneGroups.map(({ zone, columns: zoneCols }) => {
-                      const isCollapsed = collapsedZones.has(`route:${zone}`);
-                      if (isCollapsed) {
-                        return (
-                          <th key={`${zone}-collapsed`} style={{ ...darkColHeader, borderLeft: '1px solid #374151', padding: '6px 10px', textAlign: 'center' }}>
-                            <span style={{ fontSize: 9, color: '#6b7280' }}>...</span>
-                          </th>
-                        );
-                      }
-                      return zoneCols.map((col) => (
-                        <th key={col.key} style={{ ...darkColHeader, borderLeft: '1px solid #374151', minWidth: 120 }}>
-                          <div style={{ fontSize: 10, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {abbreviate(col.originName)} &rarr; {abbreviate(col.destinationName)}
-                          </div>
-                          <div style={{ fontSize: 8, fontWeight: 400, color: '#9ca3af', marginTop: 1 }}>{col.zone}</div>
-                        </th>
-                      ));
-                    })}
-                  </tr>
-                </thead>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 820 }}>
+                <thead><tr>
+                  <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', background: '#111827', color: '#fff', borderBottom: '1px solid #374151', minWidth: 180, position: 'sticky', left: 0, zIndex: 2 }}>Origin</th>
+                  <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', background: '#111827', color: '#fff', borderBottom: '1px solid #374151', minWidth: 130 }}>Destination</th>
+                  <th style={{ textAlign: 'center', padding: '6px 10px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', background: '#111827', color: '#fff', borderBottom: '1px solid #374151', width: 36 }}>CCY</th>
+                  {TRUCK_TYPES.map((t) => <th key={t.type} style={{ textAlign: 'right', padding: '6px 10px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', background: '#111827', color: '#fff', borderBottom: '1px solid #374151', whiteSpace: 'nowrap', minWidth: 65 }}><div>{t.type}</div><div style={{ fontSize: 7, fontWeight: 400, color: '#9ca3af', textTransform: 'none', letterSpacing: 0 }}>&lt;{(t.maxKg/1000).toFixed(t.maxKg>=10000?0:1)}t</div></th>)}
+                </tr></thead>
                 <tbody>
-                  {routeL1s.map((l1) => {
-                    const visibleL2s = l1.l2Services.filter((l2) => shouldShowL2(l2, 'route'));
-                    if (visibleL2s.length === 0) return null;
-                    return (
-                      <L1SectionRows
-                        key={l1.code}
-                        l1={l1}
-                        l2s={visibleL2s}
-                        columns={routeColumns}
-                        zoneGroups={routeZoneGroups}
-                        collapsedZones={collapsedZones}
-                        zonePrefix="route:"
-                        rateLookup={rateLookup}
-                      />
-                    );
+                  {Array.from(cityGroups.entries()).map(([city, rates]) => {
+                    const collapsed = collapsedCities.has(city);
+                    return [
+                      <tr key={`h-${city}`} onClick={() => toggleCity(city)} style={{ cursor: 'pointer' }}><td colSpan={11} style={{ padding: '5px 10px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontSize: 10, fontWeight: 600, color: '#152CFF' }}>{collapsed ? '▸' : '▾'} {city} <span style={{ fontWeight: 400, color: '#9ca3af', marginLeft: 4 }}>{rates.length}</span></td></tr>,
+                      ...(!collapsed ? rates.map((r) => (
+                        <tr key={r.id}>
+                          <td style={{ padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #f3f4f6', position: 'sticky', left: 0, background: '#fff' }}><span style={{ fontWeight: 500 }}>{r.originDistrict}</span> <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, color: '#d1d5db' }}>{r.originCode}</span></td>
+                          <td style={{ padding: '6px 10px', fontSize: 10, color: '#9ca3af', borderBottom: '1px solid #f3f4f6' }}>{r.destDistrict} {r.destCity}</td>
+                          <td style={{ padding: '6px 10px', textAlign: 'center', borderBottom: '1px solid #f3f4f6' }}><span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: '#9ca3af' }}>{r.currency === 'MYR' ? 'RMB' : r.currency}</span></td>
+                          {TRUCK_TYPES.map((t) => <td key={t.type} style={{ padding: '6px 10px', textAlign: 'right', borderBottom: '1px solid #f3f4f6', fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 500, color: r.rates[t.type] ? '#111827' : '#d1d5db' }}>{r.rates[t.type]?.toLocaleString() ?? '—'}</td>)}
+                        </tr>
+                      )) : []),
+                    ];
                   })}
                 </tbody>
               </table>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* ══════════ LOCATION-TYPE SECTION (EC, CS, CR, OH) ══════════ */}
-      {locationColumns.length > 0 && visibleL2Count(locationL1s, 'location') > 0 && (
-        <div style={{ padding: '16px 16px 0' }}>
-          <div style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 8 }}>
-            Location-Based Services
+        ) : (
+          <div style={{ textAlign: 'center', padding: '48px 16px', color: '#9ca3af' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{vendorRates.length === 0 ? `No FTL rates for ${vendorName}` : 'No routes match search'}</div>
+            <div style={{ fontSize: 11 }}>{vendorRates.length === 0 ? 'Upload a CSV to add rates' : 'Try a different search'}</div>
           </div>
-          <div style={{ border: '1px solid #e5e7eb', borderRadius: 6, overflow: 'hidden' }}>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: locationColumns.length * 120 + 260 }}>
-                {/* ── Zone group header row ── */}
-                <thead>
-                  <tr>
-                    <th style={{ ...stickyFirstColHeader, minWidth: 260, width: 260 }} />
-                    {locationZoneGroups.map(({ zone, columns: zoneCols }) => {
-                      const isCollapsed = collapsedZones.has(`loc:${zone}`);
-                      return (
-                        <th
-                          key={zone}
-                          colSpan={isCollapsed ? 1 : zoneCols.length}
-                          style={{
-                            padding: '4px 10px',
-                            fontSize: 9,
-                            fontWeight: 600,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.06em',
-                            color: '#9ca3af',
-                            background: '#f9fafb',
-                            borderBottom: '1px solid #e5e7eb',
-                            borderLeft: '1px solid #e5e7eb',
-                            cursor: 'pointer',
-                            userSelect: 'none',
-                            textAlign: 'left',
-                            whiteSpace: 'nowrap',
-                          }}
-                          onClick={() => toggleZone(`loc:${zone}`)}
-                        >
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            {isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
-                            {zone}
-                            <span style={{ fontWeight: 400, fontSize: 9, color: '#d1d5db' }}>({zoneCols.length})</span>
-                          </span>
-                        </th>
-                      );
-                    })}
-                  </tr>
-                  {/* ── Column headers (location names) ── */}
-                  <tr>
-                    <th style={{ ...stickyFirstColHeader, minWidth: 260, width: 260, background: '#111827', color: '#fff', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '6px 10px', borderBottom: '1px solid #374151' }}>
-                      L2 Fee
-                    </th>
-                    {locationZoneGroups.map(({ zone, columns: zoneCols }) => {
-                      const isCollapsed = collapsedZones.has(`loc:${zone}`);
-                      if (isCollapsed) {
-                        return (
-                          <th key={`${zone}-collapsed`} style={{ ...darkColHeader, borderLeft: '1px solid #374151', padding: '6px 10px', textAlign: 'center' }}>
-                            <span style={{ fontSize: 9, color: '#6b7280' }}>...</span>
-                          </th>
-                        );
-                      }
-                      return zoneCols.map((col) => (
-                        <th key={col.key} style={{ ...darkColHeader, borderLeft: '1px solid #374151', minWidth: 120 }}>
-                          <div style={{ fontSize: 10, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {abbreviate(col.locationName)}
-                          </div>
-                          <div style={{ fontSize: 8, fontWeight: 400, color: '#9ca3af', marginTop: 1 }}>{col.zone}</div>
-                        </th>
-                      ));
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {locationL1s.map((l1) => {
-                    const visibleL2s = l1.l2Services.filter((l2) => shouldShowL2(l2, 'location'));
-                    if (visibleL2s.length === 0) return null;
-                    return (
-                      <L1SectionRows
-                        key={l1.code}
-                        l1={l1}
-                        l2s={visibleL2s}
-                        columns={locationColumns}
-                        zoneGroups={locationZoneGroups}
-                        collapsedZones={collapsedZones}
-                        zonePrefix="loc:"
-                        rateLookup={rateLookup}
-                      />
-                    );
-                  })}
-                </tbody>
-              </table>
+        )}
+
+        {ftlLogs.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 8 }}>Recent Activity</div>
+            <div style={{ fontSize: 10, color: '#6b7280', display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {ftlLogs.slice().reverse().slice(0, 10).map((log) => (
+                <div key={log.id}><span style={{ fontFamily: "'JetBrains Mono', monospace", color: '#9ca3af' }}>{log.timestamp}</span><span style={{ marginLeft: 8 }}>{log.action}</span>{log.details && <span style={{ marginLeft: 4, color: '#111827' }}>— {log.details}</span>}{log.filename && <span style={{ marginLeft: 4, color: '#152CFF' }}>{log.filename}</span>}<span style={{ color: '#d1d5db', marginLeft: 4 }}>by {log.user}</span></div>
+              ))}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* ══════════ Empty state ══════════ */}
-      {vendorRates.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '48px 16px', color: '#9ca3af' }}>
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>No rates configured</div>
-          <div style={{ fontSize: 11 }}>No active rates for {vendors.find((v) => v.code === selectedVendor)?.name ?? selectedVendor}.</div>
-        </div>
-      )}
-
-      {/* ══════════ Show all L2 toggle + summary footer ══════════ */}
-      <div style={{ padding: '12px 16px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 11, color: '#6b7280' }}>
-          <input
-            type="checkbox"
-            checked={showAllL2}
-            onChange={(e) => setShowAllL2(e.target.checked)}
-            style={{ accentColor: '#152CFF' }}
-          />
-          Show all L2 fees
-          <span style={{ fontSize: 9, color: '#9ca3af' }}>
-            ({ALL_L2_SERVICES.length} total)
-          </span>
-        </label>
-        <div style={{ fontSize: 11, color: '#9ca3af' }}>
-          <strong style={{ color: '#111827' }}>{configuredL2Count}</strong> L2 fees configured across{' '}
-          <strong style={{ color: '#111827' }}>{routeCount + locationCount}</strong> routes/locations
-        </div>
+        )}
       </div>
-
-      {/* Edit mode note */}
-      {/* TODO (HMW-33): Inline editing — cells are currently display-only.
-          Use the AddRateSlideOut via Master Data for adding new rates. */}
     </div>
   );
 }
-
-// ─────────────────────────────────────────
-// L1 Section Rows (header + L2 data rows)
-// ─────────────────────────────────────────
-
-interface L1SectionRowsProps {
-  l1: L1Service;
-  l2s: L2SubService[];
-  columns: (RouteColumn | LocationColumn)[];
-  zoneGroups: ZoneGroup<RouteColumn | LocationColumn>[];
-  collapsedZones: Set<string>;
-  zonePrefix: string;
-  rateLookup: Map<string, VendorRate>;
-}
-
-function L1SectionRows({ l1, l2s, columns, zoneGroups, collapsedZones, zonePrefix, rateLookup }: L1SectionRowsProps) {
-  // Count visible (non-collapsed) columns
-  const visibleColCount = zoneGroups.reduce((sum, zg) => {
-    return sum + (collapsedZones.has(`${zonePrefix}${zg.zone}`) ? 1 : zg.columns.length);
-  }, 0);
-
-  return (
-    <>
-      {/* L1 section header row */}
-      <tr>
-        <td
-          colSpan={1 + visibleColCount}
-          style={{
-            padding: '6px 10px',
-            background: '#f9fafb',
-            borderBottom: '1px solid #e5e7eb',
-            borderTop: '1px solid #e5e7eb',
-          }}
-        >
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <span style={{
-              padding: '1px 6px',
-              borderRadius: 99,
-              fontSize: 9,
-              fontWeight: 600,
-              color: '#fff',
-              background: l1.color,
-            }}>
-              {l1.code}
-            </span>
-            <span style={{ fontSize: 11, fontWeight: 600, color: '#111827' }}>{l1.label}</span>
-            <span style={{ fontSize: 9, color: '#9ca3af' }}>{l2s.length} fee{l2s.length !== 1 ? 's' : ''}</span>
-          </span>
-        </td>
-      </tr>
-
-      {/* L2 data rows */}
-      {l2s.map((l2) => (
-        <tr key={l2.costId}>
-          {/* Sticky first column: L2 fee info */}
-          <td style={stickyFirstCol}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 9,
-                fontWeight: 500,
-                color: '#9ca3af',
-                flexShrink: 0,
-              }}>
-                {l2.costId}
-              </span>
-              <span style={{
-                fontSize: 11,
-                color: '#374151',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}>
-                {l2.name}
-              </span>
-            </div>
-            <div style={{ marginTop: 2 }}>
-              {(() => {
-                const u = UNIT_COLORS[l2.unit] ?? UNIT_COLORS.flat;
-                return (
-                  <span style={{
-                    padding: '0px 4px',
-                    borderRadius: 3,
-                    fontSize: 8,
-                    fontWeight: 600,
-                    color: u.text,
-                    background: u.bg,
-                    border: `1px solid ${u.border}`,
-                  }}>
-                    {UNIT_LABELS[l2.unit] ?? l2.unit}
-                  </span>
-                );
-              })()}
-            </div>
-          </td>
-
-          {/* Rate cells per column (respecting zone collapse) */}
-          {zoneGroups.map(({ zone, columns: zoneCols }) => {
-            const isCollapsed = collapsedZones.has(`${zonePrefix}${zone}`);
-            if (isCollapsed) {
-              return (
-                <td key={`${zone}-collapsed`} style={{ ...rateCell, borderLeft: '1px solid #e5e7eb', textAlign: 'center' }}>
-                  <span style={{ fontSize: 9, color: '#d1d5db' }}>...</span>
-                </td>
-              );
-            }
-            return zoneCols.map((col) => {
-              const mapKey = `${l2.costId}::${col.key}`;
-              const rate = rateLookup.get(mapKey);
-              return (
-                <td key={col.key} style={{ ...rateCell, borderLeft: '1px solid #f3f4f6' }}>
-                  {rate ? (
-                    <span style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: 10,
-                      fontWeight: 500,
-                      color: '#111827',
-                    }}>
-                      {formatCurrency(rate.currency, rate.amount)}
-                    </span>
-                  ) : (
-                    <span style={{ fontSize: 10, color: '#d1d5db' }}>&mdash;</span>
-                  )}
-                </td>
-              );
-            });
-          })}
-        </tr>
-      ))}
-    </>
-  );
-}
-
-// ─────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────
-
-interface ZoneGroup<T> {
-  zone: string;
-  columns: T[];
-}
-
-function groupByZone<T extends { zone: string }>(columns: T[]): ZoneGroup<T>[] {
-  const map = new Map<string, T[]>();
-  for (const col of columns) {
-    const group = map.get(col.zone) ?? [];
-    group.push(col);
-    map.set(col.zone, group);
-  }
-  return Array.from(map.entries()).map(([zone, cols]) => ({ zone, columns: cols }));
-}
-
-/** Shorten long location names for column headers */
-function abbreviate(name: string): string {
-  // Remove common suffixes to keep headers compact
-  return name
-    .replace(' Cargo Terminal', ' CT')
-    .replace(' Warehouse', ' WH')
-    .replace(' Checkpoint', ' CP')
-    .replace(' Cross-dock', ' XD')
-    .replace(' Free Trade Zone', ' FTZ')
-    .replace(' Airport', ' Apt')
-    .replace(' Region', ' Rgn');
-}
-
-// ─────────────────────────────────────────
-// Shared styles
-// ─────────────────────────────────────────
-
-const stickyFirstColHeader: React.CSSProperties = {
-  position: 'sticky',
-  left: 0,
-  zIndex: 2,
-  background: '#f9fafb',
-  borderBottom: '1px solid #e5e7eb',
-  padding: '4px 10px',
-};
-
-const darkColHeader: React.CSSProperties = {
-  background: '#111827',
-  color: '#fff',
-  fontSize: 9,
-  fontWeight: 600,
-  textTransform: 'uppercase',
-  letterSpacing: '0.05em',
-  padding: '6px 10px',
-  borderBottom: '1px solid #374151',
-  textAlign: 'left',
-  whiteSpace: 'nowrap',
-};
-
-const stickyFirstCol: React.CSSProperties = {
-  position: 'sticky',
-  left: 0,
-  zIndex: 1,
-  background: '#fff',
-  padding: '5px 10px',
-  borderBottom: '1px solid #f3f4f6',
-  minWidth: 260,
-  width: 260,
-  maxWidth: 260,
-};
-
-const rateCell: React.CSSProperties = {
-  padding: '5px 10px',
-  textAlign: 'right',
-  borderBottom: '1px solid #f3f4f6',
-  whiteSpace: 'nowrap',
-};
