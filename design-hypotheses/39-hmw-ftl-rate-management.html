@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-39: FTL Rate Management — Route × Truck Type</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.page { max-width: 1400px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+h3 { font-size: 14px; font-weight: 700; margin: 20px 0 8px; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.verdict { background: rgba(21,44,255,0.04); border: 2px solid rgba(21,44,255,0.2); border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #152CFF; font-size: 14px; margin-bottom: 6px; }
+.nav { height: 40px; background: #111827; display: flex; align-items: center; padding: 0 16px; gap: 16px; }
+.nav .logo { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; }
+.nav .brand { font-weight: 700; font-size: 13px; color: #fff; }
+.nav .link { font-size: 12px; color: rgba(255,255,255,0.5); }
+.nav .link.active { color: #fff; font-weight: 600; padding: 4px 10px; background: rgba(255,255,255,0.1); border-radius: 4px; }
+.th-dark { padding: 6px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; background: #111827; color: #fff; border-bottom: 1px solid #374151; text-align: right; white-space: nowrap; }
+.th-dark.left { text-align: left; }
+.td { padding: 6px 10px; font-size: 11px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+.rate-cell { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; color: #111827; text-align: right; padding: 6px 10px; border-bottom: 1px solid #f3f4f6; }
+.pill { padding: 4px 12px; border-radius: 99px; font-size: 11px; cursor: pointer; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; }
+.pill.active { border-color: #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-39: FTL Rate Management</h1>
+
+<div class="hmw">
+How might we design the FTL trucking rate management so ops admins can view and edit route × truck type rates in the same format vendors quote them — while connecting to the Regions master data and supporting truck type selection during order creation?
+</div>
+
+<div class="context">
+<strong>User stories addressed:</strong> US-020 to US-029
+<br><br>
+<strong>Real data from vendor rate cards:</strong>
+<ul style="margin-top: 6px; padding-left: 16px;">
+<li><strong>164 routes</strong> across 2 vendors (HaleSun + Gonda)</li>
+<li><strong>Truck types:</strong> 1.5T, 3T, 5T, 8T, 10T, 12T, 40HQ, 45HQ (not all available on all routes)</li>
+<li><strong>Origin:</strong> City + District (深圳·福田街道, 东莞·洪梅镇, 广州·花都区)</li>
+<li><strong>Destination:</strong> Fixed hub per vendor (HaleSun → 深圳机场, Gonda → 香港机场仓库)</li>
+<li><strong>Currency:</strong> RMB for domestic, HKD for cross-border</li>
+<li><strong>Accessorials:</strong> FM001 (Warehouse Transfer), FM002 (Pickup), FM003 (Cross-Border) are add-ons, not the base FTL rate</li>
+</ul>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- PART 1: FTL RATE SHEET                                       -->
+<!-- ============================================================ -->
+
+<h2>Part 1: FTL Rate Sheet (US-020 to US-025)</h2>
+
+<p style="font-size: 12px; color: #374151; margin-bottom: 12px;">The Rates page "Trucking" tab shows a route × truck type matrix per vendor — matching how vendors actually quote rates.</p>
+
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link">Delivery Orders</span>
+  <span class="link active">Rates</span>
+  <span class="link">Master Data</span>
+</div>
+
+<div style="padding: 16px 16px 0;">
+  <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">Rate Cards</h1>
+  <p style="font-size: 11px; color: #9ca3af; margin: 2px 0 0;">Manage vendor rate cards</p>
+
+  <!-- Rate type tabs -->
+  <div style="display: flex; gap: 2px; margin: 12px 0 0; border-bottom: 1px solid #e5e7eb;">
+    <button style="padding: 6px 14px; border-radius: 4px 4px 0 0; border: none; border-bottom: 2px solid #152CFF; background: transparent; color: #152CFF; font-weight: 600; font-size: 12px; cursor: pointer;">🚛 Trucking (FTL)</button>
+    <button style="padding: 6px 14px; border-radius: 4px 4px 0 0; border: none; border-bottom: 2px solid transparent; background: transparent; color: #9ca3af; font-size: 12px; cursor: pointer;">📦 Services (L2 Fees)</button>
+  </div>
+</div>
+
+<div style="padding: 12px 16px 0;">
+  <!-- Vendor pills -->
+  <div style="display: flex; gap: 6px; margin-bottom: 12px; align-items: center;">
+    <span style="font-size: 11px; color: #9ca3af;">Vendor:</span>
+    <button class="pill active">HaleSun <span class="mono" style="font-size: 9px; color: #9ca3af; margin-left: 2px;">92</span></button>
+    <button class="pill">Gonda <span class="mono" style="font-size: 9px; color: #d1d5db; margin-left: 2px;">44</span></button>
+    <button class="pill">The Lorry <span class="mono" style="font-size: 9px; color: #d1d5db; margin-left: 2px;">8</span></button>
+
+    <!-- Destination hub -->
+    <span style="margin-left: auto; font-size: 10px; color: #6b7280;">
+      Destination: <strong style="color: #111827;">深圳机场 ShenZhen Hub</strong>
+      <span style="font-size: 9px; color: #9ca3af; margin-left: 4px;">RMB</span>
+    </span>
+  </div>
+
+  <!-- FTL Rate Matrix -->
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+    <div style="overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; min-width: 960px;">
+        <thead>
+          <tr>
+            <th class="th-dark left" style="min-width: 240px; position: sticky; left: 0; z-index: 2;">
+              Origin District
+            </th>
+            <th class="th-dark" style="min-width: 85px;">
+              <div>1.5T</div>
+              <div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0; margin-top: 1px;">&lt; 1,500kg · 15m³</div>
+            </th>
+            <th class="th-dark" style="min-width: 85px;">
+              <div>3T</div>
+              <div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0; margin-top: 1px;">&lt; 2,500kg · 18m³</div>
+            </th>
+            <th class="th-dark" style="min-width: 85px;">
+              <div>5T</div>
+              <div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0; margin-top: 1px;">&lt; 4,500kg · 30m³</div>
+            </th>
+            <th class="th-dark" style="min-width: 85px;">
+              <div>8T</div>
+              <div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0; margin-top: 1px;">&lt; 7,500kg · 43m³</div>
+            </th>
+            <th class="th-dark" style="min-width: 85px;">
+              <div>10T</div>
+              <div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0; margin-top: 1px;">&lt; 10,000kg · 50m³</div>
+            </th>
+            <th class="th-dark" style="min-width: 85px;">
+              <div>40HQ</div>
+              <div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0; margin-top: 1px;">&lt; 20,000kg · 96m³</div>
+            </th>
+            <th class="th-dark" style="min-width: 85px;">
+              <div>45HQ</div>
+              <div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0; margin-top: 1px;">&lt; 20,000kg · 120m³</div>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- City group: Shenzhen -->
+          <tr>
+            <td colspan="8" style="padding: 5px 10px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 10px; font-weight: 600; color: #152CFF; cursor: pointer;">
+              ▾ 深圳市 Shenzhen <span style="font-weight: 400; color: #9ca3af; margin-left: 4px;">52 districts</span>
+            </td>
+          </tr>
+          <!-- Luohu district group -->
+          <tr>
+            <td class="td" style="position: sticky; left: 0; background: #fff; padding-left: 20px;">
+              <div style="font-size: 11px; color: #111827; font-weight: 500;">罗湖区 · 桂园街道</div>
+              <div style="font-size: 9px; color: #9ca3af;">Luohu · Guiyuan</div>
+            </td>
+            <td class="rate-cell">310</td>
+            <td class="rate-cell">360</td>
+            <td class="rate-cell">530</td>
+            <td class="rate-cell">630</td>
+            <td class="rate-cell">780</td>
+            <td class="rate-cell">1,330</td>
+            <td class="rate-cell">1,430</td>
+          </tr>
+          <tr>
+            <td class="td" style="position: sticky; left: 0; background: #fff; padding-left: 20px;">
+              <div style="font-size: 11px; color: #111827; font-weight: 500;">福田区 · 福田街道</div>
+              <div style="font-size: 9px; color: #9ca3af;">Futian</div>
+            </td>
+            <td class="rate-cell">260</td>
+            <td class="rate-cell">310</td>
+            <td class="rate-cell">430</td>
+            <td class="rate-cell">630</td>
+            <td class="rate-cell">680</td>
+            <td class="rate-cell">1,280</td>
+            <td class="rate-cell">1,380</td>
+          </tr>
+          <tr>
+            <td class="td" style="position: sticky; left: 0; background: #fff; padding-left: 20px;">
+              <div style="font-size: 11px; color: #111827; font-weight: 500;">南山区 · 粤海街道</div>
+              <div style="font-size: 9px; color: #9ca3af;">Nanshan · Yuehai</div>
+            </td>
+            <td class="rate-cell">190</td>
+            <td class="rate-cell">240</td>
+            <td class="rate-cell">350</td>
+            <td class="rate-cell">490</td>
+            <td class="rate-cell">580</td>
+            <td class="rate-cell">1,130</td>
+            <td class="rate-cell">1,230</td>
+          </tr>
+          <tr>
+            <td class="td" style="position: sticky; left: 0; background: #fff; padding-left: 20px;">
+              <div style="font-size: 11px; color: #111827; font-weight: 500;">宝安区 · 福永街道</div>
+              <div style="font-size: 9px; color: #9ca3af;">Baoan · Fuyong <span style="color: #152CFF;">← near airport</span></div>
+            </td>
+            <td class="rate-cell" style="color: #059669; font-weight: 600;">160</td>
+            <td class="rate-cell" style="color: #059669; font-weight: 600;">210</td>
+            <td class="rate-cell" style="color: #059669; font-weight: 600;">280</td>
+            <td class="rate-cell">430</td>
+            <td class="rate-cell">530</td>
+            <td class="rate-cell">1,080</td>
+            <td class="rate-cell">1,230</td>
+          </tr>
+          <tr style="color: #d1d5db; font-size: 10px;">
+            <td colspan="8" style="padding: 4px 20px; font-style: italic; border-bottom: 1px solid #f3f4f6;">+ 48 more Shenzhen districts...</td>
+          </tr>
+
+          <!-- City group: Dongguan -->
+          <tr>
+            <td colspan="8" style="padding: 5px 10px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; border-top: 1px solid #e5e7eb; font-size: 10px; font-weight: 600; color: #152CFF; cursor: pointer;">
+              ▸ 东莞市 Dongguan <span style="font-weight: 400; color: #9ca3af; margin-left: 4px;">28 towns — click to expand</span>
+            </td>
+          </tr>
+
+          <!-- City group: Pearl River Delta -->
+          <tr>
+            <td colspan="8" style="padding: 5px 10px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 10px; font-weight: 600; color: #b45309; cursor: pointer;">
+              ▸ 珠三角 Pearl River Delta <span style="font-weight: 400; color: #9ca3af; margin-left: 4px;">佛山, 中山, 珠海, 江门, 清远, 肇庆</span>
+            </td>
+          </tr>
+
+          <!-- Add route -->
+          <tr>
+            <td colspan="8" style="padding: 8px 10px; text-align: center;">
+              <button style="padding: 4px 12px; border-radius: 4px; border: 1px dashed #e5e7eb; background: none; color: #9ca3af; font-size: 10px; cursor: pointer;">+ Add route from Regions</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer -->
+    <div style="padding: 8px 10px; background: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; font-size: 10px; color: #9ca3af;">
+      <span>HaleSun FTL: <strong style="color: #111827;">92</strong> routes to 深圳机场</span>
+      <button style="padding: 4px 12px; border-radius: 6px; border: none; background: #152CFF; color: #fff; font-size: 10px; font-weight: 600; cursor: pointer;">Save Changes</button>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- PART 2: TRUCK TYPE IN CREATE FORM                            -->
+<!-- ============================================================ -->
+
+<h2>Part 2: Truck Type Selection in Create Form (US-026, US-027)</h2>
+
+<p style="font-size: 12px; color: #374151; margin-bottom: 12px;">When creating an FM Trucking job, ops selects origin district + destination district + truck type. The rate auto-populates.</p>
+
+<div class="screen">
+<div style="padding: 16px;">
+  <div style="font-size: 13px; font-weight: 700; margin-bottom: 12px;">Step 2 — Add Services</div>
+
+  <!-- FM Job card -->
+  <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px;">
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+      <span style="font-size: 11px; font-weight: 700; color: #152CFF;">J01</span>
+      <span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; font-weight: 700; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.12); color: #152CFF;">FM Trucking</span>
+    </div>
+
+    <!-- Row 1: Vendor + Truck Type -->
+    <div style="display: flex; gap: 8px; margin-bottom: 6px; align-items: flex-start;">
+      <select style="width: 140px; font-size: 11px; padding: 5px 8px; border: 1px solid #e5e7eb; border-radius: 4px;">
+        <option>HaleSun</option>
+      </select>
+
+      <!-- TRUCK TYPE SELECTOR (NEW) -->
+      <div style="display: flex; gap: 3px; flex-wrap: wrap;">
+        <button style="padding: 3px 8px; border-radius: 4px; font-size: 9px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #9ca3af; cursor: pointer;">1.5T</button>
+        <button style="padding: 3px 8px; border-radius: 4px; font-size: 9px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #9ca3af; cursor: pointer;">3T</button>
+        <button style="padding: 3px 8px; border-radius: 4px; font-size: 9px; font-weight: 600; border: 1.5px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; cursor: pointer;">5T ✓</button>
+        <button style="padding: 3px 8px; border-radius: 4px; font-size: 9px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #9ca3af; cursor: pointer;">8T</button>
+        <button style="padding: 3px 8px; border-radius: 4px; font-size: 9px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #9ca3af; cursor: pointer;">10T</button>
+        <button style="padding: 3px 8px; border-radius: 4px; font-size: 9px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #9ca3af; cursor: pointer;">40HQ</button>
+      </div>
+    </div>
+
+    <!-- Row 2: Origin district → Destination district -->
+    <div style="display: flex; gap: 8px; margin-bottom: 6px; align-items: center;">
+      <div style="flex: 1;">
+        <div style="font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 2px;">Origin District</div>
+        <select style="width: 100%; font-size: 11px; padding: 5px 8px; border: 1px solid #e5e7eb; border-radius: 4px;">
+          <option>深圳 · 福田区 · 福田街道</option>
+        </select>
+      </div>
+      <span style="color: #d1d5db; margin-top: 12px;">→</span>
+      <div style="flex: 1;">
+        <div style="font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 2px;">Destination</div>
+        <select style="width: 100%; font-size: 11px; padding: 5px 8px; border: 1px solid #e5e7eb; border-radius: 4px;">
+          <option>深圳机场 ShenZhen Hub</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Auto-populated rate -->
+    <div style="margin-top: 8px; padding: 6px 10px; background: #fff; border: 1px solid #e5e7eb; border-radius: 4px; display: flex; align-items: center; justify-content: space-between;">
+      <div>
+        <span style="font-size: 10px; font-weight: 600; color: #152CFF;">FTL Rate</span>
+        <span style="font-size: 9px; color: #9ca3af; margin-left: 6px;">HaleSun · 5T · 福田 → 深圳机场</span>
+      </div>
+      <span class="mono" style="font-size: 12px; font-weight: 700; color: #111827;">RMB 430.00</span>
+    </div>
+
+    <!-- Accessorial fees (optional, from FM L2 rates if configured) -->
+    <div style="margin-top: 4px; padding: 4px 10px; font-size: 9px; color: #9ca3af;">
+      + FM002 Pickup Fee: RMB 30.00 · FM003 Cross-Border: <span style="color: #d1d5db;">not applicable</span>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- PART 3: FTL + ACCESSORIAL FEE MODEL                         -->
+<!-- ============================================================ -->
+
+<h2>Part 3: FTL Rate + Accessorial Fees (US-028)</h2>
+
+<p style="font-size: 12px; color: #374151; margin-bottom: 12px;">How the base FTL rate and FM accessorial fees coexist in a job's fee breakdown.</p>
+
+<div class="screen">
+<div style="padding: 16px; width: 380px;">
+  <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px;">Fee Breakdown — FM Trucking</div>
+
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+    <!-- Base FTL rate (from truck type rate sheet) -->
+    <div style="padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f3f4f6; background: rgba(21,44,255,0.02);">
+      <div>
+        <div style="font-size: 11px; font-weight: 600; color: #111827;">FTL Base Rate — 5T</div>
+        <div style="font-size: 9px; color: #9ca3af;">Truck type rate · 福田 → 深圳机场</div>
+      </div>
+      <span class="mono" style="font-size: 11px; font-weight: 700; color: #111827;">RMB 430.00</span>
+    </div>
+
+    <!-- Accessorial FM002 -->
+    <div style="padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f3f4f6;">
+      <div>
+        <div style="font-size: 10px; color: #374151;">FM002 Pickup Fee</div>
+        <div style="font-size: 8px; color: #9ca3af;">Accessorial · rate card</div>
+      </div>
+      <span class="mono" style="font-size: 10px; font-weight: 600; color: #111827;">RMB 30.00</span>
+    </div>
+
+    <!-- Total -->
+    <div style="padding: 6px 10px; background: #f9fafb; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e5e7eb;">
+      <span style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Job Total</span>
+      <span class="mono" style="font-size: 12px; font-weight: 700; color: #152CFF;">RMB 460.00</span>
+    </div>
+  </div>
+
+  <div style="margin-top: 8px; font-size: 10px; color: #9ca3af; text-align: center; padding: 6px; border: 1px dashed #e5e7eb; border-radius: 4px;">
+    FTL rates from Trucking tab · Accessorials from Services tab
+  </div>
+</div>
+</div>
+
+
+<!-- VERDICT -->
+<div class="verdict">
+<h3>Design Decisions</h3>
+<ul style="font-size: 11px; color: #374151; padding-left: 16px; line-height: 2;">
+<li><strong>Rates page split:</strong> "🚛 Trucking (FTL)" tab and "📦 Services (L2 Fees)" tab. Trucking shows route × truck type. Services shows L2 Cost ID × location.</li>
+<li><strong>FTL rate sheet:</strong> Rows = origin districts grouped by city. Columns = truck types with capacity specs. Sticky first column. City groups collapsible.</li>
+<li><strong>Destination:</strong> Shown as a header above the grid (per vendor, most vendors have 1-2 fixed hubs). Not a per-row field.</li>
+<li><strong>Origin districts:</strong> From Regions master data (GB/T 2260 codes). "+ Add route from Regions" to add new rows.</li>
+<li><strong>Truck type in create form:</strong> Chip buttons (1.5T / 3T / 5T / 8T / 10T / 40HQ) next to vendor dropdown. Click to select. Selected type highlighted in blue.</li>
+<li><strong>Origin/destination in create form for FM:</strong> District-level pickers (City → District cascade) instead of facility pickers used by other services.</li>
+<li><strong>Fee model:</strong> FTL base rate (from truck type sheet) + FM accessorial fees (FM001/FM002/FM003 from Services tab). Both auto-populate. Base rate is the primary cost; accessorials are add-ons.</li>
+<li><strong>Rate lookup key:</strong> vendorCode + originDistrictCode + destinationHub + truckType → flat rate per trip.</li>
+<li><strong>Data model change:</strong> FTL rates need a <code>truckType</code> field and <code>originDistrictCode</code> / <code>destinationDistrictCode</code> fields (GB/T codes), distinct from the current VendorRate which uses locationId.</li>
+</ul>
+</div>
+
+</div>
+</body>
+</html>
