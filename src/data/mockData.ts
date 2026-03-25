@@ -124,7 +124,8 @@ export interface Location {
 export interface VendorRate {
   id: string;
   vendorCode: string;
-  serviceCode: string;
+  serviceCode: string;  // L1 service code (FM, EC, etc.)
+  costId: string;       // L2 Cost ID (FM001, FM002, etc.)
   rateType: RateType;
   originLocationId?: string;
   destinationLocationId?: string;
@@ -144,6 +145,79 @@ export const SERVICE_CONFIG: Record<string, { rateType: RateType; label: string 
   CR: { rateType: 'location', label: 'Cargo Reception' },
   OH: { rateType: 'location', label: 'Origin Handling' },
 };
+
+// --- L1/L2 Service Hierarchy (from CR Trip Management) ---
+
+export interface L2SubService {
+  costId: string;       // e.g., "FM001"
+  name: string;         // e.g., "Warehouse Transfer Fee"
+  unit: RateUnit;       // fixed per Cost ID (HMW-35)
+  l1Code: string;       // parent L1 service code
+}
+
+export interface L1Service {
+  code: string;
+  label: string;
+  color: string;        // badge color
+  rateType: RateType;
+  l2Services: L2SubService[];
+}
+
+export const SERVICE_HIERARCHY: L1Service[] = [
+  {
+    code: 'CR', label: 'Cargo Retrieval', color: '#2563eb', rateType: 'location',
+    l2Services: [
+      { costId: 'CR001', name: 'Registration Fee', unit: 'flat', l1Code: 'CR' },
+      { costId: 'CR002', name: 'Cargo Retrieval Pick Up Fee', unit: 'per-bag', l1Code: 'CR' },
+    ],
+  },
+  {
+    code: 'CS', label: 'Cargo Submission', color: '#b45309', rateType: 'location',
+    l2Services: [
+      { costId: 'CS001', name: 'Express Center Ground Handling Fee', unit: 'flat', l1Code: 'CS' },
+      { costId: 'CS002', name: 'International Cargo Terminal Transit Fee', unit: 'flat', l1Code: 'CS' },
+      { costId: 'CS003', name: 'RA Agent Fee', unit: 'flat', l1Code: 'CS' },
+      { costId: 'CS004', name: 'Security X-Ray Screening Fee', unit: 'flat', l1Code: 'CS' },
+      { costId: 'CS005', name: 'Terminal Handling Charges', unit: 'per-kg', l1Code: 'CS' },
+      { costId: 'CS006', name: 'Ground Handling Fee', unit: 'flat', l1Code: 'CS' },
+    ],
+  },
+  {
+    code: 'EC', label: 'Export Custom Clearance', color: '#7c3aed', rateType: 'location',
+    l2Services: [
+      { costId: 'EC001', name: 'Customs Declaration Fee', unit: 'flat', l1Code: 'EC' },
+      { costId: 'EC002', name: 'Customs Inspection Fee', unit: 'flat', l1Code: 'EC' },
+      { costId: 'EC003', name: 'Customs Service Fee', unit: 'flat', l1Code: 'EC' },
+    ],
+  },
+  {
+    code: 'FM', label: 'Trucking', color: '#152CFF', rateType: 'route',
+    l2Services: [
+      { costId: 'FM001', name: 'Warehouse Transfer Fee', unit: 'flat', l1Code: 'FM' },
+      { costId: 'FM002', name: 'Pickup Fee', unit: 'flat', l1Code: 'FM' },
+      { costId: 'FM003', name: 'Cross-Border Handling Fee', unit: 'flat', l1Code: 'FM' },
+    ],
+  },
+  {
+    code: 'OH', label: 'Origin Handling', color: '#6b7280', rateType: 'location',
+    l2Services: [
+      { costId: 'OH001', name: 'MAWB Fee', unit: 'flat', l1Code: 'OH' },
+      { costId: 'OH002', name: 'Loading and Unloading Fee', unit: 'per-kg', l1Code: 'OH' },
+      { costId: 'OH003', name: 'Handling Fee', unit: 'per-kg', l1Code: 'OH' },
+      { costId: 'OH004', name: 'Sorting Fee', unit: 'per-bag', l1Code: 'OH' },
+      { costId: 'OH005', name: 'Palletization / Build-Up Fee', unit: 'flat', l1Code: 'OH' },
+    ],
+  },
+];
+
+// Flat lookup helpers
+export const ALL_L2_SERVICES: L2SubService[] = SERVICE_HIERARCHY.flatMap((l1) => l1.l2Services);
+export function getL2ByCostId(costId: string): L2SubService | undefined {
+  return ALL_L2_SERVICES.find((l2) => l2.costId === costId);
+}
+export function getL1ByCode(code: string): L1Service | undefined {
+  return SERVICE_HIERARCHY.find((l1) => l1.code === code);
+}
 
 export const CURRENCY_SYMBOLS: Record<Currency, string> = {
   MYR: 'RM', CNY: 'CNY', USD: 'USD',
@@ -373,37 +447,45 @@ export const seedLocations: Location[] = [
 // --- Seed Rates (Phase 2) ---
 export const seedRates: VendorRate[] = [
   // HaleSun FM routes (MYR)
-  { id: 'RT-001', vendorCode: 'V-001', serviceCode: 'FM', rateType: 'route', originLocationId: 'LOC-001', destinationLocationId: 'LOC-002', currency: 'MYR', amount: 450, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-002', vendorCode: 'V-001', serviceCode: 'FM', rateType: 'route', originLocationId: 'LOC-019', destinationLocationId: 'LOC-011', currency: 'MYR', amount: 520, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-003', vendorCode: 'V-001', serviceCode: 'FM', rateType: 'route', originLocationId: 'LOC-014', destinationLocationId: 'LOC-015', currency: 'MYR', amount: 380, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-004', vendorCode: 'V-001', serviceCode: 'FM', rateType: 'route', originLocationId: 'LOC-001', destinationLocationId: 'LOC-010', currency: 'MYR', amount: 470, unit: 'flat', effectiveFrom: '2026-03-01', isActive: true },
+  { id: 'RT-001', vendorCode: 'V-001', serviceCode: 'FM', costId: 'FM001', rateType: 'route', originLocationId: 'LOC-001', destinationLocationId: 'LOC-002', currency: 'MYR', amount: 450, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-002', vendorCode: 'V-001', serviceCode: 'FM', costId: 'FM001', rateType: 'route', originLocationId: 'LOC-019', destinationLocationId: 'LOC-011', currency: 'MYR', amount: 520, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-003', vendorCode: 'V-001', serviceCode: 'FM', costId: 'FM001', rateType: 'route', originLocationId: 'LOC-014', destinationLocationId: 'LOC-015', currency: 'MYR', amount: 380, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-004', vendorCode: 'V-001', serviceCode: 'FM', costId: 'FM001', rateType: 'route', originLocationId: 'LOC-001', destinationLocationId: 'LOC-010', currency: 'MYR', amount: 470, unit: 'flat', effectiveFrom: '2026-03-01', isActive: true },
   // HaleSun CR (per-bag, CNY)
-  { id: 'RT-005', vendorCode: 'V-001', serviceCode: 'CR', rateType: 'location', locationId: 'LOC-021', currency: 'CNY', amount: 25, unit: 'per-bag', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-005', vendorCode: 'V-001', serviceCode: 'CR', costId: 'CR002', rateType: 'location', locationId: 'LOC-021', currency: 'CNY', amount: 25, unit: 'per-bag', effectiveFrom: '2026-01-01', isActive: true },
   // Gonda EC locations (MYR)
-  { id: 'RT-006', vendorCode: 'V-003', serviceCode: 'EC', rateType: 'location', locationId: 'LOC-002', currency: 'MYR', amount: 120, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-007', vendorCode: 'V-003', serviceCode: 'EC', rateType: 'location', locationId: 'LOC-005', currency: 'MYR', amount: 130, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-008', vendorCode: 'V-003', serviceCode: 'EC', rateType: 'location', locationId: 'LOC-015', currency: 'MYR', amount: 150, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-009', vendorCode: 'V-003', serviceCode: 'EC', rateType: 'location', locationId: 'LOC-007', currency: 'CNY', amount: 680, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-006', vendorCode: 'V-003', serviceCode: 'EC', costId: 'EC001', rateType: 'location', locationId: 'LOC-002', currency: 'MYR', amount: 120, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-007', vendorCode: 'V-003', serviceCode: 'EC', costId: 'EC001', rateType: 'location', locationId: 'LOC-005', currency: 'MYR', amount: 130, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-008', vendorCode: 'V-003', serviceCode: 'EC', costId: 'EC001', rateType: 'location', locationId: 'LOC-015', currency: 'MYR', amount: 150, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-009', vendorCode: 'V-003', serviceCode: 'EC', costId: 'EC001', rateType: 'location', locationId: 'LOC-007', currency: 'CNY', amount: 680, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
   // Gonda CS locations (MYR)
-  { id: 'RT-010', vendorCode: 'V-003', serviceCode: 'CS', rateType: 'location', locationId: 'LOC-003', currency: 'MYR', amount: 80, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-011', vendorCode: 'V-003', serviceCode: 'CS', rateType: 'location', locationId: 'LOC-017', currency: 'MYR', amount: 95, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-010', vendorCode: 'V-003', serviceCode: 'CS', costId: 'CS001', rateType: 'location', locationId: 'LOC-003', currency: 'MYR', amount: 80, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-011', vendorCode: 'V-003', serviceCode: 'CS', costId: 'CS001', rateType: 'location', locationId: 'LOC-017', currency: 'MYR', amount: 95, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
   // SevenSeas EC locations (CNY)
-  { id: 'RT-012', vendorCode: 'V-002', serviceCode: 'EC', rateType: 'location', locationId: 'LOC-011', currency: 'CNY', amount: 580, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-013', vendorCode: 'V-002', serviceCode: 'EC', rateType: 'location', locationId: 'LOC-012', currency: 'CNY', amount: 600, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-012', vendorCode: 'V-002', serviceCode: 'EC', costId: 'EC001', rateType: 'location', locationId: 'LOC-011', currency: 'CNY', amount: 580, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-013', vendorCode: 'V-002', serviceCode: 'EC', costId: 'EC001', rateType: 'location', locationId: 'LOC-012', currency: 'CNY', amount: 600, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
   // SevenSeas OH (per-kg, MYR)
-  { id: 'RT-014', vendorCode: 'V-002', serviceCode: 'OH', rateType: 'location', locationId: 'LOC-023', currency: 'MYR', amount: 0.85, unit: 'per-kg', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-014', vendorCode: 'V-002', serviceCode: 'OH', costId: 'OH003', rateType: 'location', locationId: 'LOC-023', currency: 'MYR', amount: 0.85, unit: 'per-kg', effectiveFrom: '2026-01-01', isActive: true },
   // SevenSeas CR (per-bag, CNY)
-  { id: 'RT-015', vendorCode: 'V-002', serviceCode: 'CR', rateType: 'location', locationId: 'LOC-006', currency: 'CNY', amount: 30, unit: 'per-bag', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-015', vendorCode: 'V-002', serviceCode: 'CR', costId: 'CR002', rateType: 'location', locationId: 'LOC-006', currency: 'CNY', amount: 30, unit: 'per-bag', effectiveFrom: '2026-01-01', isActive: true },
   // ThaiKee FM route (MYR)
-  { id: 'RT-016', vendorCode: 'V-004', serviceCode: 'FM', rateType: 'route', originLocationId: 'LOC-013', destinationLocationId: 'LOC-013', currency: 'MYR', amount: 280, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-016', vendorCode: 'V-004', serviceCode: 'FM', costId: 'FM001', rateType: 'route', originLocationId: 'LOC-013', destinationLocationId: 'LOC-013', currency: 'MYR', amount: 280, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
   // ThaiKee OH (per-kg, MYR)
-  { id: 'RT-017', vendorCode: 'V-004', serviceCode: 'OH', rateType: 'location', locationId: 'LOC-013', currency: 'MYR', amount: 0.65, unit: 'per-kg', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-017', vendorCode: 'V-004', serviceCode: 'OH', costId: 'OH003', rateType: 'location', locationId: 'LOC-013', currency: 'MYR', amount: 0.65, unit: 'per-kg', effectiveFrom: '2026-01-01', isActive: true },
   // The Lorry FM routes (CNY)
-  { id: 'RT-018', vendorCode: 'V-005', serviceCode: 'FM', rateType: 'route', originLocationId: 'LOC-006', destinationLocationId: 'LOC-007', currency: 'CNY', amount: 2800, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-019', vendorCode: 'V-005', serviceCode: 'FM', rateType: 'route', originLocationId: 'LOC-022', destinationLocationId: 'LOC-023', currency: 'CNY', amount: 3200, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-020', vendorCode: 'V-005', serviceCode: 'FM', rateType: 'route', originLocationId: 'LOC-008', destinationLocationId: 'LOC-007', currency: 'MYR', amount: 320, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-018', vendorCode: 'V-005', serviceCode: 'FM', costId: 'FM001', rateType: 'route', originLocationId: 'LOC-006', destinationLocationId: 'LOC-007', currency: 'CNY', amount: 2800, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-019', vendorCode: 'V-005', serviceCode: 'FM', costId: 'FM001', rateType: 'route', originLocationId: 'LOC-022', destinationLocationId: 'LOC-023', currency: 'CNY', amount: 3200, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-020', vendorCode: 'V-005', serviceCode: 'FM', costId: 'FM001', rateType: 'route', originLocationId: 'LOC-008', destinationLocationId: 'LOC-007', currency: 'MYR', amount: 320, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
   // Expired rate example: old HaleSun FM rate for TikTok WH -> SZ Bay (replaced by RT-001)
-  { id: 'RT-021', vendorCode: 'V-001', serviceCode: 'FM', rateType: 'route', originLocationId: 'LOC-001', destinationLocationId: 'LOC-002', currency: 'MYR', amount: 420, unit: 'flat', effectiveFrom: '2025-06-01', effectiveTo: '2025-12-31', isActive: false },
+  { id: 'RT-021', vendorCode: 'V-001', serviceCode: 'FM', costId: 'FM001', rateType: 'route', originLocationId: 'LOC-001', destinationLocationId: 'LOC-002', currency: 'MYR', amount: 420, unit: 'flat', effectiveFrom: '2025-06-01', effectiveTo: '2025-12-31', isActive: false },
+  // Additional L2 rates: HaleSun FM002 (Pickup Fee) and FM003 (Cross-Border)
+  { id: 'RT-022', vendorCode: 'V-001', serviceCode: 'FM', costId: 'FM002', rateType: 'route', originLocationId: 'LOC-001', destinationLocationId: 'LOC-002', currency: 'MYR', amount: 30, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-023', vendorCode: 'V-001', serviceCode: 'FM', costId: 'FM003', rateType: 'route', originLocationId: 'LOC-001', destinationLocationId: 'LOC-002', currency: 'MYR', amount: 45, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-024', vendorCode: 'V-001', serviceCode: 'FM', costId: 'FM002', rateType: 'route', originLocationId: 'LOC-019', destinationLocationId: 'LOC-011', currency: 'MYR', amount: 35, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-025', vendorCode: 'V-001', serviceCode: 'FM', costId: 'FM002', rateType: 'route', originLocationId: 'LOC-014', destinationLocationId: 'LOC-015', currency: 'MYR', amount: 25, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  // Gonda EC additional L2: EC002 + EC003 at SZ Bay Checkpoint
+  { id: 'RT-026', vendorCode: 'V-003', serviceCode: 'EC', costId: 'EC002', rateType: 'location', locationId: 'LOC-002', currency: 'MYR', amount: 45, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'RT-027', vendorCode: 'V-003', serviceCode: 'EC', costId: 'EC003', rateType: 'location', locationId: 'LOC-002', currency: 'MYR', amount: 25, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
 ];
 
 export const seedTemplates: TripTemplate[] = [
