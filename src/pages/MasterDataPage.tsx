@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import LocationsTab from '../components/master-data/LocationsTab';
+import ServicesTab from '../components/master-data/ServicesTab';
 
 type Tab = 'locations' | 'vendors' | 'customers' | 'services';
 
@@ -26,7 +27,8 @@ export default function MasterDataPage() {
       {/* Content */}
       <div style={{ padding: 16 }}>
         {tab === 'locations' && <LocationsTab />}
-        {tab !== 'locations' && (
+        {tab === 'services' && <ServicesTab />}
+        {tab !== 'locations' && tab !== 'services' && (
           <div style={{ textAlign: 'center', padding: '48px 16px', color: '#9ca3af' }}>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{tab.charAt(0).toUpperCase() + tab.slice(1)}</div>
             <div style={{ fontSize: 11 }}>Coming soon</div>

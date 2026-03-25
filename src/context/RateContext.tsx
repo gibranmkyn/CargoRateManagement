@@ -123,6 +123,7 @@ interface RateContextValue {
   getRatesForVendor: (vendorCode: string) => VendorRate[];
   getRatesForService: (serviceCode: string) => VendorRate[];
   lookupRate: (vendorCode: string, serviceCode: string, locationId?: string, originLocationId?: string, destinationLocationId?: string, jobDate?: string) => VendorRate | null;
+  lookupAllL2Rates: (vendorCode: string, serviceCode: string, locationId?: string, originLocationId?: string, destinationLocationId?: string) => VendorRate[];
   getLocationById: (id: string) => Location | undefined;
   getLocationByName: (name: string) => Location | undefined;
 }
@@ -223,6 +224,25 @@ export function RateProvider({ children }: { children: ReactNode }) {
     return candidates.sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom))[0];
   }, [state.rates]);
 
+  // Look up ALL L2 rates for a vendor+service+route (for fee auto-population)
+  const lookupAllL2Rates = useCallback((
+    vendorCode: string,
+    serviceCode: string,
+    locationId?: string,
+    originLocationId?: string,
+    destinationLocationId?: string,
+  ): VendorRate[] => {
+    const refDate = new Date().toISOString().split('T')[0];
+    return state.rates.filter((r) => {
+      if (r.vendorCode !== vendorCode || r.serviceCode !== serviceCode) return false;
+      if (!r.isActive) return false;
+      if (r.effectiveFrom > refDate) return false;
+      if (r.effectiveTo && r.effectiveTo < refDate) return false;
+      if (r.rateType === 'location') return r.locationId === locationId;
+      return r.originLocationId === originLocationId && r.destinationLocationId === destinationLocationId;
+    });
+  }, [state.rates]);
+
   const getLocationById = useCallback((id: string): Location | undefined => {
     return state.locations.find((l) => l.id === id);
   }, [state.locations]);
@@ -237,7 +257,7 @@ export function RateProvider({ children }: { children: ReactNode }) {
     isLoaded: state.isLoaded,
     addLocation, updateLocation, deleteLocation,
     addRate, updateRate, deactivateRate,
-    getLocationsGroupedByZone, getRatesForVendor, getRatesForService, lookupRate,
+    getLocationsGroupedByZone, getRatesForVendor, getRatesForService, lookupRate, lookupAllL2Rates,
     getLocationById, getLocationByName,
   };
 

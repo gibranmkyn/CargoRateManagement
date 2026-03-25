@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, ArrowRight, ArrowLeft } from 'lucide-react';
-import { customers, vendors, serviceTypes, SERVICE_CONFIG, formatCurrency } from '../data/mockData';
-import type { Job, Trip, ServiceType, Currency } from '../data/mockData';
+import { customers, vendors, serviceTypes, SERVICE_CONFIG, formatCurrency, getL2ByCostId } from '../data/mockData';
+import type { Job, Trip, ServiceType, Currency, FeeLineItem } from '../data/mockData';
 import { useTrips, generateTripId, generateJobId } from '../context/TripContext';
 import { useRates } from '../context/RateContext';
 import { useToast } from '../components/Toast';
@@ -27,7 +27,7 @@ const svcColors: Record<string, string> = {
 export default function CreateTripPage() {
   const navigate = useNavigate();
   const { addTrip } = useTrips();
-  const { lookupRate, getLocationById } = useRates();
+  const { lookupRate, lookupAllL2Rates, getLocationById } = useRates();
   const toast = useToast();
 
   const [customerCode, setCustomerCode] = useState('');
@@ -151,23 +151,27 @@ export default function CreateTripPage() {
       const orderBags = Number(bags) || 0;
       const orderWeight = Number(weight) || 0;
 
-      // Generate fee line items from rate lookup
-      const fees: import('../data/mockData').FeeLineItem[] = [];
-      if (rate) {
+      // Generate fee line items from ALL matching L2 rates (HMW-34)
+      const allRates = isRoute
+        ? lookupAllL2Rates(draft.vendorCode, draft.serviceCode, undefined, draft.originLocationId, draft.destinationLocationId)
+        : lookupAllL2Rates(draft.vendorCode, draft.serviceCode, draft.locationId);
+
+      const fees: FeeLineItem[] = allRates.map((r, fi) => {
+        const l2 = getL2ByCostId(r.costId);
         let qty = 1;
-        if (rate.unit === 'per-bag') qty = orderBags;
-        else if (rate.unit === 'per-kg') qty = orderWeight;
-        fees.push({
-          id: `F-${Date.now()}-${i}-01`,
-          name: 'Base rate',
-          rateId: rate.id,
-          currency: rate.currency,
-          rate: rate.amount,
-          unit: rate.unit,
+        if (r.unit === 'per-bag') qty = orderBags;
+        else if (r.unit === 'per-kg') qty = orderWeight;
+        return {
+          id: `F-${Date.now()}-${i}-${fi}`,
+          name: l2?.name ?? r.costId,
+          rateId: r.id,
+          currency: r.currency,
+          rate: r.amount,
+          unit: r.unit,
           quantity: qty,
-          amount: rate.amount * qty,
-        });
-      }
+          amount: r.amount * qty,
+        };
+      });
       const feeTotal = fees.reduce((sum, f) => sum + f.amount, 0);
 
       return {
@@ -374,23 +378,34 @@ export default function CreateTripPage() {
                       {isRoute && <input type="datetime-local" value={job.destinationDate} onChange={(e) => updateJob(job.key, { destinationDate: e.target.value })} style={{ fontSize: 10, color: '#9ca3af' }} />}
                     </div>
 
-                    {/* Rate badge */}
+                    {/* Rate badge — shows L2 fee count + total */}
                     {hasVendorAndLocation && (
                       <div style={{ marginTop: 4 }}>
-                        {rate ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 10, fontWeight: 600, color: '#152CFF', fontFamily: "'JetBrains Mono', monospace" }}>
-                              {formatCurrency(rate.currency, rate.amount)} /{rate.unit === 'flat' ? 'trip' : rate.unit.replace('per-', '')}
-                            </span>
-                            {cost && (
-                              <span style={{ fontSize: 10, color: '#6b7280' }}>
-                                = <strong style={{ color: '#111827', fontFamily: "'JetBrains Mono', monospace" }}>{formatCurrency(cost.currency, cost.amount)}</strong>
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: 10, fontWeight: 600, color: '#b45309', padding: '1px 6px', background: '#fefce8', borderRadius: 4, border: '1px solid #fde68a' }}>No rate on file</span>
-                        )}
+                        {(() => {
+                          const allRates = isRoute
+                            ? lookupAllL2Rates(job.vendorCode, job.serviceCode, undefined, job.originLocationId, job.destinationLocationId)
+                            : lookupAllL2Rates(job.vendorCode, job.serviceCode, job.locationId);
+                          if (allRates.length > 0) {
+                            const total = allRates.reduce((sum, r) => {
+                              let qty = 1;
+                              if (r.unit === 'per-bag') qty = Number(bags) || 0;
+                              else if (r.unit === 'per-kg') qty = Number(weight) || 0;
+                              return sum + r.amount * qty;
+                            }, 0);
+                            const curr = allRates[0].currency;
+                            return (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ fontSize: 10, fontWeight: 600, color: '#152CFF', fontFamily: "'JetBrains Mono', monospace" }}>
+                                  {allRates.length} L2 fee{allRates.length > 1 ? 's' : ''}
+                                </span>
+                                <span style={{ fontSize: 10, color: '#6b7280' }}>
+                                  = <strong style={{ color: '#111827', fontFamily: "'JetBrains Mono', monospace" }}>{formatCurrency(curr, total)}</strong>
+                                </span>
+                              </div>
+                            );
+                          }
+                          return <span style={{ fontSize: 10, fontWeight: 600, color: '#b45309', padding: '1px 6px', background: '#fefce8', borderRadius: 4, border: '1px solid #fde68a' }}>No rate on file</span>;
+                        })()}
                       </div>
                     )}
                   </div>
