@@ -1,6 +1,45 @@
 export type JobStatus = 'Completed' | 'In Progress' | 'Pending' | 'Rejected' | 'Cancelled';
 export type ProofStatus = 'awaiting' | 'uploaded' | 'validated' | 'disputed';
 
+// --- FTL Trucking Rate Model ---
+
+export type TruckType = '1.5T' | '3T' | '5T' | '8T' | '10T' | '12T' | '40HQ' | '45HQ';
+
+export const TRUCK_TYPES: { type: TruckType; maxKg: number; maxCbm: number }[] = [
+  { type: '1.5T', maxKg: 1500, maxCbm: 15 },
+  { type: '3T', maxKg: 2500, maxCbm: 18 },
+  { type: '5T', maxKg: 4500, maxCbm: 30 },
+  { type: '8T', maxKg: 7500, maxCbm: 43 },
+  { type: '10T', maxKg: 10000, maxCbm: 50 },
+  { type: '12T', maxKg: 12000, maxCbm: 60 },
+  { type: '40HQ', maxKg: 20000, maxCbm: 96 },
+  { type: '45HQ', maxKg: 20000, maxCbm: 120 },
+];
+
+export interface FtlRate {
+  id: string;
+  vendorCode: string;
+  originCity: string;        // Chinese city name
+  originDistrict: string;    // Chinese district name
+  originCode: string;        // GB/T 2260 code
+  destCity: string;
+  destDistrict: string;
+  destCode: string;
+  currency: Currency;
+  rates: Partial<Record<TruckType, number>>;  // truck type → rate per trip
+  effectiveFrom: string;
+  isActive: boolean;
+}
+
+export interface FtlRateLog {
+  id: string;
+  timestamp: string;
+  action: string;      // "CSV uploaded", "Rate created", etc.
+  user: string;
+  details?: string;    // "92 routes, 87 updated, 5 new" or "福田 5T: 430→450"
+  filename?: string;   // CSV filename if upload
+}
+
 export interface ServiceType {
   code: string;
   label: string;
@@ -486,6 +525,33 @@ export const seedRates: VendorRate[] = [
   // Gonda EC additional L2: EC002 + EC003 at SZ Bay Checkpoint
   { id: 'RT-026', vendorCode: 'V-003', serviceCode: 'EC', costId: 'EC002', rateType: 'location', locationId: 'LOC-002', currency: 'MYR', amount: 45, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
   { id: 'RT-027', vendorCode: 'V-003', serviceCode: 'EC', costId: 'EC003', rateType: 'location', locationId: 'LOC-002', currency: 'MYR', amount: 25, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+];
+
+// --- Seed FTL Rates (from real vendor Excel rate cards) ---
+export const seedFtlRates: FtlRate[] = [
+  // HaleSun → Shenzhen Hub (domestic, RMB)
+  { id: 'FTL-001', vendorCode: 'V-001', originCity: '深圳', originDistrict: '桂园街道', originCode: '440303', destCity: '深圳', destDistrict: '宝安区', destCode: '440306', currency: 'MYR', rates: { '1.5T': 310, '3T': 360, '5T': 530, '8T': 630, '10T': 780, '40HQ': 1330, '45HQ': 1430 }, effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'FTL-002', vendorCode: 'V-001', originCity: '深圳', originDistrict: '福田街道', originCode: '440304', destCity: '深圳', destDistrict: '宝安区', destCode: '440306', currency: 'MYR', rates: { '1.5T': 260, '3T': 310, '5T': 430, '8T': 630, '10T': 680, '40HQ': 1280, '45HQ': 1380 }, effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'FTL-003', vendorCode: 'V-001', originCity: '深圳', originDistrict: '南山街道', originCode: '440305', destCity: '深圳', destDistrict: '宝安区', destCode: '440306', currency: 'MYR', rates: { '1.5T': 210, '3T': 310, '5T': 430, '8T': 530, '10T': 680, '40HQ': 1230, '45HQ': 1330 }, effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'FTL-004', vendorCode: 'V-001', originCity: '深圳', originDistrict: '福永街道', originCode: '440306', destCity: '深圳', destDistrict: '宝安区', destCode: '440306', currency: 'MYR', rates: { '1.5T': 160, '3T': 210, '5T': 280, '8T': 430, '10T': 530, '40HQ': 1080, '45HQ': 1230 }, effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'FTL-005', vendorCode: 'V-001', originCity: '深圳', originDistrict: '龙华街道', originCode: '440309', destCity: '深圳', destDistrict: '宝安区', destCode: '440306', currency: 'MYR', rates: { '1.5T': 260, '3T': 310, '5T': 480, '8T': 630, '10T': 730, '40HQ': 1280, '45HQ': 1380 }, effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'FTL-006', vendorCode: 'V-001', originCity: '深圳', originDistrict: '坪山街道', originCode: '440310', destCity: '深圳', destDistrict: '宝安区', destCode: '440306', currency: 'MYR', rates: { '1.5T': 360, '3T': 460, '5T': 580, '8T': 730, '10T': 830, '40HQ': 1330, '45HQ': 1530 }, effectiveFrom: '2026-01-01', isActive: true },
+  // HaleSun — Dongguan origins
+  { id: 'FTL-007', vendorCode: 'V-001', originCity: '东莞', originDistrict: '洪梅镇', originCode: '441900125', destCity: '深圳', destDistrict: '宝安区', destCode: '440306', currency: 'MYR', rates: { '1.5T': 410, '3T': 510, '5T': 650, '8T': 780, '10T': 880, '40HQ': 1580, '45HQ': 1680 }, effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'FTL-008', vendorCode: 'V-001', originCity: '东莞', originDistrict: '长安镇', originCode: '441900119', destCity: '深圳', destDistrict: '宝安区', destCode: '440306', currency: 'MYR', rates: { '1.5T': 310, '3T': 360, '5T': 550, '8T': 630, '10T': 730, '40HQ': 1430, '45HQ': 1530 }, effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'FTL-009', vendorCode: 'V-001', originCity: '东莞', originDistrict: '虎门镇', originCode: '441900121', destCity: '深圳', destDistrict: '宝安区', destCode: '440306', currency: 'MYR', rates: { '1.5T': 360, '3T': 410, '5T': 550, '8T': 680, '10T': 780, '40HQ': 1430, '45HQ': 1580 }, effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'FTL-010', vendorCode: 'V-001', originCity: '东莞', originDistrict: '塘厦镇', originCode: '441900116', destCity: '深圳', destDistrict: '宝安区', destCode: '440306', currency: 'MYR', rates: { '1.5T': 360, '3T': 410, '5T': 600, '8T': 680, '10T': 830, '40HQ': 1480, '45HQ': 1630 }, effectiveFrom: '2026-01-01', isActive: true },
+  // Gonda → HKG Airport (cross-border, HKD)
+  { id: 'FTL-011', vendorCode: 'V-003', originCity: '广州', originDistrict: '从化区', originCode: '440117', destCity: '香港', destDistrict: '离岛区', destCode: '810118', currency: 'MYR', rates: { '3T': 2400, '5T': 2600, '8T': 2800, '10T': 3000, '12T': 3200, '40HQ': 4350 }, effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'FTL-012', vendorCode: 'V-003', originCity: '广州', originDistrict: '花都区', originCode: '440114', destCity: '香港', destDistrict: '离岛区', destCode: '810118', currency: 'MYR', rates: { '3T': 2400, '5T': 2600, '8T': 2800, '10T': 3000, '12T': 3200, '40HQ': 4350 }, effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'FTL-013', vendorCode: 'V-003', originCity: '广州', originDistrict: '番禺区', originCode: '440113', destCity: '香港', destDistrict: '离岛区', destCode: '810118', currency: 'MYR', rates: { '3T': 2300, '5T': 2500, '8T': 2700, '10T': 2900, '12T': 3100, '40HQ': 4050 }, effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'FTL-014', vendorCode: 'V-003', originCity: '东莞', originDistrict: '长安镇', originCode: '441900119', destCity: '香港', destDistrict: '离岛区', destCode: '810118', currency: 'MYR', rates: { '3T': 1800, '5T': 2350, '8T': 2550, '10T': 2650, '12T': 2850, '40HQ': 4000 }, effectiveFrom: '2026-01-01', isActive: true },
+  { id: 'FTL-015', vendorCode: 'V-003', originCity: '东莞', originDistrict: '凤岗镇', originCode: '441900117', destCity: '香港', destDistrict: '离岛区', destCode: '810118', currency: 'MYR', rates: { '3T': 1700, '5T': 2250, '8T': 2450, '10T': 2600, '12T': 2800, '40HQ': 3800 }, effectiveFrom: '2026-01-01', isActive: true },
+];
+
+export const seedFtlLogs: FtlRateLog[] = [
+  { id: 'FL-001', timestamp: '2026-01-01 11:00', action: 'CSV uploaded', user: 'Ops Admin', details: '10 routes, 10 new (initial load)', filename: 'HaleSun_2026.csv' },
+  { id: 'FL-002', timestamp: '2026-01-01 11:05', action: 'CSV uploaded', user: 'Ops Admin', details: '5 routes, 5 new (initial load)', filename: 'Gonda_HKG_2026.csv' },
 ];
 
 export const seedTemplates: TripTemplate[] = [

@@ -1,18 +1,22 @@
 import { createContext, useContext, useReducer, useEffect, useCallback, type ReactNode } from 'react';
-import type { Location, VendorRate } from '../data/mockData';
-import { seedLocations, seedRates } from '../data/mockData';
+import type { Location, VendorRate, FtlRate, FtlRateLog } from '../data/mockData';
+import { seedLocations, seedRates, seedFtlRates, seedFtlLogs } from '../data/mockData';
 
 // --- State ---
 
 interface RateState {
   locations: Location[];
   rates: VendorRate[];
+  ftlRates: FtlRate[];
+  ftlLogs: FtlRateLog[];
   isLoaded: boolean;
 }
 
 const initialState: RateState = {
   locations: [],
   rates: [],
+  ftlRates: [],
+  ftlLogs: [],
   isLoaded: false,
 };
 
@@ -26,14 +30,22 @@ type RateAction =
   | { type: 'ADD_RATE'; payload: VendorRate }
   | { type: 'UPDATE_RATE'; payload: { rateId: string; updates: Partial<Omit<VendorRate, 'id'>> } }
   | { type: 'DEACTIVATE_RATE'; payload: { rateId: string } }
-  | { type: 'AUTO_END_RATE'; payload: { rateId: string; effectiveTo: string } };
+  | { type: 'AUTO_END_RATE'; payload: { rateId: string; effectiveTo: string } }
+  | { type: 'SET_FTL_RATES'; payload: { ftlRates: FtlRate[]; log: FtlRateLog } }
+  | { type: 'ADD_FTL_LOG'; payload: FtlRateLog };
 
 // --- Reducer ---
 
 function rateReducer(state: RateState, action: RateAction): RateState {
   switch (action.type) {
     case 'LOAD_STATE':
-      return { locations: action.payload.locations, rates: action.payload.rates, isLoaded: true };
+      return { ...action.payload, isLoaded: true };
+
+    case 'SET_FTL_RATES':
+      return { ...state, ftlRates: action.payload.ftlRates, ftlLogs: [...state.ftlLogs, action.payload.log] };
+
+    case 'ADD_FTL_LOG':
+      return { ...state, ftlLogs: [...state.ftlLogs, action.payload] };
 
     case 'ADD_LOCATION':
       return { ...state, locations: [...state.locations, action.payload] };
@@ -112,7 +124,10 @@ function rateMatchesKey(r: VendorRate, vendorCode: string, serviceCode: string, 
 interface RateContextValue {
   locations: Location[];
   rates: VendorRate[];
+  ftlRates: FtlRate[];
+  ftlLogs: FtlRateLog[];
   isLoaded: boolean;
+  setFtlRates: (ftlRates: FtlRate[], log: FtlRateLog) => void;
   addLocation: (location: Location) => void;
   updateLocation: (locationId: string, updates: Partial<Omit<Location, 'id'>>) => void;
   deleteLocation: (locationId: string) => void;
@@ -139,7 +154,7 @@ export function RateProvider({ children }: { children: ReactNode }) {
 
   // Hydrate from localStorage on mount
   // Version key: bump this to force reseed when seed data changes
-  const SEED_VERSION = 'v5-l2-services';
+  const SEED_VERSION = 'v6-ftl-rates';
 
   useEffect(() => {
     try {
@@ -147,24 +162,24 @@ export function RateProvider({ children }: { children: ReactNode }) {
       const storedVersion = localStorage.getItem(STORAGE_KEY + '_version');
       if (stored && storedVersion === SEED_VERSION) {
         const parsed = JSON.parse(stored);
-        dispatch({ type: 'LOAD_STATE', payload: { locations: parsed.locations ?? [], rates: parsed.rates ?? [] } });
+        dispatch({ type: 'LOAD_STATE', payload: { locations: parsed.locations ?? [], rates: parsed.rates ?? [], ftlRates: parsed.ftlRates ?? [], ftlLogs: parsed.ftlLogs ?? [] } });
       } else {
         localStorage.removeItem(STORAGE_KEY);
         localStorage.setItem(STORAGE_KEY + '_version', SEED_VERSION);
-        dispatch({ type: 'LOAD_STATE', payload: { locations: seedLocations, rates: seedRates } });
+        dispatch({ type: 'LOAD_STATE', payload: { locations: seedLocations, rates: seedRates, ftlRates: seedFtlRates, ftlLogs: seedFtlLogs } });
       }
     } catch {
       localStorage.setItem(STORAGE_KEY + '_version', SEED_VERSION);
-      dispatch({ type: 'LOAD_STATE', payload: { locations: seedLocations, rates: seedRates } });
+      dispatch({ type: 'LOAD_STATE', payload: { locations: seedLocations, rates: seedRates, ftlRates: seedFtlRates, ftlLogs: seedFtlLogs } });
     }
   }, []);
 
   // Persist to localStorage on state change
   useEffect(() => {
     if (state.isLoaded) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ locations: state.locations, rates: state.rates }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ locations: state.locations, rates: state.rates, ftlRates: state.ftlRates, ftlLogs: state.ftlLogs }));
     }
-  }, [state.locations, state.rates, state.isLoaded]);
+  }, [state.locations, state.rates, state.ftlRates, state.ftlLogs, state.isLoaded]);
 
   const addLocation = useCallback((location: Location) => dispatch({ type: 'ADD_LOCATION', payload: location }), []);
   const updateLocation = useCallback((locationId: string, updates: Partial<Omit<Location, 'id'>>) => dispatch({ type: 'UPDATE_LOCATION', payload: { locationId, updates } }), []);
@@ -251,10 +266,17 @@ export function RateProvider({ children }: { children: ReactNode }) {
     return state.locations.find((l) => l.name === name);
   }, [state.locations]);
 
+  const setFtlRates = useCallback((ftlRates: FtlRate[], log: FtlRateLog) => {
+    dispatch({ type: 'SET_FTL_RATES', payload: { ftlRates, log } });
+  }, []);
+
   const value: RateContextValue = {
     locations: state.locations,
     rates: state.rates,
+    ftlRates: state.ftlRates,
+    ftlLogs: state.ftlLogs,
     isLoaded: state.isLoaded,
+    setFtlRates,
     addLocation, updateLocation, deleteLocation,
     addRate, updateRate, deactivateRate,
     getLocationsGroupedByZone, getRatesForVendor, getRatesForService, lookupRate, lookupAllL2Rates,
