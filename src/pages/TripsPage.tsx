@@ -42,11 +42,14 @@ export default function TripsPage() {
   const toast = useToast();
   const { trips, updateJobStatus, addProofDocument, removeProofDocument, addActivityLog, updateJob, updateFeeQty, updateJobQty, validateJob, disputeJob } = useTrips();
   const [statusFilter, setStatusFilter] = useState<'active' | 'all' | 'completed'>('active');
+  const [datePeriod, setDatePeriod] = useState<'today' | 'week' | 'month' | 'last-month' | 'all-time'>('month');
+  const [page, setPage] = useState(1);
   const [mawbSearch, setMawbSearch] = useState('');
   const [customerFilter, setCustomerFilter] = useState('');
   const [vendorFilter, setVendorFilter] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [panelIds, setPanelIds] = useState<{ tripId: string; jobId: string } | null>(null);
+  const PAGE_SIZE = 50;
 
   // Derive panel data from context (always fresh)
   const panelTrip = panelIds ? trips.find((t) => t.id === panelIds.tripId) : null;
@@ -57,11 +60,37 @@ export default function TripsPage() {
   const isOrderActive = (t: Trip) => t.jobs.some((j) => j.proofStatus !== 'validated');
   const activeCount = trips.filter(isOrderActive).length;
   const completedCount = trips.filter((t) => !isOrderActive(t)).length;
+  const showDatePicker = statusFilter !== 'active';
+
+  // Date range helper
+  function getDateRange(): { start: Date; end: Date } | null {
+    if (statusFilter === 'active') return null; // Active never date-filtered
+    const now = new Date();
+    switch (datePeriod) {
+      case 'today': { const s = new Date(now); s.setHours(0,0,0,0); return { start: s, end: now }; }
+      case 'week': { const s = new Date(now); s.setDate(s.getDate() - s.getDay()); s.setHours(0,0,0,0); return { start: s, end: now }; }
+      case 'month': { const s = new Date(now.getFullYear(), now.getMonth(), 1); return { start: s, end: now }; }
+      case 'last-month': { const s = new Date(now.getFullYear(), now.getMonth() - 1, 1); const e = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59); return { start: s, end: e }; }
+      default: return null;
+    }
+  }
+
+  function parseCreatedAt(ca: string): Date {
+    // Format: "08 Mar 2026, 09:00"
+    return new Date(ca.replace(',', ''));
+  }
+
+  const dateRange = getDateRange();
 
   const filtered = trips.filter((t) => {
     // Status filter
     if (statusFilter === 'active' && !isOrderActive(t)) return false;
     if (statusFilter === 'completed' && isOrderActive(t)) return false;
+    // Date filter (only for All/Completed)
+    if (dateRange) {
+      const created = parseCreatedAt(t.createdAt);
+      if (created < dateRange.start || created > dateRange.end) return false;
+    }
     // Existing filters
     if (mawbSearch && !t.mawb.toLowerCase().includes(mawbSearch.toLowerCase())) return false;
     if (customerFilter && t.customer.code !== customerFilter) return false;
@@ -69,11 +98,17 @@ export default function TripsPage() {
     return true;
   });
 
+  const totalFiltered = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
+
   filtered.sort((a, b) => {
     const aDate = a.jobs[0]?.origin.date || '';
     const bDate = b.jobs[0]?.origin.date || '';
-    return aDate.localeCompare(bDate);
+    return bDate.localeCompare(aDate); // newest first
   });
+
+  // Paginate (only for All/Completed — Active shows everything)
+  const paginatedFiltered = statusFilter === 'active' ? filtered : filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   // -- Handlers --
 
@@ -156,13 +191,28 @@ export default function TripsPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 16px', borderBottom: '1px solid #e5e7eb' }}>
         {/* Status filter chips */}
         {([['active', `Active (${activeCount})`], ['all', `All (${trips.length})`], ['completed', `Completed (${completedCount})`]] as const).map(([key, label]) => (
-          <button key={key} onClick={() => setStatusFilter(key as any)} style={{
+          <button key={key} onClick={() => { setStatusFilter(key as any); setPage(1); }} style={{
             padding: '3px 10px', borderRadius: 99, fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
             border: statusFilter === key ? '1px solid #152CFF' : '1px solid #e5e7eb',
             background: statusFilter === key ? 'rgba(21,44,255,0.06)' : '#fff',
             color: statusFilter === key ? '#152CFF' : '#6b7280',
           }}>{label}</button>
         ))}
+
+        {/* Date period picker — only for All/Completed */}
+        {showDatePicker && <>
+          <span style={{ width: 1, height: 16, background: '#e5e7eb', margin: '0 2px' }} />
+          <span style={{ fontSize: 10, color: '#9ca3af' }}>Period:</span>
+          {([['today', 'Today'], ['week', 'This week'], ['month', 'This month'], ['last-month', 'Last month'], ['all-time', 'All time']] as const).map(([key, label]) => (
+            <button key={key} onClick={() => { setDatePeriod(key as any); setPage(1); }} style={{
+              padding: '2px 8px', borderRadius: 99, fontSize: 9, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+              border: datePeriod === key ? '1px solid #152CFF' : '1px solid #e5e7eb',
+              background: datePeriod === key ? 'rgba(21,44,255,0.06)' : '#fff',
+              color: datePeriod === key ? '#152CFF' : '#9ca3af',
+            }}>{label}</button>
+          ))}
+        </>}
+
         <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
         <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#9ca3af' }}>
           MAWB
@@ -206,7 +256,7 @@ export default function TripsPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.length > 0 ? filtered.flatMap((trip) => {
+            {paginatedFiltered.length > 0 ? paginatedFiltered.flatMap((trip) => {
               const isExpanded = expandedId === trip.id;
               const hasRejected = trip.jobs.some((j) => j.proofStatus === 'disputed');
               const route = buildRoute(trip);
@@ -385,6 +435,25 @@ export default function TripsPage() {
           </tbody>
         </table>
       </div>
+
+      {/* -- Pagination (only for All/Completed) -- */}
+      {showDatePicker && totalPages > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderTop: '1px solid #e5e7eb' }}>
+          <span style={{ fontSize: 10, color: '#9ca3af' }}>Page {page} of {totalPages} · {totalFiltered} orders</span>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button disabled={page <= 1} onClick={() => setPage(page - 1)} style={{ padding: '3px 8px', borderRadius: 4, border: '1px solid #e5e7eb', background: '#fff', color: page <= 1 ? '#d1d5db' : '#6b7280', fontSize: 10, cursor: page <= 1 ? 'default' : 'pointer', fontFamily: 'inherit' }}>← Prev</button>
+            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((p) => (
+              <button key={p} onClick={() => setPage(p)} style={{
+                padding: '3px 8px', borderRadius: 4, fontSize: 10, fontWeight: page === p ? 600 : 400, cursor: 'pointer', fontFamily: 'inherit',
+                border: page === p ? '1px solid #152CFF' : '1px solid #e5e7eb',
+                background: page === p ? 'rgba(21,44,255,0.06)' : '#fff',
+                color: page === p ? '#152CFF' : '#6b7280',
+              }}>{p}</button>
+            ))}
+            <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} style={{ padding: '3px 8px', borderRadius: 4, border: '1px solid #e5e7eb', background: '#fff', color: page >= totalPages ? '#d1d5db' : '#6b7280', fontSize: 10, cursor: page >= totalPages ? 'default' : 'pointer', fontFamily: 'inherit' }}>Next →</button>
+          </div>
+        </div>
+      )}
 
       {/* -- Slide-out Panel -- */}
       <SlideOutPanel isOpen={!!panelTrip && !!panelJob} onClose={() => setPanelIds(null)} title={panelJob?.vendor.name}>
