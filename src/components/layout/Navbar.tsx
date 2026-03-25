@@ -14,8 +14,7 @@ export default function Navbar() {
       style={{
         height: 40,
         padding: '0 16px',
-        background: '#fff',
-        borderBottom: '1px solid #e5e7eb',
+        background: '#111827',
         position: 'sticky',
         top: 0,
         zIndex: 10,
@@ -53,7 +52,7 @@ export default function Navbar() {
             fontWeight: 700,
             fontSize: 13,
             letterSpacing: '-0.3px',
-            color: '#111827',
+            color: '#ffffff',
             fontFamily: "'Instrument Sans', -apple-system, system-ui, sans-serif",
           }}
         >
@@ -71,8 +70,8 @@ export default function Navbar() {
               fontSize: 12,
               padding: '4px 10px',
               borderRadius: 4,
-              color: isActive ? '#152CFF' : '#9ca3af',
-              background: isActive ? 'rgba(21,44,255,0.06)' : 'transparent',
+              color: isActive ? '#fff' : 'rgba(255,255,255,0.5)',
+              background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
               fontWeight: isActive ? 600 : 400,
               textDecoration: 'none',
               transition: 'color 150ms, background 150ms',
@@ -81,14 +80,14 @@ export default function Navbar() {
             onMouseEnter={(e) => {
               const el = e.currentTarget;
               if (!el.classList.contains('active')) {
-                el.style.color = '#374151';
-                el.style.background = '#f9fafb';
+                el.style.color = 'rgba(255,255,255,0.8)';
+                el.style.background = 'rgba(255,255,255,0.06)';
               }
             }}
             onMouseLeave={(e) => {
               const el = e.currentTarget;
               if (!el.classList.contains('active')) {
-                el.style.color = '#9ca3af';
+                el.style.color = 'rgba(255,255,255,0.5)';
                 el.style.background = 'transparent';
               }
             }}
