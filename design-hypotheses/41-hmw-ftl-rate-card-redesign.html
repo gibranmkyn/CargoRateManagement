@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-41: FTL Rate Card — Redesigned</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.page { max-width: 1400px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+h3 { font-size: 14px; font-weight: 700; margin: 20px 0 8px; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.verdict { background: rgba(21,44,255,0.04); border: 2px solid rgba(21,44,255,0.2); border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #152CFF; font-size: 14px; margin-bottom: 6px; }
+.nav { height: 40px; background: #111827; display: flex; align-items: center; padding: 0 16px; gap: 16px; }
+.nav .logo { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; }
+.nav .brand { font-weight: 700; font-size: 13px; color: #fff; }
+.nav .link { font-size: 12px; color: rgba(255,255,255,0.5); }
+.nav .link.active { color: #fff; font-weight: 600; padding: 4px 10px; background: rgba(255,255,255,0.1); border-radius: 4px; }
+.th-dark { padding: 6px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; background: #111827; color: #fff; border-bottom: 1px solid #374151; text-align: right; white-space: nowrap; }
+.th-dark.left { text-align: left; }
+.td { padding: 6px 10px; font-size: 11px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+.rate-cell { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; color: #111827; text-align: right; padding: 6px 10px; border-bottom: 1px solid #f3f4f6; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-41: FTL Rate Card — Redesigned</h1>
+
+<div class="hmw">
+How might we design the FTL rate card so it feels like a living document — with identity, versioning, audit trail, quick editing, and bulk CSV import — not just a flat table?
+</div>
+
+<div class="context">
+<strong>Design audit findings (Flexport lens):</strong>
+<ol style="padding-left: 16px; margin-top: 6px;">
+<li><strong>A rate card is a document, not a filter.</strong> "HaleSun → Shenzhen Hub" is the card's identity. Don't put the destination in a dropdown.</li>
+<li><strong>Allow inline editing for quick fixes.</strong> CSV for bulk, inline for tweaks. Don't force a 5-step CSV roundtrip for changing one number.</li>
+<li><strong>Preview should summarize, not list 1,300 rows.</strong> Group by city: "Shenzhen: 48 updated, 4 new."</li>
+<li><strong>Rate cards need metadata.</strong> Version, effective date, who uploaded, activity log.</li>
+<li><strong>Versioning is essential.</strong> When vendor sends Q2 rates, Q1 rates should be preserved. "View previous version" for disputes.</li>
+</ol>
+</div>
+
+<!-- ============================================================ -->
+<!-- THE RATE CARD AS A DOCUMENT                                  -->
+<!-- ============================================================ -->
+
+<h2>The Rate Card — Document Model</h2>
+
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link">Delivery Orders</span>
+  <span class="link active">Rates</span>
+  <span class="link">Master Data</span>
+</div>
+
+<div style="padding: 16px 16px 0;">
+  <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #9ca3af; margin-bottom: 8px;">
+    <a href="#" style="color: #152CFF; text-decoration: none;">Rate Cards</a>
+    <span>›</span>
+    <span style="color: #111827; font-weight: 600;">HaleSun → Shenzhen Hub</span>
+  </div>
+</div>
+
+<!-- Rate Card Header — THE IDENTITY -->
+<div style="padding: 0 16px 16px;">
+  <div style="background: #111827; border-radius: 8px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+        <span style="font-size: 18px; font-weight: 800; color: #fff; letter-spacing: -0.3px;">HaleSun</span>
+        <span style="color: rgba(255,255,255,0.3);">→</span>
+        <span style="font-size: 18px; font-weight: 800; color: #fff; letter-spacing: -0.3px;">深圳机场 Shenzhen Hub</span>
+      </div>
+      <div style="display: flex; gap: 16px; font-size: 10px; color: rgba(255,255,255,0.5);">
+        <span>🚛 FTL Trucking</span>
+        <span>92 routes · 7 truck types</span>
+        <span>Currency: RMB</span>
+        <span>Effective: 01 Mar 2026</span>
+      </div>
+    </div>
+    <div style="display: flex; gap: 6px;">
+      <button style="padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: 600; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: rgba(255,255,255,0.7); cursor: pointer;">↓ Download CSV</button>
+      <button style="padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: 600; border: none; background: #152CFF; color: #fff; cursor: pointer;">↑ Upload New Version</button>
+    </div>
+  </div>
+
+  <!-- Version bar -->
+  <div style="display: flex; align-items: center; gap: 8px; padding: 8px 0; font-size: 10px; color: #6b7280;">
+    <span style="font-weight: 600; color: #111827;">v3</span>
+    <span>Uploaded by Ops Admin · 01 Mar 2026</span>
+    <span style="color: #d1d5db;">|</span>
+    <a href="#" style="color: #152CFF; text-decoration: none;">v2 (01 Jan 2026)</a>
+    <span style="color: #d1d5db;">·</span>
+    <a href="#" style="color: #9ca3af; text-decoration: none;">v1 (01 Sep 2025)</a>
+    <span style="color: #d1d5db;">|</span>
+    <a href="#" style="color: #152CFF; text-decoration: none;">Activity Log</a>
+  </div>
+</div>
+
+<!-- Search + filter -->
+<div style="padding: 0 16px 8px;">
+  <input type="text" placeholder="Search origin district... 福田, Futian, 440304" style="font-size: 11px; padding: 5px 10px; border: 1px solid #e5e7eb; border-radius: 4px; width: 300px; outline: none;" />
+</div>
+
+<!-- Rate Grid — INLINE EDITABLE -->
+<div style="padding: 0 16px;">
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+    <div style="overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; min-width: 850px;">
+        <thead>
+          <tr>
+            <th class="th-dark left" style="min-width: 220px; position: sticky; left: 0; z-index: 2;">Origin District</th>
+            <th class="th-dark"><div>1.5T</div><div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">&lt;1,500kg</div></th>
+            <th class="th-dark"><div>3T</div><div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">&lt;2,500kg</div></th>
+            <th class="th-dark"><div>5T</div><div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">&lt;4,500kg</div></th>
+            <th class="th-dark"><div>8T</div><div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">&lt;7,500kg</div></th>
+            <th class="th-dark"><div>10T</div><div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">&lt;10,000kg</div></th>
+            <th class="th-dark"><div>40HQ</div><div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">&lt;20,000kg</div></th>
+            <th class="th-dark"><div>45HQ</div><div style="font-size: 7px; font-weight: 400; color: #9ca3af; text-transform: none; letter-spacing: 0;">&lt;20,000kg</div></th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- City group -->
+          <tr><td colspan="8" style="padding: 5px 10px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 10px; font-weight: 600; color: #152CFF; cursor: pointer;">▾ 深圳市 Shenzhen <span style="font-weight: 400; color: #9ca3af;">52 routes</span></td></tr>
+
+          <!-- Inline editable rows — click cell to edit, tab between -->
+          <tr>
+            <td class="td" style="position: sticky; left: 0; background: #fff; padding-left: 16px;">
+              <div style="font-size: 11px; font-weight: 500; color: #111827;">罗湖区 · 桂园街道</div>
+              <div class="mono" style="font-size: 8px; color: #9ca3af;">440303</div>
+            </td>
+            <td class="rate-cell">310</td>
+            <td class="rate-cell">360</td>
+            <td class="rate-cell">530</td>
+            <td class="rate-cell">630</td>
+            <td class="rate-cell">780</td>
+            <td class="rate-cell">1,330</td>
+            <td class="rate-cell">1,430</td>
+          </tr>
+          <tr>
+            <td class="td" style="position: sticky; left: 0; background: #fff; padding-left: 16px;">
+              <div style="font-size: 11px; font-weight: 500; color: #111827;">福田区 · 南园街道</div>
+              <div class="mono" style="font-size: 8px; color: #9ca3af;">440304</div>
+            </td>
+            <td class="rate-cell">260</td>
+            <td class="rate-cell">310</td>
+            <!-- Active editing cell — highlighted -->
+            <td style="padding: 3px 4px; border-bottom: 1px solid #f3f4f6;">
+              <input type="text" value="430" style="width: 100%; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1.5px solid #152CFF; border-radius: 3px; font-weight: 600; color: #111827; text-align: right; outline: none; box-shadow: 0 0 0 2px rgba(21,44,255,0.08); background: rgba(21,44,255,0.02);" />
+            </td>
+            <td class="rate-cell">630</td>
+            <td class="rate-cell">680</td>
+            <td class="rate-cell">1,280</td>
+            <td class="rate-cell">1,380</td>
+          </tr>
+          <tr>
+            <td class="td" style="position: sticky; left: 0; background: #fff; padding-left: 16px;">
+              <div style="font-size: 11px; font-weight: 500; color: #111827;">宝安区 · 福永街道</div>
+              <div class="mono" style="font-size: 8px; color: #9ca3af;">440306</div>
+            </td>
+            <td class="rate-cell" style="color: #059669; font-weight: 600;">160</td>
+            <td class="rate-cell" style="color: #059669; font-weight: 600;">210</td>
+            <td class="rate-cell" style="color: #059669; font-weight: 600;">280</td>
+            <td class="rate-cell">430</td>
+            <td class="rate-cell">530</td>
+            <td class="rate-cell">1,080</td>
+            <td class="rate-cell">1,230</td>
+          </tr>
+          <tr style="font-size: 10px; color: #d1d5db;"><td colspan="8" style="padding: 4px 16px; font-style: italic;">+ 49 more...</td></tr>
+
+          <tr><td colspan="8" style="padding: 5px 10px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; border-top: 1px solid #e5e7eb; font-size: 10px; font-weight: 600; color: #152CFF; cursor: pointer;">▸ 东莞市 Dongguan <span style="font-weight: 400; color: #9ca3af;">28 routes</span></td></tr>
+          <tr><td colspan="8" style="padding: 5px 10px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 10px; font-weight: 600; color: #152CFF; cursor: pointer;">▸ 珠三角 Other PRD <span style="font-weight: 400; color: #9ca3af;">12 routes</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Unsaved changes bar -->
+    <div style="padding: 8px 12px; background: #fefce8; border-top: 1px solid #fde68a; display: flex; align-items: center; justify-content: space-between; font-size: 10px;">
+      <span style="color: #b45309; font-weight: 600;">1 unsaved change</span>
+      <div style="display: flex; gap: 6px;">
+        <button style="padding: 3px 10px; border-radius: 4px; font-size: 10px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">Discard</button>
+        <button style="padding: 3px 10px; border-radius: 4px; font-size: 10px; border: none; background: #152CFF; color: #fff; font-weight: 600; cursor: pointer;">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Rate card list below (other vendor cards) -->
+<div style="padding: 16px;">
+  <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px;">Other rate cards</div>
+  <div style="display: flex; gap: 8px;">
+    <div style="flex: 1; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; transition: all 0.1s;">
+      <div style="font-size: 12px; font-weight: 600; color: #111827;">Gonda → HKG Airport</div>
+      <div style="font-size: 10px; color: #9ca3af; margin-top: 2px;">44 routes · HKD · v2 · Updated 15 Jan 2026</div>
+    </div>
+    <div style="flex: 1; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer;">
+      <div style="font-size: 12px; font-weight: 600; color: #111827;">The Lorry → Shekou Port</div>
+      <div style="font-size: 10px; color: #9ca3af; margin-top: 2px;">8 routes · RMB · v1 · Updated 01 Mar 2026</div>
+    </div>
+    <div style="flex: 1; padding: 10px 12px; border: 1px dashed #e5e7eb; border-radius: 6px; cursor: pointer; text-align: center; color: #9ca3af;">
+      <div style="font-size: 11px;">+ New Rate Card</div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- CSV UPLOAD — SUMMARIZED PREVIEW                              -->
+<!-- ============================================================ -->
+
+<h2>CSV Upload — Summarized Preview</h2>
+
+<div class="screen">
+<div style="padding: 16px;">
+  <!-- Upload area -->
+  <div style="padding: 24px; border: 2px dashed #152CFF; border-radius: 8px; text-align: center; margin-bottom: 16px; background: rgba(21,44,255,0.02);">
+    <div style="font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 4px;">Upload New Rate Card Version</div>
+    <div style="font-size: 11px; color: #9ca3af;">Drop CSV here or click to browse. This will create <strong>v4</strong> of HaleSun → Shenzhen Hub.</div>
+  </div>
+
+  <!-- SUMMARIZED change preview (not 1,300 rows) -->
+  <div style="padding: 12px; background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); border-radius: 6px; margin-bottom: 16px;">
+    <div style="font-size: 12px; font-weight: 700; color: #152CFF; margin-bottom: 8px;">Upload Summary — HaleSun_Q2_2026.csv</div>
+
+    <!-- Top-level stats -->
+    <div style="display: flex; gap: 16px; font-size: 11px; margin-bottom: 12px;">
+      <span><strong style="color: #111827;">164</strong> routes parsed</span>
+      <span style="color: #059669; font-weight: 600;">12 new</span>
+      <span style="color: #152CFF; font-weight: 600;">87 updated</span>
+      <span style="color: #9ca3af;">65 unchanged</span>
+      <span style="color: #dc2626; font-weight: 600;">0 errors</span>
+    </div>
+
+    <!-- GROUPED by city — not individual rows -->
+    <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+      <thead>
+        <tr>
+          <th style="padding: 4px 8px; text-align: left; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border: 1px solid #e5e7eb;">City</th>
+          <th style="padding: 4px 8px; text-align: center; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border: 1px solid #e5e7eb;">Routes</th>
+          <th style="padding: 4px 8px; text-align: center; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #059669; background: #f9fafb; border: 1px solid #e5e7eb;">New</th>
+          <th style="padding: 4px 8px; text-align: center; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #152CFF; background: #f9fafb; border: 1px solid #e5e7eb;">Updated</th>
+          <th style="padding: 4px 8px; text-align: center; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border: 1px solid #e5e7eb;">Unchanged</th>
+          <th style="padding: 4px 8px; text-align: left; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border: 1px solid #e5e7eb;">Avg Δ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding: 5px 8px; border: 1px solid #f3f4f6; font-weight: 600;">深圳市 Shenzhen</td>
+          <td style="padding: 5px 8px; border: 1px solid #f3f4f6; text-align: center;">52</td>
+          <td style="padding: 5px 8px; border: 1px solid #f3f4f6; text-align: center; color: #059669; font-weight: 600;">3</td>
+          <td style="padding: 5px 8px; border: 1px solid #f3f4f6; text-align: center; color: #152CFF; font-weight: 600;">38</td>
+          <td style="padding: 5px 8px; border: 1px solid #f3f4f6; text-align: center; color: #9ca3af;">11</td>
+          <td style="padding: 5px 8px; border: 1px solid #f3f4f6; color: #dc2626;" class="mono">+3.2%</td>
+        </tr>
+        <tr>
+          <td style="padding: 5px 8px; border: 1px solid #f3f4f6; font-weight: 600;">东莞市 Dongguan</td>
+          <td style="padding: 5px 8px; border: 1px solid #f3f4f6; text-align: center;">28</td>
+          <td style="padding: 5px 8px; border: 1px solid #f3f4f6; text-align: center; color: #059669; font-weight: 600;">5</td>
+          <td style="padding: 5px 8px; border: 1px solid #f3f4f6; text-align: center; color: #152CFF; font-weight: 600;">20</td>
+          <td style="padding: 5px 8px; border: 1px solid #f3f4f6; text-align: center; color: #9ca3af;">3</td>
+          <td style="padding: 5px 8px; border: 1px solid #f3f4f6; color: #dc2626;" class="mono">+4.1%</td>
+        </tr>
+        <tr>
+          <td style="padding: 5px 8px; border: 1px solid #f3f4f6; font-weight: 600;">珠三角 Other PRD</td>
+          <td style="padding: 5px 8px; border: 1px solid #f3f4f6; text-align: center;">12</td>
+          <td style="padding: 5px 8px; border: 1px solid #f3f4f6; text-align: center; color: #059669; font-weight: 600;">4</td>
+          <td style="padding: 5px 8px; border: 1px solid #f3f4f6; text-align: center; color: #152CFF; font-weight: 600;">8</td>
+          <td style="padding: 5px 8px; border: 1px solid #f3f4f6; text-align: center; color: #9ca3af;">0</td>
+          <td style="padding: 5px 8px; border: 1px solid #f3f4f6; color: #dc2626;" class="mono">+5.8%</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Expand to see details -->
+    <div style="margin-top: 8px; font-size: 10px; color: #152CFF; cursor: pointer; text-align: center;">
+      Show individual route changes ▾
+    </div>
+  </div>
+
+  <!-- Confirm -->
+  <div style="display: flex; gap: 8px; justify-content: flex-end;">
+    <button style="padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">Cancel</button>
+    <button style="padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 600; border: none; background: #152CFF; color: #fff; cursor: pointer;">Create v4 — Apply 99 Changes</button>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- ACTIVITY LOG                                                 -->
+<!-- ============================================================ -->
+
+<h2>Activity Log — Audit Trail</h2>
+
+<div class="screen">
+<div style="padding: 16px;">
+  <div style="font-size: 12px; font-weight: 700; color: #111827; margin-bottom: 12px;">Activity Log — HaleSun → Shenzhen Hub</div>
+
+  <div style="position: relative;">
+    <div style="position: absolute; left: 4px; top: 6px; bottom: 6px; width: 1px; background: #e5e7eb;"></div>
+
+    <div style="display: flex; gap: 10px; margin-bottom: 12px; position: relative;">
+      <div style="width: 9px; flex-shrink: 0; display: flex; justify-content: center; padding-top: 4px; z-index: 1;">
+        <div style="width: 8px; height: 8px; border-radius: 50%; background: #152CFF; border: 2px solid #152CFF;"></div>
+      </div>
+      <div>
+        <div style="font-size: 11px; font-weight: 600; color: #111827;">v3 uploaded via CSV</div>
+        <div style="font-size: 10px; color: #6b7280;">92 routes · 12 new, 87 updated, 65 unchanged · Avg increase +3.8%</div>
+        <div style="font-size: 9px; color: #9ca3af; margin-top: 2px;">Ops Admin · <span class="mono">01 Mar 2026 09:15</span> · <a href="#" style="color: #152CFF; text-decoration: none;">HaleSun_Q1_2026.csv</a></div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-bottom: 12px; position: relative;">
+      <div style="width: 9px; flex-shrink: 0; display: flex; justify-content: center; padding-top: 4px; z-index: 1;">
+        <div style="width: 8px; height: 8px; border-radius: 50%; background: #fff; border: 2px solid #d1d5db;"></div>
+      </div>
+      <div>
+        <div style="font-size: 11px; font-weight: 500; color: #111827;">Inline edit: 福田·南园 5T rate</div>
+        <div style="font-size: 10px; color: #6b7280;"><span class="mono">430 → 450</span> (+4.7%)</div>
+        <div style="font-size: 9px; color: #9ca3af; margin-top: 2px;">Rates Admin · <span class="mono">15 Feb 2026 14:22</span></div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-bottom: 12px; position: relative;">
+      <div style="width: 9px; flex-shrink: 0; display: flex; justify-content: center; padding-top: 4px; z-index: 1;">
+        <div style="width: 8px; height: 8px; border-radius: 50%; background: #fff; border: 2px solid #d1d5db;"></div>
+      </div>
+      <div>
+        <div style="font-size: 11px; font-weight: 500; color: #111827;">v2 uploaded via CSV</div>
+        <div style="font-size: 10px; color: #6b7280;">80 routes · 80 new, 0 updated · Initial load</div>
+        <div style="font-size: 9px; color: #9ca3af; margin-top: 2px;">Ops Admin · <span class="mono">01 Jan 2026 11:00</span> · <a href="#" style="color: #152CFF; text-decoration: none;">HaleSun_2024.csv</a></div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 10px; position: relative;">
+      <div style="width: 9px; flex-shrink: 0; display: flex; justify-content: center; padding-top: 4px; z-index: 1;">
+        <div style="width: 8px; height: 8px; border-radius: 50%; background: #fff; border: 2px solid #d1d5db;"></div>
+      </div>
+      <div>
+        <div style="font-size: 11px; font-weight: 500; color: #111827;">Rate card created</div>
+        <div style="font-size: 10px; color: #6b7280;">HaleSun → 深圳机场 · FTL Trucking · RMB</div>
+        <div style="font-size: 9px; color: #9ca3af; margin-top: 2px;">Ops Admin · <span class="mono">01 Sep 2025 09:00</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- RATE CARDS LIST PAGE                                         -->
+<!-- ============================================================ -->
+
+<h2>Rate Cards List — The Landing Page</h2>
+
+<p style="font-size: 12px; color: #374151; margin-bottom: 8px;">Before drilling into a specific card, the Rates page shows all rate cards as a list. Each card is a vendor → destination pair.</p>
+
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link">Delivery Orders</span>
+  <span class="link active">Rates</span>
+  <span class="link">Master Data</span>
+</div>
+
+<div style="padding: 16px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <div>
+      <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">Rate Cards</h1>
+      <p style="font-size: 11px; color: #9ca3af; margin-top: 2px;">Manage FTL trucking and service rate cards</p>
+    </div>
+    <button style="padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 600; border: none; background: #152CFF; color: #fff; cursor: pointer;">+ New Rate Card</button>
+  </div>
+
+  <!-- FTL Rate Cards -->
+  <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px;">🚛 FTL Trucking</div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px;">
+    <!-- Card 1: HaleSun -->
+    <div style="padding: 14px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; transition: all 0.1s; border-left: 3px solid #152CFF;">
+      <div style="display: flex; justify-content: space-between; align-items: start;">
+        <div>
+          <div style="font-size: 13px; font-weight: 700; color: #111827;">HaleSun</div>
+          <div style="font-size: 11px; color: #6b7280; margin-top: 2px;">→ 深圳机场 Shenzhen Hub</div>
+        </div>
+        <span style="font-size: 9px; color: #152CFF; font-weight: 600; padding: 1px 6px; background: rgba(21,44,255,0.06); border-radius: 3px;">v3</span>
+      </div>
+      <div style="display: flex; gap: 12px; margin-top: 8px; font-size: 10px; color: #9ca3af;">
+        <span>92 routes</span>
+        <span>RMB</span>
+        <span>Updated 01 Mar</span>
+      </div>
+    </div>
+
+    <!-- Card 2: Gonda -->
+    <div style="padding: 14px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; border-left: 3px solid #152CFF;">
+      <div style="display: flex; justify-content: space-between; align-items: start;">
+        <div>
+          <div style="font-size: 13px; font-weight: 700; color: #111827;">Gonda</div>
+          <div style="font-size: 11px; color: #6b7280; margin-top: 2px;">→ HKG 香港机场仓库</div>
+        </div>
+        <span style="font-size: 9px; color: #152CFF; font-weight: 600; padding: 1px 6px; background: rgba(21,44,255,0.06); border-radius: 3px;">v2</span>
+      </div>
+      <div style="display: flex; gap: 12px; margin-top: 8px; font-size: 10px; color: #9ca3af;">
+        <span>44 routes</span>
+        <span>HKD</span>
+        <span>Updated 15 Jan</span>
+      </div>
+    </div>
+
+    <!-- New card -->
+    <div style="padding: 14px; border: 1px dashed #e5e7eb; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 11px;">
+      + New FTL Rate Card
+    </div>
+  </div>
+
+  <!-- Service Rate Cards -->
+  <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px;">📦 Service Fees (L2)</div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+    <div style="padding: 14px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; border-left: 3px solid #7c3aed;">
+      <div style="font-size: 13px; font-weight: 700; color: #111827;">Gonda — EC, CS</div>
+      <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">8 L2 fees · 4 locations · Updated 01 Mar</div>
+    </div>
+    <div style="padding: 14px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; border-left: 3px solid #2563eb;">
+      <div style="font-size: 13px; font-weight: 700; color: #111827;">SevenSeas — EC, CR, OH</div>
+      <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">5 L2 fees · 3 locations · Updated 15 Feb</div>
+    </div>
+    <div style="padding: 14px; border: 1px dashed #e5e7eb; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 11px;">
+      + New Service Rate Card
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- VERDICT -->
+<div class="verdict">
+<h3>Design Decisions</h3>
+<ul style="font-size: 11px; color: #374151; padding-left: 16px; line-height: 2;">
+<li><strong>Rate card = document.</strong> Each vendor → destination pair is a named rate card with version, metadata, and activity log. Not a filter on a flat table.</li>
+<li><strong>Landing page shows cards as a grid.</strong> FTL cards and Service cards separated. Click a card → drill into the rate sheet.</li>
+<li><strong>Rate card header is a dark banner</strong> with vendor → destination identity, version, stats, and CSV actions. Not a dropdown.</li>
+<li><strong>Version history.</strong> Each CSV upload creates a new version. Previous versions accessible. "View v2" for dispute resolution.</li>
+<li><strong>Inline editing for quick fixes.</strong> Click a cell → edit in place. Unsaved changes bar at bottom. Each save is logged in activity.</li>
+<li><strong>CSV for bulk.</strong> "Upload New Version" creates a versioned bulk update. Preview shows summary by city (not 1,300 individual rows). "Show individual route changes" expandable for detail.</li>
+<li><strong>Activity log on every card.</strong> Every change tracked: CSV uploads (with filename, stats), inline edits (old → new value), card creation. Timestamp + user for every entry.</li>
+<li><strong>No destination dropdown.</strong> Destination is the card's identity. If a vendor adds a second hub, that's a new card.</li>
+</ul>
+</div>
+
+</div>
+</body>
+</html>
