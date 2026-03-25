@@ -7,7 +7,6 @@ import TripsPage from './pages/TripsPage';
 import CreateTripPage from './pages/CreateTripPage';
 import JobDetailPage from './pages/JobDetailPage';
 import RatesPage from './pages/RatesPage';
-import BillingPage from './pages/BillingPage';
 import MasterDataPage from './pages/MasterDataPage';
 
 export default function App() {
@@ -23,7 +22,6 @@ export default function App() {
                 <Route path="/create-trip" element={<CreateTripPage />} />
                 <Route path="/trips/:tripId/jobs/:jobId" element={<JobDetailPage />} />
                 <Route path="/rates" element={<RatesPage />} />
-                <Route path="/billing" element={<BillingPage />} />
                 <Route path="/master-data" element={<MasterDataPage />} />
                 <Route path="*" element={<Navigate to="/trips" replace />} />
               </Routes>
