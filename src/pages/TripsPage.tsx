@@ -251,11 +251,6 @@ export default function TripsPage() {
 
               if (isExpanded) {
                 const subTh: React.CSSProperties = { textAlign: 'left', padding: '4px 10px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' };
-                const quickStatuses: { label: string; value: JobStatus; short: string }[] = [
-                  { label: 'Pending', value: 'Pending', short: 'Pend' },
-                  { label: 'In Progress', value: 'In Progress', short: 'In Prog' },
-                  { label: 'Completed', value: 'Completed', short: 'Done' },
-                ];
                 rows.push(
                   <tr key={`${trip.id}-exp`} style={{ background: '#f9fafb' }} onClick={(e) => e.stopPropagation()}>
                     <td colSpan={8} style={{ padding: 0, borderBottom: '1px solid #e5e7eb' }}>
@@ -310,37 +305,21 @@ export default function TripsPage() {
                                         : <span style={{ color: '#9ca3af', fontWeight: 400 }}>&mdash;</span>
                                       }
                                     </td>
-                                    <td style={{ padding: '6px 10px' }} onClick={(e) => e.stopPropagation()}>
-                                      {/* Inline quick status buttons */}
-                                      <div style={{ display: 'flex', gap: 2 }}>
-                                        {quickStatuses.map((qs) => {
-                                          const isActive = job.status === qs.value;
-                                          const isCompletedBtn = qs.value === 'Completed';
-                                          const activeColor = isCompletedBtn ? '#059669' : '#0D9488';
-                                          const activeBg = isCompletedBtn ? '#f0fdf4' : 'rgba(13,148,136,0.06)';
-                                          const activeBorder = isCompletedBtn ? '#a7f3d0' : '#0D9488';
-                                          return (
-                                            <button
-                                              key={qs.value}
-                                              onClick={() => onStatus(trip.id, job.id, qs.value)}
-                                              style={{
-                                                padding: '2px 6px', borderRadius: 3, fontSize: 9, fontWeight: 600,
-                                                border: isActive ? `1.5px solid ${activeBorder}` : '1px solid transparent',
-                                                background: isActive ? activeBg : '#f3f4f6',
-                                                color: isActive ? activeColor : '#9ca3af',
-                                                cursor: 'pointer', fontFamily: 'inherit',
-                                              }}
-                                            >
-                                              {qs.short}{isActive && qs.value === 'Completed' ? ' ✓' : ''}
-                                            </button>
-                                          );
-                                        })}
-                                        <button
-                                          onClick={() => setPanelIds({ tripId: trip.id, jobId: job.id })}
-                                          title="More actions"
-                                          style={{ padding: '2px 4px', borderRadius: 3, fontSize: 9, border: 'none', background: 'transparent', color: '#9ca3af', cursor: 'pointer' }}
-                                        >⋯</button>
-                                      </div>
+                                    <td style={{ padding: '6px 10px' }} onClick={(e) => { e.stopPropagation(); setPanelIds({ tripId: trip.id, jobId: job.id }); }}>
+                                      {(() => {
+                                        const sc = getChipColor(job.status);
+                                        return (
+                                          <span style={{
+                                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                                            padding: '1px 7px', borderRadius: 4, fontSize: 10, fontWeight: 600,
+                                            border: `1px solid ${sc.border}`, background: sc.bg, color: sc.text,
+                                            cursor: 'pointer',
+                                          }}>
+                                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: sc.dot, display: 'inline-block' }} />
+                                            {job.status}
+                                          </span>
+                                        );
+                                      })()}
                                     </td>
                                     <td style={{ padding: '6px 10px', fontSize: 12, fontWeight: 700, color: proofCount > 0 ? '#059669' : '#9ca3af' }}>
                                       {proofCount > 0 ? '✓' : '○'}
