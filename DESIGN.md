@@ -36,9 +36,9 @@
 | **Everything else** | `#6b7280` | `#fff` | `#e5e7eb` | `#9ca3af` | Pending, In Progress, Cancelled |
 
 ### Other colors
-- **Accent (teal):** `#0D9488` — interactive elements ONLY (buttons, links, active nav, job labels)
-- **Accent hover:** `#0F766E`
-- **Accent soft:** `rgba(13,148,136,0.06)` — active nav bg, service pill bg
+- **Accent (Future Blue):** `#152CFF` — interactive elements ONLY (buttons, links, active nav, job labels). From Teleport.it brand guidelines.
+- **Accent hover:** `#1024CC`
+- **Accent soft:** `rgba(21,44,255,0.06)` — active nav bg, service pill bg
 - **Ink:** `#111827` (primary), `#374151` (secondary), `#6b7280` (muted), `#9ca3af` (faint), `#d1d5db` (ghost/placeholder)
 - **Surfaces:** `#f3f4f6` (page), `#ffffff` (cards/table), `#f9fafb` (raised/headers/expanded)
 - **Borders:** `#e5e7eb` (default), `#f3f4f6` (subtle row dividers)
@@ -290,7 +290,7 @@ Unit, Qty visible in slide-out panel detail, not in sub-table.
 ## Decisions Log
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-03-24 | Teal accent | Every logistics TMS uses blue. Teal differentiates. |
+| 2026-03-24 | ~~Teal accent~~ → Future Blue `#152CFF` | Updated to match Teleport.it brand identity. Electric blue accent across all interactive elements. |
 | 2026-03-24 | Instrument Sans | Clean, good weight range, works at small sizes. |
 | 2026-03-24 | JetBrains Mono for data | Slashed zero, clear 1/l/I for MAWB numbers. |
 | 2026-03-24 | Service-first creation | Ops thinks "what needs to happen" before "who does it." |

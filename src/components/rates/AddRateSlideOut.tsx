@@ -115,7 +115,7 @@ export default function AddRateSlideOut({ editingRate, onClose }: Props) {
       {svcConfig && (
         <div style={{ ...section, marginBottom: 12 }}>
           <span style={label}>Rate Type</span>
-          <div style={{ fontSize: 11, color: '#0D9488', fontWeight: 600, padding: '4px 8px', background: 'rgba(13,148,136,0.06)', borderRadius: 4, display: 'inline-block' }}>
+          <div style={{ fontSize: 11, color: '#152CFF', fontWeight: 600, padding: '4px 8px', background: 'rgba(21,44,255,0.06)', borderRadius: 4, display: 'inline-block' }}>
             {isRoute ? 'Route (Origin → Destination)' : 'Location'}
           </div>
         </div>
@@ -172,7 +172,7 @@ export default function AddRateSlideOut({ editingRate, onClose }: Props) {
       {/* Actions */}
       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
         <button onClick={onClose} style={{ flex: 1, padding: '6px 12px', borderRadius: 6, border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-        <button onClick={handleSave} style={{ flex: 1, padding: '6px 12px', borderRadius: 6, border: 'none', background: '#0D9488', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+        <button onClick={handleSave} style={{ flex: 1, padding: '6px 12px', borderRadius: 6, border: 'none', background: '#152CFF', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
           {editingRate ? 'Update Rate' : 'Save Rate'}
         </button>
       </div>

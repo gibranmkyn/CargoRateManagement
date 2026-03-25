@@ -74,7 +74,7 @@ export default function JobDetailPage() {
             gap: 6,
             fontSize: 11,
             fontWeight: 500,
-            color: '#0D9488',
+            color: '#152CFF',
             textDecoration: 'none',
           }}
         >
@@ -118,8 +118,8 @@ export default function JobDetailPage() {
   }
 
   function getDocIcon(doc: ProofDocument) {
-    if (doc.type.startsWith('image/')) return <Image size={12} style={{ color: '#0D9488' }} />;
-    return <FileText size={12} style={{ color: '#0D9488' }} />;
+    if (doc.type.startsWith('image/')) return <Image size={12} style={{ color: '#152CFF' }} />;
+    return <FileText size={12} style={{ color: '#152CFF' }} />;
   }
 
   const sectionTitle: React.CSSProperties = {
@@ -269,7 +269,7 @@ export default function JobDetailPage() {
                   Origin
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <MapPin size={11} style={{ color: '#0D9488' }} strokeWidth={2.5} />
+                  <MapPin size={11} style={{ color: '#152CFF' }} strokeWidth={2.5} />
                   <span
                     style={{
                       fontSize: 11,
@@ -433,11 +433,11 @@ export default function JobDetailPage() {
                   padding: '4px 10px',
                   fontSize: 10,
                   fontWeight: 600,
-                  color: '#0D9488',
-                  background: 'rgba(13,148,136,0.07)',
+                  color: '#152CFF',
+                  background: 'rgba(21,44,255,0.07)',
                   borderRadius: 4,
                   cursor: 'pointer',
-                  border: '1px solid rgba(13,148,136,0.12)',
+                  border: '1px solid rgba(21,44,255,0.12)',
                 }}
               >
                 <Upload size={10} />
@@ -472,8 +472,8 @@ export default function JobDetailPage() {
                         width: 28,
                         height: 28,
                         borderRadius: 6,
-                        background: 'rgba(13,148,136,0.07)',
-                        border: '1px solid rgba(13,148,136,0.12)',
+                        background: 'rgba(21,44,255,0.07)',
+                        border: '1px solid rgba(21,44,255,0.12)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -574,10 +574,10 @@ export default function JobDetailPage() {
                       padding: '6px 10px',
                       borderRadius: 4,
                       border: isActive
-                        ? '1.5px solid #0D9488'
+                        ? '1.5px solid #152CFF'
                         : '1.5px solid transparent',
                       background: isActive
-                        ? 'rgba(13,148,136,0.06)'
+                        ? 'rgba(21,44,255,0.06)'
                         : 'transparent',
                       fontWeight: isActive ? 600 : 400,
                       fontSize: 11,
@@ -686,8 +686,8 @@ export default function JobDetailPage() {
                             height: 8,
                             borderRadius: '50%',
                             border: '2px solid',
-                            background: i === 0 ? '#0D9488' : '#fff',
-                            borderColor: i === 0 ? '#0D9488' : '#d1d5db',
+                            background: i === 0 ? '#152CFF' : '#fff',
+                            borderColor: i === 0 ? '#152CFF' : '#d1d5db',
                           }}
                         />
                       </div>

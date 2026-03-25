@@ -71,7 +71,7 @@ export default function RatesPage() {
       {noBanner && (
         <div style={{ padding: '8px 16px', background: '#fefce8', borderBottom: '1px solid #fde68a', fontSize: 11, color: '#b45309', display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontWeight: 600 }}>Add locations first.</span> Rate cards require managed locations for lookups to work.
-          <a href="/master-data" style={{ color: '#0D9488', fontWeight: 600, textDecoration: 'none', marginLeft: 4 }}>Go to Locations →</a>
+          <a href="/master-data" style={{ color: '#152CFF', fontWeight: 600, textDecoration: 'none', marginLeft: 4 }}>Go to Locations →</a>
         </div>
       )}
 
@@ -88,7 +88,7 @@ export default function RatesPage() {
           <h1 style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.3px', color: '#111827', margin: 0 }}>Rates</h1>
           <p style={{ fontSize: 11, color: '#9ca3af', margin: '2px 0 0' }}>Manage vendor rate cards</p>
         </div>
-        <button onClick={() => { setEditingRate(null); setSlideOutOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 6, border: 'none', background: '#0D9488', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+        <button onClick={() => { setEditingRate(null); setSlideOutOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 6, border: 'none', background: '#152CFF', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
           <Plus size={12} /> Add Rate
         </button>
       </div>
@@ -96,7 +96,7 @@ export default function RatesPage() {
       {/* Tabs */}
       <div style={{ padding: '12px 16px 0', display: 'flex', gap: 2 }}>
         {([['vendor', 'By Vendor'], ['service', 'By Service']] as const).map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} style={{ padding: '4px 10px', borderRadius: 4, border: 'none', background: tab === key ? 'rgba(13,148,136,0.06)' : 'transparent', color: tab === key ? '#0D9488' : '#9ca3af', fontWeight: tab === key ? 600 : 400, fontSize: 12, cursor: 'pointer' }}>
+          <button key={key} onClick={() => setTab(key)} style={{ padding: '4px 10px', borderRadius: 4, border: 'none', background: tab === key ? 'rgba(21,44,255,0.06)' : 'transparent', color: tab === key ? '#152CFF' : '#9ca3af', fontWeight: tab === key ? 600 : 400, fontSize: 12, cursor: 'pointer' }}>
             {label}
           </button>
         ))}

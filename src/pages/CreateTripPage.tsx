@@ -20,7 +20,7 @@ interface JobDraft {
 }
 
 const svcColors: Record<string, string> = {
-  FM: '#0D9488', CR: '#2563eb', EC: '#7c3aed', CS: '#b45309', OH: '#6b7280',
+  FM: '#152CFF', CR: '#2563eb', EC: '#7c3aed', CS: '#b45309', OH: '#6b7280',
 };
 
 export default function CreateTripPage() {
@@ -235,7 +235,7 @@ export default function CreateTripPage() {
         {/* Step 1: Order Details */}
         <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: 16, marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-            <span style={{ width: 22, height: 22, borderRadius: 5, background: '#0D9488', color: '#fff', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>1</span>
+            <span style={{ width: 22, height: 22, borderRadius: 5, background: '#152CFF', color: '#fff', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>1</span>
             <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Order Details</span>
           </div>
           <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
@@ -261,7 +261,7 @@ export default function CreateTripPage() {
         {/* Step 2: Add Services + Assign Vendors */}
         <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: 16, marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <span style={{ width: 22, height: 22, borderRadius: 5, background: '#0D9488', color: '#fff', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>2</span>
+            <span style={{ width: 22, height: 22, borderRadius: 5, background: '#152CFF', color: '#fff', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>2</span>
             <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Add Services</span>
           </div>
           <p style={{ fontSize: 10, color: '#9ca3af', marginBottom: 12, marginLeft: 30 }}>Click a service to add a job. Each click = 1 job with that service.</p>
@@ -282,11 +282,11 @@ export default function CreateTripPage() {
                     fontFamily: 'inherit', transition: 'all 0.15s',
                   }}
                 >
-                  <span style={{ fontSize: 14, color: svcColors[svc.code] || '#0D9488' }}>+</span>
+                  <span style={{ fontSize: 14, color: svcColors[svc.code] || '#152CFF' }}>+</span>
                   <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: svcColors[svc.code] || '#9ca3af' }}>{svc.code}</span>
                   {svc.label}
                   {count > 0 && (
-                    <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 99, background: svcColors[svc.code] || '#0D9488', color: '#fff', marginLeft: 2 }}>{count}</span>
+                    <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 99, background: svcColors[svc.code] || '#152CFF', color: '#fff', marginLeft: 2 }}>{count}</span>
                   )}
                 </button>
               );
@@ -302,7 +302,7 @@ export default function CreateTripPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {jobs.map((job, i) => {
                 const svc = serviceTypes.find((s) => s.code === job.serviceCode);
-                const color = svcColors[job.serviceCode] || '#0D9488';
+                const color = svcColors[job.serviceCode] || '#152CFF';
                 const cfg = SERVICE_CONFIG[job.serviceCode];
                 const isRoute = cfg?.rateType === 'route';
                 const rate = getJobRate(job);
@@ -358,7 +358,7 @@ export default function CreateTripPage() {
                       <div style={{ marginTop: 4 }}>
                         {rate ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 10, fontWeight: 600, color: '#0D9488', fontFamily: "'JetBrains Mono', monospace" }}>
+                            <span style={{ fontSize: 10, fontWeight: 600, color: '#152CFF', fontFamily: "'JetBrains Mono', monospace" }}>
                               {formatCurrency(rate.currency, rate.amount)} /{rate.unit === 'flat' ? 'trip' : rate.unit.replace('per-', '')}
                             </span>
                             {cost && (
@@ -399,7 +399,7 @@ export default function CreateTripPage() {
         {/* Submit */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16, paddingTop: 16, borderTop: '1px solid #f3f4f6' }}>
           <button type="button" onClick={() => navigate('/trips')} style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#fff', color: '#374151', border: '1px solid #e5e7eb', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
-          <button type="submit" style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#0D9488', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Create Order</button>
+          <button type="submit" style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#152CFF', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Create Order</button>
         </div>
       </form>
     </div>

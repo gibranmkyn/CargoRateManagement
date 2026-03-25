@@ -134,7 +134,7 @@ export default function BillingPage() {
             {/* Bulk apply button */}
             {canBulkApply && (
               <div style={{ marginBottom: 8 }}>
-                <button onClick={() => handleBulkApply(trip.id)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 4, border: '1px solid #0D9488', background: 'rgba(13,148,136,0.04)', color: '#0D9488', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>
+                <button onClick={() => handleBulkApply(trip.id)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 4, border: '1px solid #152CFF', background: 'rgba(21,44,255,0.04)', color: '#152CFF', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>
                   <CheckCircle2 size={12} /> Apply agreed rates as invoiced
                 </button>
               </div>
@@ -160,7 +160,7 @@ export default function BillingPage() {
 
                   return (
                     <tr key={job.id}>
-                      <td style={{ ...td, fontWeight: 600, color: '#0D9488' }}>J{String(i + 1).padStart(2, '0')}</td>
+                      <td style={{ ...td, fontWeight: 600, color: '#152CFF' }}>J{String(i + 1).padStart(2, '0')}</td>
                       <td style={{ ...td, fontWeight: 600, color: '#111827' }}>{job.vendor.name}</td>
                       <td style={td}>{job.service.label}</td>
                       <td style={{ ...td, fontSize: 10 }}>{job.origin.location === job.destination.location ? job.origin.location : `${job.origin.location} → ${job.destination.location}`}</td>
@@ -232,7 +232,7 @@ export default function BillingPage() {
       {/* Tabs */}
       <div style={{ padding: '12px 16px 0', display: 'flex', gap: 2 }}>
         {([['ready', 'Ready'], ['validation', 'Validation'], ['approved', 'Approved']] as const).map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} style={{ padding: '4px 10px', borderRadius: 4, border: 'none', background: tab === key ? 'rgba(13,148,136,0.06)' : 'transparent', color: tab === key ? '#0D9488' : '#9ca3af', fontWeight: tab === key ? 600 : 400, fontSize: 12, cursor: 'pointer' }}>
+          <button key={key} onClick={() => setTab(key)} style={{ padding: '4px 10px', borderRadius: 4, border: 'none', background: tab === key ? 'rgba(21,44,255,0.06)' : 'transparent', color: tab === key ? '#152CFF' : '#9ca3af', fontWeight: tab === key ? 600 : 400, fontSize: 12, cursor: 'pointer' }}>
             {label}
           </button>
         ))}
@@ -247,9 +247,9 @@ export default function BillingPage() {
               {([['all', `All (${billingOrders.length})`], ['flagged', `Flagged (${flaggedOrders})`], ['no-rate', `No rate (${noRateOrders})`]] as const).map(([key, label]) => (
                 <button key={key} onClick={() => setFilter(key)} style={{
                   padding: '3px 10px', borderRadius: 99, fontSize: 10, fontWeight: 600, cursor: 'pointer',
-                  border: filter === key ? '1px solid #0D9488' : '1px solid #e5e7eb',
-                  background: filter === key ? 'rgba(13,148,136,0.06)' : '#fff',
-                  color: filter === key ? '#0D9488' : '#6b7280',
+                  border: filter === key ? '1px solid #152CFF' : '1px solid #e5e7eb',
+                  background: filter === key ? 'rgba(21,44,255,0.06)' : '#fff',
+                  color: filter === key ? '#152CFF' : '#6b7280',
                 }}>
                   {label}
                 </button>

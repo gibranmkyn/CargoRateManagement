@@ -46,7 +46,7 @@ interface Props {
 }
 
 function docIcon(doc: ProofDocument) {
-  return doc.type.startsWith('image/') ? <Image size={12} style={{ color: '#0D9488' }} /> : <FileText size={12} style={{ color: '#0D9488' }} />;
+  return doc.type.startsWith('image/') ? <Image size={12} style={{ color: '#152CFF' }} /> : <FileText size={12} style={{ color: '#152CFF' }} />;
 }
 
 export default function JobSlideOut({ job, trip, jobIndex, onStatusChange, onUploadProof, onRemoveProof, onReassign, onAddFee, onRemoveFee, onUpdateFeeQty, onUpdateJobQty }: Props) {
@@ -121,7 +121,7 @@ export default function JobSlideOut({ job, trip, jobIndex, onStatusChange, onUpl
       <div>
         <div style={sectionTitle}>Route & Services</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <MapPin size={11} style={{ color: '#0D9488', flexShrink: 0 }} />
+          <MapPin size={11} style={{ color: '#152CFF', flexShrink: 0 }} />
           <span style={{ fontSize: 11, fontWeight: 500, color: '#111827' }}>{job.origin.location}</span>
           <ArrowRight size={10} style={{ color: '#d1d5db' }} />
           <span style={{ fontSize: 11, fontWeight: 500, color: '#111827' }}>{job.destination.location}</span>
@@ -139,9 +139,9 @@ export default function JobSlideOut({ job, trip, jobIndex, onStatusChange, onUpl
           {primaryStatuses.map((s) => {
             const isActive = s.value === job.status;
             const isCompletedBtn = s.value === 'Completed';
-            const activeColor = isCompletedBtn ? '#059669' : '#0D9488';
-            const activeBg = isCompletedBtn ? '#f0fdf4' : 'rgba(13,148,136,0.06)';
-            const activeBorder = isCompletedBtn ? '#a7f3d0' : '#0D9488';
+            const activeColor = isCompletedBtn ? '#059669' : '#152CFF';
+            const activeBg = isCompletedBtn ? '#f0fdf4' : 'rgba(21,44,255,0.06)';
+            const activeBorder = isCompletedBtn ? '#a7f3d0' : '#152CFF';
             return (
               <button
                 key={s.value}
@@ -280,7 +280,7 @@ export default function JobSlideOut({ job, trip, jobIndex, onStatusChange, onUpl
               <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' }}>Job Total</span>
               <div>
                 {Array.from(feeTotals.entries()).map(([curr, total]) => (
-                  <div key={curr} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700, color: '#0D9488', textAlign: 'right' }}>
+                  <div key={curr} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700, color: '#152CFF', textAlign: 'right' }}>
                     {formatCurrency(curr, total)}
                   </div>
                 ))}
@@ -300,8 +300,8 @@ export default function JobSlideOut({ job, trip, jobIndex, onStatusChange, onUpl
           </button>
         )}
         {!isCompleted && showAddFee && (
-          <div style={{ padding: 10, background: '#f0fdfa', border: '1px solid rgba(13,148,136,0.15)', borderRadius: 6 }}>
-            <div style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#0D9488', marginBottom: 6 }}>New fee</div>
+          <div style={{ padding: 10, background: '#f0fdfa', border: '1px solid rgba(21,44,255,0.15)', borderRadius: 6 }}>
+            <div style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#152CFF', marginBottom: 6 }}>New fee</div>
             <div style={{ marginBottom: 4 }}>
               <select value={newFeeName} onChange={(e) => setNewFeeName(e.target.value)} style={{ width: '100%', fontSize: 10, padding: '4px 6px', border: '1px solid #e5e7eb', borderRadius: 4 }}>
                 <option value="">Select fee type...</option>
@@ -317,7 +317,7 @@ export default function JobSlideOut({ job, trip, jobIndex, onStatusChange, onUpl
                 <option value="flat">/trip</option><option value="per-km">/km</option><option value="per-bag">/bag</option><option value="per-kg">/kg</option>
               </select>
               <input type="number" placeholder="Qty" value={newFeeQty} onChange={(e) => setNewFeeQty(e.target.value)} style={{ width: 40, ...inputStyle, textAlign: 'center' }} />
-              <button onClick={handleAddFee} style={{ padding: '4px 8px', borderRadius: 4, border: 'none', background: '#0D9488', color: '#fff', fontSize: 9, fontWeight: 600, cursor: 'pointer' }}>Add</button>
+              <button onClick={handleAddFee} style={{ padding: '4px 8px', borderRadius: 4, border: 'none', background: '#152CFF', color: '#fff', fontSize: 9, fontWeight: 600, cursor: 'pointer' }}>Add</button>
               <button onClick={() => setShowAddFee(false)} style={{ padding: '4px 6px', borderRadius: 4, border: '1px solid #e5e7eb', background: '#fff', color: '#9ca3af', fontSize: 9, cursor: 'pointer' }}><X size={10} /></button>
             </div>
           </div>
@@ -330,8 +330,8 @@ export default function JobSlideOut({ job, trip, jobIndex, onStatusChange, onUpl
           <span style={sectionTitle as React.CSSProperties}>Proof of Service</span>
           <label style={{
             display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px',
-            fontSize: 10, fontWeight: 600, color: '#0D9488', background: 'rgba(13,148,136,0.07)',
-            borderRadius: 4, cursor: 'pointer', border: '1px solid rgba(13,148,136,0.12)',
+            fontSize: 10, fontWeight: 600, color: '#152CFF', background: 'rgba(21,44,255,0.07)',
+            borderRadius: 4, cursor: 'pointer', border: '1px solid rgba(21,44,255,0.12)',
           }}>
             <Upload size={10} /> Upload
             <input ref={fileRef} type="file" accept="image/*,.pdf" style={{ display: 'none' }} onChange={handleUpload} />
@@ -341,7 +341,7 @@ export default function JobSlideOut({ job, trip, jobIndex, onStatusChange, onUpl
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {proofs.map((doc) => (
               <div key={doc.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 6, background: '#f9fafb', border: '1px solid #e5e7eb' }}>
-                <div style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(13,148,136,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{docIcon(doc)}</div>
+                <div style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(21,44,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{docIcon(doc)}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 11, fontWeight: 500, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.name}</div>
                   <div style={{ fontSize: 9, color: '#9ca3af' }}>{fmtDateTime(doc.uploadedAt)}</div>
@@ -372,7 +372,7 @@ export default function JobSlideOut({ job, trip, jobIndex, onStatusChange, onUpl
               {log.slice().reverse().map((entry, i) => (
                 <div key={entry.id} style={{ display: 'flex', gap: 8, position: 'relative' }}>
                   <div style={{ width: 9, flexShrink: 0, display: 'flex', justifyContent: 'center', paddingTop: 4, zIndex: 1 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', border: '2px solid', background: i === 0 ? '#0D9488' : '#fff', borderColor: i === 0 ? '#0D9488' : '#d1d5db' }} />
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', border: '2px solid', background: i === 0 ? '#152CFF' : '#fff', borderColor: i === 0 ? '#152CFF' : '#d1d5db' }} />
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 11, fontWeight: 500, color: '#111827' }}>{entry.action}</div>
@@ -397,7 +397,7 @@ export default function JobSlideOut({ job, trip, jobIndex, onStatusChange, onUpl
       <div style={{ paddingTop: 10, borderTop: '1px solid #e5e7eb' }}>
         <Link
           to={`/trips/${trip.id}/jobs/${job.id}`}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 500, color: '#0D9488', textDecoration: 'none' }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 500, color: '#152CFF', textDecoration: 'none' }}
         >
           Open full detail <ExternalLink size={10} />
         </Link>

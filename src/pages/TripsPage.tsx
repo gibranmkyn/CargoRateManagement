@@ -121,7 +121,7 @@ export default function TripsPage() {
           </button>
           <button
             onClick={() => navigate('/create-trip')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#0D9488', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#152CFF', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
           >
             <Plus size={12} /> New Order
           </button>
@@ -185,7 +185,7 @@ export default function TripsPage() {
                   onMouseEnter={(e) => { if (!isExpanded && !hasRejected) e.currentTarget.style.background = '#f9fafb'; }}
                   onMouseLeave={(e) => { if (!isExpanded && !hasRejected) e.currentTarget.style.background = ''; }}
                 >
-                  <td style={{ padding: '8px 4px 8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6', color: isExpanded ? '#0D9488' : '#d1d5db', fontSize: 12, fontWeight: isExpanded ? 700 : 400 }}>
+                  <td style={{ padding: '8px 4px 8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6', color: isExpanded ? '#152CFF' : '#d1d5db', fontSize: 12, fontWeight: isExpanded ? 700 : 400 }}>
                     {hasRejected && !isExpanded ? <span style={{ color: '#dc2626', fontWeight: 700, fontSize: 12 }}>!</span> : (isExpanded ? '\u25be' : '\u25b8')}
                   </td>
                   <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
@@ -285,7 +285,7 @@ export default function TripsPage() {
                                     onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f6'; }}
                                     onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
                                   >
-                                    <td style={{ padding: '6px 10px', fontSize: 11, fontWeight: 600, color: '#0D9488' }}>
+                                    <td style={{ padding: '6px 10px', fontSize: 11, fontWeight: 600, color: '#152CFF' }}>
                                       {isJobExpanded ? '▾' : '▸'} J{String(i + 1).padStart(2, '0')}
                                     </td>
                                     <td style={{ padding: '6px 10px', fontSize: 11, fontWeight: 600, color: '#111827' }}>
@@ -382,8 +382,8 @@ export default function TripsPage() {
             }) : (
               <tr>
                 <td colSpan={8} style={{ padding: '60px 12px', textAlign: 'center' }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 6, background: 'rgba(13,148,136,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                    <Ship size={18} style={{ color: '#0D9488' }} />
+                  <div style={{ width: 40, height: 40, borderRadius: 6, background: 'rgba(21,44,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                    <Ship size={18} style={{ color: '#152CFF' }} />
                   </div>
                   <p style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>
                     {trips.length === 0 ? 'No delivery orders yet' : 'No orders match your filters'}
@@ -395,7 +395,7 @@ export default function TripsPage() {
                   </p>
                   <button
                     onClick={() => navigate('/create-trip')}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#0D9488', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#152CFF', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
                   >
                     <Plus size={12} /> New Order
                   </button>

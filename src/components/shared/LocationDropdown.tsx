@@ -139,7 +139,7 @@ export default function LocationDropdown({ value, onChange, placeholder = 'Selec
       {/* Inline add form (replaces dropdown when active) */}
       {showAddForm && (
         <div style={{ marginTop: 4, padding: 8, border: '1px solid #e5e7eb', borderRadius: 4, background: '#f0fdfa' }}>
-          <div style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#0D9488', marginBottom: 6 }}>Add new location</div>
+          <div style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#152CFF', marginBottom: 6 }}>Add new location</div>
           <input ref={nameRef} type="text" placeholder="Name" value={newName} onChange={(e) => setNewName(e.target.value)} style={{ width: '100%', fontSize: 11, padding: '4px 6px', border: '1px solid #e5e7eb', borderRadius: 4, marginBottom: 4, outline: 'none' }} />
           {addError && <div style={{ fontSize: 10, color: '#dc2626', marginBottom: 4 }}>{addError}</div>}
           <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
@@ -150,7 +150,7 @@ export default function LocationDropdown({ value, onChange, placeholder = 'Selec
             </select>
           </div>
           <div style={{ display: 'flex', gap: 4 }}>
-            <button onClick={handleAddLocation} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '4px 8px', borderRadius: 4, border: 'none', background: '#0D9488', color: '#fff', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}><Check size={10} /> Add</button>
+            <button onClick={handleAddLocation} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '4px 8px', borderRadius: 4, border: 'none', background: '#152CFF', color: '#fff', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}><Check size={10} /> Add</button>
             <button onClick={() => { setShowAddForm(false); setAddError(''); }} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '4px 8px', borderRadius: 4, border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}><X size={10} /> Cancel</button>
           </div>
         </div>
@@ -178,8 +178,8 @@ export default function LocationDropdown({ value, onChange, placeholder = 'Selec
                     onClick={() => handleSelect(opt.id)}
                     style={{
                       padding: '5px 8px', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      background: isFocused ? '#f9fafb' : isSelected ? 'rgba(13,148,136,0.04)' : 'transparent',
-                      color: isSelected ? '#0D9488' : '#374151', fontWeight: isSelected ? 600 : 400,
+                      background: isFocused ? '#f9fafb' : isSelected ? 'rgba(21,44,255,0.04)' : 'transparent',
+                      color: isSelected ? '#152CFF' : '#374151', fontWeight: isSelected ? 600 : 400,
                     }}
                     onMouseEnter={() => setFocusedIndex(globalIdx)}
                   >
@@ -197,7 +197,7 @@ export default function LocationDropdown({ value, onChange, placeholder = 'Selec
 
           {/* Add new */}
           <div style={{ borderTop: '1px solid #f3f4f6', padding: '6px 8px' }}>
-            <button onClick={() => { setShowAddForm(true); setOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: 4, width: '100%', padding: '4px 0', border: 'none', background: 'none', color: '#0D9488', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={() => { setShowAddForm(true); setOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: 4, width: '100%', padding: '4px 0', border: 'none', background: 'none', color: '#152CFF', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
               <Plus size={12} /> Add new location
             </button>
           </div>

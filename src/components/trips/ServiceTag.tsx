@@ -11,13 +11,13 @@ export default function ServiceTag({ service }: { service: ServiceType }) {
         borderRadius: 99,
         fontSize: 9,
         fontWeight: 600,
-        background: 'rgba(13,148,136,0.06)',
-        border: '1px solid rgba(13,148,136,0.1)',
+        background: 'rgba(21,44,255,0.06)',
+        border: '1px solid rgba(21,44,255,0.1)',
       }}
     >
       <span
         style={{
-          color: '#0D9488',
+          color: '#152CFF',
           fontFamily: "var(--font-mono)",
         }}
       >

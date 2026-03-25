@@ -107,7 +107,7 @@ export default function LocationsTab() {
         </select>
         <input type="text" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ ...inputStyle, minWidth: 140, marginLeft: 8 }} />
         <div style={{ marginLeft: 'auto' }}>
-          <button onClick={() => { setShowAddForm(true); setAddError(''); }} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 6, border: 'none', background: '#0D9488', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={() => { setShowAddForm(true); setAddError(''); }} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 6, border: 'none', background: '#152CFF', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
             <Plus size={12} /> Add Location
           </button>
         </div>
@@ -201,7 +201,7 @@ export default function LocationsTab() {
           {filtered.length === 0 && !showAddForm && (
             <tr>
               <td colSpan={7} style={{ padding: '48px 16px', textAlign: 'center', color: '#9ca3af' }}>
-                <MapPin size={20} style={{ color: '#0D9488', marginBottom: 8 }} />
+                <MapPin size={20} style={{ color: '#152CFF', marginBottom: 8 }} />
                 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
                   {locations.length === 0 ? 'No locations yet' : 'No locations match filters'}
                 </div>
@@ -209,7 +209,7 @@ export default function LocationsTab() {
                   {locations.length === 0 ? 'Add managed locations for rate lookups' : 'Try adjusting your filters'}
                 </div>
                 {locations.length === 0 && (
-                  <button onClick={() => setShowAddForm(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 6, border: 'none', background: '#0D9488', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                  <button onClick={() => setShowAddForm(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 6, border: 'none', background: '#152CFF', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                     <Plus size={12} /> Add Location
                   </button>
                 )}
