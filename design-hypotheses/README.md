@@ -128,6 +128,30 @@ Every design decision starts with a **"How Might We"** question. We generate 2-3
 **Decision:** Option A — flat sub-table, no inline fee expansion. Fee details in slide-out only. Priority tags removed.
 **File:** `27-hmw-simplified-subtable.html`
 
+### HMW-28: How might we help ops focus on active orders while keeping history accessible?
+**Decision:** Smart default filter — Active/All/Completed chips, Active default. Date period picker for All/Completed only.
+**File:** `28-hmw-active-vs-historical.html`
+
+### HMW-29/30: Proof-centric jobs + rate-locked fees
+**Decision:** Replace manual status with proof lifecycle. All fees from rate cards only. No free-text entry.
+**Files:** `29-hmw-scalable-filtering.html`, `30-hmw-proof-centric-jobs.html`
+
+### HMW-31 to 36: L1/L2 service hierarchy deep dive
+**Decision:** Fixed unit per Cost ID. Expandable L1/L2 tree in master data. Zone-grouped rate sheet. All L2 fees auto-populate.
+**Files:** `31-hmw-rates-module-redesign.html` through `36-hmw-services-master-data.html`
+
+### HMW-37/39: FM Trucking FTL rate card
+**Decision:** Separate FTL rate model — origin district → destination district × truck type. District-based using GB/T 2260 from Regions master data.
+**Files:** `37-hmw-fm-trucking-rate-sheet.html`, `39-hmw-ftl-rate-management.html`
+
+### HMW-40/41/42: FTL rate management evolution
+**Decision:** Simple rate page — vendor dropdown, rate table, CSV upload/download, activity log. No version UI, no card grid.
+**Files:** `40-hmw-ftl-csv-bulk-rates.html`, `41-hmw-ftl-rate-card-redesign.html`, `42-hmw-ftl-simple-rate-page.html`
+
+### HMW-43: Vendor fee schedules — auto-populate, deselect exceptions
+**Decision:** Vendor's own fee names per service+location. All fees auto-populate on job creation. Ops removes exceptions (subtractive). L2 Cost IDs become optional tags.
+**File:** `43-hmw-vendor-fee-schedule.html`
+
 ## Open (backlog)
 
 ### HMW-03: How might we make the "assign vendors to services" step feel natural instead of like filling a form?
