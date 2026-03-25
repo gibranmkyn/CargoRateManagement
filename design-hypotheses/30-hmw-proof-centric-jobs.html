@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-30: Proof-Centric Jobs + Rate-Locked Fees</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+h3 { font-size: 14px; font-weight: 700; margin: 20px 0 8px; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: rgba(21,44,255,0.04); border: 2px solid rgba(21,44,255,0.2); border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #152CFF; font-size: 14px; margin-bottom: 6px; }
+.nav { height: 40px; background: #111827; display: flex; align-items: center; padding: 0 16px; gap: 16px; }
+.nav .logo { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; }
+.nav .brand { font-weight: 700; font-size: 13px; color: #fff; }
+.nav .link { font-size: 12px; color: rgba(255,255,255,0.5); }
+.nav .link.active { color: #fff; font-weight: 600; padding: 4px 10px; background: rgba(255,255,255,0.1); border-radius: 4px; }
+.th { text-align: left; padding: 6px 12px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+.td { padding: 8px 12px; font-size: 11px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+.sec { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-30: Proof-Centric Jobs + Rate-Locked Fees</h1>
+
+<div class="hmw">
+How might we simplify the job lifecycle so that job progress is driven by proof of service — not manual status clicks — and all fees come strictly from configured rate cards?
+</div>
+
+<div class="context">
+<strong>Two problems, one root cause:</strong>
+<br><br>
+<strong>1. Fee free-text breaks billing integrity.</strong> The current "+ Add fee" lets ops type any name and amount. But the whole point of rate cards is that rates are pre-agreed with vendors. If ops can add arbitrary fees, billing validation becomes meaningless — you're comparing invoice amounts against numbers ops made up, not contractual rates. Every fee should originate from a rate card entry.
+<br><br>
+<strong>2. Manual job status is redundant busywork.</strong> Ops currently clicks Pending → In Progress → Completed on every job, 50x/day. But what actually matters is: <em>did the vendor do the work?</em> The proof of service (POD photo, customs doc, X-ray receipt) is the answer. If proof is uploaded and validated → the job is done. If not → it's not. The status should derive from the proof state, not the other way around.
+<br><br>
+<strong>The new mental model:</strong><br>
+• <strong>Fees</strong> = what the rate card says. No manual entry. If a fee isn't in the rate card, add it there first.<br>
+• <strong>Job progress</strong> = proof state: <code>Awaiting proof</code> → <code>Proof uploaded</code> → <code>Validated</code> (ready for payment).<br>
+• <strong>Order complete</strong> = all jobs validated.
+</div>
+
+<!-- ============================================ -->
+<!-- THE NEW MODEL                                -->
+<!-- ============================================ -->
+
+<h2>The Proof-Centric Model</h2>
+<span class="label" style="background: rgba(21,44,255,0.06); color: #152CFF;">Proposed</span>
+
+<div class="rationale">
+<strong>Job Lifecycle (replaces Pending/In Progress/Completed/Rejected):</strong>
+
+<div style="display: flex; gap: 4px; align-items: center; margin: 16px 0; padding: 12px; background: #f9fafb; border-radius: 6px;">
+  <div style="padding: 6px 12px; border-radius: 4px; background: #fff; border: 1px solid #e5e7eb; font-size: 11px; font-weight: 600; color: #6b7280; text-align: center;">
+    Awaiting<br>proof
+  </div>
+  <span style="color: #d1d5db;">→</span>
+  <div style="padding: 6px 12px; border-radius: 4px; background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); font-size: 11px; font-weight: 600; color: #152CFF; text-align: center;">
+    Proof<br>uploaded
+  </div>
+  <span style="color: #d1d5db;">→</span>
+  <div style="padding: 6px 12px; border-radius: 4px; background: #f0fdf4; border: 1px solid #a7f3d0; font-size: 11px; font-weight: 600; color: #059669; text-align: center;">
+    Validated<br><span style="font-size: 9px; font-weight: 400;">ready for payment</span>
+  </div>
+</div>
+
+<ul style="font-size: 11px; padding-left: 16px; line-height: 1.8;">
+  <li><strong>Awaiting proof</strong> — job created, vendor assigned, no proof doc uploaded yet. This is the default state.</li>
+  <li><strong>Proof uploaded</strong> — vendor or ops uploaded a proof document (POD photo, customs clearance PDF, X-ray receipt). Auto-transitions when first document is uploaded.</li>
+  <li><strong>Validated</strong> — ops admin reviewed the proof and confirmed it's acceptable. One click: "Validate" button. This means the job is complete and ready for payment.</li>
+  <li><strong>Disputed</strong> — proof was reviewed but rejected (wrong document, incomplete, unclear). Vendor must re-upload. Optional state, replaces "Rejected."</li>
+</ul>
+
+<p style="margin-top: 12px;"><strong>Key difference:</strong> No manual "In Progress" state. If the vendor is doing the work but hasn't uploaded proof yet, the status is still "Awaiting proof." The system doesn't need to know the vendor is mid-delivery — it only cares about the outcome (proof).</p>
+
+<p style="margin-top: 8px;"><strong>Fee model:</strong></p>
+<ul style="font-size: 11px; padding-left: 16px; line-height: 1.8;">
+  <li><strong>All fees auto-populated from rate cards.</strong> When a job is created (vendor + service + location selected), the system looks up ALL matching rates and creates fee line items automatically.</li>
+  <li><strong>No free-text fee entry.</strong> The "+ Add fee" button is removed. If a fee needs to be added, go to Rates → add the rate card entry → it appears on future jobs.</li>
+  <li><strong>Quantities are editable</strong> (bags, weight, etc.) — this recalculates the fee amounts from the locked rates.</li>
+  <li><strong>Rate card is the single source of truth</strong> for what a vendor charges.</li>
+</ul>
+
+<div class="pros-cons">
+<div class="pros"><strong>✓ Pros</strong><br>
+• Eliminates manual status busywork (50 clicks/day saved)<br>
+• Billing integrity guaranteed — fees always match rate cards<br>
+• Proof is the actual deliverable, not an arbitrary status click<br>
+• Simpler mental model: upload proof → validate → pay<br>
+• "Active" = orders awaiting proof or validation (natural filter)</div>
+<div class="cons"><strong>✗ Cons</strong><br>
+• Loses granularity of "In Progress" — can't see if vendor started<br>
+• Vendor surcharges outside rate card need a separate flow<br>
+• Requires rate cards to be comprehensive before jobs work properly</div>
+</div>
+</div>
+
+<!-- Mockup: Sub-table with proof-centric status -->
+<h3>Sub-Table: Proof-Centric Status</h3>
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link active">Delivery Orders</span>
+  <span class="link">Rates</span>
+  <span class="link">Billing</span>
+  <span class="link">Master Data</span>
+</div>
+
+<div style="padding: 16px;">
+<div style="font-size: 11px; color: #9ca3af; margin-bottom: 8px;">
+  <strong style="color: #111827; font-size: 13px;">TikTok</strong>
+  <span class="mono" style="font-size: 10px; margin-left: 6px; padding: 1px 5px; background: #f3f4f6; border-radius: 4px; border: 1px solid #e5e7eb;">160-84329871</span>
+  <span style="margin-left: 8px;">24 bags · 1,240 kg</span>
+</div>
+
+<table style="width: 100%; border-collapse: collapse;">
+<thead>
+<tr>
+  <th class="th" style="width: 50px;">Job</th>
+  <th class="th">Vendor</th>
+  <th class="th">Service</th>
+  <th class="th">Route</th>
+  <th class="th" style="width: 100px;">Cost</th>
+  <th class="th" style="width: 120px;">Proof</th>
+</tr>
+</thead>
+<tbody>
+<!-- J01: Validated (green) — proof uploaded + validated -->
+<tr style="cursor: pointer;">
+  <td class="td" style="font-weight: 600; color: #152CFF;">J01</td>
+  <td class="td" style="font-weight: 600; color: #111827;">HaleSun</td>
+  <td class="td"><span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; font-weight: 600; color: #152CFF; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.12);">FM Trucking</span></td>
+  <td class="td" style="font-size: 10px;">TikTok WH → SZ Bay</td>
+  <td class="td mono" style="font-weight: 600; color: #111827; font-size: 10px;">RM 525.00</td>
+  <td class="td">
+    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #f0fdf4; border: 1px solid #a7f3d0; color: #059669;">
+      ✓ Validated
+    </span>
+  </td>
+</tr>
+
+<!-- J02: Proof uploaded (blue) — uploaded but not yet validated -->
+<tr style="cursor: pointer;">
+  <td class="td" style="font-weight: 600; color: #152CFF;">J02</td>
+  <td class="td" style="font-weight: 600; color: #111827;">Gonda</td>
+  <td class="td"><span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; font-weight: 600; color: #7c3aed; background: rgba(124,58,237,0.06); border: 1px solid rgba(124,58,237,0.12);">EC Export Customs</span></td>
+  <td class="td" style="font-size: 10px;">SZ Bay Checkpoint</td>
+  <td class="td mono" style="font-weight: 600; color: #111827; font-size: 10px;">RM 145.00</td>
+  <td class="td">
+    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); color: #152CFF;">
+      📄 Uploaded
+    </span>
+  </td>
+</tr>
+
+<!-- J03: Awaiting proof (gray) — no proof yet -->
+<tr style="cursor: pointer;">
+  <td class="td" style="font-weight: 600; color: #152CFF;">J03</td>
+  <td class="td" style="font-weight: 600; color: #111827;">Gonda</td>
+  <td class="td"><span style="padding: 1px 6px; border-radius: 99px; font-size: 9px; font-weight: 600; color: #b45309; background: rgba(180,83,9,0.06); border: 1px solid rgba(180,83,9,0.12);">CS Submission</span></td>
+  <td class="td" style="font-size: 10px;">SZX Airport Terminal</td>
+  <td class="td mono" style="font-weight: 600; color: #111827; font-size: 10px;">RM 80.00</td>
+  <td class="td">
+    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #f3f4f6; border: 1px solid #e5e7eb; color: #9ca3af;">
+      ○ Awaiting proof
+    </span>
+  </td>
+</tr>
+</tbody>
+</table>
+
+<div style="display: flex; justify-content: flex-end; padding: 6px 10px; border-top: 1px solid #e5e7eb; margin-top: 4px;">
+  <span style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-right: 8px;">Order Total</span>
+  <span class="mono" style="font-size: 11px; font-weight: 700; color: #111827;">RM 750.00</span>
+</div>
+</div>
+</div>
+
+<!-- Mockup: Slide-Out with proof-centric flow -->
+<h3>Slide-Out: Proof Upload + Validate + Rate-Locked Fees</h3>
+<div class="screen">
+<div style="display: flex;">
+<!-- Left: context -->
+<div style="flex: 1; padding: 16px; background: #f9fafb; border-right: 1px solid #e5e7eb; font-size: 10px; color: #9ca3af;">
+  <div style="font-style: italic;">← Table visible behind slide-out</div>
+</div>
+
+<!-- Right: Slide-out panel -->
+<div style="width: 380px; padding: 16px;">
+  <!-- Header -->
+  <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+    <span style="padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); color: #152CFF;">📄 Uploaded</span>
+    <span class="mono" style="font-size: 10px; padding: 1px 5px; background: #f3f4f6; border-radius: 4px; color: #9ca3af;">J02/3</span>
+  </div>
+  <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">Gonda · EC Export Customs</div>
+  <div style="font-size: 11px; color: #9ca3af; margin-bottom: 16px;">TikTok · 160-84329871</div>
+
+  <!-- Route -->
+  <div class="sec">Route</div>
+  <div style="font-size: 11px; margin-bottom: 16px;">Shenzhen Bay Checkpoint</div>
+
+  <!-- Proof of Service — THE PRIMARY ACTION -->
+  <div class="sec">Proof of Service</div>
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; margin-bottom: 8px;">
+    <!-- Uploaded proof -->
+    <div style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: rgba(21,44,255,0.02);">
+      <div style="width: 28px; height: 28px; border-radius: 6px; background: rgba(21,44,255,0.07); display: flex; align-items: center; justify-content: center; font-size: 12px;">📄</div>
+      <div style="flex: 1;">
+        <div style="font-size: 11px; font-weight: 500; color: #111827;">customs-clearance-001.pdf</div>
+        <div style="font-size: 9px; color: #9ca3af;">Uploaded 08 Mar · 17:50</div>
+      </div>
+      <span style="font-size: 9px; color: #9ca3af; padding: 1px 5px; border: 1px solid #e5e7eb; border-radius: 3px;">View</span>
+    </div>
+  </div>
+
+  <!-- THE KEY ACTION: Validate or Dispute -->
+  <div style="display: flex; gap: 6px; margin-bottom: 16px;">
+    <button style="flex: 1; padding: 8px 12px; border-radius: 6px; border: none; background: #059669; color: #fff; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+      ✓ Validate Proof
+    </button>
+    <button style="padding: 8px 12px; border-radius: 6px; border: 1px solid #fecaca; background: #fef2f2; color: #dc2626; font-size: 11px; font-weight: 600; cursor: pointer;">
+      Dispute
+    </button>
+  </div>
+
+  <div style="font-size: 10px; color: #9ca3af; padding: 6px 8px; background: #f9fafb; border-radius: 4px; margin-bottom: 16px; text-align: center; font-style: italic;">
+    Validating confirms the vendor completed this job and the proof is acceptable.
+  </div>
+
+  <!-- Upload more -->
+  <label style="display: flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 10px; border-radius: 4px; border: 1px dashed #e5e7eb; color: #9ca3af; font-size: 10px; cursor: pointer; margin-bottom: 16px;">
+    + Upload additional proof
+  </label>
+
+  <!-- Quantities (editable) -->
+  <div class="sec">Quantities</div>
+  <div style="display: flex; gap: 8px; padding: 8px 10px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 16px;">
+    <div>
+      <div style="font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 2px;">Bags</div>
+      <input type="number" value="24" style="width: 50px; font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 4px 6px; border: 1px solid #e5e7eb; border-radius: 4px; font-weight: 600;">
+    </div>
+    <div>
+      <div style="font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 2px;">Weight (kg)</div>
+      <input type="number" value="1240" style="width: 70px; font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 4px 6px; border: 1px solid #e5e7eb; border-radius: 4px; font-weight: 600;">
+    </div>
+  </div>
+
+  <!-- Fee Breakdown — ALL FROM RATE CARDS, NO ADD BUTTON -->
+  <div class="sec">Fees — from rate card</div>
+  <div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; margin-bottom: 16px;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr>
+        <td style="padding: 5px 8px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6;">
+          <div>Customs clearance</div>
+          <div style="font-size: 8px; color: #9ca3af;">Rate card · RT-006</div>
+        </td>
+        <td style="padding: 5px 8px; font-size: 10px; border-bottom: 1px solid #f3f4f6;" class="mono" style="color: #9ca3af;">
+          RM 120.00 <span style="font-size: 8px; color: #9ca3af;">/trip</span>
+        </td>
+        <td style="padding: 5px 8px; font-size: 10px; font-weight: 600; text-align: right; border-bottom: 1px solid #f3f4f6;" class="mono">
+          RM 120.00
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 5px 8px; font-size: 10px; color: #374151;">
+          <div>Special handling</div>
+          <div style="font-size: 8px; color: #9ca3af;">Rate card · RT-025</div>
+        </td>
+        <td style="padding: 5px 8px; font-size: 10px;" class="mono" style="color: #9ca3af;">
+          RM 25.00 <span style="font-size: 8px; color: #9ca3af;">/trip</span>
+        </td>
+        <td style="padding: 5px 8px; font-size: 10px; font-weight: 600; text-align: right;" class="mono">
+          RM 25.00
+        </td>
+      </tr>
+    </table>
+    <div style="padding: 5px 8px; background: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between;">
+      <span style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Total</span>
+      <span class="mono" style="font-size: 11px; font-weight: 700; color: #152CFF;">RM 145.00</span>
+    </div>
+  </div>
+
+  <!-- No "+ Add fee" button. Instead: -->
+  <div style="font-size: 10px; color: #9ca3af; text-align: center; padding: 6px; border: 1px dashed #e5e7eb; border-radius: 4px; margin-bottom: 16px;">
+    Fees are configured in <a href="#" style="color: #152CFF; text-decoration: none; font-weight: 600;">Rates →</a>
+  </div>
+
+  <!-- Activity Log -->
+  <div class="sec">Activity Log</div>
+  <div style="font-size: 10px; color: #6b7280;">
+    <div style="margin-bottom: 4px;">📄 Proof uploaded · <span class="mono">08 Mar 17:50</span></div>
+    <div>Job created · <span class="mono">08 Mar 09:00</span></div>
+  </div>
+</div>
+</div>
+</div>
+
+
+<!-- How Active/Completed filter changes -->
+<h3>How "Active" Changes with Proof-Centric Model</h3>
+
+<div class="rationale">
+<strong>The Active filter now maps to proof state:</strong>
+<ul style="font-size: 11px; padding-left: 16px; line-height: 1.8; margin-top: 8px;">
+  <li><strong>Active</strong> = order has at least 1 job NOT validated (awaiting proof OR uploaded but not validated)</li>
+  <li><strong>Completed</strong> = ALL jobs in the order are validated</li>
+  <li>This is cleaner than the old model because "Completed" has an unambiguous meaning: proofs validated, ready for payment.</li>
+</ul>
+
+<p style="margin-top: 12px;"><strong>The sub-table "Status" column becomes "Proof" column:</strong></p>
+<table style="width: 100%; border-collapse: collapse; margin-top: 8px;">
+<tr>
+  <td style="padding: 4px 8px; font-size: 10px; border: 1px solid #e5e7eb; background: #f9fafb; font-weight: 600; width: 140px;">Old status</td>
+  <td style="padding: 4px 8px; font-size: 10px; border: 1px solid #e5e7eb; background: #f9fafb; font-weight: 600;">New proof state</td>
+  <td style="padding: 4px 8px; font-size: 10px; border: 1px solid #e5e7eb; background: #f9fafb; font-weight: 600;">Visual</td>
+</tr>
+<tr>
+  <td style="padding: 4px 8px; font-size: 10px; border: 1px solid #e5e7eb;">Pending</td>
+  <td style="padding: 4px 8px; font-size: 10px; border: 1px solid #e5e7eb;">Awaiting proof</td>
+  <td style="padding: 4px 8px; border: 1px solid #e5e7eb;"><span style="font-size: 10px; font-weight: 600; color: #9ca3af;">○ Awaiting</span></td>
+</tr>
+<tr>
+  <td style="padding: 4px 8px; font-size: 10px; border: 1px solid #e5e7eb;">In Progress</td>
+  <td style="padding: 4px 8px; font-size: 10px; border: 1px solid #e5e7eb;">Awaiting proof (same — vendor working is invisible)</td>
+  <td style="padding: 4px 8px; border: 1px solid #e5e7eb;"><span style="font-size: 10px; font-weight: 600; color: #9ca3af;">○ Awaiting</span></td>
+</tr>
+<tr>
+  <td style="padding: 4px 8px; font-size: 10px; border: 1px solid #e5e7eb;">—</td>
+  <td style="padding: 4px 8px; font-size: 10px; border: 1px solid #e5e7eb;">Proof uploaded (NEW — auto on upload)</td>
+  <td style="padding: 4px 8px; border: 1px solid #e5e7eb;"><span style="font-size: 10px; font-weight: 600; color: #152CFF;">📄 Uploaded</span></td>
+</tr>
+<tr>
+  <td style="padding: 4px 8px; font-size: 10px; border: 1px solid #e5e7eb;">Completed</td>
+  <td style="padding: 4px 8px; font-size: 10px; border: 1px solid #e5e7eb;">Validated (ops confirmed proof is acceptable)</td>
+  <td style="padding: 4px 8px; border: 1px solid #e5e7eb;"><span style="font-size: 10px; font-weight: 600; color: #059669;">✓ Validated</span></td>
+</tr>
+<tr>
+  <td style="padding: 4px 8px; font-size: 10px; border: 1px solid #e5e7eb;">Rejected</td>
+  <td style="padding: 4px 8px; font-size: 10px; border: 1px solid #e5e7eb;">Disputed (proof rejected, vendor must re-upload)</td>
+  <td style="padding: 4px 8px; border: 1px solid #e5e7eb;"><span style="font-size: 10px; font-weight: 600; color: #dc2626;">✕ Disputed</span></td>
+</tr>
+</table>
+</div>
+
+
+<!-- VERDICT -->
+<div class="verdict">
+<h3>Verdict: Adopt Proof-Centric Model + Rate-Locked Fees</h3>
+<p style="font-size: 12px; line-height: 1.6; color: #374151;">
+This is a significant simplification that aligns the software with the real workflow. Ops doesn't care whether a vendor is "in progress" — they care whether the proof document is in hand and verified. The manual status clicks are replaced by a natural progression: upload proof → validate → pay.
+</p>
+<ul style="font-size: 11px; color: #374151; margin-top: 8px; padding-left: 16px; line-height: 1.8;">
+<li><strong>Job states:</strong> Awaiting proof → Proof uploaded → Validated → (Disputed if proof rejected)</li>
+<li><strong>Auto-transition:</strong> "Awaiting" → "Uploaded" happens automatically when a document is uploaded</li>
+<li><strong>Manual action:</strong> Only "Validate" and "Dispute" are manual clicks</li>
+<li><strong>Fees:</strong> All from rate cards. No free-text entry. "Fees are configured in Rates →" link instead of "+ Add fee"</li>
+<li><strong>Quantities:</strong> Still editable per job (recalculates fees from locked rates)</li>
+<li><strong>Active filter:</strong> "Active" = orders where any job is NOT validated</li>
+<li><strong>Billing integration:</strong> "Validated" jobs = ready for billing. Clean handoff.</li>
+</ul>
+<p style="font-size: 11px; color: #6b7280; margin-top: 12px;">
+<strong>What gets removed:</strong> Status picker (5 buttons), "+ Add fee" free-text form, fee catalog dropdown. What remains: Upload proof, Validate, Dispute, Quantity editing.
+</p>
+</div>
+
+</div>
+</body>
+</html>

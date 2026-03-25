@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-29: Scalable Filtering for 1000+ Orders</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: rgba(21,44,255,0.04); border: 2px solid rgba(21,44,255,0.2); border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #152CFF; font-size: 14px; margin-bottom: 6px; }
+.nav { height: 40px; background: #111827; display: flex; align-items: center; padding: 0 16px; gap: 16px; }
+.nav .logo { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; }
+.nav .brand { font-weight: 700; font-size: 13px; color: #fff; }
+.nav .link { font-size: 12px; color: rgba(255,255,255,0.5); }
+.nav .link.active { color: #fff; font-weight: 600; padding: 4px 10px; background: rgba(255,255,255,0.1); border-radius: 4px; }
+.th { text-align: left; padding: 6px 12px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+.td { padding: 8px 12px; font-size: 11px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+.chip { padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 600; cursor: pointer; display: inline-block; }
+.chip-active { border: 1px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; }
+.chip-inactive { border: 1px solid #e5e7eb; background: #fff; color: #6b7280; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-29: Scalable Filtering for 1000+ Orders</h1>
+
+<div class="hmw">
+How might we keep the delivery orders page fast and focused when the order count grows from 10 to 1000+, without losing the ability to find any historical order?
+</div>
+
+<div class="context">
+<strong>The scale problem:</strong> Today there are 10 seed orders and the Active filter works great. But in production, ops creates 10-50 orders/day. After 3 months: 1,000-4,500 orders. Even the "Active" filter will show 20-50 orders (manageable), but the "All" view becomes unusable. The "Completed" filter shows 900+ orders — no one scrolls through that. The question is: how do we make historical lookup fast without cluttering the daily view?
+<br><br>
+<strong>Research findings:</strong> Best-in-class TMS tools (Turvo, GoFreight, Descartes) use date range pickers as the primary historical filter. Baymard Institute recommends applied filters with visual indicators and "Clear All" for data-heavy tables. Virtual scrolling is recommended over pagination for operations tools where scanning speed matters.
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION A: DATE PERIOD PICKER + ACTIVE DEFAULT -->
+<!-- ============================================ -->
+
+<h2>Option A: Date Period Picker + Active Default</h2>
+<span class="label" style="background: rgba(21,44,255,0.06); color: #152CFF;">Recommended</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Keep the existing Active/All/Completed chips, but add a date period selector that applies when viewing "All" or "Completed." Active view has no date constraint (you always see everything active). "All" and "Completed" default to "This month" and offer quick presets: Today, This week, This month, Last month, Custom range.
+
+<p style="margin-top: 10px;"><strong>How it works:</strong></p>
+<ul style="padding-left: 16px; line-height: 1.8;">
+<li><strong>Active tab:</strong> No date filter needed — shows all active orders regardless of when created. This is always small (20-50 orders max).</li>
+<li><strong>All / Completed tabs:</strong> Date picker appears. Defaults to "This month." Quick presets for common lookups. Custom range for billing periods.</li>
+<li><strong>Pagination:</strong> Show 50 orders per page with prev/next. No infinite scroll (bad for data tables per research).</li>
+<li><strong>Sort:</strong> Default newest first (most recent pickup date). Sortable columns for ops to reorder.</li>
+</ul>
+
+<div class="pros-cons">
+<div class="pros"><strong>✓ Pros</strong><br>
+• Active view stays fast regardless of total order count<br>
+• Date picker is the natural historical lookup — "find Shopee orders from January"<br>
+• Quick presets match real workflows: "what shipped this week?"<br>
+• Pagination keeps rendering fast at any scale<br>
+• No backend changes needed for localStorage (filter client-side)</div>
+<div class="cons"><strong>✗ Cons</strong><br>
+• Date picker adds UI complexity to the filter bar<br>
+• "This month" default may miss orders from yesterday that span month boundaries</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link active">Delivery Orders</span>
+  <span class="link">Rates</span>
+  <span class="link">Billing</span>
+  <span class="link">Master Data</span>
+</div>
+
+<!-- Stats bar -->
+<div style="padding: 8px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 11px; color: #6b7280; display: flex; gap: 16px;">
+  <span><strong style="color: #111827;">23</strong> active orders</span>
+  <span style="color: #152CFF; font-weight: 600;">12 in progress</span>
+  <span>8 pending</span>
+  <span style="color: #dc2626; font-weight: 600;">3 rejected</span>
+</div>
+
+<div style="padding: 16px 16px 0;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <div>
+      <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">Delivery Orders</h1>
+      <p style="font-size: 11px; color: #9ca3af; margin-top: 2px;">23 active · 1,247 total</p>
+    </div>
+    <button style="padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; background: #152CFF; color: #fff; border: none; cursor: pointer;">+ New Order</button>
+  </div>
+
+  <!-- Filter bar -->
+  <div style="display: flex; align-items: center; gap: 6px; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+    <!-- Status chips -->
+    <span class="chip chip-active">Active (23)</span>
+    <span class="chip chip-inactive">All</span>
+    <span class="chip chip-inactive">Completed</span>
+
+    <span style="width: 1px; height: 16px; background: #e5e7eb; margin: 0 4px;"></span>
+
+    <!-- Date picker (hidden for Active, visible for All/Completed) -->
+    <span style="font-size: 10px; color: #d1d5db; font-style: italic;">Date filter applies to All/Completed only</span>
+
+    <span style="margin-left: auto; font-size: 11px; color: #9ca3af;">MAWB</span>
+    <input type="text" placeholder="Search..." style="font-size: 11px; padding: 3px 8px; border: 1px solid #e5e7eb; border-radius: 4px; width: 120px; outline: none;">
+    <span style="font-size: 11px; color: #9ca3af;">Customer</span>
+    <select style="font-size: 11px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 4px;"><option>All</option></select>
+  </div>
+</div>
+
+<div style="padding: 8px 16px; font-size: 10px; color: #9ca3af;">
+  Showing 23 active orders · no date filter applied
+</div>
+
+<!-- Show what it looks like when "All" is clicked -->
+<div style="margin: 16px; padding: 12px; border: 1px dashed #152CFF; border-radius: 6px; background: rgba(21,44,255,0.02);">
+  <div style="font-size: 10px; font-weight: 600; color: #152CFF; margin-bottom: 8px;">↓ When "All" or "Completed" is clicked, date picker appears:</div>
+  <div style="display: flex; align-items: center; gap: 6px;">
+    <span class="chip chip-inactive">Active (23)</span>
+    <span class="chip chip-active">All</span>
+    <span class="chip chip-inactive">Completed (1,224)</span>
+
+    <span style="width: 1px; height: 16px; background: #e5e7eb; margin: 0 4px;"></span>
+
+    <!-- Date period presets -->
+    <span style="font-size: 10px; color: #9ca3af;">Period:</span>
+    <span class="chip chip-inactive" style="font-size: 9px;">Today</span>
+    <span class="chip chip-inactive" style="font-size: 9px;">This week</span>
+    <span class="chip chip-active" style="font-size: 9px;">This month</span>
+    <span class="chip chip-inactive" style="font-size: 9px;">Last month</span>
+    <span class="chip chip-inactive" style="font-size: 9px;">Custom ▾</span>
+
+    <span style="margin-left: auto; font-size: 10px; color: #6b7280;">
+      Showing <strong style="color: #111827;">147</strong> of 1,247 orders · March 2026
+    </span>
+  </div>
+
+  <!-- Pagination -->
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 8px; border-top: 1px solid #e5e7eb;">
+    <span style="font-size: 10px; color: #9ca3af;">Page 1 of 3 · 50 per page</span>
+    <div style="display: flex; gap: 4px;">
+      <button style="padding: 3px 8px; border-radius: 4px; border: 1px solid #e5e7eb; background: #fff; color: #9ca3af; font-size: 10px; cursor: pointer;">← Prev</button>
+      <button style="padding: 3px 8px; border-radius: 4px; border: 1px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; font-size: 10px; font-weight: 600; cursor: pointer;">1</button>
+      <button style="padding: 3px 8px; border-radius: 4px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; font-size: 10px; cursor: pointer;">2</button>
+      <button style="padding: 3px 8px; border-radius: 4px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; font-size: 10px; cursor: pointer;">3</button>
+      <button style="padding: 3px 8px; border-radius: 4px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; font-size: 10px; cursor: pointer;">Next →</button>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION B: MONTH TABS                         -->
+<!-- ============================================ -->
+
+<h2>Option B: Month Tabs — Calendar as Primary Navigation</h2>
+<span class="label" style="background: #f3f4f6; color: #6b7280;">Calendar-First</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Replace the Active/All/Completed chips with month tabs at the top: <strong>Active | Mar 2026 | Feb 2026 | Jan 2026 | ...</strong> Active is always first. Historical months are automatically generated from order dates. Each month tab shows all orders from that period. This aligns with billing cycles (monthly invoicing).
+
+<div class="pros-cons">
+<div class="pros"><strong>✓ Pros</strong><br>
+• Natural for billing: "pull up January's orders"<br>
+• Months auto-generate — no date picker needed<br>
+• Each month has a bounded number of orders (~150-500)<br>
+• Aligns with accounting periods</div>
+<div class="cons"><strong>✗ Cons</strong><br>
+• Tab bar grows long — after 12 months, 12+ tabs<br>
+• Hard to find orders that span month boundaries<br>
+• "Active" orders from different months mixed in the Active tab<br>
+• Loses the "All" view entirely</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link active">Delivery Orders</span>
+  <span class="link">Rates</span>
+  <span class="link">Billing</span>
+  <span class="link">Master Data</span>
+</div>
+
+<div style="padding: 16px 16px 0;">
+  <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px; margin-bottom: 8px;">Delivery Orders</h1>
+
+  <!-- Month tabs -->
+  <div style="display: flex; gap: 2px; overflow-x: auto; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
+    <button style="padding: 4px 12px; border-radius: 4px; border: none; background: rgba(21,44,255,0.06); color: #152CFF; font-weight: 600; font-size: 12px; cursor: pointer; white-space: nowrap;">Active (23)</button>
+    <button style="padding: 4px 12px; border-radius: 4px; border: none; background: transparent; color: #9ca3af; font-size: 12px; cursor: pointer; white-space: nowrap;">Mar 2026 (147)</button>
+    <button style="padding: 4px 12px; border-radius: 4px; border: none; background: transparent; color: #9ca3af; font-size: 12px; cursor: pointer; white-space: nowrap;">Feb 2026 (312)</button>
+    <button style="padding: 4px 12px; border-radius: 4px; border: none; background: transparent; color: #9ca3af; font-size: 12px; cursor: pointer; white-space: nowrap;">Jan 2026 (289)</button>
+    <button style="padding: 4px 12px; border-radius: 4px; border: none; background: transparent; color: #d1d5db; font-size: 12px; cursor: pointer; white-space: nowrap;">Dec 2025 (268)</button>
+    <button style="padding: 4px 12px; border-radius: 4px; border: none; background: transparent; color: #d1d5db; font-size: 12px; cursor: pointer; white-space: nowrap;">Nov 2025 (245)</button>
+    <span style="font-size: 12px; color: #d1d5db; align-self: center; padding: 0 8px;">...</span>
+  </div>
+</div>
+<div style="padding: 12px 16px; font-size: 10px; color: #9ca3af;">Showing 23 active orders across all months</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION C: SEARCH-FIRST + RECENT              -->
+<!-- ============================================ -->
+
+<h2>Option C: Search-First — MAWB/Customer Search as Primary</h2>
+<span class="label" style="background: #fffbeb; color: #b45309;">Search-Driven</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Active orders are always shown by default (same as now). For historical lookup, the primary tool is a prominent search bar — type a MAWB number, customer name, or order ID and get instant results across ALL time. No date filters needed if search is fast. This matches how ops actually looks up old orders: "find the Shopee order from that MAWB number."
+
+<div class="pros-cons">
+<div class="pros"><strong>✓ Pros</strong><br>
+• Fastest path to finding a specific order<br>
+• No date guessing — MAWB search is exact<br>
+• Simplest UI — no date pickers, no month tabs<br>
+• Active view is untouched and always focused</div>
+<div class="cons"><strong>✗ Cons</strong><br>
+• Can't browse — only works if you know what you're looking for<br>
+• "Show me all Shopee orders from January" needs additional filters<br>
+• Doesn't help with billing review (need date ranges for that)<br>
+• Search quality depends on implementation</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="nav">
+  <div class="logo"></div>
+  <span class="brand">Teleport OS</span>
+  <span class="link active">Delivery Orders</span>
+  <span class="link">Rates</span>
+  <span class="link">Billing</span>
+  <span class="link">Master Data</span>
+</div>
+
+<div style="padding: 16px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">Delivery Orders</h1>
+    <button style="padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; background: #152CFF; color: #fff; border: none;">+ New Order</button>
+  </div>
+
+  <!-- Prominent search bar -->
+  <div style="position: relative; margin-bottom: 12px;">
+    <input type="text" placeholder="Search by MAWB, customer, or order ID..." style="width: 100%; font-size: 12px; padding: 10px 12px 10px 36px; border: 1.5px solid #e5e7eb; border-radius: 6px; outline: none; background: #fff;">
+    <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 14px;">🔍</span>
+    <span style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 9px; color: #d1d5db; border: 1px solid #e5e7eb; padding: 1px 4px; border-radius: 3px;">⌘K</span>
+  </div>
+
+  <!-- Active orders below -->
+  <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+    <span class="chip chip-active">Active (23)</span>
+    <span class="chip chip-inactive">All (1,247)</span>
+    <span style="margin-left: auto; font-size: 10px; color: #9ca3af;">Search works across all orders, including historical</span>
+  </div>
+</div>
+</div>
+
+
+<!-- VERDICT -->
+<div class="verdict">
+<h3>Verdict: Option A — Date Period Picker + Active Default</h3>
+<p style="font-size: 12px; line-height: 1.6; color: #374151;">
+<strong>Recommended because:</strong> It handles both daily ops (Active view, no date filter) and historical review (date presets for billing/audit) in one unified filter bar. The date picker only appears when you leave the Active view, so it adds zero complexity to the daily workflow. Pagination at 50/page keeps rendering fast at any scale.
+</p>
+<ul style="font-size: 11px; color: #374151; margin-top: 8px; padding-left: 16px; line-height: 1.8;">
+<li><strong>Active tab:</strong> No date constraint, no pagination needed (always &lt;50 orders)</li>
+<li><strong>All/Completed tabs:</strong> Date period selector with presets (Today, This week, This month, Last month, Custom)</li>
+<li><strong>Pagination:</strong> 50 orders/page with page numbers. Not infinite scroll (bad for data tables).</li>
+<li><strong>Default period:</strong> "This month" when switching to All/Completed</li>
+<li><strong>Subtitle:</strong> "23 active · 1,247 total" gives context without cluttering</li>
+<li><strong>Future-proof:</strong> When backend is added, date filter maps directly to database query</li>
+</ul>
+
+<p style="font-size: 11px; color: #6b7280; margin-top: 12px;">
+<strong>Note:</strong> For localStorage (Phase 1), client-side filtering + pagination is sufficient up to ~5,000 orders. Beyond that, a backend with server-side pagination is required. The UI pattern here is designed to work with both.
+</p>
+</div>
+
+</div>
+</body>
+</html>
