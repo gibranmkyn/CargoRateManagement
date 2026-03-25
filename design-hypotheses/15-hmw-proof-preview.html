@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW: Proof Document Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #0D9488; }
+  .hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #0D9488; border-radius: 0 6px 6px 0; }
+  .context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+  .label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+  .pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+  .cons { background: #fefafa; border: 1px solid #fecaca; }
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+  .verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+  /* Dense table system */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 8px 12px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; font-size: 12px; }
+  tr.hoverable { cursor: pointer; }
+  tr.hoverable:hover { background: #f9fafb; }
+
+  .chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+  .chip-n { border: 1px solid #e5e7eb; background: #fff; color: #6b7280; }
+  .chip-g { border: 1px solid #a7f3d0; background: #f0fdf4; color: #059669; }
+  .chip-r { border: 1px solid #fecaca; background: #fef2f2; color: #dc2626; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+  .svc-p { padding: 1px 5px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.1); display: inline-flex; align-items: center; gap: 3px; }
+  .svc-p .c { color: #0D9488; font-family: monospace; }
+
+  /* Tooltip */
+  .tooltip-wrapper { position: relative; display: inline-block; }
+  .tooltip { position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: #111827; color: #fff; padding: 8px 10px; border-radius: 4px; font-size: 10px; line-height: 1.5; white-space: nowrap; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+  .tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #111827; }
+
+  /* Proof status icons */
+  .proof-check { color: #059669; font-weight: 700; font-size: 13px; }
+  .proof-empty { color: #d1d5db; font-size: 13px; }
+
+  /* Sub-table header */
+  .sub-header { padding: 8px 12px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 12px; }
+
+  /* Inline filename */
+  .proof-file { font-size: 10px; color: #374151; font-weight: 500; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; }
+  .proof-more { font-size: 9px; color: #9ca3af; font-weight: 600; margin-left: 2px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>H15: Proof Document Preview</h1>
+<div class="hmw">"How might we let ops verify proof documents at a glance without opening the slide-out panel?"</div>
+
+<div class="context">
+  <strong>Problem:</strong> The sub-table shows "1 doc" or "0 docs" in the Proofs column. Ops needs to verify proofs quickly -- especially for billing readiness checks. Currently, ops has to click each job row to open the slide-out panel just to see if a proof was uploaded or what the file name is. When checking 15 completed jobs for billing, that is 15 panel opens and closes. The question is usually simple: "does this job have a proof or not?"
+</div>
+
+<!-- ======================================== -->
+<h2>Option A: Tooltip Preview on Hover</h2>
+<span class="label" style="background:#eff6ff;color:#2563eb;">Rich preview</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Hover over "1 doc" in the proofs column to see a tooltip showing the file name and upload date. For image proofs, the tooltip could show a small thumbnail. The tooltip appears instantly on hover and disappears on mouse-out.
+
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>
+      Rich detail without opening the panel<br>
+      File name visible for verification<br>
+      Thumbnail preview for image proofs is very useful<br>
+      No layout changes to the table
+    </div>
+    <div class="cons"><strong>Cons</strong><br>
+      Hover-only -- doesn't work on touch devices<br>
+      Tooltip can obstruct nearby rows<br>
+      Requires loading file metadata on hover (latency)<br>
+      "1 doc" text alone doesn't signal presence/absence clearly
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="sub-header">
+    <span style="font-weight:700;">Shopee</span>
+    <span class="mono" style="font-size:9px;color:#9ca3af;margin-left:6px;">160-83291102</span>
+    <span style="font-size:11px;color:#9ca3af;margin-left:12px;">16 bags &middot; 890 kg</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:30px;"></th>
+        <th>Job</th>
+        <th>Vendor</th>
+        <th>Service</th>
+        <th>Origin &rarr; Destination</th>
+        <th>Status</th>
+        <th>Proofs</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="hoverable">
+        <td></td>
+        <td style="font-weight:600;color:#0D9488;">J01</td>
+        <td style="font-weight:600;">HaleSun</td>
+        <td><span class="svc-p"><span class="c">CR</span> Cargo Retrieval</span></td>
+        <td style="color:#374151;">Yantian Port &rarr; Dongguan WH</td>
+        <td><span class="chip chip-g"><span class="dot" style="background:#059669;"></span>Completed</span></td>
+        <td>
+          <span class="tooltip-wrapper">
+            <span style="color:#059669;font-weight:600;cursor:help;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;text-decoration-color:#a7f3d0;">1 doc</span>
+            <span class="tooltip">
+              <strong>POD-shopee-CR-20260325.pdf</strong><br>
+              Uploaded 25 Mar, 15:42 by HaleSun<br>
+              <span style="color:#9ca3af;">PDF &middot; 245 KB</span>
+            </span>
+          </span>
+        </td>
+      </tr>
+      <tr class="hoverable">
+        <td></td>
+        <td style="font-weight:600;color:#0D9488;">J02</td>
+        <td style="font-weight:600;">SevenSeas</td>
+        <td><span class="svc-p"><span class="c">FM</span> Trucking</span></td>
+        <td style="color:#374151;">Dongguan WH &rarr; Shenzhen Port</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>In Progress</span></td>
+        <td style="color:#9ca3af;">0 docs</td>
+      </tr>
+      <tr class="hoverable">
+        <td></td>
+        <td style="font-weight:600;color:#0D9488;">J03</td>
+        <td style="font-weight:600;">Gonda</td>
+        <td><span class="svc-p"><span class="c">EC</span> Export Customs</span></td>
+        <td style="color:#374151;">Customs clearance (Shenzhen)</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+        <td style="color:#9ca3af;">0 docs</td>
+      </tr>
+    </tbody>
+  </table>
+  <div style="padding:6px 12px;font-size:10px;color:#9ca3af;background:#f9fafb;border-top:1px solid #e5e7eb;">
+    Tooltip is shown on J01's "1 doc" cell (hover state)
+  </div>
+</div>
+
+<!-- ======================================== -->
+<h2>Option B: Inline File Names in Proofs Column</h2>
+<span class="label" style="background:#fffbeb;color:#d97706;">Detailed inline</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Instead of "1 doc", show the actual filename truncated to fit the column: "POD-tiktok..." Multiple files show the first file plus a count: "POD-tik... +1". No hover needed -- the information is always visible.
+
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>
+      Always visible -- no hover or click needed<br>
+      File name helps ops verify the right document was uploaded<br>
+      "+1" count shows if multiple proofs exist<br>
+      Works on touch devices
+    </div>
+    <div class="cons"><strong>Cons</strong><br>
+      Truncated file names may not be useful ("POD-tik..." doesn't help much)<br>
+      Column needs to be wider to show file names<br>
+      Visual noise -- every proof cell has different-length text<br>
+      For billing checks, file name doesn't matter -- just "is there a proof?"
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="sub-header">
+    <span style="font-weight:700;">TikTok</span>
+    <span class="mono" style="font-size:9px;color:#9ca3af;margin-left:6px;">160-83291045</span>
+    <span style="font-size:11px;color:#9ca3af;margin-left:12px;">24 bags &middot; 1,120 kg</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:30px;"></th>
+        <th>Job</th>
+        <th>Vendor</th>
+        <th>Service</th>
+        <th>Origin &rarr; Destination</th>
+        <th>Status</th>
+        <th style="min-width:120px;">Proofs</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="hoverable">
+        <td></td>
+        <td style="font-weight:600;color:#0D9488;">J01</td>
+        <td style="font-weight:600;">HaleSun</td>
+        <td><span class="svc-p"><span class="c">FM</span> Trucking</span></td>
+        <td style="color:#374151;">Dongguan &rarr; Shenzhen Port</td>
+        <td><span class="chip chip-g"><span class="dot" style="background:#059669;"></span>Completed</span></td>
+        <td>
+          <span class="proof-file" title="POD-tiktok-FM-20260325.pdf">POD-tiktok-FM...</span>
+        </td>
+      </tr>
+      <tr class="hoverable">
+        <td></td>
+        <td style="font-weight:600;color:#0D9488;">J02</td>
+        <td style="font-weight:600;">ThaiKee</td>
+        <td><span class="svc-p"><span class="c">EC</span> Export Customs</span></td>
+        <td style="color:#374151;">Customs clearance (Shenzhen)</td>
+        <td><span class="chip chip-g"><span class="dot" style="background:#059669;"></span>Completed</span></td>
+        <td>
+          <span class="proof-file" title="customs-clearance-20260325.pdf">customs-clear...</span>
+          <span class="proof-more">+1</span>
+        </td>
+      </tr>
+      <tr class="hoverable">
+        <td></td>
+        <td style="font-weight:600;color:#0D9488;">J03</td>
+        <td style="font-weight:600;">The Lorry</td>
+        <td><span class="svc-p"><span class="c">OH</span> Overland Haulage</span></td>
+        <td style="color:#374151;">Shenzhen Port &rarr; HK Terminal</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>In Progress</span></td>
+        <td style="color:#9ca3af;font-size:11px;">No proof</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ======================================== -->
+<h2>Option C: Proof Status Icon</h2>
+<span class="label" style="background:#ecfdf5;color:#059669;">Recommended</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Replace "N docs" with a simple icon. Green check mark = proof uploaded. Gray circle = no proof. This aligns with the 3-color system: green for completed/present, gray for missing/pending. The icon is compact and scannable. Ops just needs to answer one question: "is there a proof or not?" The file details remain available in the slide-out panel.
+
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>
+      Most compact -- takes minimal column width<br>
+      Aligns perfectly with 3-color status system<br>
+      Instantly scannable -- green checks stand out, gray circles blend<br>
+      Answers the real question: "does this job have proof?"<br>
+      File details stay in the slide-out (where they belong for deep inspection)
+    </div>
+    <div class="cons"><strong>Cons</strong><br>
+      Loses "how many" docs info (1 doc vs 3 docs)<br>
+      No file name preview without opening panel<br>
+      Might feel too minimal for power users who want more detail
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="sub-header">
+    <span style="font-weight:700;">AliExpress</span>
+    <span class="mono" style="font-size:9px;color:#9ca3af;margin-left:6px;">160-83291287</span>
+    <span style="font-size:11px;color:#9ca3af;margin-left:12px;">36 bags &middot; 1,540 kg</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:30px;"></th>
+        <th>Job</th>
+        <th>Vendor</th>
+        <th>Service</th>
+        <th>Origin &rarr; Destination</th>
+        <th>Status</th>
+        <th style="width:55px;text-align:center;">Proof</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="hoverable">
+        <td></td>
+        <td style="font-weight:600;color:#0D9488;">J01</td>
+        <td style="font-weight:600;">Gonda</td>
+        <td><span class="svc-p"><span class="c">CR</span> Cargo Retrieval</span></td>
+        <td style="color:#374151;">Yantian Port &rarr; Qianhai FTZ</td>
+        <td><span class="chip chip-g"><span class="dot" style="background:#059669;"></span>Completed</span></td>
+        <td style="text-align:center;"><span class="proof-check" title="1 proof document uploaded">&#10003;</span></td>
+      </tr>
+      <tr class="hoverable">
+        <td></td>
+        <td style="font-weight:600;color:#0D9488;">J02</td>
+        <td style="font-weight:600;">HaleSun</td>
+        <td><span class="svc-p"><span class="c">FM</span> Trucking</span></td>
+        <td style="color:#374151;">Qianhai FTZ &rarr; Shekou Port</td>
+        <td><span class="chip chip-g"><span class="dot" style="background:#059669;"></span>Completed</span></td>
+        <td style="text-align:center;"><span class="proof-check" title="1 proof document uploaded">&#10003;</span></td>
+      </tr>
+      <tr class="hoverable">
+        <td></td>
+        <td style="font-weight:600;color:#0D9488;">J03</td>
+        <td style="font-weight:600;">SevenSeas</td>
+        <td><span class="svc-p"><span class="c">EC</span> Export Customs</span></td>
+        <td style="color:#374151;">Customs clearance (Shekou)</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>In Progress</span></td>
+        <td style="text-align:center;"><span class="proof-empty" title="No proof uploaded">&#9675;</span></td>
+      </tr>
+      <tr class="hoverable">
+        <td></td>
+        <td style="font-weight:600;color:#0D9488;">J04</td>
+        <td style="font-weight:600;">The Lorry</td>
+        <td><span class="svc-p"><span class="c">OH</span> Overland Haulage</span></td>
+        <td style="color:#374151;">Shekou Port &rarr; HK Terminal</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+        <td style="text-align:center;"><span class="proof-empty" title="No proof uploaded">&#9675;</span></td>
+      </tr>
+    </tbody>
+  </table>
+  <div style="padding:6px 12px;font-size:10px;color:#9ca3af;background:#f9fafb;border-top:1px solid #e5e7eb;">
+    <span class="proof-check" style="font-size:11px;">&#10003;</span> = Proof uploaded &nbsp;&nbsp;
+    <span class="proof-empty" style="font-size:11px;">&#9675;</span> = No proof &nbsp;&nbsp;
+    Click any job row to open slide-out with full proof details
+  </div>
+</div>
+
+<!-- Comparison: all three approaches side by side for the Proofs column -->
+<h2 style="color:#374151;font-size:14px;margin-top:28px;">Side-by-Side: Proofs Column Comparison</h2>
+<div class="screen">
+  <table>
+    <thead>
+      <tr>
+        <th>Job</th>
+        <th>Status</th>
+        <th style="min-width:100px;">Option A: Tooltip</th>
+        <th style="min-width:120px;">Option B: Filename</th>
+        <th style="min-width:60px;text-align:center;">Option C: Icon</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="font-weight:600;color:#0D9488;">J01 Gonda</td>
+        <td><span class="chip chip-g"><span class="dot" style="background:#059669;"></span>Completed</span></td>
+        <td>
+          <span style="color:#059669;font-weight:600;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;text-decoration-color:#a7f3d0;">1 doc</span>
+        </td>
+        <td><span class="proof-file">POD-aliexp-CR...</span></td>
+        <td style="text-align:center;"><span class="proof-check">&#10003;</span></td>
+      </tr>
+      <tr>
+        <td style="font-weight:600;color:#0D9488;">J02 HaleSun</td>
+        <td><span class="chip chip-g"><span class="dot" style="background:#059669;"></span>Completed</span></td>
+        <td>
+          <span style="color:#059669;font-weight:600;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;text-decoration-color:#a7f3d0;">1 doc</span>
+        </td>
+        <td><span class="proof-file">delivery-rece...</span></td>
+        <td style="text-align:center;"><span class="proof-check">&#10003;</span></td>
+      </tr>
+      <tr>
+        <td style="font-weight:600;color:#0D9488;">J03 SevenSeas</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>In Progress</span></td>
+        <td style="color:#9ca3af;">0 docs</td>
+        <td style="color:#9ca3af;font-size:11px;">No proof</td>
+        <td style="text-align:center;"><span class="proof-empty">&#9675;</span></td>
+      </tr>
+      <tr>
+        <td style="font-weight:600;color:#0D9488;">J04 The Lorry</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+        <td style="color:#9ca3af;">0 docs</td>
+        <td style="color:#9ca3af;font-size:11px;">No proof</td>
+        <td style="text-align:center;"><span class="proof-empty">&#9675;</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ======================================== -->
+<div class="verdict">
+  <h3>Recommendation: Option C -- Proof Status Icon</h3>
+  <p style="font-size:12px;line-height:1.7;color:#374151;">
+    The icon approach is the most compact and aligns naturally with the 3-color system already used throughout the UI. Green check = proof present (done). Gray circle = proof missing (needs attention). When ops scans the sub-table during a billing readiness check, they are asking a binary question: "does this job have proof?" -- not "what's the filename?" The icon answers that instantly. A column of green checks and gray circles is scannable in under a second, whereas reading "1 doc" / "0 docs" or parsing truncated filenames takes measurably longer. The file details (name, upload date, thumbnail) belong in the slide-out panel for the cases when ops actually needs to inspect the document, which is a separate, less frequent task.
+  </p>
+</div>
+
+</div>
+</body>
+</html>

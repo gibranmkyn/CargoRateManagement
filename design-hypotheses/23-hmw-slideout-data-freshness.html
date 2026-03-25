@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW: Slide-Out Data Freshness</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #0D9488; }
+  h3 { font-size: 14px; font-weight: 700; margin: 24px 0 8px; }
+  .hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #0D9488; border-radius: 0 6px 6px 0; }
+  .context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+  .rationale strong { color: #111827; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+  .label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+  .pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+  .cons { background: #fefafa; border: 1px solid #fecaca; }
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+  .verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { text-align: left; padding: 5px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; }
+  tr:hover { background: #f9fafb; }
+
+  .nav-dense { height: 40px; padding: 0 16px; background: #fff; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 2px; font-size: 12px; }
+  .nav-dense a { padding: 4px 10px; border-radius: 4px; color: #9ca3af; text-decoration: none; }
+  .nav-dense a.active { color: #0D9488; background: rgba(13,148,136,0.06); font-weight: 600; }
+  .nav-dense .logo { display: flex; align-items: center; gap: 6px; margin-right: 16px; font-weight: 700; font-size: 13px; color: #111827; }
+  .nav-dense .logo-dot { width: 20px; height: 20px; background: #0D9488; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 9px; }
+
+  .btn-sm { padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: pointer; font-family: inherit; border: none; }
+  .btn-teal { background: #0D9488; color: #fff; }
+  .btn-ghost { background: transparent; color: #9ca3af; border: 1px solid #e5e7eb; }
+
+  .svc-p { padding: 1px 5px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.1); display: inline-flex; align-items: center; gap: 3px; }
+  .svc-p .c { color: #0D9488; font-family: monospace; }
+
+  /* Sequence diagram styles */
+  .seq-diagram { padding: 20px; }
+  .seq-row { display: flex; align-items: stretch; min-height: 40px; }
+  .seq-actor { width: 120px; flex-shrink: 0; text-align: center; font-size: 10px; font-weight: 700; padding: 6px; }
+  .seq-actor.header { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; margin: 0 4px; color: #111827; }
+  .seq-lane { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; }
+  .seq-line { position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: #e5e7eb; }
+  .seq-msg { background: #fff; border: 1px solid #e5e7eb; border-radius: 4px; padding: 4px 10px; font-size: 10px; position: relative; z-index: 1; white-space: nowrap; }
+  .seq-msg.action { background: #0D9488; color: #fff; border-color: #0D9488; font-weight: 600; }
+  .seq-msg.update { background: #f0fdf4; border-color: #a7f3d0; color: #059669; font-weight: 600; }
+  .seq-msg.stale { background: #fef2f2; border-color: #fecaca; color: #dc2626; font-weight: 600; }
+  .seq-msg.ok { background: #f0fdf4; border-color: #a7f3d0; color: #059669; }
+  .seq-arrow { font-size: 10px; color: #9ca3af; padding: 0 6px; }
+
+  /* Slide-out panel mock */
+  .panel-mock { width: 320px; border-left: 1px solid #e5e7eb; background: #fff; flex-shrink: 0; }
+  .panel-header { padding: 10px 14px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
+  .panel-section { padding: 10px 14px; border-bottom: 1px solid #f3f4f6; }
+  .panel-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #9ca3af; margin-bottom: 4px; }
+
+  .status-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+  .status-pending { background: #f3f4f6; border: 1px solid #e5e7eb; color: #6b7280; }
+  .status-progress { background: #f3f4f6; border: 1px solid #e5e7eb; color: #6b7280; }
+  .status-completed { background: #f0fdf4; border: 1px solid #a7f3d0; color: #059669; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+  .dot-gray { background: #9ca3af; }
+  .dot-green { background: #10b981; }
+
+  /* Code-style blocks */
+  .code-block { background: #1e1e2e; color: #cdd6f4; border-radius: 6px; padding: 14px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; line-height: 1.6; overflow-x: auto; }
+  .code-block .comment { color: #6c7086; }
+  .code-block .keyword { color: #cba6f7; }
+  .code-block .fn { color: #89b4fa; }
+  .code-block .string { color: #a6e3a1; }
+  .code-block .type { color: #fab387; }
+  .code-block .var { color: #f5c2e7; }
+  .code-block .op { color: #89dceb; }
+  .code-block .highlight { background: rgba(166,227,161,0.15); display: inline; padding: 1px 4px; border-radius: 2px; }
+
+  /* Toast mock */
+  .toast-mock { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .toast-green { background: #065f46; color: #d1fae5; }
+
+  /* Timeline for option C */
+  .timeline { display: flex; flex-direction: column; gap: 0; padding: 0 20px; }
+  .tl-step { display: flex; gap: 12px; padding: 10px 0; position: relative; }
+  .tl-step:not(:last-child)::before { content: ''; position: absolute; left: 11px; top: 32px; bottom: 0; width: 1px; background: #e5e7eb; }
+  .tl-dot { width: 22px; height: 22px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: #fff; flex-shrink: 0; }
+  .tl-content { flex: 1; }
+  .tl-title { font-size: 11px; font-weight: 700; color: #111827; margin-bottom: 2px; }
+  .tl-desc { font-size: 10px; color: #6b7280; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW: Slide-Out Data Freshness</h1>
+<div class="hmw">"How might we keep the slide-out panel's data fresh when ops changes status or uploads proofs -- so they always see the current state without closing and reopening?"</div>
+
+<div class="context">
+  <strong>Current bug:</strong> The slide-out panel receives a job object snapshot when it opens. When ops changes status (e.g., Pending &rarr; In Progress), the mutation goes to React Context &rarr; localStorage. But the panel holds the original snapshot. The status picker visually stays on "Pending" even though the job is now "In Progress" in the global state. Ops has to close and reopen the panel to see the updated state.<br><br>
+  <strong>What triggers this:</strong> Any mutation dispatched from within the panel: status changes, proof document uploads, activity log notes, rejection &rarr; reassignment. The panel's local data gets stale immediately after the action completes. This affects every interaction in the slide-out.<br><br>
+  <strong>Current code:</strong> Panel state is <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;font-family:monospace;font-size:10px;">{ trip: Trip, job: Job, jobIdx: number }</code>. These are copies passed when the panel opens. Context mutations update the canonical <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;font-family:monospace;font-size:10px;">trips[]</code> array, but the panel doesn't re-read from it.
+</div>
+
+<!-- ======================================================= -->
+<h2>Option A: Read from Context (Reactive Panel)</h2>
+<span class="label" style="background:#f0fdf4;color:#059669;">Recommended</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Instead of passing the full trip + job objects to the panel, pass only <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;font-family:monospace;font-size:10px;">tripId</code> + <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;font-family:monospace;font-size:10px;">jobId</code>. The panel derives the current job from context on every render: <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;font-family:monospace;font-size:10px;">trips.find(t =&gt; t.id === tripId)?.jobs.find(j =&gt; j.id === jobId)</code>. When a status change dispatches to context, context updates &rarr; the panel re-renders with the fresh data. No local copy, no drift, no stale state.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>- Always fresh -- single source of truth (context)<br>- No local state drift or sync logic<br>- Simplest mental model: panel always shows what context has<br>- Small refactor: change panel state from {trip,job} to {tripId,jobId}<br>- Works for ALL mutations, not just status changes</div>
+    <div class="cons"><strong>Cons</strong><br>- Requires refactoring how the panel receives data (IDs instead of objects)<br>- The .find() lookup runs on every render (negligible perf impact for ~50 trips)<br>- If tripId/jobId somehow becomes invalid (deleted trip), panel shows nothing (needs guard)<br>- All panel components must be updated to use derived data</div>
+  </div>
+</div>
+
+<h3>Sequence: click status &rarr; context updates &rarr; panel re-renders</h3>
+<div class="screen">
+  <div style="padding:20px;">
+    <!-- Flow diagram: current (broken) vs proposed (reactive) -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <!-- Current: broken -->
+      <div style="border:1px solid #fecaca;border-radius:6px;padding:14px;background:#fefafa;">
+        <div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:12px;">CURRENT: Stale snapshot</div>
+        <div class="timeline">
+          <div class="tl-step">
+            <div class="tl-dot" style="background:#6b7280;">1</div>
+            <div class="tl-content">
+              <div class="tl-title">Panel opens</div>
+              <div class="tl-desc">Receives <code style="font-family:monospace;font-size:9px;background:#f3f4f6;padding:1px 3px;border-radius:2px;">{ trip, job, jobIdx }</code> -- a copy of the data at this moment.</div>
+            </div>
+          </div>
+          <div class="tl-step">
+            <div class="tl-dot" style="background:#0D9488;">2</div>
+            <div class="tl-content">
+              <div class="tl-title">Ops clicks "In Progress"</div>
+              <div class="tl-desc">Panel dispatches <code style="font-family:monospace;font-size:9px;background:#f3f4f6;padding:1px 3px;border-radius:2px;">UPDATE_JOB_STATUS</code> to context.</div>
+            </div>
+          </div>
+          <div class="tl-step">
+            <div class="tl-dot" style="background:#059669;">3</div>
+            <div class="tl-content">
+              <div class="tl-title">Context updates</div>
+              <div class="tl-desc"><code style="font-family:monospace;font-size:9px;background:#f3f4f6;padding:1px 3px;border-radius:2px;">trips[].jobs[].status</code> is now "In Progress" in the global state + localStorage.</div>
+            </div>
+          </div>
+          <div class="tl-step">
+            <div class="tl-dot" style="background:#dc2626;">4</div>
+            <div class="tl-content">
+              <div class="tl-title" style="color:#dc2626;">Panel still shows "Pending"</div>
+              <div class="tl-desc">The panel's local <code style="font-family:monospace;font-size:9px;background:#f3f4f6;padding:1px 3px;border-radius:2px;">job</code> object was a snapshot. It doesn't re-read from context. Status picker shows stale value.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Proposed: reactive -->
+      <div style="border:1px solid #a7f3d0;border-radius:6px;padding:14px;background:#f0fdf9;">
+        <div style="font-size:11px;font-weight:700;color:#059669;margin-bottom:12px;">OPTION A: Read from context by ID</div>
+        <div class="timeline">
+          <div class="tl-step">
+            <div class="tl-dot" style="background:#6b7280;">1</div>
+            <div class="tl-content">
+              <div class="tl-title">Panel opens</div>
+              <div class="tl-desc">Receives <code style="font-family:monospace;font-size:9px;background:#fff;padding:1px 3px;border-radius:2px;">{ tripId, jobId }</code> -- just IDs, not data copies.</div>
+            </div>
+          </div>
+          <div class="tl-step">
+            <div class="tl-dot" style="background:#0D9488;">2</div>
+            <div class="tl-content">
+              <div class="tl-title">Panel reads from context</div>
+              <div class="tl-desc"><code style="font-family:monospace;font-size:9px;background:#fff;padding:1px 3px;border-radius:2px;">const job = trips.find(t =&gt; t.id === tripId)?.jobs.find(j =&gt; j.id === jobId)</code></div>
+            </div>
+          </div>
+          <div class="tl-step">
+            <div class="tl-dot" style="background:#0D9488;">3</div>
+            <div class="tl-content">
+              <div class="tl-title">Ops clicks "In Progress"</div>
+              <div class="tl-desc">Dispatches <code style="font-family:monospace;font-size:9px;background:#fff;padding:1px 3px;border-radius:2px;">UPDATE_JOB_STATUS</code> to context. Context updates.</div>
+            </div>
+          </div>
+          <div class="tl-step">
+            <div class="tl-dot" style="background:#059669;">4</div>
+            <div class="tl-content">
+              <div class="tl-title" style="color:#059669;">Panel re-renders with fresh data</div>
+              <div class="tl-desc">Context change triggers re-render. The <code style="font-family:monospace;font-size:9px;background:#fff;padding:1px 3px;border-radius:2px;">.find()</code> runs again and returns the updated job. Status picker shows "In Progress."</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3>Code change: panel state refactor</h3>
+<div class="screen" style="background:#1e1e2e;">
+  <div style="padding:4px 14px;background:#181825;border-bottom:1px solid #313244;display:flex;gap:12px;font-size:10px;">
+    <span style="color:#cdd6f4;font-family:monospace;">TripContext.tsx</span>
+    <span style="color:#6c7086;font-family:monospace;">-- panel state type</span>
+  </div>
+  <div class="code-block">
+    <span class="comment">// BEFORE: panel holds data copies</span><br>
+    <span class="keyword">type</span> <span class="type">PanelState</span> <span class="op">=</span> {<br>
+    &nbsp;&nbsp;<span class="var">trip</span>: <span class="type">Trip</span>;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// snapshot at open time</span><br>
+    &nbsp;&nbsp;<span class="var">job</span>: <span class="type">Job</span>;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// snapshot at open time</span><br>
+    &nbsp;&nbsp;<span class="var">jobIdx</span>: <span class="type">number</span>;<br>
+    } <span class="op">|</span> <span class="keyword">null</span>;<br>
+    <br>
+    <span class="comment">// AFTER: panel holds IDs, derives data from context</span><br>
+    <span class="keyword">type</span> <span class="type">PanelState</span> <span class="op">=</span> {<br>
+    &nbsp;&nbsp;<span class="highlight"><span class="var">tripId</span>: <span class="type">string</span>;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// stable reference</span></span><br>
+    &nbsp;&nbsp;<span class="highlight"><span class="var">jobId</span>: <span class="type">string</span>;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// stable reference</span></span><br>
+    } <span class="op">|</span> <span class="keyword">null</span>;
+  </div>
+
+  <div style="padding:4px 14px;background:#181825;border-bottom:1px solid #313244;border-top:1px solid #313244;display:flex;gap:12px;font-size:10px;margin-top:2px;">
+    <span style="color:#cdd6f4;font-family:monospace;">SlideOutPanel.tsx</span>
+    <span style="color:#6c7086;font-family:monospace;">-- deriving data</span>
+  </div>
+  <div class="code-block">
+    <span class="keyword">const</span> { <span class="var">trips</span>, <span class="var">panel</span> } <span class="op">=</span> <span class="fn">useTripContext</span>();<br>
+    <br>
+    <span class="comment">// Derive fresh data on every render</span><br>
+    <span class="keyword">const</span> <span class="var">trip</span> <span class="op">=</span> <span class="highlight"><span class="var">trips</span>.<span class="fn">find</span>(<span class="var">t</span> <span class="op">=&gt;</span> <span class="var">t</span>.<span class="var">id</span> <span class="op">===</span> <span class="var">panel</span>.<span class="var">tripId</span>)</span>;<br>
+    <span class="keyword">const</span> <span class="var">job</span> <span class="op">=</span> <span class="highlight"><span class="var">trip</span>?.<span class="var">jobs</span>.<span class="fn">find</span>(<span class="var">j</span> <span class="op">=&gt;</span> <span class="var">j</span>.<span class="var">id</span> <span class="op">===</span> <span class="var">panel</span>.<span class="var">jobId</span>)</span>;<br>
+    <br>
+    <span class="comment">// Guard: panel references deleted data</span><br>
+    <span class="keyword">if</span> (<span class="op">!</span><span class="var">trip</span> <span class="op">||</span> <span class="op">!</span><span class="var">job</span>) <span class="keyword">return</span> <span class="keyword">null</span>;<br>
+    <br>
+    <span class="comment">// Now job.status is always the current value from context</span><br>
+    <span class="comment">// When ops changes status, context updates, component re-renders,</span><br>
+    <span class="comment">// and job.status reflects the new value immediately.</span>
+  </div>
+</div>
+
+<h3>Visual: panel updates instantly after status change</h3>
+<div class="screen">
+  <div style="display:flex;min-height:360px;">
+    <!-- Left: Table background (dimmed) -->
+    <div style="flex:1;background:#f9fafb;padding:12px;opacity:0.5;">
+      <div style="font-size:11px;font-weight:700;color:#111827;margin-bottom:8px;">Delivery Orders</div>
+      <table>
+        <thead><tr><th>Order</th><th>Customer</th><th>Jobs</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono" style="font-weight:600;">DO-2026-047</td>
+            <td>Shopee</td>
+            <td><span class="svc-p"><span class="c">FM</span></span> <span class="svc-p"><span class="c">EC</span></span></td>
+            <td><span class="status-badge status-progress"><span class="dot dot-gray"></span> In Progress</span></td>
+          </tr>
+          <tr style="background:#fff;">
+            <td class="mono" style="font-weight:600;">DO-2026-048</td>
+            <td>TikTok</td>
+            <td><span class="svc-p"><span class="c">FM</span></span> <span class="svc-p"><span class="c">EC</span></span> <span class="svc-p"><span class="c">CS</span></span></td>
+            <td><span class="status-badge status-progress"><span class="dot dot-gray"></span> In Progress</span></td>
+          </tr>
+          <tr>
+            <td class="mono" style="font-weight:600;">DO-2026-049</td>
+            <td>Shein</td>
+            <td><span class="svc-p"><span class="c">FM</span></span> <span class="svc-p"><span class="c">OH</span></span></td>
+            <td><span class="status-badge status-pending"><span class="dot dot-gray"></span> Pending</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Right: Slide-out panel -->
+    <div class="panel-mock">
+      <div class="panel-header">
+        <div>
+          <div style="font-size:13px;font-weight:800;">Job: EC</div>
+          <div style="font-size:10px;color:#9ca3af;">DO-2026-048 &middot; TikTok</div>
+        </div>
+        <button class="btn-sm btn-ghost" style="padding:2px 6px;">&#10005;</button>
+      </div>
+
+      <!-- Status section: shows FRESH data -->
+      <div class="panel-section">
+        <div class="panel-label">Status</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="status-badge status-progress" style="font-size:11px;padding:3px 10px;"><span class="dot dot-gray"></span> In Progress</span>
+          <span style="font-size:9px;color:#059669;font-weight:600;">-- updated just now</span>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:4px;">
+          <button class="btn-sm btn-ghost" style="font-size:9px;padding:3px 8px;">Pending</button>
+          <button class="btn-sm" style="font-size:9px;padding:3px 8px;background:#f3f4f6;border:1px solid #9ca3af;color:#6b7280;font-weight:700;">In Progress</button>
+          <button class="btn-sm btn-ghost" style="font-size:9px;padding:3px 8px;">Completed</button>
+        </div>
+      </div>
+
+      <!-- Vendor details -->
+      <div class="panel-section">
+        <div class="panel-label">Vendor</div>
+        <div style="font-size:12px;font-weight:600;">Gonda</div>
+        <div style="font-size:10px;color:#6b7280;">Export Customs &middot; KLIA Cargo Terminal</div>
+      </div>
+
+      <!-- Proof documents -->
+      <div class="panel-section">
+        <div class="panel-label">Proof Documents</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <div style="display:flex;align-items:center;gap:6px;padding:4px 8px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;">
+            <span style="font-size:10px;">&#128206;</span>
+            <span style="font-size:10px;font-weight:600;">customs-receipt.pdf</span>
+            <span style="font-size:9px;color:#059669;margin-left:auto;">Uploaded</span>
+          </div>
+        </div>
+        <button class="btn-sm btn-ghost" style="margin-top:6px;font-size:9px;">+ Upload proof</button>
+      </div>
+
+      <!-- Activity log -->
+      <div class="panel-section">
+        <div class="panel-label">Activity Log</div>
+        <div style="font-size:10px;color:#6b7280;line-height:1.6;">
+          <div style="display:flex;gap:6px;margin-bottom:4px;">
+            <span style="color:#9ca3af;font-family:monospace;font-size:9px;white-space:nowrap;">14:32</span>
+            <span>Status changed: <strong style="color:#111827;">Pending &rarr; In Progress</strong></span>
+          </div>
+          <div style="display:flex;gap:6px;margin-bottom:4px;">
+            <span style="color:#9ca3af;font-family:monospace;font-size:9px;white-space:nowrap;">14:30</span>
+            <span>Proof uploaded: customs-receipt.pdf</span>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <span style="color:#9ca3af;font-family:monospace;font-size:9px;white-space:nowrap;">09:15</span>
+            <span>Job created. Vendor: Gonda</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toast indicator -->
+      <div style="padding:10px 14px;">
+        <div class="toast-mock toast-green">
+          <span style="font-size:12px;">&#10003;</span> Status updated to In Progress
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<h2>Option B: Optimistic Update in Panel State</h2>
+<span class="label" style="background:#fffbeb;color:#d97706;">Pragmatic</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Keep passing the job object to the panel. But when the panel dispatches a mutation (e.g., status change), it ALSO updates its own local copy of the job. The panel maintains a local patched version alongside the context update. Both update simultaneously: context gets the canonical update, panel gets an optimistic local patch. No refactoring of how the panel receives data.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>- No refactoring of panel state shape -- keeps {trip, job, jobIdx}<br>- Panel updates instantly (optimistic)<br>- Works for all panel-initiated mutations<br>- Minimal code change: add a local setState after each dispatch</div>
+    <div class="cons"><strong>Cons</strong><br>- Two sources of truth: panel local state + context state<br>- Risk of drift: if context rejects the update or formats data differently<br>- Every new mutation type needs a matching local state patch<br>- External changes (another tab, background sync) won't reach the panel<br>- Violates single-source-of-truth principle</div>
+  </div>
+</div>
+
+<h3>Code pattern: dual update (context + local)</h3>
+<div class="screen" style="background:#1e1e2e;">
+  <div style="padding:4px 14px;background:#181825;border-bottom:1px solid #313244;display:flex;gap:12px;font-size:10px;">
+    <span style="color:#cdd6f4;font-family:monospace;">SlideOutPanel.tsx</span>
+    <span style="color:#6c7086;font-family:monospace;">-- dual state update</span>
+  </div>
+  <div class="code-block">
+    <span class="comment">// Panel holds a local copy of the job</span><br>
+    <span class="keyword">const</span> [<span class="var">localJob</span>, <span class="fn">setLocalJob</span>] <span class="op">=</span> <span class="fn">useState</span>(<span class="var">panel</span>.<span class="var">job</span>);<br>
+    <br>
+    <span class="keyword">const</span> <span class="fn">handleStatusChange</span> <span class="op">=</span> (<span class="var">newStatus</span>: <span class="type">string</span>) <span class="op">=&gt;</span> {<br>
+    &nbsp;&nbsp;<span class="comment">// 1. Update context (canonical source)</span><br>
+    &nbsp;&nbsp;<span class="fn">dispatch</span>({ <span class="var">type</span>: <span class="string">'UPDATE_JOB_STATUS'</span>, <span class="var">payload</span>: { ... } });<br>
+    <br>
+    &nbsp;&nbsp;<span class="comment">// 2. <span class="highlight">Optimistic local patch</span></span><br>
+    &nbsp;&nbsp;<span class="fn">setLocalJob</span>(<span class="var">prev</span> <span class="op">=&gt;</span> ({<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;...<span class="var">prev</span>,<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="var">status</span>: <span class="var">newStatus</span>,<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="var">activityLog</span>: [...<span class="var">prev</span>.<span class="var">activityLog</span>, <span class="var">newEntry</span>]<br>
+    &nbsp;&nbsp;}));<br>
+    };<br>
+    <br>
+    <span class="comment">// Problem: localJob and context can drift</span><br>
+    <span class="comment">// e.g., context adds a timestamp, local copy doesn't know about it</span>
+  </div>
+</div>
+
+<h3>Visual: panel with local state badge showing dual sources</h3>
+<div class="screen">
+  <div style="padding:20px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <!-- Source 1: Context -->
+      <div style="border:1px solid #e5e7eb;border-radius:6px;padding:14px;">
+        <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Source 1: React Context</div>
+        <div style="font-family:monospace;font-size:10px;background:#f9fafb;padding:8px;border-radius:4px;line-height:1.6;">
+          trips[2].jobs[1].status: <strong style="color:#059669;">"In Progress"</strong><br>
+          trips[2].jobs[1].updatedAt: <strong style="color:#059669;">"2026-03-25T14:32:00Z"</strong><br>
+          trips[2].jobs[1].activityLog: <strong style="color:#059669;">[...3 entries]</strong>
+        </div>
+      </div>
+
+      <!-- Source 2: Panel local -->
+      <div style="border:1px solid #fde68a;border-radius:6px;padding:14px;background:#fffefb;">
+        <div style="font-size:10px;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Source 2: Panel Local State</div>
+        <div style="font-family:monospace;font-size:10px;background:#fff;padding:8px;border-radius:4px;line-height:1.6;border:1px solid #fde68a;">
+          localJob.status: <strong style="color:#059669;">"In Progress"</strong><br>
+          localJob.updatedAt: <strong style="color:#dc2626;">"2026-03-25T09:15:00Z"</strong> <span style="color:#dc2626;font-size:9px;">&larr; stale!</span><br>
+          localJob.activityLog: <strong style="color:#dc2626;">[...2 entries]</strong> <span style="color:#dc2626;font-size:9px;">&larr; missing 1</span>
+        </div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:12px;font-size:10px;color:#d97706;font-weight:600;">
+      Risk: local state has the status right but other fields can drift from context.
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<h2>Option C: Close-and-Reopen Pattern</h2>
+<span class="label" style="background:#fefafa;color:#dc2626;">Workaround</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> After any mutation dispatched from the panel (status change, proof upload), the system auto-closes the panel with a brief slide-out animation (150ms), shows a toast confirmation, then re-opens the panel (150ms slide-in) with fresh data pulled from context. The reopen uses the same tripId + jobId to fetch the now-updated data. Effectively automates the "close and reopen" that ops currently does manually.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>- Guarantees fresh data -- panel always opens with current context state<br>- Clear visual feedback: the close/open animation signals "something changed"<br>- No refactoring of panel data model (still passes full objects)<br>- Toast confirmation happens during the brief close, so no wasted time</div>
+    <div class="cons"><strong>Cons</strong><br>- Jarring UX: panel flickers closed and open on every status change<br>- Feels like a hack, not a feature<br>- 300ms animation delay adds up with multiple rapid changes<br>- Scroll position in the panel resets on reopen<br>- If ops is mid-typing a note when the panel re-opens, input is lost</div>
+  </div>
+</div>
+
+<h3>Timeline: mutation &rarr; toast &rarr; close &rarr; reopen with fresh data</h3>
+<div class="screen">
+  <div style="padding:20px;">
+    <div style="display:flex;align-items:stretch;gap:0;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">
+      <!-- Frame 1: Before -->
+      <div style="flex:1;padding:14px;border-right:1px solid #e5e7eb;">
+        <div style="font-size:9px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">T=0ms: Ops clicks "In Progress"</div>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:10px;">
+          <div style="font-size:11px;font-weight:700;margin-bottom:6px;">Job: EC &middot; Gonda</div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:10px;color:#9ca3af;">Status:</span>
+            <span class="status-badge status-pending"><span class="dot dot-gray"></span> Pending</span>
+          </div>
+          <div style="margin-top:8px;">
+            <button class="btn-sm" style="background:#0D9488;color:#fff;font-size:9px;padding:3px 8px;border:none;opacity:0.7;">Clicking &rarr; In Progress</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Frame 2: Close + toast -->
+      <div style="flex:1;padding:14px;border-right:1px solid #e5e7eb;background:#fafafa;">
+        <div style="font-size:9px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">T=150ms: Panel slides out + toast</div>
+        <div style="background:#f3f4f6;border:1px dashed #d1d5db;border-radius:6px;padding:30px;text-align:center;">
+          <div style="font-size:10px;color:#9ca3af;">Panel closing...</div>
+          <div style="margin-top:12px;">
+            <div class="toast-mock toast-green" style="font-size:10px;">
+              &#10003; Status updated
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Frame 3: Reopen fresh -->
+      <div style="flex:1;padding:14px;">
+        <div style="font-size:9px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">T=300ms: Panel reopens with fresh data</div>
+        <div style="background:#f0fdf9;border:1px solid #a7f3d0;border-radius:6px;padding:10px;">
+          <div style="font-size:11px;font-weight:700;margin-bottom:6px;">Job: EC &middot; Gonda</div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:10px;color:#9ca3af;">Status:</span>
+            <span class="status-badge status-progress"><span class="dot dot-gray"></span> In Progress</span>
+            <span style="font-size:9px;color:#059669;">&#10003; Fresh</span>
+          </div>
+          <div style="margin-top:6px;font-size:9px;color:#6b7280;">
+            Data re-fetched from context on reopen.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;padding:10px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;">
+      <div style="font-size:11px;color:#dc2626;font-weight:600;">Problem: the 300ms flicker</div>
+      <div style="font-size:10px;color:#7f1d1d;margin-top:4px;line-height:1.5;">
+        Every status change, proof upload, or note causes the panel to visibly close and reopen. For ops making 3 quick changes (upload proof + change status + add note), that's 3 flickers in rapid succession. Scroll position resets each time. Any in-progress typing is lost. It feels like the app is glitching, not working as designed.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<div class="verdict">
+  <h3>Verdict: Option A -- Read from Context by ID</h3>
+  <p style="font-size:12px;line-height:1.6;color:#374151;">
+    The reactive panel is the cleanest architecture. Change panel state from <code style="background:#e5e7eb;padding:1px 4px;border-radius:3px;font-family:monospace;font-size:10px;">{ trip, job, jobIdx }</code> to <code style="background:#e5e7eb;padding:1px 4px;border-radius:3px;font-family:monospace;font-size:10px;">{ tripId, jobId }</code>. The panel derives its data from context on every render: <code style="background:#e5e7eb;padding:1px 4px;border-radius:3px;font-family:monospace;font-size:10px;">trips.find(t =&gt; t.id === tripId)?.jobs.find(j =&gt; j.id === jobId)</code>. Always fresh, no local state drift, no close/reopen hacks.
+  </p>
+  <p style="font-size:12px;line-height:1.6;color:#374151;margin-top:8px;">
+    <strong>Why not Option B?</strong> Two sources of truth is an anti-pattern. The optimistic local patch works for status but drifts on timestamps, activity logs, and any field the reducer computes. Every new mutation type needs a matching local patch -- this doesn't scale. <strong>Why not Option C?</strong> The close-and-reopen flicker is a hack that trades UX quality for implementation simplicity. It resets scroll position, loses in-progress input, and feels broken during rapid multi-action sequences.
+  </p>
+  <p style="font-size:12px;line-height:1.6;color:#374151;margin-top:8px;">
+    <strong>Refactor scope:</strong> Change the <code style="background:#e5e7eb;padding:1px 4px;border-radius:3px;font-family:monospace;font-size:10px;">OPEN_PANEL</code> action to pass IDs instead of objects. Update the panel component to derive trip/job from context. Add a null guard for deleted trips/jobs. Estimated: ~30 lines changed across TripContext + SlideOutPanel.
+  </p>
+</div>
+
+</div>
+</body>
+</html>

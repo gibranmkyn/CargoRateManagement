@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TripManager — Design Hypotheses</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 13px; line-height: 1.5; }
+  .page { max-width: 1300px; margin: 0 auto; padding: 40px 24px; }
+  h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.7px; margin-bottom: 8px; }
+  h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; margin: 48px 0 8px; color: #0D9488; }
+  .subtitle { color: #6b7280; font-size: 14px; margin-bottom: 40px; }
+  .hypothesis-label { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin-bottom: 12px; }
+  .hyp-a { background: #ecfdf5; color: #059669; }
+  .hyp-b { background: #eff6ff; color: #2563eb; }
+  .hyp-c { background: #fffbeb; color: #d97706; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; font-size: 13px; color: #374151; line-height: 1.6; }
+  .rationale strong { color: #111827; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 16px; overflow: hidden; margin: 16px 0 40px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .screen-label { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #9ca3af; padding: 12px 20px 0; }
+
+  /* ── Shared UI atoms ── */
+  .nav { display: flex; align-items: center; gap: 16px; padding: 0 20px; height: 52px; border-bottom: 1px solid #e5e7eb; background: #fff; }
+  .logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; }
+  .logo-icon { width: 28px; height: 28px; background: #0D9488; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 13px; font-weight: 800; }
+  .nav-item { font-size: 13px; color: #9ca3af; padding: 6px 12px; border-radius: 8px; }
+  .nav-item.active { color: #0D9488; background: rgba(13,148,136,0.08); font-weight: 600; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; }
+  .badge-green { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+  .badge-blue { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+  .badge-amber { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+  .badge-red { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+  .mono { font-family: 'JetBrains Mono', 'SF Mono', monospace; }
+  .svc-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 99px; font-size: 10px; background: rgba(13,148,136,0.08); border: 1px solid rgba(13,148,136,0.12); }
+  .svc-pill .code { font-family: monospace; color: #0D9488; font-weight: 600; }
+  .svc-pill .label { color: #374151; }
+  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; }
+
+  /* ── Hypothesis-specific layouts ── */
+
+  /* Hyp A: Table-first (Flexport-inspired) */
+  .table-layout { padding: 20px; }
+  .table-layout table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .table-layout th { text-align: left; padding: 10px 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; border-bottom: 2px solid #e5e7eb; }
+  .table-layout td { padding: 14px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+  .table-layout tr:hover { background: #f9fafb; }
+  .table-layout .customer { font-weight: 700; font-size: 14px; color: #111827; }
+  .table-layout .trip-id { font-family: monospace; font-size: 10px; color: #9ca3af; background: #f3f4f6; padding: 1px 6px; border-radius: 4px; border: 1px solid #e5e7eb; }
+  .table-layout .route { font-size: 12px; color: #374151; }
+  .table-layout .mawb { font-family: monospace; font-size: 11px; color: #6b7280; }
+  .jobs-inline { display: flex; gap: 4px; flex-wrap: wrap; }
+  .job-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 8px; font-size: 10px; border: 1.5px solid; }
+  .job-chip.green { border-color: #a7f3d0; background: #ecfdf5; color: #059669; }
+  .job-chip.blue { border-color: #bfdbfe; background: #eff6ff; color: #2563eb; }
+  .job-chip.amber { border-color: #fde68a; background: #fffbeb; color: #d97706; }
+  .job-chip.red { border-color: #fecaca; background: #fef2f2; color: #dc2626; }
+
+  /* Hyp B: Card-grid (current approach, refined) */
+  .card-layout { padding: 20px; }
+  .trip-card { border: 1px solid #e5e7eb; border-radius: 16px; margin-bottom: 12px; overflow: hidden; }
+  .trip-card-header { padding: 16px 20px; display: flex; align-items: flex-start; gap: 12px; }
+  .trip-card-header:hover { background: #f9fafb; cursor: pointer; }
+  .trip-card-jobs { display: flex; gap: 12px; padding: 0 20px 16px 52px; flex-wrap: wrap; }
+  .job-card { flex: 1; min-width: 200px; max-width: 300px; border: 2px solid; border-radius: 12px; padding: 14px; background: #fff; }
+  .job-card.green { border-color: #a7f3d0; }
+  .job-card.blue { border-color: #bfdbfe; }
+  .job-card.amber { border-color: #fde68a; }
+  .job-card .vendor { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+  .job-card .route-small { font-size: 11px; color: #6b7280; margin-top: 8px; }
+  .job-card .status-line { font-size: 11px; font-weight: 700; margin-top: 10px; padding-top: 10px; border-top: 2px solid inherit; }
+
+  /* Hyp C: Kanban/status columns */
+  .kanban-layout { padding: 20px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .kanban-col { background: #f9fafb; border-radius: 12px; padding: 12px; min-height: 300px; }
+  .kanban-col-header { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .kanban-col-header .count { font-size: 10px; background: #e5e7eb; padding: 1px 6px; border-radius: 99px; }
+  .kanban-item { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; margin-bottom: 8px; font-size: 12px; }
+  .kanban-item .customer-name { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+  .kanban-item .mawb-tag { font-family: monospace; font-size: 10px; color: #9ca3af; }
+  .kanban-item .vendor-tag { font-size: 11px; color: #6b7280; margin-top: 6px; }
+
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 12px; padding: 20px; margin-top: 40px; }
+  .verdict h3 { color: #059669; font-size: 16px; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>TripManager — Design Hypotheses</h1>
+<p class="subtitle">Three approaches to the trip list screen. Evaluating which best serves an ops planner scanning 50 trips/day.</p>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>Hypothesis A: Table-First</h2>
+<span class="hypothesis-label hyp-a">Inspired by Flexport + spreadsheets</span>
+
+<div class="rationale">
+  <strong>Thesis:</strong> Ops planners are coming FROM spreadsheets. A table is the mental model they already have. Instead of fighting it, give them a better table — proper columns, inline job status chips, sortable headers. <strong>Progressive disclosure:</strong> click a row to expand full job details. This maximizes data density and scanning speed.
+  <br><br>
+  <strong>Risk:</strong> May feel too much like a spreadsheet and lack the "serious software" feel. Job cards don't fit naturally in a table.
+</div>
+
+<div class="screen">
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <span class="nav-item active">Trips</span>
+    <span class="nav-item">Create Trip</span>
+    <span class="nav-item">Validation</span>
+  </div>
+  <div class="screen-label">Trip list — table view</div>
+  <div class="table-layout">
+    <!-- Summary row -->
+    <div style="display:flex; gap:16px; margin-bottom:16px;">
+      <div class="card" style="flex:1; display:flex; align-items:center; gap:12px;">
+        <div style="width:40px;height:40px;background:rgba(13,148,136,0.08);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#0D9488;font-size:18px;font-weight:800;">5</div>
+        <div><div style="font-size:12px;font-weight:600;color:#374151;">Trips</div><div style="font-size:11px;color:#9ca3af;">9 jobs total</div></div>
+      </div>
+      <div class="card" style="flex:1; display:flex; align-items:center; gap:12px;">
+        <div style="width:40px;height:40px;background:#eff6ff;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#2563eb;font-size:18px;font-weight:800;">1</div>
+        <div><div style="font-size:12px;font-weight:600;color:#374151;">Active</div><div style="font-size:11px;color:#9ca3af;">in progress</div></div>
+      </div>
+      <div class="card" style="flex:1; display:flex; align-items:center; gap:12px;">
+        <div style="width:40px;height:40px;background:#ecfdf5;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#059669;font-size:18px;font-weight:800;">2</div>
+        <div><div style="font-size:12px;font-weight:600;color:#374151;">Done</div><div style="font-size:11px;color:#9ca3af;">22% rate</div></div>
+      </div>
+      <div class="card" style="flex:1; display:flex; align-items:center; gap:12px;">
+        <div style="width:40px;height:40px;background:#fffbeb;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#d97706;font-size:18px;font-weight:800;">5</div>
+        <div><div style="font-size:12px;font-weight:600;color:#374151;">Pending</div><div style="font-size:11px;color:#9ca3af;">awaiting</div></div>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>MAWB</th>
+          <th>Route</th>
+          <th>Jobs</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <div class="customer">AliExpress</div>
+            <span class="trip-id">PTRIP12302100001</span>
+          </td>
+          <td><span class="mawb">176-84329871</span><br><span style="font-size:11px;color:#9ca3af;">24 bags · 1240 kg</span></td>
+          <td><span class="route">Yantian Port → Shekou Port</span></td>
+          <td>
+            <div class="jobs-inline">
+              <span class="job-chip green"><span style="font-weight:700;">✓</span> Camila · FM+OH</span>
+            </div>
+          </td>
+          <td style="font-size:11px;color:#9ca3af;">08 Mar</td>
+        </tr>
+        <tr>
+          <td>
+            <div class="customer">Shopee</div>
+            <span class="trip-id">PTRIP12302100002</span>
+          </td>
+          <td><span class="mawb">176-33121632</span><br><span style="font-size:11px;color:#9ca3af;">16 bags · 890 kg</span></td>
+          <td><span class="route">Yantian → Dongguan → SZX Airport</span></td>
+          <td>
+            <div class="jobs-inline">
+              <span class="job-chip blue"><span style="font-weight:700;">●</span> Hoboken · CR+FM</span>
+              <span class="job-chip amber"><span style="font-weight:700;">○</span> V3 · EC</span>
+            </div>
+          </td>
+          <td style="font-size:11px;color:#9ca3af;">08 Mar</td>
+        </tr>
+        <tr style="background:#fef2f2;">
+          <td>
+            <div class="customer">AliExpress</div>
+            <span class="trip-id">PTRIP13302100101</span>
+          </td>
+          <td><span class="mawb">176-98765421</span><br><span style="font-size:11px;color:#9ca3af;">36 bags · 1500 kg</span></td>
+          <td><span class="route">Qianhai FTZ → Huanggang Port</span></td>
+          <td>
+            <div class="jobs-inline">
+              <span class="job-chip red"><span style="font-weight:700;">✕</span> Camila · FM+CS</span>
+            </div>
+          </td>
+          <td style="font-size:11px;color:#9ca3af;">09 Mar</td>
+        </tr>
+        <tr>
+          <td>
+            <div class="customer">Temu</div>
+            <span class="trip-id">PTRIP22102100001</span>
+          </td>
+          <td><span class="mawb">176-77654321</span><br><span style="font-size:11px;color:#9ca3af;">48 bags · 2450 kg</span></td>
+          <td><span class="route">SZX BaoAn → Shekou → Lantau</span></td>
+          <td>
+            <div class="jobs-inline">
+              <span class="job-chip amber"><span style="font-weight:700;">○</span> Hoboken · CR</span>
+              <span class="job-chip amber"><span style="font-weight:700;">○</span> V3 · FM</span>
+              <span class="job-chip amber"><span style="font-weight:700;">○</span> V3 · EC+CS</span>
+            </div>
+          </td>
+          <td style="font-size:11px;color:#9ca3af;">10 Mar</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>Hypothesis B: Card-Grid (Refined Current)</h2>
+<span class="hypothesis-label hyp-b">Inspired by Linear + current design</span>
+
+<div class="rationale">
+  <strong>Thesis:</strong> Trip rows expand to reveal parallel job cards. This is what we have now, polished. The key insight: jobs are parallel, and cards communicate that spatially. The collapsed row is compact for scanning; the expanded view gives full context.
+  <br><br>
+  <strong>Risk:</strong> Expanded state takes vertical space — only 2-3 trips visible when one is expanded. May feel slow for scanning many trips.
+</div>
+
+<div class="screen">
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <span class="nav-item active">Trips</span>
+    <span class="nav-item">Create Trip</span>
+    <span class="nav-item">Validation</span>
+  </div>
+  <div class="screen-label">Trip list — expandable rows with parallel job cards</div>
+  <div class="card-layout">
+    <!-- Collapsed trip -->
+    <div class="trip-card">
+      <div class="trip-card-header">
+        <span style="color:#d1d5db;font-size:14px;">▸</span>
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:700;margin-bottom:2px;">AliExpress <span class="trip-id" style="margin-left:6px;">PTRIP12302100001</span></div>
+          <div style="font-size:12px;color:#6b7280;">🏷 Yantian Port → Shekou Port · <span class="mono" style="font-size:11px;">176-84329871</span></div>
+        </div>
+        <span class="badge badge-green">1 Completed</span>
+      </div>
+    </div>
+
+    <!-- Expanded trip -->
+    <div class="trip-card" style="border-color:#bfdbfe;">
+      <div class="trip-card-header" style="background:#f9fafb;">
+        <span style="color:#0D9488;font-size:14px;">▾</span>
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:700;margin-bottom:2px;">Shopee <span class="trip-id" style="margin-left:6px;">PTRIP12302100002</span></div>
+          <div style="font-size:12px;color:#6b7280;">🏷 Yantian → Dongguan → SZX Airport · <span class="mono" style="font-size:11px;">176-33121632</span></div>
+        </div>
+        <div style="display:flex;gap:4px;"><span class="badge badge-blue">1 Active</span><span class="badge badge-amber">1 Pending</span></div>
+      </div>
+      <div class="trip-card-jobs">
+        <div class="job-card blue">
+          <div class="vendor">Hoboken</div>
+          <div style="display:flex;gap:4px;"><span class="svc-pill"><span class="code">CR</span></span><span class="svc-pill"><span class="code">FM</span></span></div>
+          <div class="route-small">Yantian Port → Dongguan Cross-dock</div>
+          <div class="status-line" style="color:#2563eb;border-color:#bfdbfe;">● In Progress</div>
+        </div>
+        <div class="job-card amber">
+          <div class="vendor">V3</div>
+          <div style="display:flex;gap:4px;"><span class="svc-pill"><span class="code">EC</span></span></div>
+          <div class="route-small">Export customs clearance</div>
+          <div class="status-line" style="color:#d97706;border-color:#fde68a;">○ Pending</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Collapsed trip with rejection -->
+    <div class="trip-card" style="border-left:3px solid #fecaca;">
+      <div class="trip-card-header">
+        <span style="color:#d1d5db;font-size:14px;">▸</span>
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:700;margin-bottom:2px;">AliExpress <span class="trip-id" style="margin-left:6px;">PTRIP13302100101</span></div>
+          <div style="font-size:12px;color:#6b7280;">🏷 Qianhai FTZ → Huanggang Port · <span class="mono" style="font-size:11px;">176-98765421</span></div>
+        </div>
+        <span class="badge badge-red">1 Rejected</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>Hypothesis C: Kanban by Status</h2>
+<span class="hypothesis-label hyp-c">Inspired by Trello/Notion boards</span>
+
+<div class="rationale">
+  <strong>Thesis:</strong> The ops planner's primary question is "what needs my attention?" A kanban board groups jobs by status (Pending / Active / Completed / Rejected) so they can see the pipeline at a glance. Each card is a job, not a trip. This inverts the hierarchy: jobs first, trips second.
+  <br><br>
+  <strong>Risk:</strong> Loses the trip-level view. Hard to see "how is trip X doing overall?" since its jobs are scattered across columns. May not match the mental model of managing trips.
+</div>
+
+<div class="screen">
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <span class="nav-item active">Trips</span>
+    <span class="nav-item">Create Trip</span>
+    <span class="nav-item">Validation</span>
+  </div>
+  <div class="screen-label">Job board — kanban by status</div>
+  <div class="kanban-layout">
+    <div class="kanban-col">
+      <div class="kanban-col-header" style="color:#d97706;"><span style="width:8px;height:8px;border-radius:50%;background:#d97706;"></span> Pending <span class="count">5</span></div>
+      <div class="kanban-item">
+        <div class="customer-name">Shopee</div>
+        <div class="mawb-tag">176-33121632</div>
+        <div style="margin-top:6px;"><span class="svc-pill"><span class="code">EC</span></span></div>
+        <div class="vendor-tag">V3 · Dongguan → SZX Airport</div>
+      </div>
+      <div class="kanban-item">
+        <div class="customer-name">Shein</div>
+        <div class="mawb-tag">176-11456287</div>
+        <div style="margin-top:6px;"><span class="svc-pill"><span class="code">OH</span></span></div>
+        <div class="vendor-tag">V4 · GZ Baiyun → GZ Region</div>
+      </div>
+      <div class="kanban-item">
+        <div class="customer-name">Temu</div>
+        <div class="mawb-tag">176-77654321</div>
+        <div style="margin-top:6px;"><span class="svc-pill"><span class="code">CR</span></span></div>
+        <div class="vendor-tag">Hoboken · SZX BaoAn</div>
+      </div>
+    </div>
+    <div class="kanban-col">
+      <div class="kanban-col-header" style="color:#2563eb;"><span style="width:8px;height:8px;border-radius:50%;background:#2563eb;"></span> Active <span class="count">1</span></div>
+      <div class="kanban-item" style="border-left:3px solid #bfdbfe;">
+        <div class="customer-name">Shopee</div>
+        <div class="mawb-tag">176-33121632</div>
+        <div style="margin-top:6px;"><span class="svc-pill"><span class="code">CR</span></span><span class="svc-pill"><span class="code">FM</span></span></div>
+        <div class="vendor-tag">Hoboken · Yantian → Dongguan</div>
+      </div>
+    </div>
+    <div class="kanban-col">
+      <div class="kanban-col-header" style="color:#059669;"><span style="width:8px;height:8px;border-radius:50%;background:#059669;"></span> Completed <span class="count">2</span></div>
+      <div class="kanban-item" style="border-left:3px solid #a7f3d0;">
+        <div class="customer-name">AliExpress</div>
+        <div class="mawb-tag">176-84329871</div>
+        <div style="margin-top:6px;"><span class="svc-pill"><span class="code">FM</span></span><span class="svc-pill"><span class="code">OH</span></span></div>
+        <div class="vendor-tag">Camila · Yantian → Shekou ✓</div>
+      </div>
+      <div class="kanban-item" style="border-left:3px solid #a7f3d0;">
+        <div class="customer-name">Shein</div>
+        <div class="mawb-tag">176-11456287</div>
+        <div style="margin-top:6px;"><span class="svc-pill"><span class="code">FM</span></span></div>
+        <div class="vendor-tag">V4 · GZ Baiyun ✓</div>
+      </div>
+    </div>
+    <div class="kanban-col">
+      <div class="kanban-col-header" style="color:#dc2626;"><span style="width:8px;height:8px;border-radius:50%;background:#dc2626;"></span> Rejected <span class="count">1</span></div>
+      <div class="kanban-item" style="border-left:3px solid #fecaca; background:#fef2f2;">
+        <div class="customer-name">AliExpress</div>
+        <div class="mawb-tag">176-98765421</div>
+        <div style="margin-top:6px;"><span class="svc-pill"><span class="code">FM</span></span><span class="svc-pill"><span class="code">CS</span></span></div>
+        <div class="vendor-tag" style="color:#dc2626;">Camila · Vehicle breakdown</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="verdict">
+  <h3>Recommendation</h3>
+  <p style="font-size:14px;line-height:1.7;">
+    <strong>Hypothesis A (Table-First)</strong> is the strongest for the primary use case. Here's why:
+  </p>
+  <ul style="margin:12px 0;padding-left:20px;line-height:1.8;font-size:13px;color:#374151;">
+    <li><strong>Scanning speed:</strong> Ops planners check 50+ trips/day. Tables are the fastest layout for scanning many rows. Each row shows customer, MAWB, route, and job status inline — no clicking to expand.</li>
+    <li><strong>Mental model match:</strong> They're coming FROM spreadsheets. A better table is a lower cognitive switch cost than cards or kanban.</li>
+    <li><strong>Data density:</strong> Job status chips inline (✓ Camila FM+OH) communicate more in less space than parallel card grids.</li>
+    <li><strong>Exception surfacing:</strong> Rejected rows highlight with red background — visible at a glance without expanding.</li>
+    <li><strong>Progressive disclosure still works:</strong> Click a row to expand the full job card view for detailed actions, status changes, proof upload, activity log.</li>
+  </ul>
+  <p style="font-size:13px;color:#374151;margin-top:12px;">
+    <strong>Hypothesis B</strong> (card-grid) is the current design — it works but wastes vertical space when expanded.
+    <strong>Hypothesis C</strong> (kanban) loses the trip-level grouping which is how ops think.
+  </p>
+  <p style="font-size:13px;color:#374151;margin-top:12px;">
+    <strong>Proposed hybrid:</strong> Use Hypothesis A (table) as the default trip list view. When a row is clicked, expand to show Hypothesis B (job cards) inline. This gives maximum scanning density PLUS full job detail when needed.
+  </p>
+</div>
+
+</div>
+</body>
+</html>

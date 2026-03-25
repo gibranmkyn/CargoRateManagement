@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW: Rate Unit Pricing</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #0D9488; }
+  h3 { font-size: 14px; font-weight: 700; margin: 24px 0 8px; }
+  .hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #0D9488; border-radius: 0 6px 6px 0; }
+  .context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+  .rationale strong { color: #111827; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+  .label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+  .pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+  .cons { background: #fefafa; border: 1px solid #fecaca; }
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+  .verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+  .model { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; margin: 12px 0; font-family: 'SF Mono', monospace; font-size: 11px; line-height: 1.8; color: #374151; white-space: pre; overflow-x: auto; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { text-align: left; padding: 5px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; }
+  tr:hover { background: #f9fafb; }
+
+  .svc-p { padding: 1px 5px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.1); display: inline-flex; align-items: center; gap: 3px; }
+  .svc-p .c { color: #0D9488; font-family: monospace; }
+  .rate { font-family: 'SF Mono', monospace; font-weight: 600; color: #111827; }
+  .rate-muted { font-family: 'SF Mono', monospace; color: #9ca3af; }
+  .cost-total { font-family: 'SF Mono', monospace; font-weight: 700; font-size: 13px; color: #0D9488; }
+  .unit-badge { padding: 1px 5px; border-radius: 3px; font-size: 9px; font-weight: 600; font-family: 'SF Mono', monospace; }
+  .unit-flat { background: #f3f4f6; color: #6b7280; }
+  .unit-kg { background: #eff6ff; color: #2563eb; }
+  .unit-bag { background: #faf5ff; color: #7c3aed; }
+  .unit-cbm { background: #fffbeb; color: #d97706; }
+
+  .nav-dense { height: 40px; padding: 0 16px; background: #fff; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 2px; font-size: 12px; }
+  .nav-dense a { padding: 4px 10px; border-radius: 4px; color: #9ca3af; text-decoration: none; }
+  .nav-dense a.active { color: #0D9488; background: rgba(13,148,136,0.06); font-weight: 600; }
+  .nav-dense .logo { display: flex; align-items: center; gap: 6px; margin-right: 16px; font-weight: 700; font-size: 13px; color: #111827; }
+  .nav-dense .logo-dot { width: 20px; height: 20px; background: #0D9488; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 9px; }
+
+  .form-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; margin-bottom: 12px; }
+  .step-badge { width: 22px; height: 22px; border-radius: 5px; background: #0D9488; color: #fff; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .alert-box { padding: 8px 12px; border-radius: 4px; font-size: 11px; display: flex; align-items: center; gap: 8px; }
+  .alert-teal { background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.12); color: #0D9488; }
+
+  .calc-row { display: flex; align-items: center; gap: 6px; font-size: 11px; padding: 4px 0; }
+  .calc-label { color: #9ca3af; min-width: 50px; }
+  .calc-op { color: #d1d5db; font-weight: 700; }
+  .calc-val { font-family: 'SF Mono', monospace; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW: Rate Unit Pricing</h1>
+<div class="hmw">"How might we model vendor rates that reflect real logistics pricing — where some services charge flat, some per-kg, some per-bag — without overcomplicating the UI?"</div>
+
+<div class="context">
+  <strong>Current assumption:</strong> The initial rate model (HMW-16) assumes a flat rate per job — e.g., RM 450 for FM Trucking from A to B. This works for fixed-price services.<br><br>
+  <strong>Real pricing:</strong> Vendor contracts use mixed units:<br>
+  &bull; <strong>FM Trucking</strong> &mdash; flat per trip (RM 450)<br>
+  &bull; <strong>CR Cargo Retrieval</strong> &mdash; per bag (RM 25/bag)<br>
+  &bull; <strong>OH Origin Handling</strong> &mdash; per kg (RM 12/kg)<br>
+  &bull; <strong>EC Export Customs</strong> &mdash; flat per declaration (RM 150)<br>
+  &bull; <strong>CS Customs Submission</strong> &mdash; per CBM for large shipments (RM 80/CBM)<br><br>
+  <strong>Impact:</strong> If we only support flat rates, cost estimates for volume-based services will be wrong. A 50-bag order at RM 25/bag = RM 1,250, not a flat RM 25. Billing reconciliation breaks if the unit type is ignored.
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2>Option A: Flat Rate Only (Simplest)</h2>
+<span class="label" style="background:#f3f4f6;color:#6b7280;">Current baseline</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Every rate is a single number — no unit type, no calculation. RM 450 for FM from A to B, RM 150 for EC at a location. Cost = rate, regardless of how many bags or how much weight. The rate card table just has a "Rate" column.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>- Simplest possible data model<br>- No calculation logic needed<br>- Easy to understand and maintain<br>- Good enough for fixed-price services (FM, EC)</div>
+    <div class="cons"><strong>Cons</strong><br>- Inaccurate for volume-based services (CR per-bag, OH per-kg)<br>- Cost estimates wrong for large or small shipments<br>- Doesn't reflect actual vendor contracts<br>- Billing reconciliation will still have discrepancies</div>
+  </div>
+</div>
+
+<!-- Mockup A: Simple rate card -->
+<h3>Rate card with flat rates only</h3>
+<div class="screen">
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a href="#">Delivery Orders</a>
+    <a class="active" href="#">Rates</a>
+    <a href="#">Master Data</a>
+  </div>
+  <div style="padding:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;">
+      <div>
+        <div style="font-size:16px;font-weight:800;">Vendor Rate Cards</div>
+        <div style="font-size:11px;color:#9ca3af;">Flat rates per vendor, service, and location</div>
+      </div>
+      <button style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;background:#0D9488;color:#fff;border:none;cursor:pointer;font-family:inherit;">+ Add Rate</button>
+    </div>
+
+    <!-- HaleSun -->
+    <div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:12px;">
+      <div style="padding:8px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-weight:700;font-size:12px;">HaleSun</span>
+        <span style="font-size:10px;color:#9ca3af;">3 rates</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Location / Route</th>
+            <th>Rate</th>
+            <th>Currency</th>
+            <th>Effective</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="svc-p"><span class="c">FM</span> Trucking</span></td>
+            <td>TikTok WH &rarr; SZX Airport</td>
+            <td><span class="rate">450.00</span></td>
+            <td>MYR</td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">01 Jan 2026</td>
+          </tr>
+          <tr>
+            <td><span class="svc-p"><span class="c">FM</span> Trucking</span></td>
+            <td>Yiwu Warehouse &rarr; Ningbo Port</td>
+            <td><span class="rate">520.00</span></td>
+            <td>MYR</td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">01 Jan 2026</td>
+          </tr>
+          <tr>
+            <td><span class="svc-p"><span class="c">CR</span> Cargo Retrieval</span></td>
+            <td>Yantian Port</td>
+            <td><span class="rate">120.00</span></td>
+            <td>MYR</td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">15 Feb 2026</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Problem callout -->
+    <div style="background:#fefafa;border:1px solid #fecaca;border-radius:6px;padding:10px 12px;font-size:11px;color:#991b1b;">
+      <strong>Problem:</strong> HaleSun charges CR at RM 25/bag, not RM 120 flat. For a 50-bag order, the actual cost is RM 1,250 — not RM 120. The flat rate model can't represent this.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2>Option B: Rate + Unit Type</h2>
+<span class="label" style="background:#ecfdf5;color:#059669;">Recommended</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Each rate has a unit type: <strong>flat</strong>, <strong>per-kg</strong>, <strong>per-bag</strong>, or <strong>per-CBM</strong>. The rate card shows both the number and the unit: "RM 450 flat" vs "RM 12 /kg" vs "RM 25 /bag". Cost calculation uses the unit: flat &rarr; rate, per-kg &rarr; rate &times; weight, per-bag &rarr; rate &times; bags, per-CBM &rarr; rate &times; volume. The create form shows the calculated cost with a transparent breakdown.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>- Accurate cost estimates for all service types<br>- Matches real vendor contracts<br>- Billing reconciliation can compare apples to apples<br>- Transparent — ops sees rate, unit, quantity, and calculated cost</div>
+    <div class="cons"><strong>Cons</strong><br>- More complex data model (unit type field, calculation logic)<br>- Ops needs to understand that some rates are per-unit<br>- Order total depends on bag count and weight being entered accurately<br>- Need to handle edge case: what if bags/weight not yet known?</div>
+  </div>
+</div>
+
+<!-- Data model -->
+<h3>Updated Data Model</h3>
+<div class="model">VendorRate {
+  vendorCode: string        // "V-001" (HaleSun)
+  serviceCode: string       // "FM", "EC", "CR", "CS", "OH"
+  rateType: "location" | "route"
+  location?: string         // LOC-004 (SZX Airport)
+  origin?: string           // LOC-001 (TikTok WH)
+  destination?: string      // LOC-004 (SZX Airport)
+
+  rate: number              // 25.00
+  unit: "flat" | "per-kg" | "per-bag" | "per-cbm"
+  //  flat    → cost = rate
+  //  per-kg  → cost = rate × totalWeight
+  //  per-bag → cost = rate × bagCount
+  //  per-cbm → cost = rate × volume
+
+  currency: "MYR" | "CNY" | "USD"
+  effectiveFrom: string
+  effectiveTo?: string
+}</div>
+
+<!-- Mockup B1: Rate card with unit types -->
+<h3>Rate card with unit types</h3>
+<div class="screen">
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a href="#">Delivery Orders</a>
+    <a class="active" href="#">Rates</a>
+    <a href="#">Master Data</a>
+  </div>
+  <div style="padding:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;">
+      <div>
+        <div style="font-size:16px;font-weight:800;">Vendor Rate Cards</div>
+        <div style="font-size:11px;color:#9ca3af;">Rates with unit types &middot; flat, per-kg, per-bag, per-CBM</div>
+      </div>
+      <button style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;background:#0D9488;color:#fff;border:none;cursor:pointer;font-family:inherit;">+ Add Rate</button>
+    </div>
+
+    <!-- HaleSun -->
+    <div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:12px;">
+      <div style="padding:8px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-weight:700;font-size:12px;">HaleSun</span>
+        <span style="font-size:10px;color:#9ca3af;">4 rates</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Location / Route</th>
+            <th>Rate</th>
+            <th>Unit</th>
+            <th>Currency</th>
+            <th>Effective</th>
+            <th style="width:40px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="svc-p"><span class="c">FM</span> Trucking</span></td>
+            <td>TikTok WH &rarr; SZX Airport</td>
+            <td><span class="rate">450.00</span></td>
+            <td><span class="unit-badge unit-flat">flat</span></td>
+            <td>MYR</td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">01 Jan 2026</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-p"><span class="c">FM</span> Trucking</span></td>
+            <td>Yiwu Warehouse &rarr; Ningbo Port</td>
+            <td><span class="rate">520.00</span></td>
+            <td><span class="unit-badge unit-flat">flat</span></td>
+            <td>MYR</td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">01 Jan 2026</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-p"><span class="c">CR</span> Cargo Retrieval</span></td>
+            <td>Yantian Port</td>
+            <td><span class="rate">25.00</span></td>
+            <td><span class="unit-badge unit-bag">/bag</span></td>
+            <td>MYR</td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">15 Feb 2026</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-p"><span class="c">OH</span> Origin Handling</span></td>
+            <td>TikTok WH, Shenzhen</td>
+            <td><span class="rate">12.00</span></td>
+            <td><span class="unit-badge unit-kg">/kg</span></td>
+            <td>MYR</td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">01 Mar 2026</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Gonda -->
+    <div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:12px;">
+      <div style="padding:8px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-weight:700;font-size:12px;">Gonda</span>
+        <span style="font-size:10px;color:#9ca3af;">3 rates</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Location / Route</th>
+            <th>Rate</th>
+            <th>Unit</th>
+            <th>Currency</th>
+            <th>Effective</th>
+            <th style="width:40px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="svc-p"><span class="c">EC</span> Export Customs</span></td>
+            <td>SZX Airport Cargo Terminal</td>
+            <td><span class="rate">150.00</span></td>
+            <td><span class="unit-badge unit-flat">flat</span></td>
+            <td>MYR</td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">01 Jan 2026</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-p"><span class="c">CS</span> Submission</span></td>
+            <td>SZX Airport Cargo Terminal</td>
+            <td><span class="rate">80.00</span></td>
+            <td><span class="unit-badge unit-flat">flat</span></td>
+            <td>MYR</td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">01 Jan 2026</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-p"><span class="c">EC</span> Export Customs</span></td>
+            <td>Shenzhen Bay Checkpoint</td>
+            <td><span class="rate">160.00</span></td>
+            <td><span class="unit-badge unit-flat">flat</span></td>
+            <td>MYR</td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">01 Mar 2026</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ThaiKee -->
+    <div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:12px;">
+      <div style="padding:8px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-weight:700;font-size:12px;">ThaiKee</span>
+        <span style="font-size:10px;color:#9ca3af;">2 rates</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Location / Route</th>
+            <th>Rate</th>
+            <th>Unit</th>
+            <th>Currency</th>
+            <th>Effective</th>
+            <th style="width:40px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="svc-p"><span class="c">OH</span> Origin Handling</span></td>
+            <td>TikTok WH, Shenzhen</td>
+            <td><span class="rate">10.50</span></td>
+            <td><span class="unit-badge unit-kg">/kg</span></td>
+            <td>MYR</td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">01 Feb 2026</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-p"><span class="c">CR</span> Cargo Retrieval</span></td>
+            <td>Shekou Port</td>
+            <td><span class="rate">30.00</span></td>
+            <td><span class="unit-badge unit-bag">/bag</span></td>
+            <td>MYR</td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">01 Feb 2026</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Mockup B2: Create form with calculated costs -->
+<h3>Create form with cost calculation breakdown</h3>
+<div class="screen">
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a href="#">Delivery Orders</a>
+    <a class="active" href="#">New Order</a>
+    <a href="#">Rates</a>
+  </div>
+  <div style="padding:16px;max-width:900px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+      <span style="color:#9ca3af;">&#8592;</span>
+      <span style="font-size:16px;font-weight:800;">Create Delivery Order</span>
+    </div>
+
+    <!-- Order header info -->
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px;margin-bottom:12px;display:flex;gap:24px;font-size:11px;">
+      <div><span style="color:#9ca3af;">Customer:</span> <strong>TikTok</strong></div>
+      <div><span style="color:#9ca3af;">Bags:</span> <strong class="mono">36</strong></div>
+      <div><span style="color:#9ca3af;">Weight:</span> <strong class="mono">1,840 kg</strong></div>
+      <div><span style="color:#9ca3af;">Volume:</span> <strong class="mono">4.2 CBM</strong></div>
+    </div>
+
+    <div class="form-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+        <span class="step-badge">2</span>
+        <span style="font-size:13px;font-weight:700;">Jobs with calculated costs</span>
+      </div>
+
+      <!-- Job 1: FM flat -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:11px;font-weight:700;color:#0D9488;">J01</span>
+            <span class="svc-p"><span class="c">FM</span> Trucking</span>
+            <span style="font-size:11px;font-weight:600;color:#374151;">HaleSun</span>
+            <span style="font-size:10px;color:#9ca3af;">TikTok WH &rarr; SZX Airport</span>
+          </div>
+          <div style="background:rgba(13,148,136,0.06);border:1px solid rgba(13,148,136,0.12);padding:3px 8px;border-radius:4px;">
+            <span class="mono" style="font-size:11px;font-weight:700;color:#0D9488;">RM 450.00</span>
+          </div>
+        </div>
+        <div class="calc-row" style="padding-left:26px;">
+          <span class="calc-val">RM 450.00</span>
+          <span class="unit-badge unit-flat">flat</span>
+          <span style="color:#9ca3af;font-size:10px;margin-left:4px;">= RM 450.00</span>
+        </div>
+      </div>
+
+      <!-- Job 2: CR per-bag -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:11px;font-weight:700;color:#0D9488;">J02</span>
+            <span class="svc-p"><span class="c">CR</span> Cargo Retrieval</span>
+            <span style="font-size:11px;font-weight:600;color:#374151;">HaleSun</span>
+            <span style="font-size:10px;color:#9ca3af;">@ Yantian Port</span>
+          </div>
+          <div style="background:rgba(13,148,136,0.06);border:1px solid rgba(13,148,136,0.12);padding:3px 8px;border-radius:4px;">
+            <span class="mono" style="font-size:11px;font-weight:700;color:#0D9488;">RM 900.00</span>
+          </div>
+        </div>
+        <div class="calc-row" style="padding-left:26px;">
+          <span class="calc-val">RM 25.00</span>
+          <span class="unit-badge unit-bag">/bag</span>
+          <span class="calc-op">&times;</span>
+          <span class="calc-val">36 bags</span>
+          <span style="color:#9ca3af;font-size:10px;margin-left:4px;">= RM 900.00</span>
+        </div>
+      </div>
+
+      <!-- Job 3: OH per-kg -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:11px;font-weight:700;color:#0D9488;">J03</span>
+            <span class="svc-p"><span class="c">OH</span> Origin Handling</span>
+            <span style="font-size:11px;font-weight:600;color:#374151;">ThaiKee</span>
+            <span style="font-size:10px;color:#9ca3af;">@ TikTok WH, Shenzhen</span>
+          </div>
+          <div style="background:rgba(13,148,136,0.06);border:1px solid rgba(13,148,136,0.12);padding:3px 8px;border-radius:4px;">
+            <span class="mono" style="font-size:11px;font-weight:700;color:#0D9488;">RM 19,320.00</span>
+          </div>
+        </div>
+        <div class="calc-row" style="padding-left:26px;">
+          <span class="calc-val">RM 10.50</span>
+          <span class="unit-badge unit-kg">/kg</span>
+          <span class="calc-op">&times;</span>
+          <span class="calc-val">1,840 kg</span>
+          <span style="color:#9ca3af;font-size:10px;margin-left:4px;">= RM 19,320.00</span>
+        </div>
+      </div>
+
+      <!-- Job 4: EC flat -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:11px;font-weight:700;color:#0D9488;">J04</span>
+            <span class="svc-p"><span class="c">EC</span> Export Customs</span>
+            <span style="font-size:11px;font-weight:600;color:#374151;">Gonda</span>
+            <span style="font-size:10px;color:#9ca3af;">@ SZX Airport Cargo Terminal</span>
+          </div>
+          <div style="background:rgba(13,148,136,0.06);border:1px solid rgba(13,148,136,0.12);padding:3px 8px;border-radius:4px;">
+            <span class="mono" style="font-size:11px;font-weight:700;color:#0D9488;">RM 150.00</span>
+          </div>
+        </div>
+        <div class="calc-row" style="padding-left:26px;">
+          <span class="calc-val">RM 150.00</span>
+          <span class="unit-badge unit-flat">flat</span>
+          <span style="color:#9ca3af;font-size:10px;margin-left:4px;">= RM 150.00</span>
+        </div>
+      </div>
+
+      <!-- Order total -->
+      <div style="display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-top:14px;padding-top:14px;border-top:2px solid #e5e7eb;">
+        <span style="font-size:12px;color:#6b7280;font-weight:600;">Estimated Order Total:</span>
+        <span class="cost-total" style="font-size:16px;">RM 20,820.00</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mockup B3: Sub-table with unit-aware rates -->
+<h3>Sub-table showing unit type per job</h3>
+<div class="screen">
+  <div style="padding:8px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;">
+    <span style="font-weight:700;font-size:12px;">TikTok</span>
+    <span class="mono" style="font-size:9px;color:#9ca3af;margin-left:6px;">DO-20260315-003</span>
+    <span style="font-size:11px;color:#9ca3af;margin-left:12px;">36 bags &middot; 1,840 kg</span>
+    <span style="float:right;font-size:11px;font-weight:700;color:#0D9488;" class="mono">Total: RM 20,820.00</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Job</th>
+        <th>Vendor</th>
+        <th>Service</th>
+        <th>Location / Route</th>
+        <th>Rate</th>
+        <th>Unit</th>
+        <th>Qty</th>
+        <th>Cost</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="font-weight:600;color:#0D9488;">J01</td>
+        <td style="font-weight:600;">HaleSun</td>
+        <td><span class="svc-p"><span class="c">FM</span></span></td>
+        <td>TikTok WH &rarr; SZX Airport</td>
+        <td><span class="rate">450.00</span></td>
+        <td><span class="unit-badge unit-flat">flat</span></td>
+        <td class="mono" style="color:#9ca3af;">&#8212;</td>
+        <td><span class="rate">450.00</span></td>
+        <td><span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #a7f3d0;background:#f0fdf4;color:#059669;"><span style="width:5px;height:5px;border-radius:50%;background:#059669;display:inline-block;"></span>Done</span></td>
+      </tr>
+      <tr>
+        <td style="font-weight:600;color:#0D9488;">J02</td>
+        <td style="font-weight:600;">HaleSun</td>
+        <td><span class="svc-p"><span class="c">CR</span></span></td>
+        <td>@ Yantian Port</td>
+        <td><span class="rate">25.00</span></td>
+        <td><span class="unit-badge unit-bag">/bag</span></td>
+        <td class="mono">36</td>
+        <td><span class="rate">900.00</span></td>
+        <td><span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #e5e7eb;background:#f9fafb;color:#6b7280;"><span style="width:5px;height:5px;border-radius:50%;background:#9ca3af;display:inline-block;"></span>In Progress</span></td>
+      </tr>
+      <tr>
+        <td style="font-weight:600;color:#0D9488;">J03</td>
+        <td style="font-weight:600;">ThaiKee</td>
+        <td><span class="svc-p"><span class="c">OH</span></span></td>
+        <td>@ TikTok WH, Shenzhen</td>
+        <td><span class="rate">10.50</span></td>
+        <td><span class="unit-badge unit-kg">/kg</span></td>
+        <td class="mono">1,840</td>
+        <td><span class="rate">19,320.00</span></td>
+        <td><span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #a7f3d0;background:#f0fdf4;color:#059669;"><span style="width:5px;height:5px;border-radius:50%;background:#059669;display:inline-block;"></span>Done</span></td>
+      </tr>
+      <tr>
+        <td style="font-weight:600;color:#0D9488;">J04</td>
+        <td style="font-weight:600;">Gonda</td>
+        <td><span class="svc-p"><span class="c">EC</span></span></td>
+        <td>@ SZX Airport Cargo Terminal</td>
+        <td><span class="rate">150.00</span></td>
+        <td><span class="unit-badge unit-flat">flat</span></td>
+        <td class="mono" style="color:#9ca3af;">&#8212;</td>
+        <td><span class="rate">150.00</span></td>
+        <td><span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #e5e7eb;background:#f9fafb;color:#6b7280;"><span style="width:5px;height:5px;border-radius:50%;background:#9ca3af;display:inline-block;"></span>Pending</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2>Option C: Tiered Pricing</h2>
+<span class="label" style="background:#fffbeb;color:#92400e;">Future / overkill</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Rates have volume tiers: 0-500 kg = RM 14/kg, 501-1000 kg = RM 12/kg, 1001+ kg = RM 10/kg. The system picks the tier based on the shipment's weight/bags, then calculates cost. Supports progressive tiers (different rate per bracket) or slab tiers (single rate based on total).
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>- Most accurate for large-volume contracts with volume discounts<br>- Reflects how enterprise logistics contracts actually work<br>- Incentivizes ops to consolidate shipments for better rates</div>
+    <div class="cons"><strong>Cons</strong><br>- Way too complex for Phase 1 — most vendors use simple per-unit pricing<br>- Data entry burden: admin enters multiple tier rows per rate<br>- Tier edge cases (split shipments, partial weights) add complexity<br>- Only 1-2 vendors currently have tiered contracts</div>
+  </div>
+</div>
+
+<!-- Mockup C: Tiered rate card -->
+<h3>Tiered rate card (complex)</h3>
+<div class="screen">
+  <div style="padding:16px;">
+    <div style="font-size:12px;font-weight:700;margin-bottom:8px;">SevenSeas — OH Origin Handling at TikTok WH (Tiered)</div>
+    <div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">
+      <table>
+        <thead>
+          <tr>
+            <th>Tier</th>
+            <th>Range</th>
+            <th>Rate</th>
+            <th>Unit</th>
+            <th>Example (1,840 kg)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-weight:600;">Tier 1</td>
+            <td>0 &ndash; 500 kg</td>
+            <td><span class="rate">14.00</span></td>
+            <td><span class="unit-badge unit-kg">/kg</span></td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">500 &times; 14 = 7,000</td>
+          </tr>
+          <tr>
+            <td style="font-weight:600;">Tier 2</td>
+            <td>501 &ndash; 1,000 kg</td>
+            <td><span class="rate">12.00</span></td>
+            <td><span class="unit-badge unit-kg">/kg</span></td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">500 &times; 12 = 6,000</td>
+          </tr>
+          <tr>
+            <td style="font-weight:600;">Tier 3</td>
+            <td>1,001+ kg</td>
+            <td><span class="rate">10.00</span></td>
+            <td><span class="unit-badge unit-kg">/kg</span></td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">840 &times; 10 = 8,400</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="padding:8px 12px;background:#f9fafb;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:8px;align-items:center;">
+        <span style="font-size:11px;color:#6b7280;">Progressive total for 1,840 kg:</span>
+        <span class="mono" style="font-weight:700;color:#0D9488;">RM 21,400.00</span>
+      </div>
+    </div>
+    <div style="margin-top:8px;font-size:10px;color:#9ca3af;">
+      Compare: flat Option B at RM 10.50/kg would be RM 19,320. Tiered pricing is more nuanced but significantly harder to maintain.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="verdict">
+  <h3>Recommendation: Option B — Rate + Unit Type</h3>
+  <p style="font-size:12px;line-height:1.7;color:#374151;">
+    <strong>Why Option B:</strong> It's the minimum viable accuracy. Flat rates (Option A) are wrong for per-bag and per-kg services — the cost difference can be 10x. Unit types add one field to the data model but make every cost estimate correct. Tiered pricing (Option C) is overkill — only 1-2 vendors use tiers, and we can handle those as manual overrides for now.
+  </p>
+  <p style="font-size:12px;line-height:1.7;color:#374151;margin-top:8px;">
+    <strong>UI pattern:</strong> Show the unit type as a small badge next to the rate: <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;font-size:11px;">RM 25.00 /bag</code> vs <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;font-size:11px;">RM 450.00 flat</code>. In the create form, show the full calculation: rate &times; quantity = cost. This makes it transparent and easy to verify.
+  </p>
+  <p style="font-size:12px;line-height:1.7;color:#374151;margin-top:8px;">
+    <strong>Edge case:</strong> If bags or weight aren't entered yet, show "RM 25.00 /bag &times; ? bags" with a placeholder. The total updates live as ops fills in the shipment details. This encourages ops to enter accurate quantities.
+  </p>
+  <p style="font-size:12px;line-height:1.7;color:#374151;margin-top:8px;">
+    <strong>Supported units for Phase 1:</strong> <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;font-size:11px;">flat</code>, <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;font-size:11px;">per-kg</code>, <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;font-size:11px;">per-bag</code>. Add <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;font-size:11px;">per-cbm</code> when a vendor contract requires it.
+  </p>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW: Data Density for Logistics Users</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 13px; line-height: 1.4; }
+  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .page { max-width: 1400px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.7px; margin-bottom: 6px; }
+  h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; margin: 48px 0 8px; color: #0D9488; }
+  .subtitle { color: #6b7280; font-size: 14px; margin-bottom: 40px; line-height: 1.7; }
+  .hmw { font-size: 17px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 24px; letter-spacing: -0.2px; padding: 16px 20px; background: #fff; border-left: 4px solid #0D9488; border-radius: 0 8px 8px 0; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; margin: 16px 0 32px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .label { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 10px; border-radius: 4px; display: inline-block; margin-bottom: 12px; }
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 8px; padding: 20px; margin-top: 40px; }
+  .verdict h3 { color: #059669; font-size: 16px; margin-bottom: 8px; }
+
+  /* ── Dense Nav ── */
+  .nav-dense { height: 40px; padding: 0 16px; background: #fff; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 2px; }
+  .nav-dense .logo { display: flex; align-items: center; gap: 6px; margin-right: 20px; font-weight: 700; font-size: 13px; color: #111827; }
+  .nav-dense .logo-dot { width: 20px; height: 20px; background: #0D9488; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 9px; font-weight: 800; }
+  .nav-dense a { font-size: 12px; padding: 4px 10px; border-radius: 4px; color: #9ca3af; text-decoration: none; }
+  .nav-dense a.active { color: #0D9488; background: rgba(13,148,136,0.06); font-weight: 600; }
+
+  /* ── Dense Stats Bar ── */
+  .stats-bar { display: flex; align-items: center; gap: 16px; padding: 8px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 12px; }
+  .stat { display: flex; align-items: center; gap: 4px; color: #6b7280; }
+  .stat strong { font-weight: 700; font-size: 14px; }
+  .stat-sep { width: 1px; height: 16px; background: #e5e7eb; }
+
+  /* ── Dense Table ── */
+  .dtable { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .dtable thead th { text-align: left; padding: 6px 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+  .dtable tbody tr { border-bottom: 1px solid #f3f4f6; transition: background 0.08s; cursor: pointer; }
+  .dtable tbody tr:hover { background: #f9fafb; }
+  .dtable tbody tr.rej { background: #fefafa; }
+  .dtable tbody td { padding: 8px 12px; vertical-align: middle; }
+  .dtable .cust { font-size: 13px; font-weight: 600; color: #111827; }
+  .dtable .id { font-family: 'SF Mono', monospace; font-size: 10px; color: #9ca3af; }
+  .dtable .mawb { font-family: 'SF Mono', monospace; font-size: 11px; color: #374151; }
+  .dtable .meta { font-size: 11px; color: #9ca3af; }
+  .dtable .route { font-size: 11px; color: #374151; }
+
+  /* ── Dense Job Chips ── */
+  .chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; border: 1px solid; line-height: 1.6; }
+  .chip .d { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+  /* SIMPLIFIED: only 3 states — done (green), problem (red), everything else (gray) */
+  .chip-g { border-color: #a7f3d0; background: #f0fdf4; color: #059669; }
+  .chip-g .d { background: #059669; }
+  .chip-n { border-color: #e5e7eb; background: #fff; color: #6b7280; }
+  .chip-n .d { background: #9ca3af; }
+  .chip-r { border-color: #fecaca; background: #fef2f2; color: #dc2626; }
+  .chip-r .d { background: #dc2626; }
+
+  /* ── Dense expanded ── */
+  .exp-row { background: #f9fafb; }
+  .exp-row td { padding: 0 !important; border-bottom: 1px solid #e5e7eb !important; }
+  .exp-content { padding: 10px 12px 10px 40px; }
+  .exp-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 6px; }
+  .job-cards-dense { display: flex; gap: 8px; flex-wrap: wrap; }
+  .jcard { min-width: 200px; max-width: 280px; flex: 1; border: 1.5px solid; border-radius: 6px; background: #fff; overflow: hidden; font-size: 11px; }
+  .jcard-body { padding: 10px 12px; }
+  .jcard .vendor { font-size: 12px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+  .jcard .svc { display: flex; gap: 3px; margin-bottom: 4px; }
+  .svc-p { padding: 1px 5px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.1); }
+  .svc-p .c { color: #0D9488; font-family: monospace; }
+  .svc-p .l { color: #374151; }
+  .jcard .rt { font-size: 10px; color: #6b7280; }
+  .jcard-ft { padding: 5px 12px; border-top: 1.5px solid; display: flex; align-items: center; justify-content: space-between; background: #fafbfc; }
+  .jcard-ft .st { font-size: 10px; font-weight: 700; display: flex; align-items: center; gap: 4px; }
+  .jcard-ft .lnk { font-size: 10px; color: #9ca3af; text-decoration: none; }
+
+  /* ── Page header (dense) ── */
+  .pg-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; }
+  .pg-title { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; }
+  .pg-sub { font-size: 11px; color: #9ca3af; margin-top: 1px; }
+  .btn-s { padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; }
+  .btn-pri { background: #0D9488; color: #fff; box-shadow: 0 1px 2px rgba(13,148,136,0.25); }
+  .btn-sec { background: #fff; color: #374151; border: 1px solid #e5e7eb; }
+
+  /* ── Filter (dense) ── */
+  .filter-dense { display: flex; align-items: center; gap: 8px; padding: 6px 16px; border-bottom: 1px solid #e5e7eb; background: #fff; }
+  .filter-dense input, .filter-dense select { border: 1px solid #e5e7eb; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-family: inherit; outline: none; }
+  .filter-dense input:focus { border-color: #0D9488; }
+  .filter-dense label { font-size: 10px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.04em; }
+  .filter-group { display: flex; align-items: center; gap: 4px; }
+
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  .compare-box { border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; }
+  .compare-box.old { border-color: #fecaca; background: #fefafa; }
+  .compare-box.new { border-color: #a7f3d0; background: #f0fff4; }
+  .compare-box h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW: Data Density for Logistics Users</h1>
+<div class="hmw">"How might we make the UI feel like a smart spreadsheet — dense enough for ops who live in Excel, but with the clarity of intentional design?"</div>
+<p class="subtitle">
+  Ops planners manage 50+ delivery orders daily in Excel. They're used to seeing 30-40 rows at a glance with zero wasted space. Our current design shows 5-6 orders per viewport with big cards, generous padding, and 32px dashboard numbers. That's the opposite of their mental model.
+</p>
+
+<div class="compare">
+  <div class="compare-box old">
+    <h4>Current (SaaS-y)</h4>
+    <ul style="font-size:12px;color:#374151;line-height:1.8;padding-left:16px;">
+      <li>Dashboard: 4 big cards, ~120px height, 32px numbers</li>
+      <li>Table padding: 14px 16px per cell</li>
+      <li>Card radius: 14px (bubbly)</li>
+      <li>Row height: ~70px</li>
+      <li>Visible orders: ~5-6 per viewport</li>
+      <li><strong>Feels like:</strong> Modern SaaS template</li>
+    </ul>
+  </div>
+  <div class="compare-box new">
+    <h4>Proposed (Data-dense)</h4>
+    <ul style="font-size:12px;color:#374151;line-height:1.8;padding-left:16px;">
+      <li>Dashboard: single stats bar, ~32px height</li>
+      <li>Table padding: 8px 12px per cell</li>
+      <li>Card radius: 4-6px (sharp)</li>
+      <li>Row height: ~40px</li>
+      <li>Visible orders: ~12-15 per viewport</li>
+      <li><strong>Feels like:</strong> Smart spreadsheet with personality</li>
+    </ul>
+  </div>
+</div>
+
+<h2>Dense Design Mockup</h2>
+<span class="label" style="background:#ecfdf5;color:#059669;">Full screen — Delivery Orders list</span>
+
+<div class="screen">
+  <!-- Dense Nav -->
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a class="active" href="#">Delivery Orders</a>
+    <a href="#">New Order</a>
+    <a href="#">Validation</a>
+    <a href="#">Master Data</a>
+  </div>
+
+  <!-- Stats Bar (replaces 4 big cards) -->
+  <div class="stats-bar">
+    <div class="stat"><strong style="color:#111827;">5</strong> orders</div>
+    <div class="stat-sep"></div>
+    <div class="stat"><strong style="color:#111827;">6</strong> in progress</div>
+    <div class="stat-sep"></div>
+    <div class="stat"><strong style="color:#059669;">2</strong> completed</div>
+    <div class="stat-sep"></div>
+    <div class="stat"><strong style="color:#dc2626;">1</strong> rejected</div>
+  </div>
+
+  <!-- Page Header -->
+  <div class="pg-header">
+    <div>
+      <div class="pg-title">Delivery Orders</div>
+      <div class="pg-sub">Manage delivery orders across vendors</div>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="btn-s btn-sec">↓ Export</button>
+      <button class="btn-s btn-pri">+ New Order</button>
+    </div>
+  </div>
+
+  <!-- Dense Filter -->
+  <div class="filter-dense">
+    <div class="filter-group">
+      <label>MAWB</label>
+      <input type="text" placeholder="Search..." style="width:160px;" class="mono">
+    </div>
+    <div class="filter-group">
+      <label>Customer</label>
+      <select style="width:130px;"><option>All</option></select>
+    </div>
+    <div class="filter-group">
+      <label>From</label>
+      <input type="date" style="width:120px;">
+    </div>
+    <div class="filter-group">
+      <label>To</label>
+      <input type="date" style="width:120px;">
+    </div>
+    <span style="margin-left:auto;font-size:11px;color:#9ca3af;" class="mono">5 orders</span>
+  </div>
+
+  <!-- Dense Table -->
+  <table class="dtable">
+    <thead>
+      <tr>
+        <th style="width:20px;"></th>
+        <th>Customer</th>
+        <th>MAWB</th>
+        <th>Route</th>
+        <th>Cargo</th>
+        <th>Jobs</th>
+        <th style="width:56px;">Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="color:#d1d5db;text-align:center;">▸</td>
+        <td><span class="cust">AliExpress</span><br><span class="id">PTRIP12302100001</span></td>
+        <td><span class="mawb">176-84329871</span></td>
+        <td><span class="route">Yantian Port → Shekou Port</span></td>
+        <td><span class="meta">24 bags · 1240 kg</span></td>
+        <td><span class="chip chip-g"><span class="d"></span>Camila FM+OH</span></td>
+        <td><span class="meta">08 Mar</span></td>
+      </tr>
+
+      <!-- Expanded row -->
+      <tr style="background:#f9fafb;">
+        <td style="color:#0D9488;text-align:center;font-weight:700;">▾</td>
+        <td><span class="cust">Shopee</span><br><span class="id">PTRIP12302100002</span></td>
+        <td><span class="mawb">176-33121632</span></td>
+        <td><span class="route">Yantian → Dongguan → SZX Airport</span></td>
+        <td><span class="meta">16 bags · 890 kg</span></td>
+        <td>
+          <span class="chip chip-n"><span class="d"></span>Hoboken CR+FM</span>
+          <span class="chip chip-n"><span class="d"></span>V3 EC</span>
+        </td>
+        <td><span class="meta">08 Mar</span></td>
+      </tr>
+      <tr class="exp-row">
+        <td colspan="7">
+          <div class="exp-content">
+            <div class="exp-label">Jobs (2)</div>
+            <div class="job-cards-dense">
+              <div class="jcard" style="border-color:#e5e7eb;">
+                <div class="jcard-body">
+                  <div class="vendor">Hoboken</div>
+                  <div class="svc"><span class="svc-p"><span class="c">CR</span></span><span class="svc-p"><span class="c">FM</span></span></div>
+                  <div class="rt">Yantian Port → Dongguan Cross-dock</div>
+                </div>
+                <div class="jcard-ft" style="border-color:#e5e7eb;">
+                  <span class="st" style="color:#6b7280;"><span class="d" style="background:#9ca3af;width:5px;height:5px;border-radius:50%;display:inline-block;"></span> In Progress</span>
+                  <a class="lnk" href="#">J01 →</a>
+                </div>
+              </div>
+              <div class="jcard" style="border-color:#e5e7eb;">
+                <div class="jcard-body">
+                  <div class="vendor">V3</div>
+                  <div class="svc"><span class="svc-p"><span class="c">EC</span></span></div>
+                  <div class="rt">Export customs (parallel)</div>
+                </div>
+                <div class="jcard-ft" style="border-color:#e5e7eb;">
+                  <span class="st" style="color:#6b7280;"><span class="d" style="background:#9ca3af;width:5px;height:5px;border-radius:50%;display:inline-block;"></span> Pending</span>
+                  <a class="lnk" href="#">J02 →</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Rejected row -->
+      <tr class="rej">
+        <td style="color:#dc2626;text-align:center;font-weight:700;">!</td>
+        <td><span class="cust">AliExpress</span><br><span class="id">PTRIP13302100101</span></td>
+        <td><span class="mawb">176-98765421</span></td>
+        <td><span class="route">Qianhai FTZ → Huanggang Port</span></td>
+        <td><span class="meta">36 bags · 1500 kg</span></td>
+        <td><span class="chip chip-r"><span class="d"></span>Camila FM+CS</span></td>
+        <td><span class="meta">09 Mar</span></td>
+      </tr>
+
+      <tr>
+        <td style="color:#d1d5db;text-align:center;">▸</td>
+        <td><span class="cust">Shein</span><br><span class="id">PTRIP14302100001</span></td>
+        <td><span class="mawb">176-11456287</span></td>
+        <td><span class="route">GZ Baiyun → GZ Region Airport</span></td>
+        <td><span class="meta">10 bags · 520 kg</span></td>
+        <td>
+          <span class="chip chip-g"><span class="d"></span>V4 FM</span>
+          <span class="chip chip-n"><span class="d"></span>V4 OH</span>
+        </td>
+        <td><span class="meta">10 Mar</span></td>
+      </tr>
+
+      <tr>
+        <td style="color:#d1d5db;text-align:center;">▸</td>
+        <td><span class="cust">Temu</span><br><span class="id">PTRIP22102100001</span></td>
+        <td><span class="mawb">176-77654321</span></td>
+        <td><span class="route">SZX BaoAn → Shekou → Lantau</span></td>
+        <td><span class="meta">48 bags · 2450 kg</span></td>
+        <td>
+          <span class="chip chip-n"><span class="d"></span>Hoboken CR</span>
+          <span class="chip chip-n"><span class="d"></span>V3 FM</span>
+          <span class="chip chip-n"><span class="d"></span>V3 EC+CS</span>
+        </td>
+        <td><span class="meta">10 Mar</span></td>
+      </tr>
+
+      <!-- Extra rows to show density -->
+      <tr>
+        <td style="color:#d1d5db;text-align:center;">▸</td>
+        <td><span class="cust">Alibaba</span><br><span class="id">PTRIP25302100001</span></td>
+        <td><span class="mawb">176-22334455</span></td>
+        <td><span class="route">Yiwu → Ningbo Port</span></td>
+        <td><span class="meta">60 bags · 3200 kg</span></td>
+        <td><span class="chip chip-n"><span class="d"></span>Camila FM</span></td>
+        <td><span class="meta">11 Mar</span></td>
+      </tr>
+      <tr>
+        <td style="color:#d1d5db;text-align:center;">▸</td>
+        <td><span class="cust">Shopee</span><br><span class="id">PTRIP25302100002</span></td>
+        <td><span class="mawb">176-99887766</span></td>
+        <td><span class="route">Guangzhou → Hong Kong Airport</span></td>
+        <td><span class="meta">12 bags · 680 kg</span></td>
+        <td>
+          <span class="chip chip-g"><span class="d"></span>V3 EC</span>
+          <span class="chip chip-g"><span class="d"></span>V4 OH</span>
+        </td>
+        <td><span class="meta">11 Mar</span></td>
+      </tr>
+      <tr>
+        <td style="color:#d1d5db;text-align:center;">▸</td>
+        <td><span class="cust">AliExpress</span><br><span class="id">PTRIP25302100003</span></td>
+        <td><span class="mawb">176-11223344</span></td>
+        <td><span class="route">Shenzhen Bay → KL Cargo</span></td>
+        <td><span class="meta">32 bags · 1800 kg</span></td>
+        <td><span class="chip chip-n"><span class="d"></span>HaleSun FM+CS</span></td>
+        <td><span class="meta">12 Mar</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="verdict">
+  <h3>Key differences from current design</h3>
+  <ul style="font-size:13px;line-height:1.8;padding-left:16px;color:#374151;">
+    <li><strong>Navbar: 40px</strong> (was 52px) — 12px saved. Smaller logo, tighter nav links.</li>
+    <li><strong>Dashboard → Stats bar:</strong> One line with counts + separators. No cards, no icons, no big numbers. Saves ~120px vertical space.</li>
+    <li><strong>Table padding: 8px 12px</strong> (was 14px 16px) — each row saves ~12px height.</li>
+    <li><strong>Border radius: 4-6px</strong> (was 14px) — feels sharp and professional, not bubbly.</li>
+    <li><strong>Font sizes: 12-13px</strong> for most text. Customer name 13px (was 14px). Chips 10px.</li>
+    <li><strong>Customer + ID on same cell</strong> with ID below in smaller text — saves a column vs separate display.</li>
+    <li><strong>Cargo column</strong> added (bags + weight) — keeps metadata visible without expanding.</li>
+    <li><strong>~8 rows visible</strong> without scrolling (was ~5). With stats bar and denser rows, ops sees almost 2x more data.</li>
+    <li><strong>Expanded job cards also tighter:</strong> 10px padding, 6px radius, smaller text.</li>
+    <li><strong>Filter bar is inline</strong> — horizontal with minimal labels, not a full card.</li>
+  </ul>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>User-Facing Design Questions</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 13px; line-height: 1.5; }
+  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .page { max-width: 1300px; margin: 0 auto; padding: 40px 24px 80px; }
+  h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.7px; margin-bottom: 6px; }
+  h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; margin: 56px 0 8px; color: #0D9488; }
+  .subtitle { color: #6b7280; font-size: 14px; margin-bottom: 40px; line-height: 1.7; }
+  .hmw { font-size: 17px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; letter-spacing: -0.2px; padding: 16px 20px; background: #fff; border-left: 4px solid #0D9488; border-radius: 0 12px 12px 0; }
+  .context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 14px 18px; margin-bottom: 20px; font-size: 12px; color: #92400e; line-height: 1.6; }
+  .context strong { color: #78350f; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 16px; overflow: hidden; margin: 16px 0 32px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .screen-inner { padding: 24px; position: relative; min-height: 200px; }
+  .decision { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 14px; padding: 20px; margin: 20px 0 0; }
+  .decision strong { color: #059669; }
+  .decision p { font-size: 13px; line-height: 1.7; color: #374151; }
+  .annotation { position: absolute; background: #111827; color: #fff; font-size: 10px; font-weight: 600; padding: 4px 10px; border-radius: 6px; white-space: nowrap; z-index: 5; }
+  .annotation::after { content: ''; position: absolute; bottom: -5px; left: 16px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 5px solid #111827; }
+  .nav-mini { display: flex; align-items: center; height: 44px; padding: 0 20px; background: #fff; border-bottom: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; gap: 8px; }
+  .nav-mini .active { color: #0D9488; font-weight: 600; }
+
+  /* ── Shared atoms ── */
+  .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; border: 1.5px solid; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .b-green { border-color: #a7f3d0; background: #f0fdf4; color: #059669; }
+  .b-blue { border-color: #bfdbfe; background: #eff6ff; color: #2563eb; }
+  .b-amber { border-color: #fde68a; background: #fefce8; color: #b45309; }
+  .b-red { border-color: #fecaca; background: #fef2f2; color: #dc2626; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 600; border: 1.5px solid; }
+  .svc-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 600; background: rgba(13,148,136,0.07); border: 1px solid rgba(13,148,136,0.12); }
+  .svc-pill .code { color: #0D9488; font-family: monospace; }
+  .mock-row { display: flex; align-items: center; gap: 16px; padding: 14px 20px; border-bottom: 1px solid #f3f4f6; }
+  .mock-row .customer { font-size: 14px; font-weight: 700; }
+  .mock-row .meta { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+  /* ── Toast notification ── */
+  .toast { position: absolute; top: 16px; right: 16px; display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 20px rgba(0,0,0,0.12); z-index: 20; animation: slideIn 0.3s ease-out; }
+  .toast-success { background: #059669; color: #fff; }
+  .toast-warning { background: #d97706; color: #fff; }
+  .toast-error { background: #dc2626; color: #fff; }
+  .toast .icon { width: 20px; height: 20px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .toast .dismiss { opacity: 0.6; cursor: pointer; font-size: 14px; margin-left: 8px; }
+  @keyframes slideIn { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  /* ── Rejection banner ── */
+  .rejection-banner { display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; margin-bottom: 16px; }
+  .rejection-banner .icon { width: 32px; height: 32px; border-radius: 8px; background: #dc2626; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0; }
+  .rejection-banner .text { flex: 1; }
+  .rejection-banner .title { font-size: 13px; font-weight: 700; color: #dc2626; }
+  .rejection-banner .desc { font-size: 12px; color: #92400e; margin-top: 1px; }
+  .rejection-banner .action { padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; background: #dc2626; color: #fff; border: none; cursor: pointer; white-space: nowrap; }
+
+  /* ── Slide-out panel ── */
+  .slide-panel { position: absolute; top: 0; right: 0; width: 400px; height: 100%; background: #fff; border-left: 1px solid #e5e7eb; box-shadow: -4px 0 20px rgba(0,0,0,0.08); padding: 24px; z-index: 10; overflow-y: auto; }
+  .slide-panel h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .panel-close { position: absolute; top: 16px; right: 16px; width: 28px; height: 28px; border-radius: 8px; border: none; background: #f3f4f6; cursor: pointer; font-size: 14px; color: #6b7280; display: flex; align-items: center; justify-content: center; }
+  .panel-section { margin-bottom: 20px; }
+  .panel-section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 10px; }
+  .reassign-select { width: 100%; border: 1.5px solid #fecaca; border-radius: 10px; padding: 10px 14px; font-size: 13px; font-family: inherit; background: #fef2f2; outline: none; }
+  .reassign-select:focus { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,0.1); }
+  .reassign-btn { width: 100%; padding: 10px; border-radius: 10px; font-size: 13px; font-weight: 700; font-family: inherit; background: #dc2626; color: #fff; border: none; cursor: pointer; margin-top: 8px; }
+  .reason-box { background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 12px; font-size: 12px; color: #dc2626; font-weight: 600; }
+
+  /* ── Edit mode ── */
+  .edit-bar { display: flex; align-items: center; gap: 8px; padding: 10px 20px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; margin-bottom: 12px; font-size: 12px; color: #2563eb; }
+  .edit-bar .save-btn { padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; background: #2563eb; color: #fff; border: none; cursor: pointer; margin-left: auto; }
+  .edit-bar .cancel-btn { padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 500; background: #fff; color: #6b7280; border: 1px solid #e5e7eb; cursor: pointer; }
+  .editable-field { border: 1.5px dashed #bfdbfe; border-radius: 8px; padding: 4px 8px; background: #f0f7ff; min-width: 80px; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>User-Facing Design Questions</h1>
+<p class="subtitle">Three interactions every ops planner will hit on day 1. Getting these right determines whether they stick with the tool or go back to spreadsheets.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2>1. Rejection & Reassignment</h2>
+<div class="hmw">"How might we surface rejected jobs so ops can reassign the vendor within seconds — before the cargo sits idle?"</div>
+
+<div class="context">
+  <strong>Real scenario:</strong> Camila's truck broke down en route to Huanggang Port. The job is rejected. 36 bags of priority AliExpress cargo are sitting at Qianhai Free Trade Zone with no one to move them. Every minute costs money and customer trust.
+</div>
+
+<div class="screen">
+  <div class="nav-mini">TripManager <span class="active">Trips</span></div>
+  <div class="screen-inner" style="min-height:520px; overflow: hidden;">
+    <!-- Rejection alert banner at top -->
+    <div class="rejection-banner">
+      <div class="icon">!</div>
+      <div class="text">
+        <div class="title">1 rejected job needs reassignment</div>
+        <div class="desc">AliExpress PTRIP13302100101 — Camila rejected FM+CS (Vehicle breakdown)</div>
+      </div>
+      <button class="action">View & Reassign →</button>
+    </div>
+
+    <!-- Trip list -->
+    <div style="border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+      <div class="mock-row">
+        <span style="color:#d1d5db;">▸</span>
+        <div style="flex:1;"><div class="customer">AliExpress</div><div class="meta">176-84329871 · Yantian → Shekou</div></div>
+        <span class="chip" style="border-color:#a7f3d0;background:#f0fdf4;color:#059669;"><span class="dot" style="background:#059669;"></span>Camila · FM+OH</span>
+      </div>
+
+      <!-- Rejected row — highlighted -->
+      <div class="mock-row" style="background:#fef8f8;border-left:3px solid #dc2626;">
+        <span style="color:#dc2626;font-weight:700;">!</span>
+        <div style="flex:1;">
+          <div class="customer">AliExpress <span style="font-size:11px;font-weight:400;color:#dc2626;background:#fef2f2;padding:1px 6px;border-radius:4px;border:1px solid #fecaca;margin-left:4px;">NEEDS ACTION</span></div>
+          <div class="meta">176-98765421 · Qianhai FTZ → Huanggang Port · <span style="color:#dc2626;font-weight:600;">Priority shipment</span></div>
+        </div>
+        <span class="chip" style="border-color:#fecaca;background:#fef2f2;color:#dc2626;"><span class="dot" style="background:#dc2626;"></span>Camila · FM+CS · REJECTED</span>
+      </div>
+
+      <div class="mock-row">
+        <span style="color:#d1d5db;">▸</span>
+        <div style="flex:1;"><div class="customer">Temu</div><div class="meta">176-77654321 · SZX BaoAn → Lantau</div></div>
+        <div style="display:flex;gap:4px;">
+          <span class="chip" style="border-color:#fde68a;background:#fefce8;color:#b45309;"><span class="dot" style="background:#d97706;"></span>3 Pending</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide-out panel for reassignment -->
+    <div class="slide-panel" style="height:auto;min-height:100%;">
+      <button class="panel-close">✕</button>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <h3>Camila</h3>
+        <span class="badge b-red"><span class="dot" style="background:#dc2626;"></span>Rejected</span>
+      </div>
+      <div style="font-size:12px;color:#9ca3af;margin-bottom:20px;">
+        <span class="mono" style="font-size:10px;background:#f3f4f6;padding:2px 6px;border-radius:4px;border:1px solid #e5e7eb;">J01/1</span>
+        · AliExpress · <span class="mono" style="font-size:11px;">176-98765421</span>
+      </div>
+
+      <!-- Rejection reason -->
+      <div class="panel-section">
+        <div class="panel-section-title">Rejection Reason</div>
+        <div class="reason-box">Vehicle breakdown</div>
+      </div>
+
+      <!-- Route info -->
+      <div class="panel-section">
+        <div class="panel-section-title">Route & Services</div>
+        <div style="font-size:12px;color:#374151;margin-bottom:4px;">Qianhai Free Trade Zone → Huanggang Port</div>
+        <div style="display:flex;gap:4px;margin-top:6px;">
+          <span class="svc-pill"><span class="code">FM</span> Trucking</span>
+          <span class="svc-pill"><span class="code">CS</span> Cargo Submission</span>
+        </div>
+      </div>
+
+      <!-- Reassignment -->
+      <div class="panel-section">
+        <div class="panel-section-title" style="color:#dc2626;">Reassign to new vendor</div>
+        <select class="reassign-select">
+          <option value="">Select vendor...</option>
+          <option>HaleSun</option>
+          <option>Hoboken</option>
+          <option>V3</option>
+          <option>V4</option>
+          <option>Last Mile Trucking</option>
+        </select>
+        <button class="reassign-btn">Reassign Job</button>
+        <div style="font-size:11px;color:#9ca3af;margin-top:6px;text-align:center;">This will set status back to Pending and log the reassignment</div>
+      </div>
+
+      <!-- Activity log -->
+      <div class="panel-section" style="padding-top:12px;border-top:1px solid #f3f4f6;">
+        <div class="panel-section-title">Activity Log</div>
+        <div style="font-size:11px;padding:4px 0;border-bottom:1px solid #f3f4f6;">
+          <strong style="color:#dc2626;">Status → Rejected</strong> — Vehicle breakdown<br>
+          <span style="color:#9ca3af;">Ops Admin · <span class="mono" style="font-size:10px;">10 Mar 08:30</span></span>
+        </div>
+        <div style="font-size:11px;padding:4px 0;">
+          <strong>Job created</strong><br>
+          <span style="color:#9ca3af;">Ops Admin · <span class="mono" style="font-size:10px;">10 Mar 06:00</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="decision">
+  <strong>Design decision:</strong>
+  <p>Three-layer surfacing: (1) Alert banner at top of trip list with count + quick "View & Reassign" button. (2) Red-highlighted row in the table with "NEEDS ACTION" tag. (3) Slide-out panel for reassignment — shows rejection reason, route, services, and a vendor dropdown. One flow, no page navigation.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2>2. Action Feedback</h2>
+<div class="hmw">"How might we give ops instant confidence that their action worked — without interrupting their flow?"</div>
+
+<div class="context">
+  <strong>Real scenario:</strong> Ops just created a trip, changed 3 job statuses, and uploaded a proof document — all in 2 minutes. They need to know each action succeeded without stopping to check. Currently: silent redirect after creation, no feedback on status changes.
+</div>
+
+<div class="screen">
+  <div class="nav-mini">TripManager <span class="active">Trips</span></div>
+  <div class="screen-inner" style="min-height:320px;">
+    <!-- Toast: trip created -->
+    <div class="toast toast-success" style="top:16px;right:16px;">
+      <span class="icon">✓</span>
+      Trip created — TRIP20260325001
+      <span class="dismiss">✕</span>
+    </div>
+
+    <div style="margin-top:56px;">
+      <div class="mock-row" style="background:#f0fdf9;border-left:3px solid #059669;">
+        <span style="color:#059669;font-weight:700;">▸</span>
+        <div style="flex:1;">
+          <div class="customer">AliExpress <span style="font-size:10px;color:#059669;background:#ecfdf5;padding:1px 6px;border-radius:4px;border:1px solid #a7f3d0;margin-left:4px;">JUST CREATED</span></div>
+          <div class="meta">176-99001122 · TikTok WH → SZX Airport</div>
+        </div>
+        <span class="chip" style="border-color:#fde68a;background:#fefce8;color:#b45309;"><span class="dot" style="background:#d97706;"></span>HaleSun · FM+EC</span>
+      </div>
+      <div class="mock-row">
+        <span style="color:#d1d5db;">▸</span>
+        <div style="flex:1;"><div class="customer">Shopee</div><div class="meta">176-33121632 · Yantian → SZX</div></div>
+        <div style="display:flex;gap:4px;">
+          <span class="chip" style="border-color:#bfdbfe;background:#eff6ff;color:#2563eb;"><span class="dot" style="background:#2563eb;"></span>Hoboken</span>
+          <span class="chip" style="border-color:#fde68a;background:#fefce8;color:#b45309;"><span class="dot" style="background:#d97706;"></span>V3</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="nav-mini">Status change feedback</div>
+  <div class="screen-inner" style="min-height:200px;">
+    <!-- Toast: status changed -->
+    <div class="toast toast-success" style="top:16px;right:16px;">
+      <span class="icon">✓</span>
+      Hoboken J01 → Completed
+      <span class="dismiss">✕</span>
+    </div>
+
+    <div style="margin-top:56px;">
+      <div class="mock-row">
+        <span style="color:#d1d5db;">▸</span>
+        <div style="flex:1;"><div class="customer">Shopee</div><div class="meta">176-33121632 · Yantian → SZX</div></div>
+        <div style="display:flex;gap:4px;">
+          <!-- This chip just changed from blue to green -->
+          <span class="chip" style="border-color:#a7f3d0;background:#f0fdf4;color:#059669;outline:2px solid #059669;outline-offset:2px;"><span class="dot" style="background:#059669;"></span>Hoboken · CR+FM ✓</span>
+          <span class="chip" style="border-color:#fde68a;background:#fefce8;color:#b45309;"><span class="dot" style="background:#d97706;"></span>V3 · EC</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="nav-mini">Proof upload feedback</div>
+  <div class="screen-inner" style="min-height:180px;">
+    <!-- Toast: proof uploaded -->
+    <div class="toast toast-success" style="top:16px;right:16px;">
+      <span class="icon">📄</span>
+      Proof uploaded — delivery-receipt.pdf
+      <span class="dismiss">✕</span>
+    </div>
+
+    <div style="margin-top:56px;padding:16px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin-bottom:8px;">Proof of Service</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;">
+        <div style="width:32px;height:32px;border-radius:8px;background:rgba(13,148,136,0.08);display:flex;align-items:center;justify-content:center;font-size:14px;">📄</div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;">delivery-receipt.pdf</div>
+          <div style="font-size:11px;color:#9ca3af;">Just now · Ops Admin</div>
+        </div>
+        <span style="font-size:10px;color:#059669;font-weight:600;background:#ecfdf5;padding:2px 8px;border-radius:99px;border:1px solid #a7f3d0;">NEW</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="decision">
+  <strong>Design decision:</strong>
+  <p><strong>Toast notifications</strong> for all actions — top-right, auto-dismiss after 4 seconds. Green for success, amber for warnings, red for errors. Each toast includes: icon + action description + entity ID. Additionally: (1) newly created trips get a green left-border + "JUST CREATED" tag for 30 seconds, (2) status changes get a brief outline flash on the chip, (3) uploaded proofs show a "NEW" badge.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2>3. Editing After Creation</h2>
+<div class="hmw">"How might we let ops fix mistakes in a trip without forcing them to delete and recreate it?"</div>
+
+<div class="context">
+  <strong>Real scenario:</strong> Ops created a trip but selected the wrong customer. Or the MAWB was entered incorrectly. Or they need to add another job because the route changed. The trip has 2 jobs already in progress — deleting and recreating would lose all status history and activity logs.
+</div>
+
+<div class="screen">
+  <div class="nav-mini">TripManager <span class="active">Trips</span> — editing a trip</div>
+  <div class="screen-inner" style="min-height:380px;">
+    <!-- Edit mode banner -->
+    <div class="edit-bar">
+      <span style="font-weight:700;">✏️ Editing trip</span>
+      <span class="mono" style="font-size:10px;background:rgba(37,99,235,0.08);padding:2px 6px;border-radius:4px;">PTRIP12302100002</span>
+      <span style="color:#6b7280;">— changes are saved when you click Save</span>
+      <button class="cancel-btn">Cancel</button>
+      <button class="save-btn">Save Changes</button>
+    </div>
+
+    <!-- Trip row in edit mode -->
+    <div style="border:2px solid #bfdbfe;border-radius:14px;overflow:hidden;background:#fafcff;">
+      <!-- Trip header — editable fields highlighted -->
+      <div style="padding:16px 20px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+          <span class="editable-field" style="font-size:14px;font-weight:700;">Shopee</span>
+          <span class="mono" style="font-size:10px;color:#9ca3af;background:#f3f4f6;padding:2px 6px;border-radius:4px;border:1px solid #e5e7eb;">PTRIP12302100002</span>
+          <span style="font-size:10px;color:#2563eb;font-weight:600;">← customer is editable</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#6b7280;margin-bottom:4px;">
+          MAWB: <span class="editable-field mono" style="font-size:11px;">176-33121632</span>
+          <span style="font-size:10px;color:#2563eb;">← editable</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#6b7280;">
+          <span class="editable-field">16</span> bags ·
+          <span class="editable-field">890</span> kg ·
+          <span class="editable-field">Flatbed</span>
+        </div>
+      </div>
+
+      <!-- Jobs section -->
+      <div style="padding:0 20px 16px;border-top:1px solid #e5e7eb;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;padding:12px 0 8px;">Jobs (2) — <span style="color:#2563eb;">can add new jobs, cannot edit in-progress jobs</span></div>
+
+        <!-- Job 1: In Progress — NOT editable -->
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:8px;opacity:0.8;">
+          <span style="font-size:11px;font-weight:700;color:#2563eb;">J01</span>
+          <span style="font-size:13px;font-weight:600;">Hoboken</span>
+          <div style="display:flex;gap:4px;">
+            <span class="svc-pill"><span class="code">CR</span></span>
+            <span class="svc-pill"><span class="code">FM</span></span>
+          </div>
+          <span class="badge b-blue" style="font-size:10px;"><span class="dot" style="background:#2563eb;"></span>In Progress</span>
+          <span style="margin-left:auto;font-size:10px;color:#9ca3af;">🔒 Cannot edit — in progress</span>
+        </div>
+
+        <!-- Job 2: Pending — editable -->
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f0f7ff;border:2px dashed #bfdbfe;border-radius:10px;margin-bottom:8px;">
+          <span style="font-size:11px;font-weight:700;color:#2563eb;">J02</span>
+          <span class="editable-field" style="font-size:13px;font-weight:600;">V3</span>
+          <div style="display:flex;gap:4px;">
+            <span class="svc-pill"><span class="code">EC</span></span>
+          </div>
+          <span class="badge b-amber" style="font-size:10px;"><span class="dot" style="background:#d97706;"></span>Pending</span>
+          <span style="margin-left:auto;font-size:10px;color:#2563eb;">✏️ Editable</span>
+          <span style="color:#dc2626;cursor:pointer;font-size:12px;padding:4px;">🗑</span>
+        </div>
+
+        <!-- Add job button -->
+        <button style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px dashed #bfdbfe;border-radius:10px;background:#fafcff;font-size:12px;font-weight:600;color:#2563eb;cursor:pointer;font-family:inherit;width:100%;justify-content:center;">
+          + Add new job
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="decision">
+  <strong>Design decision:</strong>
+  <p><strong>Inline editing</strong> from the expanded trip view. Click an "Edit" button on the trip row → enters edit mode with a blue banner + Save/Cancel buttons. Rules: (1) Trip-level fields (customer, MAWB, bags, weight, remarks) are always editable until trip is validated. (2) Pending jobs can be edited or deleted. (3) In-progress or completed jobs are locked (shown with 🔒) — must cancel and recreate if changes needed. (4) New jobs can always be added. This matches the CR requirement: "only MAWB, bags, weight can be edited once trip is ongoing."</p>
+</div>
+
+</div>
+</body>
+</html>

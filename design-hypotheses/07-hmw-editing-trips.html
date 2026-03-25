@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW: Editing Trips</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 13px; line-height: 1.5; }
+  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .page { max-width: 1300px; margin: 0 auto; padding: 40px 24px 80px; }
+  h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.7px; margin-bottom: 6px; }
+  h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; margin: 48px 0 8px; color: #0D9488; }
+  .subtitle { color: #6b7280; font-size: 14px; margin-bottom: 40px; line-height: 1.7; }
+  .hmw { font-size: 18px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 24px; letter-spacing: -0.3px; padding: 16px 20px; background: #fff; border-left: 4px solid #0D9488; border-radius: 0 12px 12px 0; }
+  .hyp-label { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 12px; border-radius: 8px; margin-bottom: 12px; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 20px; margin-bottom: 20px; font-size: 13px; color: #374151; line-height: 1.7; }
+  .rationale strong { color: #111827; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .pros, .cons { padding: 12px 16px; border-radius: 10px; font-size: 12px; line-height: 1.6; }
+  .pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+  .cons { background: #fef2f2; border: 1px solid #fecaca; }
+  .pros strong { color: #059669; }
+  .cons strong { color: #dc2626; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 16px; overflow: hidden; margin: 16px 0 40px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+
+  /* Shared nav */
+  .nav { display: flex; align-items: center; height: 48px; padding: 0 20px; background: #fff; border-bottom: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; gap: 12px; }
+  .nav .logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; color: #111827; }
+  .nav .logo-icon { width: 26px; height: 26px; background: #0D9488; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 800; }
+  .nav-item { font-size: 12px; color: #9ca3af; padding: 5px 10px; border-radius: 7px; cursor: pointer; }
+  .nav-item.active { color: #0D9488; background: rgba(13,148,136,0.08); font-weight: 600; }
+  .nav-spacer { flex: 1; }
+  .nav-avatar { width: 28px; height: 28px; border-radius: 50%; background: #e5e7eb; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #6b7280; }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 9px; font-size: 12px; font-weight: 600; border: 1.5px solid #e5e7eb; background: #fff; color: #374151; cursor: pointer; }
+  .btn-primary { background: #0D9488; color: #fff; border-color: #0D9488; box-shadow: 0 1px 4px rgba(13,148,136,0.25); }
+  .btn-danger { background: #fff; color: #dc2626; border-color: #fecaca; }
+  .btn-sm { padding: 5px 12px; font-size: 11px; border-radius: 7px; }
+  .btn-xs { padding: 3px 8px; font-size: 10px; border-radius: 6px; }
+
+  /* Badge / chips */
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; border: 1.5px solid; }
+  .b-green { border-color: #a7f3d0; background: #f0fdf4; color: #059669; }
+  .b-blue { border-color: #bfdbfe; background: #eff6ff; color: #2563eb; }
+  .b-amber { border-color: #fde68a; background: #fefce8; color: #b45309; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .job-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 600; border: 1.5px solid; }
+  .jc-green { border-color: #a7f3d0; background: #f0fdf4; color: #059669; }
+  .jc-blue { border-color: #bfdbfe; background: #eff6ff; color: #2563eb; }
+  .jc-amber { border-color: #fde68a; background: #fefce8; color: #b45309; }
+
+  /* Edit banner */
+  .edit-banner { display: flex; align-items: center; gap: 12px; padding: 10px 20px; background: #eff6ff; border-bottom: 2px solid #bfdbfe; color: #1e40af; font-size: 13px; font-weight: 600; }
+  .edit-banner .edit-icon { width: 22px; height: 22px; border-radius: 50%; background: #2563eb; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+  .edit-banner .spacer { flex: 1; }
+
+  /* Trip detail panel (expanded view) */
+  .trip-detail-panel { padding: 0; }
+  .detail-header { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid #e5e7eb; }
+  .detail-header .back { font-size: 16px; color: #9ca3af; cursor: pointer; }
+  .detail-header h3 { font-size: 16px; font-weight: 700; }
+  .detail-header .spacer { flex: 1; }
+
+  /* Fields grid */
+  .fields-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; padding: 20px; border-bottom: 1px solid #e5e7eb; }
+  .field { position: relative; }
+  .field label { display: block; font-size: 10px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px; }
+  .field .val { font-size: 13px; font-weight: 600; color: #111827; }
+
+  /* Editable field styles */
+  .field-editable { padding: 8px 10px; border: 1.5px dashed #93c5fd; border-radius: 8px; background: #fafcff; cursor: pointer; }
+  .field-editable:hover { border-color: #2563eb; background: #eff6ff; }
+  .field-locked { padding: 8px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; background: #f9fafb; position: relative; }
+  .lock-icon { position: absolute; top: 6px; right: 6px; font-size: 10px; color: #9ca3af; }
+  .field-input { width: 100%; padding: 7px 10px; border: 1.5px solid #2563eb; border-radius: 8px; font-size: 13px; font-family: inherit; font-weight: 600; background: #fff; outline: none; }
+  .field-select { width: 100%; padding: 7px 10px; border: 1.5px solid #2563eb; border-radius: 8px; font-size: 13px; font-family: inherit; font-weight: 600; background: #fff; appearance: auto; }
+
+  /* Job cards in detail view */
+  .jobs-section { padding: 20px; }
+  .jobs-section-header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .jobs-section-header h4 { font-size: 14px; font-weight: 700; }
+  .job-detail-card { border: 2px solid; border-radius: 14px; padding: 16px; margin-bottom: 12px; position: relative; }
+  .job-detail-card.editable { border-color: #93c5fd; border-style: dashed; background: #fafcff; }
+  .job-detail-card.locked { border-color: #e5e7eb; background: #f9fafb; }
+  .job-detail-card.locked::after { content: ""; }
+  .job-detail-card .job-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .job-detail-card .vendor-name { font-size: 14px; font-weight: 700; }
+  .job-detail-card .job-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; font-size: 12px; }
+  .job-detail-card .job-meta label { display: block; font-size: 9px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+  .job-detail-card .job-meta .val { font-weight: 600; color: #374151; }
+  .job-locked-overlay { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #f3f4f6; border-radius: 8px; font-size: 11px; color: #6b7280; margin-top: 10px; border: 1px solid #e5e7eb; }
+  .job-locked-overlay .lock { font-size: 12px; }
+  .add-job-card { border: 2px dashed #0D9488; border-radius: 14px; padding: 20px; text-align: center; color: #0D9488; font-weight: 600; font-size: 13px; cursor: pointer; background: rgba(13,148,136,0.03); }
+  .add-job-card:hover { background: rgba(13,148,136,0.08); }
+  .delete-job-btn { position: absolute; top: 12px; right: 12px; width: 24px; height: 24px; border-radius: 6px; border: 1px solid #fecaca; background: #fef2f2; color: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; }
+
+  /* Edit page (Option B) */
+  .edit-page { padding: 0; }
+  .edit-page-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 12px; }
+  .edit-page-header .back { color: #9ca3af; font-size: 14px; cursor: pointer; text-decoration: none; }
+  .edit-page-header h3 { font-size: 16px; font-weight: 700; flex: 1; }
+  .edit-page-body { padding: 24px; }
+  .form-section { margin-bottom: 24px; }
+  .form-section h5 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280; margin-bottom: 12px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-field { }
+  .form-field label { display: block; font-size: 11px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+  .form-field input, .form-field select { width: 100%; padding: 9px 12px; border: 1.5px solid #e5e7eb; border-radius: 9px; font-size: 13px; font-family: inherit; background: #fff; }
+  .form-field input:focus, .form-field select:focus { border-color: #0D9488; outline: none; }
+  .form-field input.locked { background: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
+  .locked-job-card { border: 1.5px solid #e5e7eb; border-radius: 12px; padding: 14px; background: #f9fafb; margin-bottom: 10px; }
+  .locked-job-card .job-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: #6b7280; }
+  .locked-job-card .job-detail-row { font-size: 11px; color: #9ca3af; }
+
+  /* Field-level inline edit (Option C) */
+  .inline-editable { cursor: pointer; border-bottom: 1px dashed #d1d5db; padding-bottom: 1px; }
+  .inline-editable:hover { border-bottom-color: #0D9488; color: #0D9488; }
+  .inline-editing { display: inline-flex; align-items: center; gap: 4px; }
+  .inline-input { padding: 4px 8px; border: 1.5px solid #0D9488; border-radius: 6px; font-size: 13px; font-family: inherit; font-weight: 600; width: 160px; outline: none; }
+  .inline-save-hint { font-size: 9px; color: #9ca3af; font-weight: 400; }
+
+  .context-box { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 20px; margin-bottom: 32px; border-left: 4px solid #d97706; }
+  .context-box .context-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #d97706; margin-bottom: 8px; }
+  .context-box p { font-size: 13px; color: #374151; line-height: 1.7; }
+
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 14px; padding: 24px; margin-top: 48px; }
+  .verdict h3 { color: #059669; font-size: 16px; margin-bottom: 8px; font-weight: 700; }
+  .verdict ul { margin: 12px 0; padding-left: 20px; line-height: 1.8; font-size: 13px; color: #374151; }
+
+  .rule-callout { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; margin: 12px 0; font-size: 12px; color: #92400e; line-height: 1.5; }
+  .rule-callout .rule-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>H07: Editing Trips</h1>
+<div class="hmw">"How might we let ops fix mistakes without losing the work already done on a trip?"</div>
+
+<div class="context-box">
+  <div class="context-title">Scenario</div>
+  <p>
+    The ops planner created a trip with the wrong customer — it should be AliExpress, not Shopee. Or they need to add a new FM job because the route changed mid-day. The trip already has 2 jobs: one "In Transit" with Jorge, one "Completed" by Hoboken. Deleting the trip and recreating it would lose all status history, activity logs, uploaded proofs, and MAWB tracking. They need to edit the trip in-place while preserving everything already done.
+  </p>
+</div>
+
+<div class="rule-callout">
+  <div class="rule-icon">&#9888;</div>
+  <div>
+    <strong>Business rule:</strong> Once a sub-trip (job) is ongoing or completed, it cannot be reassigned — it must be cancelled and a new one created. Pending jobs can be freely edited or deleted. Trip-level fields (customer, MAWB, bags, weight) are always editable until the trip is validated for billing.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2>Option A: Inline Edit Mode</h2>
+<span class="hyp-label" style="background:#ecfdf5;color:#059669;">Recommended</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> An "Edit" button on the expanded trip view switches the trip into edit mode. A blue banner appears: "Editing trip — Save / Cancel". Editable fields get dashed blue borders. The distinction between editable and locked is visually clear: pending jobs have blue dashed borders (editable + deletable), in-progress/completed jobs have gray solid borders with a lock icon (read-only). New jobs can be added via a dashed teal "Add Job" card.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>No page navigation — everything stays in context<br>Explicit edit mode prevents accidental changes<br>Clear visual distinction between editable and locked elements<br>Save/Cancel gives a clear "commit" moment for all changes</div>
+    <div class="cons"><strong>Cons</strong><br>Complex state management (edit mode vs view mode)<br>Edit mode can feel visually noisy with all the dashed borders<br>Planner must remember to save — unsaved changes could be lost</div>
+  </div>
+</div>
+
+<div class="screen">
+  <!-- Nav -->
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <div class="nav-item active">Trips</div>
+    <div class="nav-item">Vendors</div>
+    <div class="nav-item">Customers</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-avatar">MR</div>
+  </div>
+  <!-- Edit banner -->
+  <div class="edit-banner">
+    <div class="edit-icon">&#9998;</div>
+    <span>Editing trip <strong style="margin-left:4px;">TRIP20260325-003</strong></span>
+    <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:4px;">— Unsaved changes</span>
+    <span class="spacer"></span>
+    <div class="btn btn-sm" style="color:#6b7280;border-color:#d1d5db;">Cancel</div>
+    <div class="btn btn-sm btn-primary">Save Changes</div>
+  </div>
+  <!-- Trip detail: fields grid -->
+  <div class="trip-detail-panel">
+    <div class="detail-header">
+      <span class="back">&larr;</span>
+      <h3>AliExpress — Qianhai FTZ &rarr; Shekou</h3>
+      <span class="spacer"></span>
+      <span class="badge b-blue" style="font-size:10px;"><span class="dot" style="background:#2563eb;"></span>In Progress</span>
+    </div>
+    <div class="fields-grid">
+      <!-- Customer (editable, being changed) -->
+      <div class="field">
+        <label>Customer</label>
+        <div class="field-editable" style="border-color:#2563eb;background:#eff6ff;">
+          <select class="field-select" style="border:none;padding:0;background:transparent;font-weight:700;color:#2563eb;">
+            <option>Shopee</option>
+            <option selected>AliExpress</option>
+            <option>Temu</option>
+          </select>
+        </div>
+      </div>
+      <!-- MAWB (editable) -->
+      <div class="field">
+        <label>MAWB</label>
+        <div class="field-editable">
+          <span class="val mono" style="font-size:12px;">176-84330458</span>
+        </div>
+      </div>
+      <!-- Bags (editable) -->
+      <div class="field">
+        <label>Bags</label>
+        <div class="field-editable">
+          <span class="val">36</span>
+        </div>
+      </div>
+      <!-- Weight (editable) -->
+      <div class="field">
+        <label>Weight (kg)</label>
+        <div class="field-editable">
+          <span class="val">1,240</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Jobs section -->
+    <div class="jobs-section">
+      <div class="jobs-section-header">
+        <h4>Jobs (Sub-Trips)</h4>
+        <span style="font-size:11px;color:#6b7280;">3 jobs &middot; 1 editable, 2 locked</span>
+      </div>
+
+      <!-- Job 1: In Transit — LOCKED -->
+      <div class="job-detail-card locked">
+        <div class="job-header">
+          <span class="job-chip jc-blue"><span class="dot" style="background:#2563eb;"></span>In Transit</span>
+          <span class="vendor-name">Jorge Martinez</span>
+          <span style="font-size:11px;color:#9ca3af;">FM + CS</span>
+        </div>
+        <div class="job-meta">
+          <div><label>Route</label><div class="val">Qianhai FTZ &rarr; Shekou Port</div></div>
+          <div><label>Assigned</label><div class="val">Mar 25, 10:30 AM</div></div>
+          <div><label>Last Update</label><div class="val">Mar 25, 2:15 PM — Departed Qianhai</div></div>
+        </div>
+        <div class="job-locked-overlay">
+          <span class="lock">&#128274;</span>
+          <span>This job is in transit and cannot be edited. To change vendor, cancel this job and create a new one.</span>
+        </div>
+      </div>
+
+      <!-- Job 2: Completed — LOCKED -->
+      <div class="job-detail-card locked">
+        <div class="job-header">
+          <span class="job-chip jc-green"><span class="dot" style="background:#059669;"></span>Completed</span>
+          <span class="vendor-name">Hoboken Logistics</span>
+          <span style="font-size:11px;color:#9ca3af;">OH</span>
+        </div>
+        <div class="job-meta">
+          <div><label>Route</label><div class="val">Shekou Port &rarr; Warehouse B</div></div>
+          <div><label>Completed</label><div class="val">Mar 25, 11:45 AM</div></div>
+          <div><label>Proof</label><div class="val" style="color:#059669;">1 file uploaded</div></div>
+        </div>
+        <div class="job-locked-overlay">
+          <span class="lock">&#128274;</span>
+          <span>This job is completed and locked. All history and proof documents are preserved.</span>
+        </div>
+      </div>
+
+      <!-- Job 3: Pending — EDITABLE -->
+      <div class="job-detail-card editable">
+        <div class="delete-job-btn" title="Delete this job">&times;</div>
+        <div class="job-header">
+          <span class="job-chip jc-amber"><span class="dot" style="background:#d97706;"></span>Pending</span>
+          <span class="vendor-name">Unassigned</span>
+          <span style="font-size:11px;color:#9ca3af;">FM</span>
+        </div>
+        <div class="job-meta">
+          <div>
+            <label>Vendor</label>
+            <select style="padding:5px 8px;border:1.5px solid #2563eb;border-radius:7px;font-size:12px;font-family:inherit;font-weight:600;background:#fff;width:100%;">
+              <option>Select vendor...</option>
+              <option>Camila Rodrigues</option>
+              <option>FastTrack Express</option>
+            </select>
+          </div>
+          <div>
+            <label>Services</label>
+            <select style="padding:5px 8px;border:1.5px solid #2563eb;border-radius:7px;font-size:12px;font-family:inherit;font-weight:600;background:#fff;width:100%;">
+              <option selected>FM (First Mile)</option>
+              <option>FM + CS</option>
+              <option>FM + OH</option>
+              <option>CS (Consolidation)</option>
+            </select>
+          </div>
+          <div>
+            <label>Route</label>
+            <input type="text" value="Nanshan → Shekou Port" style="padding:5px 8px;border:1.5px solid #2563eb;border-radius:7px;font-size:12px;font-family:inherit;font-weight:600;background:#fff;width:100%;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Add new job -->
+      <div class="add-job-card">+ Add New Job</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2>Option B: Edit Page (Separate Route)</h2>
+<span class="hyp-label" style="background:#eff6ff;color:#2563eb;">Simple — familiar form pattern</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> The "Edit" button navigates to a dedicated edit page (/trips/TRIP20260325-003/edit). The page looks like the Create Trip form but pre-filled with existing data. Locked jobs appear as read-only cards. New jobs can be added at the bottom. A "Save" button at the top saves all changes and returns to the trip detail view.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>Simpler implementation — standard form page pattern<br>Familiar "edit page" UX — most web apps use this<br>Full page space for all fields — no cramped inline editing<br>Clear URL state: /trips/:id/edit vs /trips/:id</div>
+    <div class="cons"><strong>Cons</strong><br>Loses trip list context — planner navigates away from the list<br>Full page navigation for a small edit (e.g., just fixing the customer name)<br>Back button confusion — does "back" go to trip detail or trip list?<br>Feels heavy for minor corrections</div>
+  </div>
+</div>
+
+<div class="screen">
+  <!-- Nav -->
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <div class="nav-item active">Trips</div>
+    <div class="nav-item">Vendors</div>
+    <div class="nav-item">Customers</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-avatar">MR</div>
+  </div>
+  <div class="edit-page">
+    <div class="edit-page-header">
+      <a class="back">&larr; Back to trip</a>
+      <h3>Edit Trip — TRIP20260325-003</h3>
+      <div class="btn btn-sm" style="color:#6b7280;">Cancel</div>
+      <div class="btn btn-sm btn-primary">Save Changes</div>
+    </div>
+    <div class="edit-page-body">
+      <!-- Trip-level fields -->
+      <div class="form-section">
+        <h5>Trip Details</h5>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Customer</label>
+            <select style="width:100%;padding:9px 12px;border:1.5px solid #0D9488;border-radius:9px;font-size:13px;font-family:inherit;font-weight:600;">
+              <option>Shopee</option>
+              <option selected>AliExpress</option>
+              <option>Temu</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>MAWB</label>
+            <input type="text" value="176-84330458" style="font-family:'SF Mono',monospace;">
+          </div>
+          <div class="form-field">
+            <label>Number of Bags</label>
+            <input type="text" value="36">
+          </div>
+          <div class="form-field">
+            <label>Weight (kg)</label>
+            <input type="text" value="1,240">
+          </div>
+        </div>
+      </div>
+
+      <!-- Locked jobs -->
+      <div class="form-section">
+        <h5>Existing Jobs (Locked)</h5>
+        <div class="locked-job-card">
+          <div class="job-title">
+            <span>&#128274;</span>
+            <span class="job-chip jc-blue" style="font-size:10px;"><span class="dot" style="background:#2563eb;"></span>In Transit</span>
+            Jorge Martinez — FM + CS
+          </div>
+          <div class="job-detail-row">Qianhai FTZ &rarr; Shekou Port &middot; Departed Mar 25, 2:15 PM &middot; 1 proof file</div>
+        </div>
+        <div class="locked-job-card">
+          <div class="job-title">
+            <span>&#128274;</span>
+            <span class="job-chip jc-green" style="font-size:10px;"><span class="dot" style="background:#059669;"></span>Completed</span>
+            Hoboken Logistics — OH
+          </div>
+          <div class="job-detail-row">Shekou Port &rarr; Warehouse B &middot; Completed Mar 25, 11:45 AM &middot; 1 proof file</div>
+        </div>
+      </div>
+
+      <!-- Editable / new jobs -->
+      <div class="form-section">
+        <h5>Add New Job</h5>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Vendor</label>
+            <select>
+              <option>Select vendor...</option>
+              <option>Camila Rodrigues</option>
+              <option>FastTrack Express</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Services</label>
+            <select>
+              <option>FM (First Mile)</option>
+              <option>FM + CS</option>
+              <option>CS (Consolidation)</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Origin</label>
+            <input type="text" placeholder="e.g. Nanshan">
+          </div>
+          <div class="form-field">
+            <label>Destination</label>
+            <input type="text" placeholder="e.g. Shekou Port">
+          </div>
+        </div>
+        <div style="margin-top:12px;">
+          <div class="btn btn-sm" style="color:#0D9488;border-color:rgba(13,148,136,0.3);">+ Add Another Job</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2>Option C: Field-Level Inline Editing</h2>
+<span class="hyp-label" style="background:#fffbeb;color:#d97706;">Direct manipulation — fastest for single fixes</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> No "edit mode" button. Individual fields are directly clickable to edit. Click the customer name and a dropdown appears inline. Click the MAWB and it becomes a text input. Each field saves immediately on blur or Enter (optimistic update). Locked fields show a lock icon and a tooltip on hover explaining why they can't be edited.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>Fastest for single-field fixes — click, type, done<br>No mode switching — always "ready to edit"<br>Feels modern and responsive — Notion/Airtable-style<br>No need to click Edit, find the field, change it, then Save</div>
+    <div class="cons"><strong>Cons</strong><br>Accidental edits — a stray click triggers edit mode on a field<br>No clear "save" moment — changes save on blur, which can feel uncertain<br>Hard to batch multiple changes — each field is independent<br>Confusing distinction between "this field is clickable" vs "this is read-only"<br>No undo/cancel for a group of changes</div>
+  </div>
+</div>
+
+<div class="screen">
+  <!-- Nav -->
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <div class="nav-item active">Trips</div>
+    <div class="nav-item">Vendors</div>
+    <div class="nav-item">Customers</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-avatar">MR</div>
+  </div>
+  <div class="trip-detail-panel">
+    <div class="detail-header">
+      <span class="back">&larr;</span>
+      <h3>AliExpress — Qianhai FTZ &rarr; Shekou</h3>
+      <span class="spacer"></span>
+      <span class="badge b-blue" style="font-size:10px;"><span class="dot" style="background:#2563eb;"></span>In Progress</span>
+    </div>
+    <div class="fields-grid">
+      <!-- Customer: currently being edited inline -->
+      <div class="field">
+        <label>Customer</label>
+        <div class="inline-editing">
+          <input type="text" class="inline-input" value="AliExpress" autofocus>
+          <span class="inline-save-hint">Enter to save</span>
+        </div>
+      </div>
+      <!-- MAWB: clickable but not currently editing -->
+      <div class="field">
+        <label>MAWB</label>
+        <div class="val"><span class="inline-editable mono" style="font-size:12px;">176-84330458</span></div>
+      </div>
+      <!-- Bags: clickable -->
+      <div class="field">
+        <label>Bags</label>
+        <div class="val"><span class="inline-editable">36</span></div>
+      </div>
+      <!-- Weight: clickable -->
+      <div class="field">
+        <label>Weight (kg)</label>
+        <div class="val"><span class="inline-editable">1,240</span></div>
+      </div>
+    </div>
+
+    <div class="jobs-section">
+      <div class="jobs-section-header">
+        <h4>Jobs (Sub-Trips)</h4>
+      </div>
+
+      <!-- Locked job — hover shows tooltip -->
+      <div class="job-detail-card locked">
+        <div class="job-header">
+          <span class="job-chip jc-blue"><span class="dot" style="background:#2563eb;"></span>In Transit</span>
+          <span class="vendor-name">Jorge Martinez</span>
+          <span style="font-size:11px;color:#9ca3af;">FM + CS</span>
+          <span style="margin-left:auto;font-size:11px;color:#9ca3af;">&#128274; Locked — in transit</span>
+        </div>
+        <div class="job-meta">
+          <div><label>Route</label><div class="val">Qianhai FTZ &rarr; Shekou Port</div></div>
+          <div><label>Assigned</label><div class="val">Mar 25, 10:30 AM</div></div>
+          <div><label>Last Update</label><div class="val">Mar 25, 2:15 PM</div></div>
+        </div>
+      </div>
+
+      <!-- Completed job — locked -->
+      <div class="job-detail-card locked">
+        <div class="job-header">
+          <span class="job-chip jc-green"><span class="dot" style="background:#059669;"></span>Completed</span>
+          <span class="vendor-name">Hoboken Logistics</span>
+          <span style="font-size:11px;color:#9ca3af;">OH</span>
+          <span style="margin-left:auto;font-size:11px;color:#9ca3af;">&#128274; Locked — completed</span>
+        </div>
+        <div class="job-meta">
+          <div><label>Route</label><div class="val">Shekou Port &rarr; Warehouse B</div></div>
+          <div><label>Completed</label><div class="val">Mar 25, 11:45 AM</div></div>
+          <div><label>Proof</label><div class="val" style="color:#059669;">1 file uploaded</div></div>
+        </div>
+      </div>
+
+      <!-- Pending job — fields are clickable inline -->
+      <div class="job-detail-card" style="border:2px solid #e5e7eb;">
+        <div class="job-header">
+          <span class="job-chip jc-amber"><span class="dot" style="background:#d97706;"></span>Pending</span>
+          <span class="vendor-name"><span class="inline-editable">Unassigned</span></span>
+          <span style="font-size:11px;color:#9ca3af;"><span class="inline-editable">FM</span></span>
+        </div>
+        <div class="job-meta">
+          <div><label>Vendor</label><div class="val"><span class="inline-editable" style="color:#0D9488;">Click to assign</span></div></div>
+          <div><label>Services</label><div class="val"><span class="inline-editable">FM (First Mile)</span></div></div>
+          <div><label>Route</label><div class="val"><span class="inline-editable">Nanshan &rarr; Shekou Port</span></div></div>
+        </div>
+      </div>
+
+      <div class="add-job-card">+ Add New Job</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="verdict">
+  <h3>Recommendation: Option A — Inline Edit Mode</h3>
+  <p style="font-size:13px;color:#374151;line-height:1.7;margin-bottom:12px;">
+    An explicit Edit &rarr; Save/Cancel flow is the safest and clearest approach for a system where edits have real operational consequences.
+  </p>
+  <ul>
+    <li><strong>Prevents accidental changes.</strong> Unlike Option C (field-level), the planner must deliberately click "Edit" to enter edit mode. No stray clicks will change the customer name or MAWB.</li>
+    <li><strong>Clear locked vs. editable distinction.</strong> Dashed blue borders (editable) vs. gray with lock icon (locked) makes it impossible to confuse which jobs can be modified. This matches the business rule: "once a sub-trip is ongoing, it cannot be reassigned."</li>
+    <li><strong>Stays in context.</strong> Unlike Option B (separate page), the planner never leaves the trip view. They can see the trip list behind them, see the full trip detail, and make their edit — all in one place.</li>
+    <li><strong>Batched changes with a clear commit moment.</strong> The planner can fix the customer, change the MAWB, and add a new job all in one edit session, then click "Save" once. This is better than field-level saves (Option C) where each change is independent.</li>
+    <li><strong>Unsaved changes warning.</strong> If the planner clicks away without saving, a confirmation dialog prevents lost work.</li>
+  </ul>
+</div>
+
+</div>
+</body>
+</html>

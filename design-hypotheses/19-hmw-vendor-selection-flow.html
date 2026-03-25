@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW: Vendor Selection Flow</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #0D9488; }
+  h3 { font-size: 14px; font-weight: 700; margin: 24px 0 8px; }
+  .hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #0D9488; border-radius: 0 6px 6px 0; }
+  .context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+  .rationale strong { color: #111827; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+  .label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+  .pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+  .cons { background: #fefafa; border: 1px solid #fecaca; }
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+  .verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { text-align: left; padding: 5px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; }
+  tr:hover { background: #f9fafb; }
+
+  .svc-p { padding: 1px 5px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.1); display: inline-flex; align-items: center; gap: 3px; }
+  .svc-p .c { color: #0D9488; font-family: monospace; }
+  .rate { font-family: 'SF Mono', monospace; font-weight: 600; color: #111827; }
+  .cost-total { font-family: 'SF Mono', monospace; font-weight: 700; font-size: 13px; color: #0D9488; }
+  .unit-badge { padding: 1px 5px; border-radius: 3px; font-size: 9px; font-weight: 600; font-family: 'SF Mono', monospace; }
+  .unit-flat { background: #f3f4f6; color: #6b7280; }
+  .unit-bag { background: #faf5ff; color: #7c3aed; }
+
+  .nav-dense { height: 40px; padding: 0 16px; background: #fff; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 2px; font-size: 12px; }
+  .nav-dense a { padding: 4px 10px; border-radius: 4px; color: #9ca3af; text-decoration: none; }
+  .nav-dense a.active { color: #0D9488; background: rgba(13,148,136,0.06); font-weight: 600; }
+  .nav-dense .logo { display: flex; align-items: center; gap: 6px; margin-right: 16px; font-weight: 700; font-size: 13px; color: #111827; }
+  .nav-dense .logo-dot { width: 20px; height: 20px; background: #0D9488; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 9px; }
+
+  .form-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; margin-bottom: 12px; }
+  .step-badge { width: 22px; height: 22px; border-radius: 5px; background: #0D9488; color: #fff; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+
+  .rate-badge { display: inline-flex; align-items: center; gap:4px; background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.12); padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; color: #0D9488; }
+  .rate-badge .mono { font-size: 11px; }
+
+  .popover { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); padding: 12px; width: 480px; }
+  .popover-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #f3f4f6; }
+
+  .reliability-bar { width: 50px; height: 4px; border-radius: 2px; background: #e5e7eb; display: inline-block; vertical-align: middle; position: relative; overflow: hidden; }
+  .reliability-fill { height: 100%; border-radius: 2px; position: absolute; left: 0; top: 0; }
+
+  .auto-vendor { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(13,148,136,0.04); border: 1px solid rgba(13,148,136,0.12); border-radius: 6px; cursor: pointer; }
+  .auto-vendor:hover { background: rgba(13,148,136,0.08); }
+
+  select.v-select { border: 1px solid #e5e7eb; border-radius: 4px; padding: 5px 8px; font-size: 11px; font-family: inherit; width: 140px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW: Vendor Selection Flow</h1>
+<div class="hmw">"How might we help ops pick the right vendor for each job — considering both rate and reliability — without slowing down order creation?"</div>
+
+<div class="context">
+  <strong>Current state:</strong> Ops picks a vendor from a flat dropdown for each job. No rate visibility — they don't know the cost until the invoice arrives. Vendor selection is based on habit and tribal knowledge ("we always use HaleSun for TikTok FM").<br><br>
+  <strong>With rate management:</strong> We now have rate cards per vendor/service/location. The question becomes: where do we surface this information? Options range from minimal (show rate after selection) to full (auto-select the cheapest vendor). The trade-off is speed vs. informed decision-making.<br><br>
+  <strong>Reliability data:</strong> The system already tracks job completions and rejections per vendor. We can compute a simple "completion rate" and "rejections in last 30 days" metric to help ops assess reliability alongside cost.
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2>Option A: Rate Shown After Selection</h2>
+<span class="label" style="background:#f3f4f6;color:#6b7280;">Minimal change</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> The current create form stays the same — ops picks vendor and service from dropdowns, picks location. After all three are selected, the rate auto-appears as a badge next to the job row. No comparison, no suggestion — just visibility into what this particular vendor charges. If no rate is on file, a "No rate" amber badge appears instead.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>- Minimal change to current workflow<br>- Non-intrusive — rate appears passively<br>- No extra clicks for power users<br>- Works even with incomplete rate data</div>
+    <div class="cons"><strong>Cons</strong><br>- Can't compare vendors without switching back and forth<br>- Ops might not realize a cheaper option exists<br>- No reliability data visible<br>- Doesn't encourage cost-optimal decisions</div>
+  </div>
+</div>
+
+<!-- Mockup A: Rate badge appears after selection -->
+<h3>Rate appears after vendor + service + location selected</h3>
+<div class="screen">
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a href="#">Delivery Orders</a>
+    <a class="active" href="#">New Order</a>
+    <a href="#">Rates</a>
+    <a href="#">Master Data</a>
+  </div>
+  <div style="padding:16px;max-width:900px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+      <span style="color:#9ca3af;">&#8592;</span>
+      <span style="font-size:16px;font-weight:800;">Create Delivery Order</span>
+    </div>
+
+    <!-- Order context -->
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px;margin-bottom:12px;display:flex;gap:24px;font-size:11px;">
+      <div><span style="color:#9ca3af;">Customer:</span> <strong>Shopee</strong></div>
+      <div><span style="color:#9ca3af;">Bags:</span> <strong class="mono">24</strong></div>
+      <div><span style="color:#9ca3af;">Weight:</span> <strong class="mono">1,240 kg</strong></div>
+    </div>
+
+    <div class="form-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+        <span class="step-badge">2</span>
+        <span style="font-size:13px;font-weight:700;">Assign vendors & services</span>
+      </div>
+
+      <!-- Job 1: rate visible -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:11px;font-weight:700;color:#0D9488;">J01</span>
+            <select class="v-select"><option>HaleSun</option><option>SevenSeas</option><option>The Lorry</option></select>
+            <select class="v-select" style="width:120px;"><option>FM Trucking</option></select>
+            <span style="font-size:10px;color:#9ca3af;">TikTok WH &rarr; SZX Airport</span>
+          </div>
+          <span class="rate-badge"><span class="mono">RM 450.00</span> <span class="unit-badge unit-flat" style="margin:0;">flat</span></span>
+        </div>
+      </div>
+
+      <!-- Job 2: rate visible -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:11px;font-weight:700;color:#0D9488;">J02</span>
+            <select class="v-select"><option>HaleSun</option><option>ThaiKee</option></select>
+            <select class="v-select" style="width:120px;"><option>CR Retrieval</option></select>
+            <span style="font-size:10px;color:#9ca3af;">@ Yantian Port</span>
+          </div>
+          <span class="rate-badge"><span class="mono">RM 25.00</span> <span class="unit-badge" style="background:#faf5ff;color:#7c3aed;margin:0;">/bag</span></span>
+        </div>
+      </div>
+
+      <!-- Job 3: no rate on file -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:11px;font-weight:700;color:#0D9488;">J03</span>
+            <select class="v-select"><option>Gonda</option></select>
+            <select class="v-select" style="width:120px;"><option>EC Customs</option></select>
+            <span style="font-size:10px;color:#9ca3af;">@ Huanggang Port</span>
+          </div>
+          <span style="display:inline-flex;align-items:center;gap:4px;background:#fffbeb;border:1px solid #fde68a;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;color:#d97706;">No rate on file</span>
+        </div>
+      </div>
+
+      <!-- Total -->
+      <div style="display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid #f3f4f6;">
+        <span style="font-size:11px;color:#9ca3af;">Estimated Total:</span>
+        <span class="cost-total">RM 1,050.00</span>
+        <span style="font-size:9px;color:#d97706;">*partial — 1 job missing rate</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2>Option B: Vendor Comparison Popover</h2>
+<span class="label" style="background:#ecfdf5;color:#059669;">Recommended</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> After ops selects a service and location (but before selecting a vendor), a small "Compare vendors" link appears. Clicking it opens a popover showing all vendors that serve this service at this location, with their rate, unit type, completion rate, and recent rejections. Ops picks a vendor from the comparison table. The popover replaces the vendor dropdown for that job. Power users who already know their vendor can just use the dropdown and ignore the link.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>- Full comparison without leaving the form<br>- Shows both cost and reliability side by side<br>- Informed decision-making for new ops<br>- Power users can ignore it — optional, not forced</div>
+    <div class="cons"><strong>Cons</strong><br>- Extra click for users who want to compare<br>- Could slow down ops who just want to pick and move on<br>- Requires rate data for multiple vendors to be useful<br>- UI complexity: popover positioning, responsive behavior</div>
+  </div>
+</div>
+
+<!-- Mockup B1: Form with "Compare vendors" link -->
+<h3>Create form with comparison link</h3>
+<div class="screen">
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a href="#">Delivery Orders</a>
+    <a class="active" href="#">New Order</a>
+    <a href="#">Rates</a>
+  </div>
+  <div style="padding:16px;max-width:900px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+      <span style="color:#9ca3af;">&#8592;</span>
+      <span style="font-size:16px;font-weight:800;">Create Delivery Order</span>
+    </div>
+
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px;margin-bottom:12px;display:flex;gap:24px;font-size:11px;">
+      <div><span style="color:#9ca3af;">Customer:</span> <strong>Shein</strong></div>
+      <div><span style="color:#9ca3af;">Bags:</span> <strong class="mono">48</strong></div>
+      <div><span style="color:#9ca3af;">Weight:</span> <strong class="mono">2,560 kg</strong></div>
+    </div>
+
+    <div class="form-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+        <span class="step-badge">2</span>
+        <span style="font-size:13px;font-weight:700;">Assign vendors & services</span>
+      </div>
+
+      <!-- Job 1: already selected, no popover -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:11px;font-weight:700;color:#0D9488;">J01</span>
+            <select class="v-select"><option>SevenSeas</option></select>
+            <select class="v-select" style="width:120px;"><option>FM Trucking</option></select>
+            <span style="font-size:10px;color:#9ca3af;">TikTok WH &rarr; Yantian Port</span>
+          </div>
+          <span class="rate-badge"><span class="mono">RM 380.00</span> <span class="unit-badge unit-flat" style="margin:0;">flat</span></span>
+        </div>
+      </div>
+
+      <!-- Job 2: with popover open -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin-bottom:8px;position:relative;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="font-size:11px;font-weight:700;color:#0D9488;">J02</span>
+          <select class="v-select" style="border-color:#0D9488;"><option>Select vendor...</option></select>
+          <select class="v-select" style="width:120px;"><option>CR Retrieval</option></select>
+          <span style="font-size:10px;color:#9ca3af;">@ Yantian Port</span>
+        </div>
+        <div style="padding-left:26px;">
+          <span style="font-size:10px;color:#0D9488;cursor:pointer;font-weight:600;text-decoration:underline;text-underline-offset:2px;">Compare 3 vendors for CR at Yantian Port &#8599;</span>
+        </div>
+
+        <!-- Popover -->
+        <div class="popover" style="position:absolute;top:52px;left:26px;z-index:20;">
+          <div class="popover-header">
+            <div>
+              <div style="font-size:12px;font-weight:700;">Compare Vendors</div>
+              <div style="font-size:10px;color:#9ca3af;">CR Cargo Retrieval &middot; Yantian Port &middot; 48 bags</div>
+            </div>
+            <span style="color:#9ca3af;cursor:pointer;font-size:14px;">&times;</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                <th>Vendor</th>
+                <th>Rate</th>
+                <th>Unit</th>
+                <th>Est. Cost</th>
+                <th>Completion</th>
+                <th>Rejections (30d)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="background:#f0fdf4;cursor:pointer;">
+                <td><input type="radio" name="vendor-cr" checked></td>
+                <td style="font-weight:600;">HaleSun</td>
+                <td><span class="rate">25.00</span></td>
+                <td><span class="unit-badge unit-bag">/bag</span></td>
+                <td><span class="rate" style="color:#0D9488;">1,200.00</span></td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:4px;">
+                    <div class="reliability-bar"><div class="reliability-fill" style="width:96%;background:#059669;"></div></div>
+                    <span style="font-size:10px;color:#059669;font-weight:600;">96%</span>
+                  </div>
+                </td>
+                <td style="font-size:10px;">0</td>
+              </tr>
+              <tr style="cursor:pointer;">
+                <td><input type="radio" name="vendor-cr"></td>
+                <td style="font-weight:600;">ThaiKee</td>
+                <td><span class="rate">30.00</span></td>
+                <td><span class="unit-badge unit-bag">/bag</span></td>
+                <td><span class="rate">1,440.00</span></td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:4px;">
+                    <div class="reliability-bar"><div class="reliability-fill" style="width:91%;background:#d97706;"></div></div>
+                    <span style="font-size:10px;color:#d97706;font-weight:600;">91%</span>
+                  </div>
+                </td>
+                <td style="font-size:10px;">2</td>
+              </tr>
+              <tr style="cursor:pointer;">
+                <td><input type="radio" name="vendor-cr"></td>
+                <td style="font-weight:600;">SevenSeas</td>
+                <td><span class="rate">28.00</span></td>
+                <td><span class="unit-badge unit-bag">/bag</span></td>
+                <td><span class="rate">1,344.00</span></td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:4px;">
+                    <div class="reliability-bar"><div class="reliability-fill" style="width:98%;background:#059669;"></div></div>
+                    <span style="font-size:10px;color:#059669;font-weight:600;">98%</span>
+                  </div>
+                </td>
+                <td style="font-size:10px;">0</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid #f3f4f6;">
+            <span style="font-size:9px;color:#9ca3af;">Cheapest: HaleSun (RM 1,200) &middot; Most reliable: SevenSeas (98%)</span>
+            <button style="padding:4px 10px;border-radius:4px;font-size:10px;font-weight:600;background:#0D9488;color:#fff;border:none;cursor:pointer;font-family:inherit;">Select HaleSun</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Job 3: selected via comparison -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:11px;font-weight:700;color:#0D9488;">J03</span>
+            <select class="v-select"><option>Gonda</option></select>
+            <select class="v-select" style="width:120px;"><option>EC Customs</option></select>
+            <span style="font-size:10px;color:#9ca3af;">@ Yantian Port</span>
+          </div>
+          <span class="rate-badge"><span class="mono">RM 150.00</span> <span class="unit-badge unit-flat" style="margin:0;">flat</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mockup B2: Another popover for FM service showing route-based comparison -->
+<h3>Comparison for FM Trucking (route-based)</h3>
+<div class="screen">
+  <div style="padding:16px;">
+    <div style="font-size:12px;font-weight:700;margin-bottom:4px;">Compare Vendors</div>
+    <div style="font-size:10px;color:#9ca3af;margin-bottom:10px;">FM Trucking &middot; TikTok WH &rarr; SZX Airport Cargo Terminal</div>
+
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Vendor</th>
+          <th>Rate</th>
+          <th>Unit</th>
+          <th>Completion (90d)</th>
+          <th>Rejections (30d)</th>
+          <th>Avg pickup</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="cursor:pointer;">
+          <td><input type="radio" name="vendor-fm"></td>
+          <td style="font-weight:600;">SevenSeas</td>
+          <td><span class="rate">420.00</span></td>
+          <td><span class="unit-badge unit-flat">flat</span></td>
+          <td>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <div class="reliability-bar"><div class="reliability-fill" style="width:98%;background:#059669;"></div></div>
+              <span style="font-size:10px;color:#059669;font-weight:600;">98%</span>
+            </div>
+          </td>
+          <td style="font-size:10px;">0</td>
+          <td class="mono" style="font-size:10px;">2.1h</td>
+          <td><span style="color:#059669;font-weight:600;font-size:9px;">Best value</span></td>
+        </tr>
+        <tr style="cursor:pointer;">
+          <td><input type="radio" name="vendor-fm" checked></td>
+          <td style="font-weight:600;">HaleSun</td>
+          <td><span class="rate">450.00</span></td>
+          <td><span class="unit-badge unit-flat">flat</span></td>
+          <td>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <div class="reliability-bar"><div class="reliability-fill" style="width:95%;background:#059669;"></div></div>
+              <span style="font-size:10px;color:#059669;font-weight:600;">95%</span>
+            </div>
+          </td>
+          <td style="font-size:10px;">1</td>
+          <td class="mono" style="font-size:10px;">1.8h</td>
+          <td><span style="color:#2563eb;font-weight:600;font-size:9px;">Fastest</span></td>
+        </tr>
+        <tr style="cursor:pointer;">
+          <td><input type="radio" name="vendor-fm"></td>
+          <td style="font-weight:600;">The Lorry</td>
+          <td><span class="rate">510.00</span></td>
+          <td><span class="unit-badge unit-flat">flat</span></td>
+          <td>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <div class="reliability-bar"><div class="reliability-fill" style="width:92%;background:#d97706;"></div></div>
+              <span style="font-size:10px;color:#d97706;font-weight:600;">92%</span>
+            </div>
+          </td>
+          <td style="font-size:10px;">2</td>
+          <td class="mono" style="font-size:10px;">3.4h</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="font-size:9px;color:#9ca3af;margin-top:6px;">Rate difference: cheapest (SevenSeas RM 420) vs most expensive (The Lorry RM 510) = RM 90 / 21% spread.</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2>Option C: Smart Default + Override</h2>
+<span class="label" style="background:#fffbeb;color:#92400e;">Ambitious / future</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> The system auto-selects the cheapest available vendor for each job based on rate cards. When ops creates an order and assigns a service + location, the vendor field auto-fills with the cheapest option. It shows "Auto: SevenSeas RM 420" with an edit icon. Ops can override by clicking to change the vendor. The idea is that routine orders should be one-click — the system makes the optimal choice.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>- Fastest possible workflow for routine orders<br>- Optimizes cost by default — cheapest vendor always selected<br>- Reduces cognitive load on ops<br>- Could save significant cost over hundreds of orders</div>
+    <div class="cons"><strong>Cons</strong><br>- Ops may not trust auto-selection initially<br>- Cheapest isn't always best (vendor capacity, relationship, reliability)<br>- Requires complete rate data for all vendors at all locations<br>- Vendor preferences exist for good reasons (customer requested, familiarity)</div>
+  </div>
+</div>
+
+<!-- Mockup C: Auto-selected vendors -->
+<h3>Create form with auto-selected vendors</h3>
+<div class="screen">
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a href="#">Delivery Orders</a>
+    <a class="active" href="#">New Order</a>
+    <a href="#">Rates</a>
+  </div>
+  <div style="padding:16px;max-width:900px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+      <span style="color:#9ca3af;">&#8592;</span>
+      <span style="font-size:16px;font-weight:800;">Create Delivery Order</span>
+    </div>
+
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px;margin-bottom:12px;display:flex;gap:24px;font-size:11px;">
+      <div><span style="color:#9ca3af;">Customer:</span> <strong>AliExpress</strong></div>
+      <div><span style="color:#9ca3af;">Bags:</span> <strong class="mono">30</strong></div>
+      <div><span style="color:#9ca3af;">Weight:</span> <strong class="mono">1,650 kg</strong></div>
+    </div>
+
+    <div class="form-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span class="step-badge">2</span>
+        <span style="font-size:13px;font-weight:700;">Auto-assigned vendors</span>
+      </div>
+      <div style="font-size:10px;color:#9ca3af;margin-bottom:14px;padding-left:30px;">System selected cheapest available vendor for each service. Click vendor name to override.</div>
+
+      <!-- Job 1: Auto-selected, cheapest -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:11px;font-weight:700;color:#0D9488;">J01</span>
+            <span class="svc-p"><span class="c">FM</span> Trucking</span>
+            <span style="font-size:10px;color:#9ca3af;">Dongguan Cross-dock &rarr; Shekou Port</span>
+          </div>
+          <div class="auto-vendor">
+            <span style="font-size:9px;font-weight:600;color:#9ca3af;text-transform:uppercase;">Auto:</span>
+            <span style="font-size:11px;font-weight:700;">SevenSeas</span>
+            <span class="mono" style="font-size:11px;font-weight:600;color:#0D9488;">RM 360.00</span>
+            <span style="font-size:10px;color:#9ca3af;cursor:pointer;">&#9998;</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Job 2: Auto-selected -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:11px;font-weight:700;color:#0D9488;">J02</span>
+            <span class="svc-p"><span class="c">CR</span> Retrieval</span>
+            <span style="font-size:10px;color:#9ca3af;">@ Shekou Port</span>
+          </div>
+          <div class="auto-vendor">
+            <span style="font-size:9px;font-weight:600;color:#9ca3af;text-transform:uppercase;">Auto:</span>
+            <span style="font-size:11px;font-weight:700;">HaleSun</span>
+            <span class="mono" style="font-size:11px;font-weight:600;color:#0D9488;">RM 22.00 <span class="unit-badge unit-bag" style="font-size:8px;">/bag</span></span>
+            <span style="font-size:10px;color:#9ca3af;cursor:pointer;">&#9998;</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Job 3: Overridden by ops -->
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:11px;font-weight:700;color:#0D9488;">J03</span>
+            <span class="svc-p"><span class="c">EC</span> Customs</span>
+            <span style="font-size:10px;color:#9ca3af;">@ Shekou Port</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:9px;color:#d97706;font-weight:600;">OVERRIDE</span>
+            <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:#fff;border:1px solid #fde68a;border-radius:6px;">
+              <span style="font-size:11px;font-weight:700;">Gonda</span>
+              <span class="mono" style="font-size:11px;font-weight:600;color:#111827;">RM 160.00</span>
+              <span style="font-size:9px;color:#d97706;">+RM 20 vs auto</span>
+              <span style="font-size:10px;color:#9ca3af;cursor:pointer;">&#9998;</span>
+            </div>
+          </div>
+        </div>
+        <div style="padding-left:26px;margin-top:4px;font-size:9px;color:#d97706;">
+          Auto-suggested ThaiKee at RM 140.00. You selected Gonda instead (+RM 20).
+        </div>
+      </div>
+
+      <!-- Job 4: No vendor available -->
+      <div style="background:#fefafa;border:1px solid #fecaca;border-radius:6px;padding:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:11px;font-weight:700;color:#0D9488;">J04</span>
+            <span class="svc-p"><span class="c">OH</span> Handling</span>
+            <span style="font-size:10px;color:#9ca3af;">@ Dongguan Cross-dock</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:#fefafa;border:1px dashed #fecaca;border-radius:6px;">
+            <span style="font-size:10px;color:#dc2626;font-weight:600;">No vendor has a rate for this service at this location</span>
+            <select class="v-select" style="width:130px;border-color:#fecaca;"><option>Select manually...</option></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Total with savings -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:14px;border-top:2px solid #e5e7eb;">
+        <div style="font-size:10px;color:#9ca3af;">
+          Auto-optimized: 2 of 4 jobs &middot; 1 override (+RM 20) &middot; 1 manual
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:11px;color:#6b7280;">Estimated Total:</span>
+          <span class="cost-total">RM 1,180.00</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="verdict">
+  <h3>Recommendation: Option B — Vendor Comparison Popover</h3>
+  <p style="font-size:12px;line-height:1.7;color:#374151;">
+    <strong>Why Option B:</strong> It gives ops the information they need to make a good decision without forcing a particular workflow. Power users who know their vendor just use the dropdown and never click "Compare." New ops or unusual routes benefit from seeing all options side by side. This respects tribal knowledge while making rate data accessible.
+  </p>
+  <p style="font-size:12px;line-height:1.7;color:#374151;margin-top:8px;">
+    <strong>Why not Option C (auto-select):</strong> Auto-selection sounds efficient but requires two things we don't have yet: (1) complete rate data for all vendors at all locations, and (2) ops trust in the system's choices. If the auto-selected vendor is wrong (capacity issue, customer preference), ops has to override every time — which is slower than just picking from a dropdown. Build trust with Option B first, then consider auto-defaults later.
+  </p>
+  <p style="font-size:12px;line-height:1.7;color:#374151;margin-top:8px;">
+    <strong>Implementation detail:</strong> The "Compare vendors" link only appears when 2+ vendors have rates for the same service + location. If only one vendor has a rate, no comparison needed. The popover shows: vendor name, rate, unit, estimated cost (rate &times; quantity), completion rate (last 90 days), and rejections (last 30 days). Sort by cheapest by default, with reliability as a secondary signal.
+  </p>
+</div>
+
+</div>
+</body>
+</html>

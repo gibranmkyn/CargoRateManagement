@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW: Rejection & Reassignment</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 13px; line-height: 1.5; }
+  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .page { max-width: 1300px; margin: 0 auto; padding: 40px 24px 80px; }
+  h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.7px; margin-bottom: 6px; }
+  h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; margin: 48px 0 8px; color: #0D9488; }
+  .subtitle { color: #6b7280; font-size: 14px; margin-bottom: 40px; line-height: 1.7; }
+  .hmw { font-size: 18px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 24px; letter-spacing: -0.3px; padding: 16px 20px; background: #fff; border-left: 4px solid #0D9488; border-radius: 0 12px 12px 0; }
+  .hyp-label { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 12px; border-radius: 8px; margin-bottom: 12px; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 20px; margin-bottom: 20px; font-size: 13px; color: #374151; line-height: 1.7; }
+  .rationale strong { color: #111827; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .pros, .cons { padding: 12px 16px; border-radius: 10px; font-size: 12px; line-height: 1.6; }
+  .pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+  .cons { background: #fef2f2; border: 1px solid #fecaca; }
+  .pros strong { color: #059669; }
+  .cons strong { color: #dc2626; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 16px; overflow: hidden; margin: 16px 0 40px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .screen-inner { padding: 0; }
+
+  /* Shared nav */
+  .nav { display: flex; align-items: center; height: 48px; padding: 0 20px; background: #fff; border-bottom: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; gap: 12px; }
+  .nav .logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; color: #111827; }
+  .nav .logo-icon { width: 26px; height: 26px; background: #0D9488; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 800; }
+  .nav-item { font-size: 12px; color: #9ca3af; padding: 5px 10px; border-radius: 7px; cursor: pointer; }
+  .nav-item.active { color: #0D9488; background: rgba(13,148,136,0.08); font-weight: 600; }
+  .nav-spacer { flex: 1; }
+  .nav-avatar { width: 28px; height: 28px; border-radius: 50%; background: #e5e7eb; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #6b7280; }
+
+  /* Toolbar */
+  .toolbar { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid #e5e7eb; }
+  .toolbar-title { font-size: 16px; font-weight: 700; color: #111827; }
+  .toolbar-spacer { flex: 1; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 9px; font-size: 12px; font-weight: 600; border: 1.5px solid #e5e7eb; background: #fff; color: #374151; cursor: pointer; }
+  .btn-primary { background: #0D9488; color: #fff; border-color: #0D9488; box-shadow: 0 1px 4px rgba(13,148,136,0.25); }
+  .btn-sm { padding: 5px 12px; font-size: 11px; border-radius: 7px; }
+
+  /* Badge */
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; border: 1.5px solid; }
+  .b-green { border-color: #a7f3d0; background: #f0fdf4; color: #059669; }
+  .b-blue { border-color: #bfdbfe; background: #eff6ff; color: #2563eb; }
+  .b-amber { border-color: #fde68a; background: #fefce8; color: #b45309; }
+  .b-red { border-color: #fecaca; background: #fef2f2; color: #dc2626; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; }
+
+  /* Table rows */
+  .trip-row { display: flex; align-items: center; gap: 14px; padding: 14px 20px; border-bottom: 1px solid #f3f4f6; transition: background 0.15s; }
+  .trip-row:hover { background: #f9fafb; }
+  .trip-row .expand { color: #d1d5db; font-size: 10px; cursor: pointer; }
+  .trip-row .customer { font-size: 14px; font-weight: 700; color: #111827; }
+  .trip-row .meta { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+  .trip-row .meta .mono { font-size: 10px; background: #f3f4f6; padding: 1px 5px; border-radius: 3px; border: 1px solid #e5e7eb; }
+  .trip-row .jobs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .job-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 600; border: 1.5px solid; }
+  .jc-green { border-color: #a7f3d0; background: #f0fdf4; color: #059669; }
+  .jc-blue { border-color: #bfdbfe; background: #eff6ff; color: #2563eb; }
+  .jc-amber { border-color: #fde68a; background: #fefce8; color: #b45309; }
+  .jc-red { border-color: #fecaca; background: #fef2f2; color: #dc2626; }
+
+  /* Alert banner */
+  .alert-banner { display: flex; align-items: center; gap: 10px; padding: 10px 20px; background: #fef2f2; border-bottom: 2px solid #fecaca; color: #991b1b; font-size: 13px; font-weight: 600; }
+  .alert-banner .alert-icon { width: 22px; height: 22px; border-radius: 50%; background: #dc2626; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0; }
+  .alert-banner .alert-link { margin-left: auto; color: #dc2626; font-weight: 700; font-size: 12px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+
+  /* Red rejected row */
+  .trip-row.rejected { border-left: 4px solid #dc2626; background: #fef2f2; }
+  .needs-action-tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; background: #dc2626; color: #fff; }
+
+  /* Modal overlay */
+  .modal-overlay { position: relative; background: rgba(17,24,39,0.4); min-height: 400px; display: flex; align-items: center; justify-content: center; }
+  .modal { background: #fff; border-radius: 16px; width: 520px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); overflow: hidden; }
+  .modal-header { padding: 20px 24px 0; }
+  .modal-header h3 { font-size: 16px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+  .modal-header p { font-size: 12px; color: #6b7280; }
+  .modal-body { padding: 16px 24px; }
+  .modal-field { margin-bottom: 14px; }
+  .modal-field label { display: block; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px; }
+  .modal-field .value { font-size: 13px; font-weight: 600; color: #111827; }
+  .modal-field .field-input { width: 100%; padding: 9px 12px; border: 1.5px solid #e5e7eb; border-radius: 9px; font-size: 13px; font-family: inherit; background: #f9fafb; }
+  .modal-field select { width: 100%; padding: 9px 12px; border: 1.5px solid #0D9488; border-radius: 9px; font-size: 13px; font-family: inherit; background: #f0fdfa; color: #0D9488; font-weight: 600; appearance: auto; }
+  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; padding: 16px 24px; border-top: 1px solid #f3f4f6; }
+  .modal-reason { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; background: #fef2f2; border-radius: 10px; margin-bottom: 14px; font-size: 12px; color: #991b1b; line-height: 1.5; }
+  .modal-reason .reason-icon { width: 20px; height: 20px; border-radius: 50%; background: #dc2626; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; flex-shrink: 0; margin-top: 1px; }
+
+  /* Tabs for Needs Attention */
+  .tab-bar { display: flex; gap: 0; border-bottom: 2px solid #e5e7eb; padding: 0 20px; }
+  .tab { padding: 10px 16px; font-size: 13px; font-weight: 600; color: #9ca3af; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+  .tab.active { color: #0D9488; border-bottom-color: #0D9488; }
+  .tab .tab-count { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; font-size: 10px; font-weight: 700; margin-left: 5px; }
+  .tab .tab-count.red { background: #dc2626; color: #fff; }
+
+  /* Attention queue card */
+  .attention-card { display: flex; gap: 16px; padding: 18px 20px; border-bottom: 1px solid #f3f4f6; align-items: flex-start; }
+  .attention-card:hover { background: #fef2f2; }
+  .attention-icon { width: 36px; height: 36px; border-radius: 10px; background: #fef2f2; border: 1.5px solid #fecaca; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .attention-content { flex: 1; }
+  .attention-content .title { font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+  .attention-content .desc { font-size: 12px; color: #6b7280; line-height: 1.5; margin-bottom: 10px; }
+  .attention-actions { display: flex; gap: 8px; align-items: center; }
+  .attention-time { font-size: 11px; color: #dc2626; font-weight: 600; flex-shrink: 0; text-align: right; }
+
+  /* Slide-out panel (simplified) */
+  .slideout { position: absolute; right: 0; top: 0; bottom: 0; width: 360px; background: #fff; border-left: 1px solid #e5e7eb; box-shadow: -4px 0 20px rgba(0,0,0,0.08); z-index: 10; }
+  .slideout-header { padding: 16px 20px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
+  .slideout-header h4 { font-size: 14px; font-weight: 700; }
+  .slideout-close { width: 28px; height: 28px; border-radius: 7px; border: 1px solid #e5e7eb; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #9ca3af; cursor: pointer; }
+  .slideout-body { padding: 16px 20px; }
+  .slideout-field { margin-bottom: 14px; }
+  .slideout-field label { display: block; font-size: 10px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .slideout-field .val { font-size: 13px; font-weight: 600; color: #111827; }
+
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 14px; padding: 24px; margin-top: 48px; }
+  .verdict h3 { color: #059669; font-size: 16px; margin-bottom: 8px; font-weight: 700; }
+  .verdict ul { margin: 12px 0; padding-left: 20px; line-height: 1.8; font-size: 13px; color: #374151; }
+  .context-box { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 20px; margin-bottom: 32px; border-left: 4px solid #d97706; }
+  .context-box .context-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #d97706; margin-bottom: 8px; }
+  .context-box p { font-size: 13px; color: #374151; line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>H05: Rejection & Reassignment</h1>
+<div class="hmw">"How might we surface rejected jobs so ops can reassign the vendor within seconds — before cargo sits idle?"</div>
+
+<div class="context-box">
+  <div class="context-title">Scenario</div>
+  <p>
+    <strong>Camila's truck broke down.</strong> She rejects the FM+CS job for TRIP20260325-003. There are 36 bags of AliExpress priority cargo sitting at Qianhai FTZ with no vendor assigned. Every minute the cargo sits idle costs money, and the customer's SLA timer is ticking. The ops planner needs to see this immediately, understand what happened, and reassign the job to another vendor — ideally within 30 seconds.
+  </p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2>Option A: Alert Banner + Red Row Highlight</h2>
+<span class="hyp-label" style="background:#ecfdf5;color:#059669;">Recommended</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> When a vendor rejects a job, a red alert banner appears at the top of the trip list: "1 rejected job needs reassignment" with a "View" link. The rejected trip row gets a red left border and a "NEEDS ACTION" tag. Clicking the row opens the standard slide-out panel where the planner can reassign the vendor from a dropdown.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>Non-intrusive — fits existing table layout<br>Red banner is visible without being aggressive<br>Reuses the existing slide-out panel (no new patterns)<br>Planner can finish current task before responding</div>
+    <div class="cons"><strong>Cons</strong><br>Banner can be dismissed or ignored<br>No urgency beyond color — no sound or forced interaction<br>If planner is on a different page, they won't see it until they return to trip list</div>
+  </div>
+</div>
+
+<div class="screen">
+  <!-- Nav -->
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <div class="nav-item active">Trips</div>
+    <div class="nav-item">Vendors</div>
+    <div class="nav-item">Customers</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-avatar">MR</div>
+  </div>
+  <!-- Alert Banner -->
+  <div class="alert-banner">
+    <div class="alert-icon">!</div>
+    <span>1 rejected job needs reassignment — AliExpress cargo at Qianhai FTZ waiting</span>
+    <span class="alert-link">View &rarr;</span>
+  </div>
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-title">Trips</div>
+    <div class="toolbar-spacer"></div>
+    <div class="btn btn-sm">Filter</div>
+    <div class="btn btn-sm btn-primary">+ New Trip</div>
+  </div>
+  <div class="screen-inner" style="position: relative;">
+    <!-- Normal trip row -->
+    <div class="trip-row">
+      <span class="expand">&#9654;</span>
+      <div style="flex:1;">
+        <div class="customer">Shopee</div>
+        <div class="meta"><span class="mono">TRIP20260325-001</span> &middot; 176-84329871 &middot; 18 bags &middot; Yantian &rarr; Shekou</div>
+      </div>
+      <div class="jobs">
+        <span class="job-chip jc-green"><span class="dot" style="background:#059669;"></span>Hoboken &middot; FM+OH</span>
+        <span class="job-chip jc-blue"><span class="dot" style="background:#2563eb;"></span>FastTrack &middot; CS</span>
+      </div>
+    </div>
+    <!-- Normal trip row -->
+    <div class="trip-row">
+      <span class="expand">&#9654;</span>
+      <div style="flex:1;">
+        <div class="customer">Shopee</div>
+        <div class="meta"><span class="mono">TRIP20260325-002</span> &middot; 176-84330102 &middot; 12 bags &middot; Nanshan &rarr; Shekou</div>
+      </div>
+      <div class="jobs">
+        <span class="job-chip jc-green"><span class="dot" style="background:#059669;"></span>Camila &middot; FM</span>
+      </div>
+    </div>
+    <!-- REJECTED trip row -->
+    <div class="trip-row rejected">
+      <span class="expand">&#9654;</span>
+      <div style="flex:1;">
+        <div class="customer">AliExpress</div>
+        <div class="meta"><span class="mono">TRIP20260325-003</span> &middot; 176-84330458 &middot; 36 bags &middot; Qianhai FTZ &rarr; Shekou</div>
+      </div>
+      <div class="jobs">
+        <span class="job-chip jc-red"><span class="dot" style="background:#dc2626;"></span>Camila &middot; FM+CS</span>
+      </div>
+      <div class="needs-action-tag">NEEDS ACTION</div>
+    </div>
+    <!-- Normal trip row -->
+    <div class="trip-row">
+      <span class="expand">&#9654;</span>
+      <div style="flex:1;">
+        <div class="customer">AliExpress</div>
+        <div class="meta"><span class="mono">TRIP20260325-004</span> &middot; 176-84330599 &middot; 22 bags &middot; Futian &rarr; Shekou</div>
+      </div>
+      <div class="jobs">
+        <span class="job-chip jc-amber"><span class="dot" style="background:#d97706;"></span>Jorge &middot; FM+OH</span>
+      </div>
+    </div>
+    <!-- Slide-out panel (shown on click) -->
+    <div class="slideout">
+      <div class="slideout-header">
+        <h4>Reassign Job</h4>
+        <div class="slideout-close">&times;</div>
+      </div>
+      <div class="slideout-body">
+        <div class="modal-reason">
+          <div class="reason-icon">!</div>
+          <div><strong>Rejection reason:</strong> Truck broke down on Nanhai Blvd. Cannot complete pickup. Sorry for the inconvenience.</div>
+        </div>
+        <div class="slideout-field">
+          <label>Trip</label>
+          <div class="val">TRIP20260325-003</div>
+        </div>
+        <div class="slideout-field">
+          <label>Customer</label>
+          <div class="val">AliExpress</div>
+        </div>
+        <div class="slideout-field">
+          <label>Route</label>
+          <div class="val">Qianhai FTZ &rarr; Shekou</div>
+        </div>
+        <div class="slideout-field">
+          <label>Services</label>
+          <div class="val"><span class="job-chip jc-red" style="font-size:11px;"><span class="dot" style="background:#dc2626;"></span>FM + CS</span></div>
+        </div>
+        <div class="slideout-field">
+          <label>Cargo</label>
+          <div class="val">36 bags &middot; 1,240 kg</div>
+        </div>
+        <div class="slideout-field" style="margin-top: 20px;">
+          <label>Reassign to vendor</label>
+          <select style="width:100%;padding:9px 12px;border:1.5px solid #0D9488;border-radius:9px;font-size:13px;font-family:inherit;background:#f0fdfa;color:#0D9488;font-weight:600;">
+            <option>Select vendor...</option>
+            <option selected>Jorge Martinez</option>
+            <option>Hoboken Logistics</option>
+            <option>FastTrack Express</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px;">
+          <div class="btn btn-primary" style="flex:1;justify-content:center;">Reassign Job</div>
+          <div class="btn" style="flex:1;justify-content:center;">Cancel</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2>Option B: Blocking Modal</h2>
+<span class="hyp-label" style="background:#eff6ff;color:#2563eb;">Aggressive — forces immediate action</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> The moment a vendor rejects a job, a modal appears for the ops planner. The modal shows the rejection reason, route, services, and cargo details. It includes a vendor dropdown to reassign immediately. The modal cannot be dismissed without taking action — the planner must either reassign the job or snooze for 15 minutes.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>Cannot be missed — guaranteed immediate awareness<br>Forces resolution — no chance of forgotten rejections<br>Fastest possible time-to-reassignment<br>All context is in the modal — no navigation needed</div>
+    <div class="cons"><strong>Cons</strong><br>Interrupts whatever the planner is doing right now<br>Feels aggressive — bad UX if planner is mid-task<br>If multiple rejections happen at once, stacked modals are terrible<br>Creates anxiety and pressure</div>
+  </div>
+</div>
+
+<div class="screen">
+  <!-- Nav -->
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <div class="nav-item active">Trips</div>
+    <div class="nav-item">Vendors</div>
+    <div class="nav-item">Customers</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-avatar">MR</div>
+  </div>
+  <div class="toolbar">
+    <div class="toolbar-title">Trips</div>
+    <div class="toolbar-spacer"></div>
+    <div class="btn btn-sm">Filter</div>
+    <div class="btn btn-sm btn-primary">+ New Trip</div>
+  </div>
+  <!-- Modal overlay with trip list dimmed behind -->
+  <div class="modal-overlay">
+    <!-- Dimmed trip rows behind -->
+    <div style="position:absolute;inset:0;padding:0;opacity:0.3;pointer-events:none;">
+      <div class="trip-row">
+        <span class="expand">&#9654;</span>
+        <div style="flex:1;">
+          <div class="customer">Shopee</div>
+          <div class="meta">TRIP20260325-001 &middot; 18 bags</div>
+        </div>
+      </div>
+      <div class="trip-row">
+        <span class="expand">&#9654;</span>
+        <div style="flex:1;">
+          <div class="customer">AliExpress</div>
+          <div class="meta">TRIP20260325-003 &middot; 36 bags</div>
+        </div>
+      </div>
+    </div>
+    <!-- The modal -->
+    <div class="modal">
+      <div class="modal-header">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="width:32px;height:32px;border-radius:50%;background:#fef2f2;border:2px solid #fecaca;display:flex;align-items:center;justify-content:center;color:#dc2626;font-weight:800;font-size:14px;">!</div>
+          <div>
+            <h3>Job Rejected — Immediate Action Required</h3>
+            <p>Camila couldn't complete FM+CS for TRIP20260325-003</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="modal-reason">
+          <div class="reason-icon">!</div>
+          <div><strong>Camila says:</strong> "Truck broke down on Nanhai Blvd. Cannot complete pickup. Sorry for the inconvenience."</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+          <div class="modal-field">
+            <label>Customer</label>
+            <div class="value">AliExpress</div>
+          </div>
+          <div class="modal-field">
+            <label>MAWB</label>
+            <div class="value" style="font-family:'SF Mono',monospace;font-size:12px;">176-84330458</div>
+          </div>
+          <div class="modal-field">
+            <label>Route</label>
+            <div class="value">Qianhai FTZ &rarr; Shekou</div>
+          </div>
+          <div class="modal-field">
+            <label>Cargo</label>
+            <div class="value">36 bags &middot; 1,240 kg</div>
+          </div>
+        </div>
+        <div class="modal-field">
+          <label>Services</label>
+          <div style="display:flex;gap:6px;">
+            <span class="job-chip jc-red"><span class="dot" style="background:#dc2626;"></span>First Mile (FM)</span>
+            <span class="job-chip jc-red"><span class="dot" style="background:#dc2626;"></span>Consolidation (CS)</span>
+          </div>
+        </div>
+        <div class="modal-field" style="margin-top:16px;padding-top:16px;border-top:1px solid #f3f4f6;">
+          <label>Reassign to vendor</label>
+          <select>
+            <option>Select a vendor...</option>
+            <option>Jorge Martinez</option>
+            <option selected>Hoboken Logistics</option>
+            <option>FastTrack Express</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="btn" style="color:#6b7280;">Snooze 15 min</div>
+        <div class="btn btn-primary">Reassign to Hoboken</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2>Option C: Dedicated "Needs Attention" Queue</h2>
+<span class="hyp-label" style="background:#fffbeb;color:#d97706;">Separate view — clean but requires navigation</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> A new tab on the trip list: "Needs Attention (1)" alongside "All Trips". This tab shows only trips with rejected or problematic jobs. Each item in the queue shows full context — rejection reason, route, cargo, and an inline vendor reassignment dropdown — so the planner can resolve issues without navigating to individual trips.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>Clean separation — main trip list stays uncluttered<br>Full context per item — no need to click into anything<br>Works as a daily "to-do" list for the planner<br>Scales well if there are multiple issues at once</div>
+    <div class="cons"><strong>Cons</strong><br>Requires switching to the tab — planner might not check it<br>Rejection could go unnoticed until the planner clicks the tab<br>Another view to maintain and learn<br>No push notification — relies on the count badge being noticed</div>
+  </div>
+</div>
+
+<div class="screen">
+  <!-- Nav -->
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <div class="nav-item active">Trips</div>
+    <div class="nav-item">Vendors</div>
+    <div class="nav-item">Customers</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-avatar">MR</div>
+  </div>
+  <!-- Tabs -->
+  <div class="tab-bar">
+    <div class="tab">All Trips</div>
+    <div class="tab active">Needs Attention <span class="tab-count red">1</span></div>
+    <div class="tab">Completed</div>
+  </div>
+  <!-- Attention queue -->
+  <div style="padding:0;">
+    <div style="padding:14px 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:8px;">
+      <span style="font-size:14px;font-weight:700;color:#111827;">Needs Attention</span>
+      <span style="font-size:11px;color:#6b7280;">Issues requiring your action</span>
+    </div>
+    <!-- Attention item -->
+    <div class="attention-card">
+      <div class="attention-icon">&#9888;</div>
+      <div class="attention-content">
+        <div class="title">AliExpress — Job Rejected by Camila</div>
+        <div class="desc">
+          <strong>TRIP20260325-003</strong> &middot; Qianhai FTZ &rarr; Shekou &middot; 36 bags &middot; 1,240 kg<br>
+          <strong>Services:</strong> FM + CS &nbsp;&middot;&nbsp; <strong>MAWB:</strong> <span class="mono" style="font-size:11px;">176-84330458</span><br>
+          <strong>Reason:</strong> "Truck broke down on Nanhai Blvd. Cannot complete pickup."
+        </div>
+        <div class="attention-actions">
+          <select style="padding:7px 12px;border:1.5px solid #0D9488;border-radius:8px;font-size:12px;font-family:inherit;background:#f0fdfa;color:#0D9488;font-weight:600;">
+            <option>Select vendor...</option>
+            <option>Jorge Martinez</option>
+            <option>Hoboken Logistics</option>
+            <option>FastTrack Express</option>
+          </select>
+          <div class="btn btn-primary btn-sm">Reassign</div>
+          <div class="btn btn-sm">View Trip</div>
+        </div>
+      </div>
+      <div class="attention-time">12 min ago<br><span style="font-size:10px;font-weight:400;color:#9ca3af;">3:42 PM</span></div>
+    </div>
+    <!-- Empty state hint -->
+    <div style="padding:40px 20px;text-align:center;color:#9ca3af;font-size:13px;">
+      No other issues at this time.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="verdict">
+  <h3>Recommendation: Option A — Alert Banner + Red Row Highlight</h3>
+  <p style="font-size:13px;color:#374151;line-height:1.7;margin-bottom:12px;">
+    The banner + red row approach is the best balance between visibility and non-intrusiveness.
+  </p>
+  <ul>
+    <li><strong>Non-intrusive but unmissable</strong> — the red banner sits at the top of the trip list, visible the moment the planner looks at the screen, but doesn't block their current workflow.</li>
+    <li><strong>No new patterns to learn</strong> — clicking the row opens the existing slide-out panel, which already has the vendor dropdown and job details. The reassignment flow is the same as the normal assignment flow.</li>
+    <li><strong>Graceful degradation</strong> — if multiple rejections happen, the banner updates the count ("3 rejected jobs") and multiple rows light up red. No stacking modals, no cluttered queue.</li>
+    <li><strong>Option B (modal) is too aggressive</strong> — it interrupts flow and creates anxiety. If the planner is creating a trip for a different customer, a blocking modal is hostile.</li>
+    <li><strong>Option C (queue) is too passive</strong> — it relies on the planner checking the tab. The red count badge might not be enough urgency for time-sensitive cargo.</li>
+    <li><strong>Future enhancement:</strong> Add browser notification / sound alert for high-priority rejections so planners on a different page get notified.</li>
+  </ul>
+</div>
+
+</div>
+</body>
+</html>

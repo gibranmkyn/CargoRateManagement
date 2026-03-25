@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW: Expanded Job View</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 40px 0 6px; color: #0D9488; }
+  .hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #0D9488; border-radius: 0 6px 6px 0; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+  .rationale strong { color: #111827; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 12px 0 28px; }
+  .label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+  .pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+  .cons { background: #fefafa; border: 1px solid #fecaca; }
+
+  /* Shared table styles */
+  .parent-row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 12px; }
+  .parent-row .cust { font-size: 13px; font-weight: 600; }
+  .parent-row .meta { font-size: 11px; color: #9ca3af; }
+
+  .chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+  .chip-g { border: 1px solid #a7f3d0; background: #f0fdf4; color: #059669; }
+  .chip-n { border: 1px solid #e5e7eb; background: #fff; color: #6b7280; }
+  .chip-r { border: 1px solid #fecaca; background: #fef2f2; color: #dc2626; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+
+  .svc-p { padding: 1px 5px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.1); display: inline-flex; align-items: center; gap: 3px; }
+  .svc-p .c { color: #0D9488; font-family: monospace; }
+
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+  .verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW: Expanded Job View</h1>
+<div class="hmw">"How might we show jobs within an expanded delivery order in a way that feels native to Excel users — not like a gallery of cards?"</div>
+
+<!-- ═══════════════════════════════ -->
+<h2>Option A: Sub-Table (most Excel-like)</h2>
+<span class="label" style="background:#ecfdf5;color:#059669;">Recommended</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Expanding a delivery order reveals a nested table with one row per job. Same column alignment as the parent table but indented. Feels like expanding a grouped row in Excel.
+  <div class="pros-cons">
+    <div class="pros"><strong>✓ Pros</strong><br>• Most natural for Excel users — it's just more rows<br>• Highest data density — 3 jobs in ~100px vs ~200px for cards<br>• Column alignment makes scanning easy<br>• Click any job row to open slide-out</div>
+    <div class="cons"><strong>✕ Cons</strong><br>• Less visual distinction between parent and child rows<br>• Can't show as much detail per job as a card<br>• Route info might be truncated in narrow columns</div>
+  </div>
+</div>
+
+<div class="screen">
+  <!-- Parent row (expanded) -->
+  <div class="parent-row">
+    <span style="color:#0D9488;font-weight:700;">▾</span>
+    <span class="cust" style="width:100px;">Shopee</span>
+    <span class="mono" style="font-size:11px;color:#374151;width:100px;">176-33121632</span>
+    <span style="font-size:11px;color:#374151;flex:1;">Yantian → Dongguan → SZX Airport</span>
+    <span style="font-size:11px;color:#9ca3af;width:90px;">16 bags · 890 kg</span>
+    <div style="display:flex;gap:4px;">
+      <span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Hoboken CR+FM</span>
+      <span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>V3 EC</span>
+    </div>
+  </div>
+
+  <!-- Sub-table for jobs -->
+  <div style="background:#f9fafb;">
+    <table style="width:100%;border-collapse:collapse;font-size:11px;">
+      <thead>
+        <tr style="border-bottom:1px solid #e5e7eb;">
+          <th style="width:40px;"></th>
+          <th style="text-align:left;padding:4px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;">Job</th>
+          <th style="text-align:left;padding:4px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;">Vendor</th>
+          <th style="text-align:left;padding:4px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;">Services</th>
+          <th style="text-align:left;padding:4px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;">Origin → Destination</th>
+          <th style="text-align:left;padding:4px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;">Status</th>
+          <th style="text-align:left;padding:4px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;">Proofs</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid #f3f4f6;cursor:pointer;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+          <td style="width:40px;"></td>
+          <td style="padding:6px 10px;font-weight:600;color:#0D9488;">J01</td>
+          <td style="padding:6px 10px;font-weight:600;color:#111827;">Hoboken</td>
+          <td style="padding:6px 10px;"><span class="svc-p"><span class="c">CR</span></span> <span class="svc-p"><span class="c">FM</span></span></td>
+          <td style="padding:6px 10px;color:#374151;">Yantian Port → Dongguan Cross-dock</td>
+          <td style="padding:6px 10px;"><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>In Progress</span></td>
+          <td style="padding:6px 10px;color:#9ca3af;">0 docs</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f3f4f6;cursor:pointer;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+          <td style="width:40px;"></td>
+          <td style="padding:6px 10px;font-weight:600;color:#0D9488;">J02</td>
+          <td style="padding:6px 10px;font-weight:600;color:#111827;">V3</td>
+          <td style="padding:6px 10px;"><span class="svc-p"><span class="c">EC</span></span></td>
+          <td style="padding:6px 10px;color:#374151;">Export customs (parallel)</td>
+          <td style="padding:6px 10px;"><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+          <td style="padding:6px 10px;color:#9ca3af;">0 docs</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ -->
+<h2>Option B: Compact Cards (current approach, tightened)</h2>
+<span class="label" style="background:#eff6ff;color:#2563eb;">Current</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> What we have now — parallel cards with vendor, services, route, status. Already tightened from the dense mockup. Each card is a self-contained job summary.
+  <div class="pros-cons">
+    <div class="pros"><strong>✓ Pros</strong><br>• Visual separation between jobs is very clear<br>• Each job is a distinct visual unit<br>• Status-colored borders give quick scanning signal</div>
+    <div class="cons"><strong>✕ Cons</strong><br>• Takes more vertical space than a sub-table<br>• Cards feel "designed" not "data" — friction with Excel users<br>• Information is arranged differently from the parent table</div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="parent-row">
+    <span style="color:#0D9488;font-weight:700;">▾</span>
+    <span class="cust" style="width:100px;">Shopee</span>
+    <span class="mono" style="font-size:11px;color:#374151;width:100px;">176-33121632</span>
+    <span style="font-size:11px;color:#374151;flex:1;">Yantian → Dongguan → SZX Airport</span>
+    <span style="font-size:11px;color:#9ca3af;width:90px;">16 bags · 890 kg</span>
+  </div>
+  <div style="background:#f9fafb;padding:10px 12px 10px 40px;display:flex;gap:8px;flex-wrap:wrap;">
+    <div style="min-width:200px;max-width:280px;flex:1;border:1.5px solid #e5e7eb;border-radius:6px;background:#fff;overflow:hidden;">
+      <div style="padding:10px 12px;">
+        <div style="font-size:12px;font-weight:700;color:#111827;margin-bottom:4px;">Hoboken</div>
+        <div style="display:flex;gap:3px;margin-bottom:4px;"><span class="svc-p"><span class="c">CR</span></span><span class="svc-p"><span class="c">FM</span></span></div>
+        <div style="font-size:10px;color:#6b7280;">Yantian Port → Dongguan Cross-dock</div>
+      </div>
+      <div style="padding:5px 12px;border-top:1.5px solid #e5e7eb;background:#fafbfc;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:10px;font-weight:700;color:#6b7280;display:flex;align-items:center;gap:4px;"><span class="dot" style="background:#9ca3af;"></span> In Progress</span>
+        <span style="font-size:10px;color:#9ca3af;">J01 →</span>
+      </div>
+    </div>
+    <div style="min-width:200px;max-width:280px;flex:1;border:1.5px solid #e5e7eb;border-radius:6px;background:#fff;overflow:hidden;">
+      <div style="padding:10px 12px;">
+        <div style="font-size:12px;font-weight:700;color:#111827;margin-bottom:4px;">V3</div>
+        <div style="display:flex;gap:3px;margin-bottom:4px;"><span class="svc-p"><span class="c">EC</span></span></div>
+        <div style="font-size:10px;color:#6b7280;">Export customs (parallel)</div>
+      </div>
+      <div style="padding:5px 12px;border-top:1.5px solid #e5e7eb;background:#fafbfc;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:10px;font-weight:700;color:#6b7280;display:flex;align-items:center;gap:4px;"><span class="dot" style="background:#9ca3af;"></span> Pending</span>
+        <span style="font-size:10px;color:#9ca3af;">J02 →</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ -->
+<h2>Option C: Inline Rows (no expand needed)</h2>
+<span class="label" style="background:#fffbeb;color:#92400e;">Radical</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Don't expand at all. Each job IS a row in the main table, grouped under its delivery order. The delivery order header row is slightly styled (bold, slightly darker background) and the job rows are indented below it. Like grouped rows in Excel with a subtotal row.
+  <div class="pros-cons">
+    <div class="pros"><strong>✓ Pros</strong><br>• Maximum density — no expand/collapse, everything visible<br>• Most Excel-like — it literally IS a grouped spreadsheet<br>• No context switching between "order view" and "job view"<br>• Fastest scanning — all info in one flat list</div>
+    <div class="cons"><strong>✕ Cons</strong><br>• With 50 orders × 2-3 jobs each = 100-150 rows. Could be overwhelming.<br>• Harder to visually group "which jobs belong to which order"<br>• Loses the clean "5 orders" → expand for detail flow</div>
+  </div>
+</div>
+
+<div class="screen">
+  <table style="width:100%;border-collapse:collapse;font-size:11px;">
+    <thead>
+      <tr style="border-bottom:1px solid #e5e7eb;">
+        <th style="text-align:left;padding:5px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;width:24px;"></th>
+        <th style="text-align:left;padding:5px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;">Customer / Job</th>
+        <th style="text-align:left;padding:5px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;">MAWB</th>
+        <th style="text-align:left;padding:5px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;">Vendor</th>
+        <th style="text-align:left;padding:5px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;">Services</th>
+        <th style="text-align:left;padding:5px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;">Route</th>
+        <th style="text-align:left;padding:5px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;">Status</th>
+        <th style="text-align:left;padding:5px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;background:#f9fafb;">Proofs</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Order 1: header row -->
+      <tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;">
+        <td style="padding:6px 10px;"></td>
+        <td style="padding:6px 10px;font-size:12px;font-weight:700;color:#111827;" colspan="2">AliExpress <span class="mono" style="font-size:9px;color:#9ca3af;margin-left:4px;">PTRIP12302100001</span></td>
+        <td colspan="5" style="padding:6px 10px;font-size:10px;color:#9ca3af;">24 bags · 1240 kg · Fragile cargo</td>
+      </tr>
+      <!-- Order 1: job row -->
+      <tr style="border-bottom:1px solid #f3f4f6;cursor:pointer;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+        <td style="padding:5px 10px;"></td>
+        <td style="padding:5px 10px;padding-left:24px;color:#0D9488;font-weight:600;">J01</td>
+        <td style="padding:5px 10px;" class="mono">176-84329871</td>
+        <td style="padding:5px 10px;font-weight:600;">Camila</td>
+        <td style="padding:5px 10px;"><span class="svc-p"><span class="c">FM</span></span> <span class="svc-p"><span class="c">OH</span></span></td>
+        <td style="padding:5px 10px;color:#374151;">Yantian → Shekou</td>
+        <td style="padding:5px 10px;"><span class="chip chip-g"><span class="dot" style="background:#059669;"></span>Completed</span></td>
+        <td style="padding:5px 10px;color:#059669;font-weight:600;">1 doc ✓</td>
+      </tr>
+
+      <!-- Order 2: header row -->
+      <tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;">
+        <td style="padding:6px 10px;"></td>
+        <td style="padding:6px 10px;font-size:12px;font-weight:700;color:#111827;" colspan="2">Shopee <span class="mono" style="font-size:9px;color:#9ca3af;margin-left:4px;">PTRIP12302100002</span></td>
+        <td colspan="5" style="padding:6px 10px;font-size:10px;color:#9ca3af;">16 bags · 890 kg · Flatbed</td>
+      </tr>
+      <!-- Order 2: job rows -->
+      <tr style="border-bottom:1px solid #f3f4f6;cursor:pointer;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+        <td style="padding:5px 10px;"></td>
+        <td style="padding:5px 10px;padding-left:24px;color:#0D9488;font-weight:600;">J01</td>
+        <td style="padding:5px 10px;" class="mono">176-33121632</td>
+        <td style="padding:5px 10px;font-weight:600;">Hoboken</td>
+        <td style="padding:5px 10px;"><span class="svc-p"><span class="c">CR</span></span> <span class="svc-p"><span class="c">FM</span></span></td>
+        <td style="padding:5px 10px;color:#374151;">Yantian → Dongguan</td>
+        <td style="padding:5px 10px;"><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>In Progress</span></td>
+        <td style="padding:5px 10px;color:#9ca3af;">0 docs</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f3f4f6;cursor:pointer;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+        <td style="padding:5px 10px;"></td>
+        <td style="padding:5px 10px;padding-left:24px;color:#0D9488;font-weight:600;">J02</td>
+        <td style="padding:5px 10px;" class="mono">176-33121632</td>
+        <td style="padding:5px 10px;font-weight:600;">V3</td>
+        <td style="padding:5px 10px;"><span class="svc-p"><span class="c">EC</span></span></td>
+        <td style="padding:5px 10px;color:#374151;">Export customs</td>
+        <td style="padding:5px 10px;"><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+        <td style="padding:5px 10px;color:#9ca3af;">0 docs</td>
+      </tr>
+
+      <!-- Order 3: rejected -->
+      <tr style="background:#fefafa;border-bottom:1px solid #e5e7eb;">
+        <td style="padding:6px 10px;color:#dc2626;font-weight:700;">!</td>
+        <td style="padding:6px 10px;font-size:12px;font-weight:700;color:#111827;" colspan="2">AliExpress <span class="mono" style="font-size:9px;color:#9ca3af;margin-left:4px;">PTRIP13302100101</span></td>
+        <td colspan="5" style="padding:6px 10px;font-size:10px;color:#9ca3af;">36 bags · 1500 kg · Priority</td>
+      </tr>
+      <tr style="background:#fefafa;border-bottom:1px solid #f3f4f6;cursor:pointer;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='#fefafa'">
+        <td style="padding:5px 10px;"></td>
+        <td style="padding:5px 10px;padding-left:24px;color:#0D9488;font-weight:600;">J01</td>
+        <td style="padding:5px 10px;" class="mono">176-98765421</td>
+        <td style="padding:5px 10px;font-weight:600;">Camila</td>
+        <td style="padding:5px 10px;"><span class="svc-p"><span class="c">FM</span></span> <span class="svc-p"><span class="c">CS</span></span></td>
+        <td style="padding:5px 10px;color:#374151;">Qianhai → Huanggang</td>
+        <td style="padding:5px 10px;"><span class="chip chip-r"><span class="dot" style="background:#dc2626;"></span>Rejected</span></td>
+        <td style="padding:5px 10px;color:#9ca3af;">0 docs</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════ -->
+<div class="verdict">
+  <h3>Recommendation: Option A (Sub-Table)</h3>
+  <p style="font-size:12px;line-height:1.7;color:#374151;">
+    <strong>Option A</strong> is the best fit for Excel-native users. It keeps the expand/collapse flow (so the list stays manageable at 50 orders) but the expanded content is a TABLE, not cards. Same column alignment, same visual language, same density.
+  </p>
+  <p style="font-size:12px;line-height:1.7;color:#374151;margin-top:8px;">
+    <strong>Option C</strong> (inline rows) is the most radical and densest, but 50 orders × 2-3 jobs = 150 rows is too much for a single flat view. It would need virtual scrolling and grouping logic.
+  </p>
+  <p style="font-size:12px;line-height:1.7;color:#374151;margin-top:8px;">
+    <strong>Option B</strong> (cards) should be dropped — it fights the dense table aesthetic we just established.
+  </p>
+  <p style="font-size:12px;line-height:1.7;color:#374151;margin-top:8px;">
+    The sub-table also naturally shows the <strong>"Proofs" column</strong> — the admin can see at a glance which jobs have uploaded proof documents and which don't, without expanding further.
+  </p>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW: One Service Per Job</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #0D9488; }
+  .hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #0D9488; border-radius: 0 6px 6px 0; }
+  .context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+  .pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+  .cons { background: #fefafa; border: 1px solid #fecaca; }
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+  .verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+  .svc-p { padding: 1px 5px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.1); display: inline-flex; align-items: center; gap: 3px; }
+  .svc-p .c { color: #0D9488; font-family: monospace; }
+  .chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+  .chip-n { border: 1px solid #e5e7eb; background: #fff; color: #6b7280; }
+  .chip-g { border: 1px solid #a7f3d0; background: #f0fdf4; color: #059669; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 5px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW: One Service Per Job</h1>
+<div class="hmw">"How might we structure jobs so that each one tracks exactly 1 service — making billing, status, and proof tracking unambiguous?"</div>
+
+<div class="context">
+  <strong>User's requirement:</strong> "Each job should only have 1 service code. If the same vendor handles trucking AND customs, those should be 2 separate jobs — not 1 job with 2 services."
+  <br><br>
+  <strong>Why this matters for billing:</strong> Each service maps to an L1/L2 cost ID. If a job bundles FM+EC, which service is the proof for? Which service is completed vs pending? The billing team needs service-level granularity.
+</div>
+
+<!-- ═══════════════════════════════ -->
+<h2>Option A: 1 Job = 1 Service (Proposed)</h2>
+
+<div class="rationale">
+  <strong>Model change:</strong> `Job.services` (array) → `Job.service` (single ServiceType). If vendor Camila does FM Trucking AND EC Customs, that's 2 jobs: J01 (Camila · FM) and J02 (Camila · EC). Each job tracks its own status, proof, and activity log independently.
+
+  <div class="pros-cons">
+    <div class="pros"><strong>✓ Pros</strong><br>
+      • Billing is unambiguous — 1 job = 1 cost line item<br>
+      • Status per service: trucking can be "completed" while customs is still "in progress"<br>
+      • Proof per service: delivery receipt for trucking, clearance doc for customs<br>
+      • Simpler data model — no need for ServiceMultiSelect component<br>
+      • Sub-table view is cleaner — each row IS a billable line item
+    </div>
+    <div class="cons"><strong>✕ Cons</strong><br>
+      • More jobs per order (was 2-3, now 3-5 for complex orders)<br>
+      • Same vendor appears multiple times in the table<br>
+      • Create form changes — add 1 job per service instead of grouping
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <!-- Show how the sub-table looks with 1-service jobs -->
+  <div style="padding:8px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;font-size:12px;">
+    <span style="font-weight:700;">Shopee</span>
+    <span class="mono" style="font-size:9px;color:#9ca3af;margin-left:6px;">PTRIP12302100002</span>
+    <span style="font-size:11px;color:#9ca3af;margin-left:12px;">16 bags · 890 kg</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:30px;"></th>
+        <th>Job</th>
+        <th>Vendor</th>
+        <th>Service</th>
+        <th>Origin → Destination</th>
+        <th>Status</th>
+        <th>Proofs</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="cursor:pointer;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+        <td></td>
+        <td style="font-weight:600;color:#0D9488;">J01</td>
+        <td style="font-weight:600;">Hoboken</td>
+        <td><span class="svc-p"><span class="c">CR</span> Cargo Retrieval</span></td>
+        <td style="color:#374151;">Yantian Port → Dongguan</td>
+        <td><span class="chip chip-g"><span class="dot" style="background:#059669;"></span>Completed</span></td>
+        <td style="color:#059669;font-weight:600;">1 doc ✓</td>
+      </tr>
+      <tr style="cursor:pointer;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+        <td></td>
+        <td style="font-weight:600;color:#0D9488;">J02</td>
+        <td style="font-weight:600;">Hoboken</td>
+        <td><span class="svc-p"><span class="c">FM</span> Trucking</span></td>
+        <td style="color:#374151;">Yantian Port → Dongguan</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>In Progress</span></td>
+        <td style="color:#9ca3af;">0 docs</td>
+      </tr>
+      <tr style="cursor:pointer;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+        <td></td>
+        <td style="font-weight:600;color:#0D9488;">J03</td>
+        <td style="font-weight:600;">V3</td>
+        <td><span class="svc-p"><span class="c">EC</span> Export Customs</span></td>
+        <td style="color:#374151;">Customs clearance (parallel)</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+        <td style="color:#9ca3af;">0 docs</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div style="font-size:11px;color:#374151;line-height:1.6;margin-bottom:24px;">
+  <strong>Notice:</strong> Hoboken appears twice (J01 + J02) — same vendor, different services. Each has its own status and proof column. The billing team sees 3 line items, each with a clear cost ID.
+</div>
+
+<!-- ═══════════════════════════════ -->
+<h2>Option B: 1 Job = Multiple Services (Current)</h2>
+
+<div class="rationale">
+  <strong>Current model:</strong> `Job.services` is an array. Hoboken handles CR+FM as one job. Service pills are shown together.
+
+  <div class="pros-cons">
+    <div class="pros"><strong>✓ Pros</strong><br>
+      • Fewer jobs per order (simpler table)<br>
+      • Groups vendor assignments naturally<br>
+      • Create form allows multi-select services per vendor
+    </div>
+    <div class="cons"><strong>✕ Cons</strong><br>
+      • Billing is ambiguous — which service in the bundle is the proof for?<br>
+      • Status is per-job, not per-service — trucking and customs share one status<br>
+      • If trucking is done but customs isn't, what status does the job show?<br>
+      • The original CR requirement was 1 service per child trip
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div style="padding:8px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;font-size:12px;">
+    <span style="font-weight:700;">Shopee</span>
+    <span class="mono" style="font-size:9px;color:#9ca3af;margin-left:6px;">PTRIP12302100002</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:30px;"></th>
+        <th>Job</th>
+        <th>Vendor</th>
+        <th>Services</th>
+        <th>Origin → Destination</th>
+        <th>Status</th>
+        <th>Proofs</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td></td>
+        <td style="font-weight:600;color:#0D9488;">J01</td>
+        <td style="font-weight:600;">Hoboken</td>
+        <td><span class="svc-p"><span class="c">CR</span></span> <span class="svc-p"><span class="c">FM</span></span></td>
+        <td style="color:#374151;">Yantian Port → Dongguan</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>In Progress</span></td>
+        <td style="color:#9ca3af;">0 docs <span style="color:#dc2626;">← which service?</span></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td style="font-weight:600;color:#0D9488;">J02</td>
+        <td style="font-weight:600;">V3</td>
+        <td><span class="svc-p"><span class="c">EC</span></span></td>
+        <td style="color:#374151;">Customs clearance</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+        <td style="color:#9ca3af;">0 docs</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════ -->
+<h2>Impact on Create Form</h2>
+
+<div class="screen">
+  <div style="padding:16px;">
+    <div style="font-size:13px;font-weight:700;margin-bottom:12px;">Option A: Simpler creation flow</div>
+    <div style="font-size:11px;color:#374151;line-height:1.7;">
+      Step 2 stays the same: check off required services (FM, EC, CS...).<br>
+      Step 3 changes: instead of grouping services into jobs, each service IS a job.<br>
+      For each selected service → assign a vendor + origin + destination.<br>
+      <br>
+      <strong>The form becomes:</strong><br>
+      <div style="margin:8px 0;padding:10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;">
+        <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #f3f4f6;">
+          <span style="color:#0D9488;font-weight:700;width:30px;">J01</span>
+          <span class="svc-p"><span class="c">FM</span> Trucking</span>
+          <span style="color:#374151;">→</span>
+          <span style="font-weight:600;">Hoboken</span>
+          <span style="color:#9ca3af;font-size:10px;margin-left:auto;">Yantian → Dongguan</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #f3f4f6;">
+          <span style="color:#0D9488;font-weight:700;width:30px;">J02</span>
+          <span class="svc-p"><span class="c">CR</span> Cargo Retrieval</span>
+          <span style="color:#374151;">→</span>
+          <span style="font-weight:600;">Hoboken</span>
+          <span style="color:#9ca3af;font-size:10px;margin-left:auto;">Yantian → Dongguan</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:4px 0;">
+          <span style="color:#0D9488;font-weight:700;width:30px;">J03</span>
+          <span class="svc-p"><span class="c">EC</span> Export Customs</span>
+          <span style="color:#374151;">→</span>
+          <span style="font-weight:600;">V3</span>
+          <span style="color:#9ca3af;font-size:10px;margin-left:auto;">Customs clearance</span>
+        </div>
+      </div>
+      Each row is: <strong>service badge → vendor dropdown → route.</strong> No multi-select needed. Cleaner, faster.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ -->
+<div class="verdict">
+  <h3>Recommendation: Option A (1 Job = 1 Service)</h3>
+  <p style="font-size:12px;line-height:1.7;color:#374151;">
+    This aligns with the user's explicit requirement and the original CR spec. It makes billing unambiguous, allows per-service status tracking and proof uploads, and simplifies the create form. The trade-off (more rows in the sub-table) is actually a benefit — each row IS a billable line item. The sub-table becomes the billing worksheet.
+  </p>
+  <p style="font-size:12px;line-height:1.7;color:#374151;margin-top:8px;">
+    <strong>Data model change:</strong> `Job.services: ServiceType[]` → `Job.service: ServiceType` (single). ServiceMultiSelect component replaced with a simple service dropdown per job.
+  </p>
+</div>
+
+</div>
+</body>
+</html>

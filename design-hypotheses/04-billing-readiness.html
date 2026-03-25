@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>H07: Billing Readiness</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 13px; line-height: 1.5; }
+  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .page { max-width: 1300px; margin: 0 auto; padding: 40px 24px 80px; }
+  h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.7px; margin-bottom: 6px; }
+  h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; margin: 48px 0 8px; color: #0D9488; }
+  .subtitle { color: #6b7280; font-size: 14px; margin-bottom: 40px; line-height: 1.7; }
+  .hmw { font-size: 18px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 24px; letter-spacing: -0.3px; padding: 16px 20px; background: #fff; border-left: 4px solid #0D9488; border-radius: 0 12px 12px 0; }
+  .hyp-label { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 12px; border-radius: 8px; margin-bottom: 12px; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 20px; margin-bottom: 20px; font-size: 13px; color: #374151; line-height: 1.7; }
+  .rationale strong { color: #111827; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .pros, .cons { padding: 12px 16px; border-radius: 10px; font-size: 12px; line-height: 1.6; }
+  .pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+  .cons { background: #fef2f2; border: 1px solid #fecaca; }
+  .pros strong { color: #059669; }
+  .cons strong { color: #dc2626; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 16px; overflow: hidden; margin: 16px 0 40px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .screen-inner { padding: 24px; }
+
+  /* Shared */
+  .nav-mini { display: flex; align-items: center; height: 44px; padding: 0 20px; background: #fff; border-bottom: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; gap: 8px; }
+  .nav-mini .active { color: #0D9488; font-weight: 600; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; border: 1.5px solid; }
+  .badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .b-green { border-color: #a7f3d0; background: #f0fdf4; color: #059669; }
+  .b-green .dot { background: #059669; }
+  .b-amber { border-color: #fde68a; background: #fefce8; color: #b45309; }
+  .b-amber .dot { background: #d97706; }
+
+  .mock-row { display: flex; align-items: center; gap: 16px; padding: 14px 20px; border-bottom: 1px solid #f3f4f6; }
+  .mock-row .customer { font-size: 14px; font-weight: 700; }
+  .mock-row .meta { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+  .chip-green { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 600; border: 1.5px solid #a7f3d0; background: #f0fdf4; color: #059669; }
+  .chip-amber { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 600; border: 1.5px solid #fde68a; background: #fefce8; color: #b45309; }
+  .chip-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+  /* Billing ready indicators */
+  .ready-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; background: #0D9488; color: #fff; }
+  .ready-badge-outline { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 8px; font-size: 11px; font-weight: 600; background: rgba(13,148,136,0.06); color: #0D9488; border: 1.5px solid rgba(13,148,136,0.2); }
+  .not-ready { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 8px; font-size: 11px; font-weight: 600; color: #9ca3af; background: #f9fafb; border: 1.5px solid #e5e7eb; }
+  .checklist-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; font-size: 12px; border-bottom: 1px solid #f3f4f6; }
+  .check-done { width: 18px; height: 18px; border-radius: 5px; background: #059669; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+  .check-pending { width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid #d1d5db; display: flex; align-items: center; justify-content: center; }
+  .progress-bar { height: 6px; border-radius: 3px; background: #e5e7eb; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 3px; background: #0D9488; }
+  .validate-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 700; background: #0D9488; color: #fff; border: none; cursor: pointer; box-shadow: 0 1px 4px rgba(13,148,136,0.3); }
+  .validate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 14px; padding: 24px; margin-top: 48px; }
+  .verdict h3 { color: #059669; font-size: 16px; margin-bottom: 8px; font-weight: 700; }
+  .verdict ul { margin: 12px 0; padding-left: 20px; line-height: 1.8; font-size: 13px; color: #374151; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>H07: Trip Completion & Billing Readiness</h1>
+<div class="hmw">"How might we help ops admins confidently know which trips are ready for vendor payment — and which aren't?"</div>
+<p class="subtitle">
+  The end goal of every trip is billing. Teleport pays vendors for completed services. The admin needs to know:
+  (1) Are all jobs done? (2) Is proof uploaded for every job? (3) Can I confidently validate this trip for payment?
+  <br><br>
+  <strong>The cost of getting this wrong:</strong> Paying a vendor for incomplete work, or delaying payment for completed work. Both erode vendor relationships.
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2>Option A: Visual Indicator on Trip Row</h2>
+<span class="hyp-label" style="background:#ecfdf5;color:#059669;">Passive — information at a glance</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> When ALL jobs in a trip are "Completed" AND ALL jobs have at least 1 proof document uploaded, the trip row shows a "Ready for Billing" badge. The admin scans the list and sees which trips are ready without clicking into anything.
+  <div class="pros-cons">
+    <div class="pros"><strong>✓ Pros</strong><br>• Zero-click — visible in the trip list<br>• Clear binary state: ready or not ready<br>• Works with the existing table layout<br>• Simple to implement</div>
+    <div class="cons"><strong>✕ Cons</strong><br>• No action — just information. Admin still needs to navigate somewhere to validate.<br>• Doesn't show WHAT's missing if not ready<br>• Can clutter the trip row if there are many indicators</div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="nav-mini">TripManager <span class="active">Trips</span></div>
+  <div class="screen-inner">
+    <!-- Ready trip -->
+    <div class="mock-row" style="background:#f0fdf9;">
+      <span style="color:#d1d5db;">▸</span>
+      <div style="flex:1;">
+        <div class="customer">AliExpress</div>
+        <div class="meta">176-84329871 · 24 bags · Yantian → Shekou</div>
+      </div>
+      <div class="chip-green"><span class="chip-dot" style="background:#059669;"></span>Camila · FM+OH</div>
+      <div style="margin-left:8px;">
+        <span class="ready-badge">✓ Ready for Billing</span>
+      </div>
+    </div>
+
+    <!-- Not ready — jobs still pending -->
+    <div class="mock-row">
+      <span style="color:#d1d5db;">▸</span>
+      <div style="flex:1;">
+        <div class="customer">Shopee</div>
+        <div class="meta">176-33121632 · 16 bags · Yantian → Dongguan → SZX</div>
+      </div>
+      <div style="display:flex;gap:4px;">
+        <div class="chip-green"><span class="chip-dot" style="background:#059669;"></span>Hoboken</div>
+        <div class="chip-amber"><span class="chip-dot" style="background:#d97706;"></span>V3</div>
+      </div>
+      <div style="margin-left:8px;">
+        <span class="not-ready">1 of 2 jobs done</span>
+      </div>
+    </div>
+
+    <!-- Completed but missing proof -->
+    <div class="mock-row">
+      <span style="color:#d1d5db;">▸</span>
+      <div style="flex:1;">
+        <div class="customer">Shein</div>
+        <div class="meta">176-11456287 · 10 bags · GZ Baiyun → GZ Region</div>
+      </div>
+      <div style="display:flex;gap:4px;">
+        <div class="chip-green"><span class="chip-dot" style="background:#059669;"></span>V4 · FM</div>
+        <div class="chip-green"><span class="chip-dot" style="background:#059669;"></span>V4 · OH</div>
+      </div>
+      <div style="margin-left:8px;">
+        <span class="ready-badge-outline">⚠ Missing 1 proof</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2>Option B: Billing Readiness Checklist in Expanded View</h2>
+<span class="hyp-label" style="background:#eff6ff;color:#2563eb;">Active — shows what's missing + action</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> When a trip is expanded, show a "Billing Readiness" section below the job cards. It shows a checklist: each job needs ✓ Completed status + ✓ Proof uploaded. Items that are done show green checks; items that aren't show what's missing. A "Validate for Billing" button activates only when all checks pass.
+  <div class="pros-cons">
+    <div class="pros"><strong>✓ Pros</strong><br>• Shows exactly WHAT's missing — actionable<br>• "Validate" button is the clear next step<br>• Progress bar gives a visual sense of how close the trip is<br>• Naturally fits in the expanded trip view</div>
+    <div class="cons"><strong>✕ Cons</strong><br>• Requires expanding the trip to see readiness<br>• Adds vertical space to the expanded view<br>• "Validate" action needs careful design to prevent accidental validation</div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="nav-mini">TripManager <span class="active">Trips</span></div>
+  <div class="screen-inner">
+    <div style="font-size:14px;font-weight:700;margin-bottom:4px;">AliExpress <span class="mono" style="font-size:10px;color:#9ca3af;background:#f3f4f6;padding:2px 6px;border-radius:4px;border:1px solid #e5e7eb;">PTRIP12302100001</span></div>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:16px;">Yantian Port → Shekou Port · <span class="mono" style="font-size:11px;">176-84329871</span></div>
+
+    <!-- Job cards (completed) -->
+    <div style="display:flex;gap:12px;margin-bottom:20px;">
+      <div style="flex:1;border:2px solid #a7f3d0;border-radius:12px;padding:14px;background:#fff;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:6px;">Camila</div>
+        <div style="display:flex;gap:4px;margin-bottom:6px;">
+          <span style="font-size:10px;padding:2px 6px;border-radius:99px;background:rgba(13,148,136,0.07);border:1px solid rgba(13,148,136,0.12);"><span style="color:#0D9488;font-family:monospace;font-weight:600;">FM</span> Trucking</span>
+          <span style="font-size:10px;padding:2px 6px;border-radius:99px;background:rgba(13,148,136,0.07);border:1px solid rgba(13,148,136,0.12);"><span style="color:#0D9488;font-family:monospace;font-weight:600;">OH</span> Origin Handling</span>
+        </div>
+        <div style="font-size:12px;color:#6b7280;">Yantian Port → Shekou Port</div>
+        <div style="margin-top:10px;padding-top:10px;border-top:2px solid #a7f3d0;font-size:12px;font-weight:700;color:#059669;display:flex;align-items:center;gap:6px;">
+          <span style="width:7px;height:7px;border-radius:50%;background:#059669;"></span> Completed · 10:30
+        </div>
+      </div>
+    </div>
+
+    <!-- Billing Readiness section -->
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:14px;padding:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#111827;">Billing Readiness</div>
+          <div style="font-size:11px;color:#9ca3af;">All requirements must be met before validation</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:11px;color:#9ca3af;margin-bottom:4px;">2 of 2 complete</div>
+          <div class="progress-bar" style="width:120px;">
+            <div class="progress-fill" style="width:100%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="checklist-item">
+        <span class="check-done">✓</span>
+        <div style="flex:1;">
+          <div style="font-size:12px;font-weight:600;">J01 Camila — Status: Completed</div>
+          <div style="font-size:11px;color:#9ca3af;">FM Trucking + Origin Handling</div>
+        </div>
+      </div>
+      <div class="checklist-item" style="border:none;">
+        <span class="check-done">✓</span>
+        <div style="flex:1;">
+          <div style="font-size:12px;font-weight:600;">J01 Camila — Proof uploaded</div>
+          <div style="font-size:11px;color:#9ca3af;">POD-yantian-shekou.jpg</div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:end;margin-top:16px;padding-top:16px;border-top:1px solid #e5e7eb;">
+        <button class="validate-btn">✓ Validate for Billing</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2>Option C: Separate "Validation" View</h2>
+<span class="hyp-label" style="background:#fffbeb;color:#d97706;">Dedicated workflow for billing admins</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> The "Validation" nav link leads to a dedicated page showing ONLY trips that are candidates for billing (all jobs completed). Each trip shows a summary with proof status, checklist, and a validate button. This is the admin's workspace — separate from the ops planner's trip list.
+  <div class="pros-cons">
+    <div class="pros"><strong>✓ Pros</strong><br>• Clean separation: ops manages trips, admin validates for billing<br>• No clutter in the trip list — billing indicators are in their own space<br>• Can add billing-specific features (cost breakdown, invoice generation) without polluting the trip list<br>• Matches the CR requirement for a "validation dashboard"</div>
+    <div class="cons"><strong>✕ Cons</strong><br>• Admin needs to switch between trips list and validation view<br>• Duplicates trip information in a second view<br>• More pages to build and maintain</div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="nav-mini">TripManager Trips <span class="active">Validation</span> Master Data</div>
+  <div class="screen-inner">
+    <div style="display:flex;align-items:end;justify-content:space-between;margin-bottom:20px;">
+      <div>
+        <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px;">Validation</div>
+        <div style="font-size:13px;color:#9ca3af;">Review completed trips and approve for vendor payment</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <span style="padding:6px 14px;border-radius:9px;font-size:12px;font-weight:600;background:rgba(13,148,136,0.08);color:#0D9488;">Ready (2)</span>
+        <span style="padding:6px 14px;border-radius:9px;font-size:12px;color:#9ca3af;background:#f9fafb;border:1px solid #e5e7eb;">Missing Proof (1)</span>
+        <span style="padding:6px 14px;border-radius:9px;font-size:12px;color:#9ca3af;background:#f9fafb;border:1px solid #e5e7eb;">Validated (4)</span>
+      </div>
+    </div>
+
+    <!-- Ready for validation -->
+    <div style="border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;margin-bottom:12px;">
+      <div style="padding:16px 20px;display:flex;align-items:center;gap:12px;background:#f0fdf9;">
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:700;">AliExpress</div>
+          <div style="font-size:11px;color:#9ca3af;margin-top:2px;"><span class="mono" style="font-size:10px;">176-84329871</span> · 1 job · All completed · All proofs uploaded</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="text-align:right;">
+            <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;">Total services</div>
+            <div style="font-size:14px;font-weight:700;color:#111827;">2</div>
+          </div>
+          <button class="validate-btn" style="font-size:12px;padding:8px 16px;">✓ Validate</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Missing proof -->
+    <div style="border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;margin-bottom:12px;">
+      <div style="padding:16px 20px;display:flex;align-items:center;gap:12px;">
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:700;">Shein</div>
+          <div style="font-size:11px;color:#9ca3af;margin-top:2px;"><span class="mono" style="font-size:10px;">176-11456287</span> · 2 jobs · All completed · <span style="color:#d97706;font-weight:600;">1 proof missing</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="ready-badge-outline" style="font-size:11px;">⚠ Incomplete</span>
+          <button class="validate-btn" style="font-size:12px;padding:8px 16px;" disabled>✓ Validate</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Already validated -->
+    <div style="border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;opacity:0.6;">
+      <div style="padding:16px 20px;display:flex;align-items:center;gap:12px;background:#f9fafb;">
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:700;">Previous Trip <span style="font-size:11px;font-weight:400;color:#9ca3af;">(example)</span></div>
+          <div style="font-size:11px;color:#9ca3af;margin-top:2px;">Validated on 07 Mar 2026 by Ops Admin</div>
+        </div>
+        <span style="padding:4px 12px;border-radius:8px;font-size:11px;font-weight:600;background:#f3f4f6;color:#6b7280;">✓ Validated</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="verdict">
+  <h3>Recommendation: Option B + C combined</h3>
+  <ul>
+    <li><strong>Option B (checklist in expanded view)</strong> gives ops planners immediate visibility into what's missing — they can fix it right there (upload proof, change status).</li>
+    <li><strong>Option C (validation page)</strong> gives the billing admin a dedicated workspace — they don't want to scroll through all trips, just the ones ready for payment.</li>
+    <li><strong>Combined:</strong> The trip list shows a small readiness indicator (from Option A) so ops knows at a glance. The expanded view shows the checklist (Option B). The Validation page (Option C) is the admin's billing workspace.</li>
+    <li><strong>This matches the CR requirement</strong> which explicitly mentions a "Trips Validation dashboard" for admins.</li>
+  </ul>
+</div>
+
+</div>
+</body>
+</html>

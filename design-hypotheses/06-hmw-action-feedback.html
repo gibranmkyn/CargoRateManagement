@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW: Action Feedback</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 13px; line-height: 1.5; }
+  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .page { max-width: 1300px; margin: 0 auto; padding: 40px 24px 80px; }
+  h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.7px; margin-bottom: 6px; }
+  h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; margin: 48px 0 8px; color: #0D9488; }
+  .subtitle { color: #6b7280; font-size: 14px; margin-bottom: 40px; line-height: 1.7; }
+  .hmw { font-size: 18px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 24px; letter-spacing: -0.3px; padding: 16px 20px; background: #fff; border-left: 4px solid #0D9488; border-radius: 0 12px 12px 0; }
+  .hyp-label { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 12px; border-radius: 8px; margin-bottom: 12px; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 20px; margin-bottom: 20px; font-size: 13px; color: #374151; line-height: 1.7; }
+  .rationale strong { color: #111827; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .pros, .cons { padding: 12px 16px; border-radius: 10px; font-size: 12px; line-height: 1.6; }
+  .pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+  .cons { background: #fef2f2; border: 1px solid #fecaca; }
+  .pros strong { color: #059669; }
+  .cons strong { color: #dc2626; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 16px; overflow: hidden; margin: 16px 0 40px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+
+  /* Shared nav */
+  .nav { display: flex; align-items: center; height: 48px; padding: 0 20px; background: #fff; border-bottom: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; gap: 12px; }
+  .nav .logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; color: #111827; }
+  .nav .logo-icon { width: 26px; height: 26px; background: #0D9488; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 800; }
+  .nav-item { font-size: 12px; color: #9ca3af; padding: 5px 10px; border-radius: 7px; cursor: pointer; }
+  .nav-item.active { color: #0D9488; background: rgba(13,148,136,0.08); font-weight: 600; }
+  .nav-spacer { flex: 1; }
+  .nav-avatar { width: 28px; height: 28px; border-radius: 50%; background: #e5e7eb; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #6b7280; }
+
+  /* Toolbar */
+  .toolbar { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid #e5e7eb; }
+  .toolbar-title { font-size: 16px; font-weight: 700; color: #111827; }
+  .toolbar-spacer { flex: 1; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 9px; font-size: 12px; font-weight: 600; border: 1.5px solid #e5e7eb; background: #fff; color: #374151; cursor: pointer; }
+  .btn-primary { background: #0D9488; color: #fff; border-color: #0D9488; box-shadow: 0 1px 4px rgba(13,148,136,0.25); }
+  .btn-sm { padding: 5px 12px; font-size: 11px; border-radius: 7px; }
+
+  /* Badge / chips */
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; border: 1.5px solid; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; }
+
+  /* Table rows */
+  .trip-row { display: flex; align-items: center; gap: 14px; padding: 14px 20px; border-bottom: 1px solid #f3f4f6; transition: all 0.3s; }
+  .trip-row:hover { background: #f9fafb; }
+  .trip-row .expand { color: #d1d5db; font-size: 10px; cursor: pointer; }
+  .trip-row .customer { font-size: 14px; font-weight: 700; color: #111827; }
+  .trip-row .meta { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+  .trip-row .meta .mono { font-size: 10px; background: #f3f4f6; padding: 1px 5px; border-radius: 3px; border: 1px solid #e5e7eb; }
+  .trip-row .jobs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .job-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 600; border: 1.5px solid; }
+  .jc-green { border-color: #a7f3d0; background: #f0fdf4; color: #059669; }
+  .jc-blue { border-color: #bfdbfe; background: #eff6ff; color: #2563eb; }
+  .jc-amber { border-color: #fde68a; background: #fefce8; color: #b45309; }
+
+  /* Toast notification */
+  .toast-container { position: absolute; top: 16px; right: 16px; z-index: 20; display: flex; flex-direction: column; gap: 8px; }
+  .toast { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,0.12); min-width: 300px; animation: slideIn 0.3s ease; }
+  .toast-green { background: #059669; color: #fff; }
+  .toast-amber { background: #d97706; color: #fff; }
+  .toast-red { background: #dc2626; color: #fff; }
+  .toast .toast-icon { width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+  .toast .toast-text { flex: 1; }
+  .toast .toast-text .toast-sub { font-size: 11px; font-weight: 400; opacity: 0.85; margin-top: 2px; }
+  .toast .toast-dismiss { font-size: 14px; opacity: 0.6; cursor: pointer; }
+  .toast .toast-progress { position: absolute; bottom: 0; left: 0; height: 3px; background: rgba(255,255,255,0.3); border-radius: 0 0 12px 12px; width: 70%; }
+
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  /* Inline highlight effects */
+  .glow-green { border-left: 4px solid #059669; background: #f0fdf4; }
+  .just-created-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 5px; font-size: 9px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; background: #059669; color: #fff; animation: fadeTag 1s ease; }
+  @keyframes fadeTag {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .pulse-chip { animation: pulse 0.6s ease; }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(13,148,136,0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(13,148,136,0); }
+    100% { box-shadow: 0 0 0 0 rgba(13,148,136,0); }
+  }
+
+  /* Proof upload area */
+  .proof-area { display: flex; gap: 8px; align-items: center; padding: 10px 16px; background: #f9fafb; border-radius: 10px; margin-top: 8px; }
+  .proof-file { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 11px; }
+  .proof-file.new { border-color: #a7f3d0; background: #f0fdf4; }
+  .new-badge-sm { display: inline-flex; padding: 1px 5px; border-radius: 4px; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; background: #059669; color: #fff; }
+
+  /* Expanded trip detail for inline demos */
+  .trip-detail { padding: 16px 20px 16px 48px; border-bottom: 1px solid #e5e7eb; background: #fafafa; }
+  .trip-detail-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .detail-field label { display: block; font-size: 10px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 3px; }
+  .detail-field .val { font-size: 13px; font-weight: 600; color: #111827; }
+
+  .context-box { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 20px; margin-bottom: 32px; border-left: 4px solid #d97706; }
+  .context-box .context-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #d97706; margin-bottom: 8px; }
+  .context-box p { font-size: 13px; color: #374151; line-height: 1.7; }
+
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 14px; padding: 24px; margin-top: 48px; }
+  .verdict h3 { color: #059669; font-size: 16px; margin-bottom: 8px; font-weight: 700; }
+  .verdict ul { margin: 12px 0; padding-left: 20px; line-height: 1.8; font-size: 13px; color: #374151; }
+
+  .scenario-label { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 10px; border-radius: 6px; margin-bottom: 6px; background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>H06: Action Feedback</h1>
+<div class="hmw">"How might we give ops instant confidence their action worked — without interrupting their flow?"</div>
+
+<div class="context-box">
+  <div class="context-title">Scenario</div>
+  <p>
+    The ops planner just created a new trip for AliExpress, changed 3 job statuses from "Pending" to "In Transit", and uploaded a proof of delivery document — all within 2 minutes. They need confirmation that each action was saved successfully, without having to stop and verify. If they don't trust the system saved their work, they'll double-check everything manually, slowing them down.
+  </p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2>Option A: Toast Notifications</h2>
+<span class="hyp-label" style="background:#ecfdf5;color:#059669;">Industry standard — familiar pattern</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Every action triggers a toast notification in the top-right corner. Green for success, amber for warnings, red for errors. Toasts auto-dismiss after 4 seconds. The planner sees text confirmation ("Trip created — TRIP20260325-005") without needing to click or navigate anywhere.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>Industry standard — every SaaS tool uses this pattern<br>Non-blocking — planner can keep working while the toast shows<br>Clear text confirmation of exactly what happened<br>Color-coded severity (green/amber/red) provides quick scan</div>
+    <div class="cons"><strong>Cons</strong><br>Can be missed if planner is looking at a different part of the screen<br>No persistence — gone after 4 seconds, no way to review<br>Rapid-fire actions = stacked toasts that feel noisy<br>Toast position (top-right) is far from the action area (center/left)</div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <div class="nav-item active">Trips</div>
+    <div class="nav-item">Vendors</div>
+    <div class="nav-item">Customers</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-avatar">MR</div>
+  </div>
+  <div class="toolbar">
+    <div class="toolbar-title">Trips</div>
+    <div class="toolbar-spacer"></div>
+    <div class="btn btn-sm">Filter</div>
+    <div class="btn btn-sm btn-primary">+ New Trip</div>
+  </div>
+  <div style="position:relative;min-height:340px;">
+    <!-- Toast stack -->
+    <div class="toast-container">
+      <div class="toast toast-green" style="position:relative;">
+        <div class="toast-icon">&#10003;</div>
+        <div class="toast-text">
+          Trip created successfully
+          <div class="toast-sub">TRIP20260325-005 &middot; AliExpress &middot; 28 bags</div>
+        </div>
+        <div class="toast-dismiss">&times;</div>
+        <div class="toast-progress"></div>
+      </div>
+    </div>
+    <!-- Trip rows -->
+    <div class="trip-row">
+      <span class="expand">&#9654;</span>
+      <div style="flex:1;">
+        <div class="customer">Shopee</div>
+        <div class="meta"><span class="mono">TRIP20260325-001</span> &middot; 176-84329871 &middot; 18 bags &middot; Yantian &rarr; Shekou</div>
+      </div>
+      <div class="jobs">
+        <span class="job-chip jc-green"><span class="dot" style="background:#059669;"></span>Hoboken &middot; FM+OH</span>
+      </div>
+    </div>
+    <div class="trip-row">
+      <span class="expand">&#9654;</span>
+      <div style="flex:1;">
+        <div class="customer">AliExpress</div>
+        <div class="meta"><span class="mono">TRIP20260325-003</span> &middot; 176-84330458 &middot; 36 bags &middot; Qianhai FTZ &rarr; Shekou</div>
+      </div>
+      <div class="jobs">
+        <span class="job-chip jc-blue"><span class="dot" style="background:#2563eb;"></span>Jorge &middot; FM+CS</span>
+      </div>
+    </div>
+    <div class="trip-row">
+      <span class="expand">&#9654;</span>
+      <div style="flex:1;">
+        <div class="customer">AliExpress</div>
+        <div class="meta"><span class="mono">TRIP20260325-005</span> &middot; 176-84330780 &middot; 28 bags &middot; Futian &rarr; Shekou</div>
+      </div>
+      <div class="jobs">
+        <span class="job-chip jc-amber"><span class="dot" style="background:#d97706;"></span>Pending &middot; FM+OH</span>
+      </div>
+    </div>
+    <div class="trip-row">
+      <span class="expand">&#9654;</span>
+      <div style="flex:1;">
+        <div class="customer">Shopee</div>
+        <div class="meta"><span class="mono">TRIP20260325-004</span> &middot; 176-84330599 &middot; 22 bags &middot; Futian &rarr; Shekou</div>
+      </div>
+      <div class="jobs">
+        <span class="job-chip jc-green"><span class="dot" style="background:#059669;"></span>FastTrack &middot; CS</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Second mockup: multiple toasts for rapid actions -->
+<p style="font-size:12px;color:#6b7280;margin-bottom:8px;margin-top:-24px;">
+  <strong>Scenario:</strong> Three status changes in quick succession
+</p>
+<div class="screen">
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <div class="nav-item active">Trips</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-avatar">MR</div>
+  </div>
+  <div style="position:relative;min-height:280px;padding:20px;">
+    <div class="toast-container">
+      <div class="toast toast-green" style="position:relative;">
+        <div class="toast-icon">&#10003;</div>
+        <div class="toast-text">
+          Status updated to In Transit
+          <div class="toast-sub">Hoboken &middot; FM+OH &middot; TRIP20260325-001</div>
+        </div>
+        <div class="toast-dismiss">&times;</div>
+      </div>
+      <div class="toast toast-green" style="position:relative;opacity:0.85;">
+        <div class="toast-icon">&#10003;</div>
+        <div class="toast-text">
+          Status updated to In Transit
+          <div class="toast-sub">Jorge &middot; FM+CS &middot; TRIP20260325-003</div>
+        </div>
+        <div class="toast-dismiss">&times;</div>
+      </div>
+      <div class="toast toast-green" style="position:relative;opacity:0.7;">
+        <div class="toast-icon">&#10003;</div>
+        <div class="toast-text">
+          Proof uploaded
+          <div class="toast-sub">delivery-receipt-0325.pdf &middot; TRIP20260325-001</div>
+        </div>
+        <div class="toast-dismiss">&times;</div>
+      </div>
+    </div>
+    <div style="color:#9ca3af;font-size:12px;padding:20px;">
+      <em>Problem: 3 stacked toasts in quick succession can feel noisy and visually cluttered.</em>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2>Option B: Inline State Changes</h2>
+<span class="hyp-label" style="background:#eff6ff;color:#2563eb;">Spatial feedback — co-located with the action</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> No toast. Instead, the changed element itself provides feedback through visual animation. A new trip row gets a green left border glow and a "JUST CREATED" tag that fades after 10 seconds. A status change causes the chip to pulse briefly. An uploaded proof file appears with a "NEW" badge. Feedback is always right where the action happened.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>Feedback is spatially co-located — impossible to miss if you're looking at the element<br>No extra UI chrome (no toast layer, no notification stack)<br>Feels "native" — like the data itself is responding to your action<br>Scales naturally — each element handles its own feedback</div>
+    <div class="cons"><strong>Cons</strong><br>If the user scrolled away from the element, they see nothing<br>No text confirmation of what happened — just visual change<br>Animations can be subtle and missed on large screens<br>"JUST CREATED" tag needs to auto-remove, adding complexity</div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <div class="nav-item active">Trips</div>
+    <div class="nav-item">Vendors</div>
+    <div class="nav-item">Customers</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-avatar">MR</div>
+  </div>
+  <div class="toolbar">
+    <div class="toolbar-title">Trips</div>
+    <div class="toolbar-spacer"></div>
+    <div class="btn btn-sm">Filter</div>
+    <div class="btn btn-sm btn-primary">+ New Trip</div>
+  </div>
+  <div style="min-height:340px;">
+    <div class="scenario-label" style="margin:12px 20px 0;">After creating a new trip</div>
+    <!-- New trip with green glow -->
+    <div class="trip-row glow-green">
+      <span class="expand">&#9654;</span>
+      <div style="flex:1;">
+        <div class="customer">AliExpress <span class="just-created-tag">JUST CREATED</span></div>
+        <div class="meta"><span class="mono">TRIP20260325-005</span> &middot; 176-84330780 &middot; 28 bags &middot; Futian &rarr; Shekou</div>
+      </div>
+      <div class="jobs">
+        <span class="job-chip jc-amber"><span class="dot" style="background:#d97706;"></span>Pending &middot; FM+OH</span>
+      </div>
+    </div>
+    <div class="scenario-label" style="margin:16px 20px 0;">After changing status from Pending to In Transit</div>
+    <!-- Row with pulsing chip -->
+    <div class="trip-row">
+      <span class="expand">&#9654;</span>
+      <div style="flex:1;">
+        <div class="customer">Shopee</div>
+        <div class="meta"><span class="mono">TRIP20260325-001</span> &middot; 176-84329871 &middot; 18 bags &middot; Yantian &rarr; Shekou</div>
+      </div>
+      <div class="jobs">
+        <span class="job-chip jc-blue pulse-chip" style="border-width:2.5px;"><span class="dot" style="background:#2563eb;"></span>Hoboken &middot; FM+OH &middot; <strong>In Transit</strong></span>
+      </div>
+    </div>
+    <div class="scenario-label" style="margin:16px 20px 0;">After uploading proof</div>
+    <!-- Expanded row showing proof -->
+    <div class="trip-row">
+      <span class="expand" style="color:#0D9488;">&#9660;</span>
+      <div style="flex:1;">
+        <div class="customer">AliExpress</div>
+        <div class="meta"><span class="mono">TRIP20260325-003</span> &middot; 176-84330458 &middot; 36 bags &middot; Qianhai FTZ &rarr; Shekou</div>
+      </div>
+      <div class="jobs">
+        <span class="job-chip jc-green"><span class="dot" style="background:#059669;"></span>Jorge &middot; FM+CS &middot; Completed</span>
+      </div>
+    </div>
+    <div class="trip-detail">
+      <div style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:8px;">Proof of Delivery</div>
+      <div class="proof-area">
+        <div class="proof-file">
+          <span style="color:#9ca3af;">&#128196;</span> pod-ali-20260324.pdf <span style="color:#9ca3af;font-size:10px;">1.2 MB</span>
+        </div>
+        <div class="proof-file new">
+          <span style="color:#059669;">&#128196;</span> delivery-receipt-0325.pdf <span style="color:#9ca3af;font-size:10px;">840 KB</span>
+          <span class="new-badge-sm">NEW</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2>Option C: Toast + Inline Combined</h2>
+<span class="hyp-label" style="background:#fffbeb;color:#d97706;">Recommended — redundant feedback for zero doubt</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Combines both approaches. Every action shows a toast notification AND the affected element provides inline visual feedback. The toast gives text confirmation ("Trip created"), the inline highlight gives spatial confirmation (green glow on the row). For rapid-fire actions (e.g., changing 5 statuses in a row), toasts are batched: "3 jobs updated" instead of 3 separate toasts.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>Redundant feedback = zero chance of missing it<br>Toast handles "what happened" (text), inline handles "where" (spatial)<br>Batch toasts solve the stacking problem for rapid actions<br>Users who prefer toast get toast; users who prefer inline get inline</div>
+    <div class="cons"><strong>Cons</strong><br>Potentially noisy if many actions happen fast<br>More implementation work — two systems to maintain<br>Need smart batching logic to avoid overwhelming the planner</div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <div class="nav-item active">Trips</div>
+    <div class="nav-item">Vendors</div>
+    <div class="nav-item">Customers</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-avatar">MR</div>
+  </div>
+  <div class="toolbar">
+    <div class="toolbar-title">Trips</div>
+    <div class="toolbar-spacer"></div>
+    <div class="btn btn-sm">Filter</div>
+    <div class="btn btn-sm btn-primary">+ New Trip</div>
+  </div>
+  <div style="position:relative;min-height:360px;">
+    <!-- Toast for trip creation -->
+    <div class="toast-container">
+      <div class="toast toast-green" style="position:relative;">
+        <div class="toast-icon">&#10003;</div>
+        <div class="toast-text">
+          Trip created successfully
+          <div class="toast-sub">TRIP20260325-005 &middot; AliExpress &middot; 28 bags</div>
+        </div>
+        <div class="toast-dismiss">&times;</div>
+        <div class="toast-progress"></div>
+      </div>
+    </div>
+    <!-- Rows: new one has glow + tag -->
+    <div class="trip-row">
+      <span class="expand">&#9654;</span>
+      <div style="flex:1;">
+        <div class="customer">Shopee</div>
+        <div class="meta"><span class="mono">TRIP20260325-001</span> &middot; 176-84329871 &middot; 18 bags &middot; Yantian &rarr; Shekou</div>
+      </div>
+      <div class="jobs">
+        <span class="job-chip jc-green"><span class="dot" style="background:#059669;"></span>Hoboken &middot; FM+OH</span>
+      </div>
+    </div>
+    <div class="trip-row">
+      <span class="expand">&#9654;</span>
+      <div style="flex:1;">
+        <div class="customer">AliExpress</div>
+        <div class="meta"><span class="mono">TRIP20260325-003</span> &middot; 176-84330458 &middot; 36 bags &middot; Qianhai FTZ &rarr; Shekou</div>
+      </div>
+      <div class="jobs">
+        <span class="job-chip jc-blue"><span class="dot" style="background:#2563eb;"></span>Jorge &middot; FM+CS</span>
+      </div>
+    </div>
+    <!-- NEW trip with glow + tag (inline feedback) -->
+    <div class="trip-row glow-green">
+      <span class="expand">&#9654;</span>
+      <div style="flex:1;">
+        <div class="customer">AliExpress <span class="just-created-tag">JUST CREATED</span></div>
+        <div class="meta"><span class="mono">TRIP20260325-005</span> &middot; 176-84330780 &middot; 28 bags &middot; Futian &rarr; Shekou</div>
+      </div>
+      <div class="jobs">
+        <span class="job-chip jc-amber"><span class="dot" style="background:#d97706;"></span>Pending &middot; FM+OH</span>
+      </div>
+    </div>
+    <div class="trip-row">
+      <span class="expand">&#9654;</span>
+      <div style="flex:1;">
+        <div class="customer">Shopee</div>
+        <div class="meta"><span class="mono">TRIP20260325-004</span> &middot; 176-84330599 &middot; 22 bags &middot; Futian &rarr; Shekou</div>
+      </div>
+      <div class="jobs">
+        <span class="job-chip jc-green"><span class="dot" style="background:#059669;"></span>FastTrack &middot; CS</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Batch toast example -->
+<p style="font-size:12px;color:#6b7280;margin-bottom:8px;margin-top:-24px;">
+  <strong>Batch toast scenario:</strong> 3 status changes in quick succession collapse into one toast
+</p>
+<div class="screen">
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <div class="nav-item active">Trips</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-avatar">MR</div>
+  </div>
+  <div style="position:relative;min-height:260px;">
+    <div class="toast-container">
+      <div class="toast toast-green" style="position:relative;">
+        <div class="toast-icon">&#10003;</div>
+        <div class="toast-text">
+          3 jobs updated to In Transit
+          <div class="toast-sub">Hoboken FM+OH, Jorge FM+CS, FastTrack CS</div>
+        </div>
+        <div class="toast-dismiss">&times;</div>
+        <div class="toast-progress"></div>
+      </div>
+    </div>
+    <!-- Rows with pulsing chips (inline feedback) -->
+    <div class="trip-row">
+      <span class="expand">&#9654;</span>
+      <div style="flex:1;">
+        <div class="customer">Shopee</div>
+        <div class="meta"><span class="mono">TRIP20260325-001</span> &middot; 18 bags</div>
+      </div>
+      <div class="jobs">
+        <span class="job-chip jc-blue pulse-chip" style="border-width:2.5px;"><span class="dot" style="background:#2563eb;"></span>Hoboken &middot; In Transit</span>
+      </div>
+    </div>
+    <div class="trip-row">
+      <span class="expand">&#9654;</span>
+      <div style="flex:1;">
+        <div class="customer">AliExpress</div>
+        <div class="meta"><span class="mono">TRIP20260325-003</span> &middot; 36 bags</div>
+      </div>
+      <div class="jobs">
+        <span class="job-chip jc-blue pulse-chip" style="border-width:2.5px;"><span class="dot" style="background:#2563eb;"></span>Jorge &middot; In Transit</span>
+      </div>
+    </div>
+    <div class="trip-row">
+      <span class="expand">&#9654;</span>
+      <div style="flex:1;">
+        <div class="customer">Shopee</div>
+        <div class="meta"><span class="mono">TRIP20260325-004</span> &middot; 22 bags</div>
+      </div>
+      <div class="jobs">
+        <span class="job-chip jc-blue pulse-chip" style="border-width:2.5px;"><span class="dot" style="background:#2563eb;"></span>FastTrack &middot; In Transit</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="verdict">
+  <h3>Recommendation: Option C — Toast + Inline Combined</h3>
+  <p style="font-size:13px;color:#374151;line-height:1.7;margin-bottom:12px;">
+    Dual-channel feedback gives the planner maximum confidence with minimal disruption.
+  </p>
+  <ul>
+    <li><strong>Toast = text confirmation.</strong> "Trip created — TRIP20260325-005" gives the planner words they can read. If they're looking at the top-right, they see it immediately.</li>
+    <li><strong>Inline = spatial confirmation.</strong> The green glow and "JUST CREATED" tag confirm the action right where it happened. If the planner is looking at the table, they see it immediately.</li>
+    <li><strong>Batch toasts solve the noise problem.</strong> If the planner changes 5 statuses in 10 seconds, one toast says "5 jobs updated to In Transit" instead of 5 separate toasts. Each row still gets its individual pulse animation.</li>
+    <li><strong>Error handling is toast-first.</strong> If an action fails, the toast turns red with a clear error message and a "Retry" button. The inline element reverts to its previous state.</li>
+    <li><strong>Toast auto-dismiss: 4s for success, sticky for errors.</strong> Success toasts disappear on their own. Error toasts stay until dismissed or retried.</li>
+  </ul>
+</div>
+
+</div>
+</body>
+</html>

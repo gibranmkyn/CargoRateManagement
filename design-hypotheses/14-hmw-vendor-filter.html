@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW: Vendor Filter</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #0D9488; }
+  .hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #0D9488; border-radius: 0 6px 6px 0; }
+  .context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+  .label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+  .pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+  .cons { background: #fefafa; border: 1px solid #fecaca; }
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+  .verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+  /* Dense table system */
+  .nav { display: flex; align-items: center; height: 40px; padding: 0 16px; background: #fff; border-bottom: 1px solid #e5e7eb; font-size: 11px; color: #9ca3af; gap: 10px; }
+  .nav .logo { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 12px; color: #111827; }
+  .nav .logo-icon { width: 22px; height: 22px; background: #0D9488; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: white; font-size: 9px; font-weight: 800; }
+  .nav-item { font-size: 11px; color: #9ca3af; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+  .nav-item.active { color: #0D9488; background: rgba(13,148,136,0.08); font-weight: 600; }
+  .nav-spacer { flex: 1; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 8px 12px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; font-size: 12px; }
+  tr.hoverable { cursor: pointer; }
+  tr.hoverable:hover { background: #f9fafb; }
+
+  .chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+  .chip-n { border: 1px solid #e5e7eb; background: #fff; color: #6b7280; }
+  .chip-g { border: 1px solid #a7f3d0; background: #f0fdf4; color: #059669; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+  .svc-p { padding: 1px 5px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.1); display: inline-flex; align-items: center; gap: 3px; }
+  .svc-p .c { color: #0D9488; font-family: monospace; }
+
+  .toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid #e5e7eb; }
+  .toolbar-title { font-size: 13px; font-weight: 700; color: #111827; }
+  .toolbar-spacer { flex: 1; }
+  .btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #374151; cursor: pointer; }
+  .btn-primary { background: #0D9488; color: #fff; border-color: #0D9488; }
+  .btn-sm { padding: 3px 8px; font-size: 10px; }
+
+  .filter-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+  .filter-select { padding: 5px 10px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 11px; font-family: inherit; background: #fff; color: #374151; cursor: pointer; appearance: auto; }
+  .filter-select-active { border-color: #0D9488; background: #f0fdfa; color: #0D9488; font-weight: 600; }
+  .filter-input { padding: 5px 10px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 11px; font-family: inherit; background: #fff; color: #374151; width: 180px; }
+  .filter-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; }
+
+  .filter-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; background: #f0fdfa; border: 1px solid #ccfbf1; color: #0D9488; }
+  .filter-chip-x { cursor: pointer; font-size: 13px; margin-left: 2px; color: #0D9488; opacity: 0.6; }
+  .filter-chip-x:hover { opacity: 1; }
+
+  /* Vendor view tab styles */
+  .tab-bar { display: flex; gap: 0; border-bottom: 1px solid #e5e7eb; padding: 0 12px; }
+  .tab { padding: 8px 12px; font-size: 11px; font-weight: 600; color: #9ca3af; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab.active { color: #0D9488; border-bottom-color: #0D9488; }
+
+  .vendor-group { border-bottom: 1px solid #e5e7eb; }
+  .vendor-group-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f9fafb; font-size: 12px; font-weight: 700; color: #111827; }
+  .vendor-count { font-size: 10px; font-weight: 600; color: #9ca3af; background: #f3f4f6; padding: 1px 6px; border-radius: 99px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>H14: Vendor Filter</h1>
+<div class="hmw">"How might we let ops find all jobs assigned to a specific vendor -- for coordination, performance review, or capacity planning?"</div>
+
+<div class="context">
+  <strong>Problem:</strong> Currently the filter bar only supports MAWB search and customer dropdown. Ops often needs to answer questions like "show me all HaleSun jobs today" to coordinate pickups, or "how many jobs does Gonda have this week" for capacity planning. Right now, they scroll through 50+ rows, mentally filtering vendor names. For vendor coordination calls, this wastes 5-10 minutes per session.
+</div>
+
+<!-- ======================================== -->
+<h2>Option A: Vendor Dropdown in Filter Bar</h2>
+<span class="label" style="background:#ecfdf5;color:#059669;">Recommended</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Add a "Vendor" dropdown as a third filter, next to the existing MAWB search and Customer dropdown. Selecting a vendor filters the table to show only orders that have at least one job assigned to that vendor. The selected vendor is highlighted in the dropdown with teal styling.
+
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>
+      Fits the existing filter pattern -- consistent, learnable<br>
+      Simple to implement -- same dropdown pattern as Customer filter<br>
+      Can combine filters: "HaleSun + TikTok" = HaleSun jobs for TikTok<br>
+      Clear state: dropdown shows what's filtered
+    </div>
+    <div class="cons"><strong>Cons</strong><br>
+      Filter bar gets wider with a third dropdown<br>
+      Vendor list could be long (20+ vendors) -- needs search in dropdown<br>
+      Only filters at the order level, not individual job level
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <div class="nav-item active">Orders</div>
+    <div class="nav-item">Vendors</div>
+    <div class="nav-spacer"></div>
+  </div>
+  <div class="toolbar">
+    <div class="toolbar-title">Orders</div>
+    <div class="toolbar-spacer"></div>
+    <div class="btn btn-sm btn-primary">+ New Order</div>
+  </div>
+  <div class="filter-bar">
+    <span class="filter-label">Filter:</span>
+    <input class="filter-input" placeholder="Search MAWB..." value="" style="width:150px;" />
+    <select class="filter-select">
+      <option>All Customers</option>
+      <option>TikTok</option>
+      <option>Shopee</option>
+      <option>Shein</option>
+      <option>AliExpress</option>
+      <option>Temu</option>
+    </select>
+    <select class="filter-select filter-select-active">
+      <option>All Vendors</option>
+      <option selected>HaleSun</option>
+      <option>SevenSeas</option>
+      <option>Gonda</option>
+      <option>ThaiKee</option>
+      <option>The Lorry</option>
+    </select>
+    <span style="font-size:10px;color:#6b7280;margin-left:4px;">Showing 3 of 12 orders</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:24px;"></th>
+        <th>Customer</th>
+        <th>MAWB</th>
+        <th>Vendor</th>
+        <th>Service</th>
+        <th>Pickup</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="hoverable">
+        <td style="color:#d1d5db;font-size:10px;">&#9654;</td>
+        <td style="font-weight:600;">TikTok</td>
+        <td class="mono" style="font-size:10px;color:#6b7280;">160-83291045</td>
+        <td style="font-weight:600;color:#0D9488;">HaleSun</td>
+        <td><span class="svc-p"><span class="c">FM</span></span></td>
+        <td>25 Mar, 14:30</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+      </tr>
+      <tr class="hoverable">
+        <td style="color:#d1d5db;font-size:10px;">&#9654;</td>
+        <td style="font-weight:600;">Shein</td>
+        <td class="mono" style="font-size:10px;color:#6b7280;">160-83291198</td>
+        <td style="font-weight:600;color:#0D9488;">HaleSun</td>
+        <td><span class="svc-p"><span class="c">CR</span></span></td>
+        <td>25 Mar, 17:00</td>
+        <td><span class="chip chip-g"><span class="dot" style="background:#059669;"></span>Completed</span></td>
+      </tr>
+      <tr class="hoverable">
+        <td style="color:#d1d5db;font-size:10px;">&#9654;</td>
+        <td style="font-weight:600;">Temu</td>
+        <td class="mono" style="font-size:10px;color:#6b7280;">160-83291355</td>
+        <td style="font-weight:600;color:#0D9488;">HaleSun</td>
+        <td><span class="svc-p"><span class="c">OH</span></span></td>
+        <td>26 Mar, 09:00</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>In Progress</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ======================================== -->
+<h2>Option B: Clickable Vendor Names in Table</h2>
+<span class="label" style="background:#eff6ff;color:#2563eb;">Direct manipulation</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Click any vendor name in the table (in the vendor column or in job chips) to instantly filter the table to that vendor. A "filtered by: HaleSun x" chip appears above the table. Click the "x" to clear the filter. The vendor names act as interactive links (teal color, pointer cursor).
+
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>
+      Fastest path -- one click on any vendor name in the table<br>
+      Feels intuitive -- "click what you want to see more of"<br>
+      No filter bar clutter -- the table IS the filter<br>
+      Works from any row without opening dropdowns
+    </div>
+    <div class="cons"><strong>Cons</strong><br>
+      Non-standard -- clickable cell text is unexpected in a data table<br>
+      Conflicts with row-click (expand) interaction<br>
+      No way to discover the feature without trying it<br>
+      Hard to combine with other filters (customer + vendor)
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <div class="nav-item active">Orders</div>
+    <div class="nav-item">Vendors</div>
+    <div class="nav-spacer"></div>
+  </div>
+  <div class="toolbar">
+    <div class="toolbar-title">Orders</div>
+    <div class="toolbar-spacer"></div>
+    <div class="btn btn-sm btn-primary">+ New Order</div>
+  </div>
+  <!-- Active filter chip -->
+  <div style="padding:6px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:6px;">
+    <span class="filter-label">Filtered by:</span>
+    <span class="filter-chip">HaleSun <span class="filter-chip-x">&times;</span></span>
+    <span style="font-size:10px;color:#6b7280;">3 orders</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:24px;"></th>
+        <th>Customer</th>
+        <th>MAWB</th>
+        <th>Vendor</th>
+        <th>Service</th>
+        <th>Pickup</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="hoverable">
+        <td style="color:#d1d5db;font-size:10px;">&#9654;</td>
+        <td style="font-weight:600;">TikTok</td>
+        <td class="mono" style="font-size:10px;color:#6b7280;">160-83291045</td>
+        <td style="font-weight:600;color:#0D9488;cursor:pointer;text-decoration:underline;text-decoration-color:rgba(13,148,136,0.3);text-underline-offset:2px;">HaleSun</td>
+        <td><span class="svc-p"><span class="c">FM</span></span></td>
+        <td>25 Mar, 14:30</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+      </tr>
+      <tr class="hoverable">
+        <td style="color:#d1d5db;font-size:10px;">&#9654;</td>
+        <td style="font-weight:600;">Shein</td>
+        <td class="mono" style="font-size:10px;color:#6b7280;">160-83291198</td>
+        <td style="font-weight:600;color:#0D9488;cursor:pointer;text-decoration:underline;text-decoration-color:rgba(13,148,136,0.3);text-underline-offset:2px;">HaleSun</td>
+        <td><span class="svc-p"><span class="c">CR</span></span></td>
+        <td>25 Mar, 17:00</td>
+        <td><span class="chip chip-g"><span class="dot" style="background:#059669;"></span>Completed</span></td>
+      </tr>
+      <tr class="hoverable">
+        <td style="color:#d1d5db;font-size:10px;">&#9654;</td>
+        <td style="font-weight:600;">Temu</td>
+        <td class="mono" style="font-size:10px;color:#6b7280;">160-83291355</td>
+        <td style="font-weight:600;color:#0D9488;cursor:pointer;text-decoration:underline;text-decoration-color:rgba(13,148,136,0.3);text-underline-offset:2px;">HaleSun</td>
+        <td><span class="svc-p"><span class="c">OH</span></span></td>
+        <td>26 Mar, 09:00</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>In Progress</span></td>
+      </tr>
+    </tbody>
+  </table>
+  <div style="padding:6px 12px;font-size:10px;color:#9ca3af;background:#f9fafb;border-top:1px solid #e5e7eb;">
+    Vendor names are clickable links -- click any to filter the table
+  </div>
+</div>
+
+<!-- ======================================== -->
+<h2>Option C: Vendor View Tab (Grouped View)</h2>
+<span class="label" style="background:#fffbeb;color:#d97706;">Separate perspective</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> A "By Vendor" tab above the table groups all jobs by vendor. Each vendor section shows a header with the vendor name and job count, followed by their assigned jobs across all orders. This gives a vendor-centric view of the workload.
+
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>
+      Complete vendor-centric view -- see all jobs for each vendor<br>
+      Great for capacity planning ("HaleSun has 5 jobs, Gonda has 2")<br>
+      Natural for vendor coordination calls<br>
+      Could show vendor stats (completion rate, total cargo weight)
+    </div>
+    <div class="cons"><strong>Cons</strong><br>
+      A whole new view to build and maintain<br>
+      Context switch -- user leaves the order-centric table<br>
+      Doesn't compose with existing MAWB/customer filters<br>
+      Overkill for Phase 1 -- a filter covers 80% of the use case
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <div class="nav-item active">Orders</div>
+    <div class="nav-item">Vendors</div>
+    <div class="nav-spacer"></div>
+  </div>
+  <div class="tab-bar">
+    <div class="tab">By Order</div>
+    <div class="tab active">By Vendor</div>
+  </div>
+  <!-- HaleSun group -->
+  <div class="vendor-group">
+    <div class="vendor-group-header">
+      HaleSun <span class="vendor-count">3 jobs</span>
+      <span style="font-size:10px;color:#9ca3af;font-weight:400;margin-left:auto;">Total: 42 bags &middot; 1,890 kg</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>MAWB</th>
+          <th>Service</th>
+          <th>Route</th>
+          <th>Pickup</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="hoverable">
+          <td style="font-weight:600;">TikTok</td>
+          <td class="mono" style="font-size:10px;color:#6b7280;">160-83291045</td>
+          <td><span class="svc-p"><span class="c">FM</span></span></td>
+          <td>Dongguan &rarr; Shenzhen Port</td>
+          <td>25 Mar, 14:30</td>
+          <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+        </tr>
+        <tr class="hoverable">
+          <td style="font-weight:600;">Shein</td>
+          <td class="mono" style="font-size:10px;color:#6b7280;">160-83291198</td>
+          <td><span class="svc-p"><span class="c">CR</span></span></td>
+          <td>Yantian Port &rarr; Dongguan WH</td>
+          <td>25 Mar, 17:00</td>
+          <td><span class="chip chip-g"><span class="dot" style="background:#059669;"></span>Completed</span></td>
+        </tr>
+        <tr class="hoverable">
+          <td style="font-weight:600;">Temu</td>
+          <td class="mono" style="font-size:10px;color:#6b7280;">160-83291355</td>
+          <td><span class="svc-p"><span class="c">OH</span></span></td>
+          <td>Nansha &rarr; Guangzhou WH</td>
+          <td>26 Mar, 09:00</td>
+          <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>In Progress</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <!-- SevenSeas group -->
+  <div class="vendor-group">
+    <div class="vendor-group-header">
+      SevenSeas <span class="vendor-count">2 jobs</span>
+      <span style="font-size:10px;color:#9ca3af;font-weight:400;margin-left:auto;">Total: 28 bags &middot; 1,120 kg</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>MAWB</th>
+          <th>Service</th>
+          <th>Route</th>
+          <th>Pickup</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="hoverable">
+          <td style="font-weight:600;">Shopee</td>
+          <td class="mono" style="font-size:10px;color:#6b7280;">160-83291102</td>
+          <td><span class="svc-p"><span class="c">EC</span></span></td>
+          <td>Customs clearance (Yantian)</td>
+          <td>26 Mar, 10:00</td>
+          <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+        </tr>
+        <tr class="hoverable">
+          <td style="font-weight:600;">AliExpress</td>
+          <td class="mono" style="font-size:10px;color:#6b7280;">160-83291410</td>
+          <td><span class="svc-p"><span class="c">CS</span></span></td>
+          <td>Qianhai FTZ &rarr; Shekou Port</td>
+          <td>27 Mar, 08:00</td>
+          <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <!-- Collapsed groups -->
+  <div class="vendor-group">
+    <div class="vendor-group-header" style="cursor:pointer;">
+      <span style="color:#d1d5db;font-size:10px;margin-right:4px;">&#9654;</span>
+      Gonda <span class="vendor-count">2 jobs</span>
+    </div>
+  </div>
+  <div class="vendor-group">
+    <div class="vendor-group-header" style="cursor:pointer;">
+      <span style="color:#d1d5db;font-size:10px;margin-right:4px;">&#9654;</span>
+      ThaiKee <span class="vendor-count">1 job</span>
+    </div>
+  </div>
+  <div class="vendor-group">
+    <div class="vendor-group-header" style="cursor:pointer;">
+      <span style="color:#d1d5db;font-size:10px;margin-right:4px;">&#9654;</span>
+      The Lorry <span class="vendor-count">1 job</span>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================== -->
+<div class="verdict">
+  <h3>Recommendation: Option A -- Vendor Dropdown in Filter Bar</h3>
+  <p style="font-size:12px;line-height:1.7;color:#374151;">
+    The vendor dropdown is the simplest addition that covers the core need: "show me all jobs for vendor X." It fits the existing filter pattern (MAWB search + Customer dropdown), so ops doesn't need to learn a new interaction. It composes naturally with existing filters -- "HaleSun + TikTok" answers "what HaleSun jobs do we have for TikTok?" Option B (clickable vendor names) is a nice shortcut but breaks the standard table interaction model and is hard to discover. Option C (vendor view tab) is valuable for capacity planning but is a Phase 2 feature -- it requires a new view, new grouping logic, and new summary stats. The dropdown covers 80% of the use case with 20% of the effort.
+  </p>
+</div>
+
+</div>
+</body>
+</html>

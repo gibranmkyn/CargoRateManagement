@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW: Empty State</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #0D9488; }
+  h3 { font-size: 14px; font-weight: 700; margin: 24px 0 8px; }
+  .hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #0D9488; border-radius: 0 6px 6px 0; }
+  .context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+  .rationale strong { color: #111827; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+  .label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+  .pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+  .cons { background: #fefafa; border: 1px solid #fecaca; }
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+  .verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { text-align: left; padding: 5px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; }
+  tr:hover { background: #f9fafb; }
+
+  .nav-dense { height: 40px; padding: 0 16px; background: #fff; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 2px; font-size: 12px; }
+  .nav-dense a { padding: 4px 10px; border-radius: 4px; color: #9ca3af; text-decoration: none; }
+  .nav-dense a.active { color: #0D9488; background: rgba(13,148,136,0.06); font-weight: 600; }
+  .nav-dense .logo { display: flex; align-items: center; gap: 6px; margin-right: 16px; font-weight: 700; font-size: 13px; color: #111827; }
+  .nav-dense .logo-dot { width: 20px; height: 20px; background: #0D9488; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 9px; }
+
+  .btn-sm { padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: pointer; font-family: inherit; border: none; }
+  .btn-teal { background: #0D9488; color: #fff; }
+  .btn-ghost { background: transparent; color: #9ca3af; border: 1px solid #e5e7eb; }
+
+  .stat-bar { display: flex; gap: 0; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
+  .stat-item { flex: 1; padding: 8px 12px; border-right: 1px solid #f3f4f6; text-align: center; }
+  .stat-item:last-child { border-right: none; }
+  .stat-num { font-size: 18px; font-weight: 800; font-family: 'SF Mono', monospace; color: #111827; }
+  .stat-num.zero { color: #d1d5db; }
+  .stat-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #9ca3af; }
+
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .dot-green { background: #10b981; }
+  .dot-red { background: #ef4444; }
+  .dot-gray { background: #9ca3af; }
+
+  .sample-tag { display: inline-flex; align-items: center; padding: 1px 6px; border-radius: 3px; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW: Empty State</h1>
+<div class="hmw">"How might we welcome a first-time ops planner so the empty app feels like an invitation, not a broken page?"</div>
+
+<div class="context">
+  <strong>Current problem:</strong> Day 1, a new ops planner opens Teleport OS. No delivery orders exist yet. They see: a stats bar showing all zeros, an empty table with column headers, and nothing else. No guidance on what to do first. The app looks broken -- like data failed to load, not like a fresh workspace.<br><br>
+  <strong>Who this affects:</strong> New Teleport ops team members, new customer onboarding (when the ops planner sets up the first TikTok or Shopee delivery), and demo scenarios where the app needs to look intentional even without data.<br><br>
+  <strong>Constraints:</strong> Ops planners are logistics professionals, not consumer app users. They don't need onboarding tours or tooltips. They need a clear signal: "this is working, here's how to start." The empty state should feel professional and dense -- not like a SaaS marketing page.
+</div>
+
+<!-- ======================================================= -->
+<h2>Option A: Empty Table with Inline CTA</h2>
+<span class="label" style="background:#f0fdf4;color:#059669;">Recommended</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> The page layout stays exactly the same: nav, stats bar, table with column headers. But the table body -- where data rows would be -- shows a centered empty state message: a teal ship icon, "No delivery orders yet," a one-line explanation, and a [+ New Order] button. The stats bar shows "0" for everything (honest, not hidden). When the first order is created, the empty state disappears and data rows replace it. No special logic to dismiss.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>- Minimal -- doesn't change the page structure at all<br>- The empty state IS the table body, so it disappears naturally when data exists<br>- Clear CTA: the [+ New Order] button is the obvious next action<br>- Stats bar with zeros is honest and functional (no fake data, no hiding)<br>- No "dismiss" logic needed -- data replaces the empty state</div>
+    <div class="cons"><strong>Cons</strong><br>- Doesn't explain what an "order" is or how the 3-step workflow works<br>- For someone truly unfamiliar with Teleport OS, the CTA is "create an order" but they don't know what that entails<br>- Slightly plain -- professional, but not inspiring</div>
+  </div>
+</div>
+
+<h3>Full page: empty state with inline CTA in table body</h3>
+<div class="screen">
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a class="active" href="#">Delivery Orders</a>
+    <a href="#">Rates</a>
+    <a href="#">Billing</a>
+    <a href="#">Master Data</a>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <button class="btn-sm btn-teal">+ New Order</button>
+    </div>
+  </div>
+
+  <div style="padding:16px;">
+    <!-- Page header -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;">
+      <div>
+        <div style="font-size:16px;font-weight:800;">Delivery Orders</div>
+        <div style="font-size:11px;color:#9ca3af;">Manage cross-border cargo deliveries</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <input style="border:1px solid #e5e7eb;border-radius:4px;padding:4px 8px;font-size:11px;font-family:inherit;width:180px;background:#fff;" placeholder="Search MAWB, customer..." />
+        <select style="border:1px solid #e5e7eb;border-radius:4px;padding:4px 8px;font-size:11px;font-family:inherit;background:#fff;">
+          <option>All Statuses</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Stats bar: all zeros -->
+    <div class="stat-bar">
+      <div class="stat-item">
+        <div class="stat-num zero">0</div>
+        <div class="stat-label">Total orders</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num zero">0</div>
+        <div class="stat-label"><span class="status-dot dot-gray"></span> Pending</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num zero">0</div>
+        <div class="stat-label"><span class="status-dot dot-gray"></span> In Progress</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num zero">0</div>
+        <div class="stat-label"><span class="status-dot dot-green"></span> Completed</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num zero">0</div>
+        <div class="stat-label"><span class="status-dot dot-red"></span> Rejected</div>
+      </div>
+    </div>
+
+    <!-- Table with empty state in body -->
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:120px;">Order ID</th>
+            <th style="width:100px;">Customer</th>
+            <th>MAWB</th>
+            <th style="width:60px;">Bags</th>
+            <th style="width:80px;">Weight</th>
+            <th style="width:140px;">Jobs</th>
+            <th style="width:90px;">Status</th>
+            <th style="width:90px;">Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="8" style="padding:60px 20px;text-align:center;border-bottom:none;">
+              <!-- Ship icon circle -->
+              <div style="width:48px;height:48px;border-radius:12px;background:rgba(13,148,136,0.08);border:1px solid rgba(13,148,136,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 21l.5-3A10 10 0 0 1 12 8h0a10 10 0 0 1 9.5 10l.5 3"/><path d="M12 8V3"/><path d="M4.5 18h15"/></svg>
+              </div>
+              <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:4px;">No delivery orders yet</div>
+              <div style="font-size:11px;color:#6b7280;margin-bottom:14px;">Create your first order to start managing vendor deliveries.</div>
+              <button class="btn-sm btn-teal" style="padding:6px 16px;font-size:11px;">+ New Order</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<h2>Option B: Getting Started Guide</h2>
+<span class="label" style="background:#eff6ff;color:#2563eb;">Educational</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Instead of the empty table body, show a 3-step "getting started" card that explains the Teleport OS workflow. Step 1: "Create a delivery order" -- assign customer, MAWB, and services. Step 2: "Track job progress" -- vendors execute, you monitor status changes. Step 3: "Validate for billing" -- upload proofs, validate completed orders. A [Get Started] button at the bottom takes the user to the create order form. The card disappears permanently after the first order is created.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>- Educates new users on the full workflow (create &rarr; track &rarr; validate)<br>- Feels intentional -- the empty state was designed, not neglected<br>- Single CTA is clear: "Get Started"<br>- Disappears after first order -- returning users never see it again</div>
+    <div class="cons"><strong>Cons</strong><br>- Takes more vertical space than a simple message<br>- The "track" and "validate" steps are things ops will learn by doing, not by reading<br>- Feels slightly hand-hold-y for logistics professionals<br>- Requires "dismissal" logic: must track whether user has created first order</div>
+  </div>
+</div>
+
+<h3>Full page: getting started card replacing the table body</h3>
+<div class="screen">
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a class="active" href="#">Delivery Orders</a>
+    <a href="#">Rates</a>
+    <a href="#">Billing</a>
+    <a href="#">Master Data</a>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <button class="btn-sm btn-teal">+ New Order</button>
+    </div>
+  </div>
+
+  <div style="padding:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;">
+      <div>
+        <div style="font-size:16px;font-weight:800;">Delivery Orders</div>
+        <div style="font-size:11px;color:#9ca3af;">Manage cross-border cargo deliveries</div>
+      </div>
+    </div>
+
+    <!-- Stats bar: all zeros -->
+    <div class="stat-bar">
+      <div class="stat-item">
+        <div class="stat-num zero">0</div>
+        <div class="stat-label">Total orders</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num zero">0</div>
+        <div class="stat-label"><span class="status-dot dot-gray"></span> Pending</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num zero">0</div>
+        <div class="stat-label"><span class="status-dot dot-gray"></span> In Progress</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num zero">0</div>
+        <div class="stat-label"><span class="status-dot dot-green"></span> Completed</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num zero">0</div>
+        <div class="stat-label"><span class="status-dot dot-red"></span> Rejected</div>
+      </div>
+    </div>
+
+    <!-- Getting started card -->
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">
+      <!-- Table header still present -->
+      <table>
+        <thead>
+          <tr>
+            <th style="width:120px;">Order ID</th>
+            <th style="width:100px;">Customer</th>
+            <th>MAWB</th>
+            <th style="width:60px;">Bags</th>
+            <th style="width:80px;">Weight</th>
+            <th style="width:140px;">Jobs</th>
+            <th style="width:90px;">Status</th>
+            <th style="width:90px;">Created</th>
+          </tr>
+        </thead>
+      </table>
+
+      <!-- Getting started replaces tbody -->
+      <div style="padding:32px 40px;max-width:640px;margin:0 auto;">
+        <div style="text-align:center;margin-bottom:24px;">
+          <div style="font-size:16px;font-weight:800;color:#111827;">Welcome to Teleport OS</div>
+          <div style="font-size:11px;color:#6b7280;margin-top:4px;">Here's how delivery order management works:</div>
+        </div>
+
+        <!-- 3-step guide -->
+        <div style="display:flex;gap:16px;margin-bottom:24px;">
+          <!-- Step 1 -->
+          <div style="flex:1;padding:14px;border:1px solid #e5e7eb;border-radius:6px;background:#fafafa;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+              <div style="width:20px;height:20px;border-radius:5px;background:#0D9488;color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</div>
+              <span style="font-size:11px;font-weight:700;color:#111827;">Create an order</span>
+            </div>
+            <div style="font-size:10px;color:#6b7280;line-height:1.5;">Assign a customer, enter MAWB and cargo details, then add jobs for each vendor service (FM, EC, CS, etc.).</div>
+          </div>
+
+          <!-- Step 2 -->
+          <div style="flex:1;padding:14px;border:1px solid #e5e7eb;border-radius:6px;background:#fafafa;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+              <div style="width:20px;height:20px;border-radius:5px;background:#0D9488;color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</div>
+              <span style="font-size:11px;font-weight:700;color:#111827;">Track progress</span>
+            </div>
+            <div style="font-size:10px;color:#6b7280;line-height:1.5;">Monitor job status as vendors execute. Update statuses from Pending &rarr; In Progress &rarr; Completed. Handle rejections inline.</div>
+          </div>
+
+          <!-- Step 3 -->
+          <div style="flex:1;padding:14px;border:1px solid #e5e7eb;border-radius:6px;background:#fafafa;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+              <div style="width:20px;height:20px;border-radius:5px;background:#0D9488;color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</div>
+              <span style="font-size:11px;font-weight:700;color:#111827;">Validate billing</span>
+            </div>
+            <div style="font-size:10px;color:#6b7280;line-height:1.5;">Upload proof documents, compare vendor invoices against rate cards, and validate completed orders for payment.</div>
+          </div>
+        </div>
+
+        <div style="text-align:center;">
+          <button class="btn-sm btn-teal" style="padding:8px 20px;font-size:11px;">Get Started &mdash; Create First Order</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<h2>Option C: Sample Data with Dismiss</h2>
+<span class="label" style="background:#faf5ff;color:#7c3aed;">Exploratory</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Pre-load 3 sample delivery orders with realistic data (TikTok, Shopee, Shein). A dismissible banner at the top says "These are sample orders to help you explore Teleport OS. [Dismiss samples]." Each sample row has a "SAMPLE" tag next to the order ID. Ops can click into samples to see how the slide-out panel, status changes, and proof uploads work. Dismissing clears all samples and shows the clean empty state (Option A's inline CTA).
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>- User sees a fully working app immediately -- learns by exploring, not reading<br>- Can practice status changes, proof uploads, etc. without creating real data<br>- Most realistic introduction to the tool's density and data patterns<br>- Dismissal is one click -- not persistent</div>
+    <div class="cons"><strong>Cons</strong><br>- Risk of confusion: ops might think sample data is real and try to act on it<br>- More complex to implement (seed data, dismiss logic, cleanup)<br>- If ops doesn't dismiss, samples pollute the real data view<br>- Sample data needs to be maintained as the app evolves</div>
+  </div>
+</div>
+
+<h3>Full page: sample orders with dismiss banner</h3>
+<div class="screen">
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a class="active" href="#">Delivery Orders</a>
+    <a href="#">Rates</a>
+    <a href="#">Billing</a>
+    <a href="#">Master Data</a>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <button class="btn-sm btn-teal">+ New Order</button>
+    </div>
+  </div>
+
+  <div style="padding:16px;">
+    <!-- Dismiss banner -->
+    <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:6px;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:11px;color:#6b21a8;">
+        <strong>Sample data:</strong> These are example orders to help you explore Teleport OS. They're not real deliveries.
+      </div>
+      <button class="btn-sm" style="background:#7c3aed;color:#fff;font-size:10px;padding:3px 10px;">Dismiss Samples</button>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;">
+      <div>
+        <div style="font-size:16px;font-weight:800;">Delivery Orders</div>
+        <div style="font-size:11px;color:#9ca3af;">Manage cross-border cargo deliveries</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <input style="border:1px solid #e5e7eb;border-radius:4px;padding:4px 8px;font-size:11px;font-family:inherit;width:180px;background:#fff;" placeholder="Search MAWB, customer..." />
+        <select style="border:1px solid #e5e7eb;border-radius:4px;padding:4px 8px;font-size:11px;font-family:inherit;background:#fff;">
+          <option>All Statuses</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Stats bar: sample data -->
+    <div class="stat-bar">
+      <div class="stat-item">
+        <div class="stat-num" style="color:#d1d5db;">3</div>
+        <div class="stat-label">Total orders</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num" style="color:#d1d5db;">1</div>
+        <div class="stat-label"><span class="status-dot dot-gray"></span> Pending</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num" style="color:#d1d5db;">1</div>
+        <div class="stat-label"><span class="status-dot dot-gray"></span> In Progress</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num" style="color:#d1d5db;">1</div>
+        <div class="stat-label"><span class="status-dot dot-green"></span> Completed</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num" style="color:#d1d5db;">0</div>
+        <div class="stat-label"><span class="status-dot dot-red"></span> Rejected</div>
+      </div>
+    </div>
+
+    <!-- Table with sample data -->
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:160px;">Order ID</th>
+            <th style="width:100px;">Customer</th>
+            <th>MAWB</th>
+            <th style="width:60px;">Bags</th>
+            <th style="width:80px;">Weight</th>
+            <th style="width:160px;">Jobs</th>
+            <th style="width:90px;">Status</th>
+            <th style="width:90px;">Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Sample 1: TikTok - Completed -->
+          <tr style="background:#fefcff;">
+            <td>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span class="mono" style="font-weight:600;font-size:11px;">DO-SAMPLE-001</span>
+                <span class="sample-tag">SAMPLE</span>
+              </div>
+            </td>
+            <td><strong>TikTok</strong></td>
+            <td class="mono" style="font-size:10px;">160-84729301</td>
+            <td class="mono">24</td>
+            <td class="mono">1,240 kg</td>
+            <td>
+              <div style="display:flex;gap:3px;">
+                <span style="padding:1px 5px;border-radius:4px;font-size:9px;font-weight:600;background:#f0fdf4;color:#059669;border:1px solid #a7f3d0;">FM</span>
+                <span style="padding:1px 5px;border-radius:4px;font-size:9px;font-weight:600;background:#f0fdf4;color:#059669;border:1px solid #a7f3d0;">EC</span>
+                <span style="padding:1px 5px;border-radius:4px;font-size:9px;font-weight:600;background:#f0fdf4;color:#059669;border:1px solid #a7f3d0;">CS</span>
+              </div>
+            </td>
+            <td><span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #a7f3d0;background:#f0fdf4;color:#059669;"><span class="status-dot dot-green"></span> Completed</span></td>
+            <td style="font-size:10px;color:#9ca3af;">24 Mar 2026</td>
+          </tr>
+
+          <!-- Sample 2: Shopee - In Progress -->
+          <tr style="background:#fefcff;">
+            <td>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span class="mono" style="font-weight:600;font-size:11px;">DO-SAMPLE-002</span>
+                <span class="sample-tag">SAMPLE</span>
+              </div>
+            </td>
+            <td><strong>Shopee</strong></td>
+            <td class="mono" style="font-size:10px;">160-55102847</td>
+            <td class="mono">18</td>
+            <td class="mono">920 kg</td>
+            <td>
+              <div style="display:flex;gap:3px;">
+                <span style="padding:1px 5px;border-radius:4px;font-size:9px;font-weight:600;background:#f0fdf4;color:#059669;border:1px solid #a7f3d0;">FM</span>
+                <span style="padding:1px 5px;border-radius:4px;font-size:9px;font-weight:600;background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">EC</span>
+                <span style="padding:1px 5px;border-radius:4px;font-size:9px;font-weight:600;background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">CS</span>
+              </div>
+            </td>
+            <td><span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #e5e7eb;background:#f9fafb;color:#6b7280;"><span class="status-dot dot-gray"></span> In Progress</span></td>
+            <td style="font-size:10px;color:#9ca3af;">24 Mar 2026</td>
+          </tr>
+
+          <!-- Sample 3: Shein - Pending -->
+          <tr style="background:#fefcff;">
+            <td>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span class="mono" style="font-weight:600;font-size:11px;">DO-SAMPLE-003</span>
+                <span class="sample-tag">SAMPLE</span>
+              </div>
+            </td>
+            <td><strong>Shein</strong></td>
+            <td class="mono" style="font-size:10px;">160-33718295</td>
+            <td class="mono">42</td>
+            <td class="mono">2,100 kg</td>
+            <td>
+              <div style="display:flex;gap:3px;">
+                <span style="padding:1px 5px;border-radius:4px;font-size:9px;font-weight:600;background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">FM</span>
+                <span style="padding:1px 5px;border-radius:4px;font-size:9px;font-weight:600;background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">EC</span>
+                <span style="padding:1px 5px;border-radius:4px;font-size:9px;font-weight:600;background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">OH</span>
+              </div>
+            </td>
+            <td><span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #e5e7eb;background:#f9fafb;color:#6b7280;"><span class="status-dot dot-gray"></span> Pending</span></td>
+            <td style="font-size:10px;color:#9ca3af;">25 Mar 2026</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:8px;font-size:10px;color:#9ca3af;text-align:center;">
+      Sample data will be removed when you click "Dismiss Samples" or create your first real order.
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<div class="verdict">
+  <h3>Verdict: Option A -- Empty Table with Inline CTA</h3>
+  <p style="font-size:12px;line-height:1.6;color:#374151;">
+    The inline CTA in the empty table body is the densest, most professional approach. It doesn't change the page structure, doesn't require dismiss logic, and doesn't patronize ops planners with onboarding tutorials. The stats bar showing all zeros is honest -- ops knows they're looking at a fresh workspace, not a broken one. The [+ New Order] button is the single, clear next action.
+  </p>
+  <p style="font-size:12px;line-height:1.6;color:#374151;margin-top:8px;">
+    <strong>Why not Option B?</strong> The 3-step guide is educational but too hand-hold-y for logistics pros. They'll learn the workflow by doing, not by reading a card. The extra vertical space doesn't earn its keep. <strong>Why not Option C?</strong> Sample data is the most engaging but also the riskiest -- ops might confuse samples with real orders, and the implementation cost (seeding, cleanup, dismiss) is high for a state that only lasts until the first order is created. Option A is the utilitarian choice: professional, clear, and self-removing.
+  </p>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>H04: Status Change Interaction</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 13px; line-height: 1.5; }
+  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .page { max-width: 1300px; margin: 0 auto; padding: 40px 24px 80px; }
+  h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.7px; margin-bottom: 6px; }
+  h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; margin: 48px 0 8px; color: #0D9488; }
+  .subtitle { color: #6b7280; font-size: 14px; margin-bottom: 40px; line-height: 1.6; }
+  .hyp-label { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 12px; border-radius: 8px; margin-bottom: 12px; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 20px; margin-bottom: 20px; font-size: 13px; color: #374151; line-height: 1.7; }
+  .rationale strong { color: #111827; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .pros, .cons { padding: 12px 16px; border-radius: 10px; font-size: 12px; line-height: 1.6; }
+  .pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+  .cons { background: #fef2f2; border: 1px solid #fecaca; }
+  .pros strong { color: #059669; }
+  .cons strong { color: #dc2626; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 16px; overflow: hidden; margin: 16px 0 40px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .screen-inner { padding: 24px; position: relative; }
+
+  /* Shared components */
+  .nav-mini { display: flex; align-items: center; height: 44px; padding: 0 20px; background: #fff; border-bottom: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; gap: 8px; }
+  .nav-mini .active { color: #0D9488; font-weight: 600; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; border: 1.5px solid; }
+  .badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .b-green { border-color: #a7f3d0; background: #f0fdf4; color: #059669; }
+  .b-green .dot { background: #059669; }
+  .b-blue { border-color: #bfdbfe; background: #eff6ff; color: #2563eb; }
+  .b-blue .dot { background: #2563eb; }
+  .b-amber { border-color: #fde68a; background: #fefce8; color: #b45309; }
+  .b-amber .dot { background: #d97706; }
+  .b-red { border-color: #fecaca; background: #fef2f2; color: #dc2626; }
+  .b-red .dot { background: #dc2626; }
+  .b-gray { border-color: #e5e7eb; background: #f9fafb; color: #6b7280; }
+  .b-gray .dot { background: #9ca3af; }
+
+  .svc-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 600; background: rgba(13,148,136,0.07); border: 1px solid rgba(13,148,136,0.12); }
+  .svc-pill .code { color: #0D9488; font-family: monospace; }
+
+  /* Table row mock */
+  .mock-row { display: flex; align-items: center; gap: 16px; padding: 14px 20px; border-bottom: 1px solid #f3f4f6; }
+  .mock-row:hover { background: #f9fafb; }
+  .mock-row .customer { font-size: 14px; font-weight: 700; }
+  .mock-row .meta { font-size: 11px; color: #9ca3af; }
+  .mock-row .route { font-size: 12px; color: #374151; }
+
+  /* ── Option A: Inline dropdown ── */
+  .dropdown-overlay { position: absolute; z-index: 10; background: #fff; border: 1.5px solid #e5e7eb; border-radius: 12px; padding: 6px; box-shadow: 0 4px 20px rgba(0,0,0,0.12); min-width: 180px; }
+  .dropdown-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; transition: background 0.1s; }
+  .dropdown-item:hover { background: #f9fafb; }
+  .dropdown-item.active { background: rgba(13,148,136,0.06); font-weight: 600; }
+
+  /* ── Option B: Slide-out panel ── */
+  .slide-panel { position: absolute; top: 0; right: 0; width: 380px; height: 100%; background: #fff; border-left: 1px solid #e5e7eb; box-shadow: -4px 0 20px rgba(0,0,0,0.08); padding: 24px; z-index: 10; overflow-y: auto; }
+  .slide-panel h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .slide-panel .sub { font-size: 12px; color: #9ca3af; margin-bottom: 20px; }
+  .panel-section { margin-bottom: 20px; }
+  .panel-section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 10px; }
+  .status-btn { width: 100%; text-align: left; padding: 10px 14px; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 13px; font-family: inherit; background: #fff; cursor: pointer; display: flex; align-items: center; gap: 8px; margin-bottom: 6px; transition: all 0.15s; }
+  .status-btn:hover { border-color: #d1d5db; background: #f9fafb; }
+  .status-btn.selected { border-color: #0D9488; background: rgba(13,148,136,0.04); box-shadow: 0 0 0 1px #0D9488; }
+  .panel-meta { display: flex; justify-content: space-between; font-size: 12px; padding: 6px 0; border-bottom: 1px solid #f3f4f6; }
+  .panel-meta:last-child { border: none; }
+  .panel-close { position: absolute; top: 16px; right: 16px; width: 28px; height: 28px; border-radius: 8px; border: none; background: #f3f4f6; cursor: pointer; font-size: 14px; color: #6b7280; display: flex; align-items: center; justify-content: center; }
+  .panel-close:hover { background: #e5e7eb; }
+
+  .upload-area { border: 1.5px dashed #d1d5db; border-radius: 10px; padding: 16px; text-align: center; background: #fafbfc; }
+  .upload-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 8px; font-size: 11px; font-weight: 600; color: #0D9488; background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.15); cursor: pointer; margin-top: 8px; }
+
+  /* Verdict */
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 14px; padding: 24px; margin-top: 48px; }
+  .verdict h3 { color: #059669; font-size: 16px; margin-bottom: 8px; font-weight: 700; }
+  .verdict p { font-size: 14px; line-height: 1.7; color: #374151; }
+  .verdict ul { margin: 12px 0; padding-left: 20px; line-height: 1.8; font-size: 13px; color: #374151; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>H04: Status Change Interaction</h1>
+<p class="subtitle">
+  Ops planners change job statuses ~50 times/day. This is the single most repeated action in the app.
+  The interaction must be fast (< 2 clicks), provide enough context to avoid mistakes, and leave an audit trail.
+  <br><br>
+  <strong>Key constraint:</strong> Status changes are non-sequential (customs can complete before trucking). The UI must NOT imply a linear progression — just show the current state and let the user pick any new state.
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2>Option A: Inline Dropdown on Job Chip</h2>
+<span class="hyp-label" style="background:#ecfdf5;color:#059669;">Fastest — 1 click to open, 1 click to select</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Click the status chip directly in the trip table row. A dropdown appears anchored to the chip showing all 5 statuses. Select one — done. The chip updates instantly. Activity log entry is created automatically in the background.
+  <div class="pros-cons">
+    <div class="pros"><strong>✓ Pros</strong><br>• Fastest possible interaction (2 clicks total)<br>• No navigation, no context switch<br>• Works for bulk status updates (click, click, click down the list)<br>• Mirrors how spreadsheet users expect to update a cell</div>
+    <div class="cons"><strong>✕ Cons</strong><br>• No room for rejection reason (would need a follow-up prompt)<br>• Can't upload proof in the same flow<br>• Easy to misclick — no confirmation<br>• Small touch target on mobile</div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="nav-mini">TripManager <span class="active">Trips</span></div>
+  <div class="screen-inner" style="min-height: 300px;">
+    <!-- Row with dropdown open -->
+    <div class="mock-row">
+      <span style="color:#d1d5db;">▸</span>
+      <div style="flex:1;">
+        <div class="customer">AliExpress</div>
+        <div class="meta">176-84329871 · 24 bags · Yantian → Shekou</div>
+      </div>
+      <span class="badge b-green"><span class="dot"></span>Camila · FM+OH</span>
+    </div>
+
+    <div class="mock-row" style="background:#f9fafb;">
+      <span style="color:#d1d5db;">▸</span>
+      <div style="flex:1;">
+        <div class="customer">Shopee</div>
+        <div class="meta">176-33121632 · 16 bags · Yantian → Dongguan → SZX</div>
+      </div>
+      <div style="display:flex;gap:6px;position:relative;">
+        <!-- This chip has been clicked — dropdown is open -->
+        <span class="badge b-blue" style="outline:2px solid #2563eb;outline-offset:1px;cursor:pointer;"><span class="dot"></span>Hoboken · CR+FM</span>
+
+        <div class="dropdown-overlay" style="top:36px;left:-20px;">
+          <div class="dropdown-item"><span class="badge b-amber" style="font-size:10px;padding:2px 8px;"><span class="dot"></span>Pending</span></div>
+          <div class="dropdown-item active"><span class="badge b-blue" style="font-size:10px;padding:2px 8px;"><span class="dot"></span>In Progress</span> ← current</div>
+          <div class="dropdown-item"><span class="badge b-green" style="font-size:10px;padding:2px 8px;"><span class="dot"></span>Completed</span></div>
+          <div class="dropdown-item"><span class="badge b-red" style="font-size:10px;padding:2px 8px;"><span class="dot"></span>Rejected</span></div>
+          <div class="dropdown-item"><span class="badge b-gray" style="font-size:10px;padding:2px 8px;"><span class="dot"></span>Cancelled</span></div>
+        </div>
+
+        <span class="badge b-amber"><span class="dot"></span>V3 · EC</span>
+      </div>
+    </div>
+
+    <div class="mock-row">
+      <span style="color:#d1d5db;">▸</span>
+      <div style="flex:1;">
+        <div class="customer">Temu</div>
+        <div class="meta">176-77654321 · 48 bags · SZX BaoAn → Lantau</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <span class="badge b-amber"><span class="dot"></span>Hoboken · CR</span>
+        <span class="badge b-amber"><span class="dot"></span>V3 · FM</span>
+        <span class="badge b-amber"><span class="dot"></span>V3 · EC+CS</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2>Option B: Slide-Out Panel</h2>
+<span class="hyp-label" style="background:#eff6ff;color:#2563eb;">Best balance — fast + contextual</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Click a job chip or the "J01→" link. A panel slides in from the right showing: status picker, job details (vendor, route, services), proof upload, and recent activity log. The trip list stays visible on the left. Change status, upload proof, or view log — all without navigating away.
+  <div class="pros-cons">
+    <div class="pros"><strong>✓ Pros</strong><br>• Fast — no page navigation<br>• Full context: status, route, services, vendor, proofs, log all visible<br>• Can upload proof + change status in the same flow<br>• Trip list stays visible for reference<br>• Rejection reason can be entered inline</div>
+    <div class="cons"><strong>✕ Cons</strong><br>• More complex to implement (panel animation, overlay handling)<br>• Reduces visible trip list width when open<br>• May feel cramped on smaller screens</div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="nav-mini">TripManager <span class="active">Trips</span></div>
+  <div class="screen-inner" style="min-height: 480px; position: relative; overflow: hidden;">
+    <!-- Trip list (dimmed when panel open) -->
+    <div style="opacity: 0.5; pointer-events: none;">
+      <div class="mock-row">
+        <span style="color:#d1d5db;">▸</span>
+        <div style="flex:1;"><div class="customer">AliExpress</div><div class="meta">176-84329871 · Yantian → Shekou</div></div>
+        <span class="badge b-green"><span class="dot"></span>Camila</span>
+      </div>
+      <div class="mock-row" style="background:#eff6ff;">
+        <span style="color:#0D9488;">▸</span>
+        <div style="flex:1;"><div class="customer">Shopee</div><div class="meta">176-33121632 · Yantian → Dongguan → SZX</div></div>
+        <span class="badge b-blue" style="outline:2px solid #2563eb;outline-offset:1px;"><span class="dot"></span>Hoboken</span>
+        <span class="badge b-amber"><span class="dot"></span>V3</span>
+      </div>
+      <div class="mock-row">
+        <span style="color:#d1d5db;">▸</span>
+        <div style="flex:1;"><div class="customer">Temu</div><div class="meta">176-77654321 · SZX → Lantau</div></div>
+        <span class="badge b-amber"><span class="dot"></span>3 Pending</span>
+      </div>
+    </div>
+
+    <!-- Slide-out panel -->
+    <div class="slide-panel">
+      <button class="panel-close">✕</button>
+      <h3>Hoboken</h3>
+      <div class="sub">
+        <span class="mono" style="font-size:10px;background:#f3f4f6;padding:2px 6px;border-radius:4px;border:1px solid #e5e7eb;">J01/2</span>
+        · Shopee · <span class="mono" style="font-size:11px;">176-33121632</span>
+      </div>
+
+      <!-- Status picker -->
+      <div class="panel-section">
+        <div class="panel-section-title">Status</div>
+        <button class="status-btn"><span class="badge b-amber" style="font-size:10px;"><span class="dot"></span>Pending</span></button>
+        <button class="status-btn selected"><span class="badge b-blue" style="font-size:10px;"><span class="dot"></span>In Progress</span></button>
+        <button class="status-btn"><span class="badge b-green" style="font-size:10px;"><span class="dot"></span>Completed</span></button>
+        <button class="status-btn"><span class="badge b-red" style="font-size:10px;"><span class="dot"></span>Rejected</span></button>
+      </div>
+
+      <!-- Route -->
+      <div class="panel-section">
+        <div class="panel-section-title">Route & Services</div>
+        <div style="font-size:12px;color:#374151;margin-bottom:4px;">Yantian Port → Dongguan Cross-dock</div>
+        <div class="mono" style="font-size:10px;color:#9ca3af;margin-bottom:8px;">09 Mar 2026 · 06:00</div>
+        <div style="display:flex;gap:4px;">
+          <span class="svc-pill"><span class="code">CR</span> Cargo Retrieval</span>
+          <span class="svc-pill"><span class="code">FM</span> Trucking</span>
+        </div>
+      </div>
+
+      <!-- Proof upload -->
+      <div class="panel-section">
+        <div class="panel-section-title">Proof of Service</div>
+        <div class="upload-area">
+          <div style="font-size:11px;color:#9ca3af;">No documents yet</div>
+          <div class="upload-btn">↑ Upload</div>
+        </div>
+      </div>
+
+      <!-- Activity log -->
+      <div class="panel-section">
+        <div class="panel-section-title">Activity Log <span class="mono" style="font-size:9px;background:#f3f4f6;padding:1px 5px;border-radius:99px;color:#9ca3af;">2</span></div>
+        <div style="font-size:11px;color:#374151;padding:4px 0;border-bottom:1px solid #f3f4f6;">
+          <strong>Status → In Progress</strong><br>
+          <span style="color:#9ca3af;">Ops Admin · <span class="mono" style="font-size:10px;">09 Mar 06:15</span></span>
+        </div>
+        <div style="font-size:11px;color:#374151;padding:4px 0;">
+          <strong>Job created</strong><br>
+          <span style="color:#9ca3af;">Ops Admin · <span class="mono" style="font-size:10px;">09 Mar 06:00</span></span>
+        </div>
+      </div>
+
+      <!-- Meta -->
+      <div class="panel-section" style="padding-top:12px;border-top:1px solid #f3f4f6;">
+        <div class="panel-meta"><span style="color:#9ca3af;">Vendor</span><span style="font-weight:600;">Hoboken</span></div>
+        <div class="panel-meta"><span style="color:#9ca3af;">Customer</span><span style="font-weight:600;">Shopee</span></div>
+        <div class="panel-meta"><span style="color:#9ca3af;">Created</span><span class="mono" style="font-size:11px;">08 Mar 2026</span></div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <a href="#" style="font-size:12px;color:#0D9488;text-decoration:none;">Open full detail →</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2>Option C: Navigate to Job Detail Page</h2>
+<span class="hyp-label" style="background:#fffbeb;color:#d97706;">Most context — but slowest</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Click job chip → navigates to the full job detail page (what we have now). Change status there, upload proofs, view full activity log. Hit back to return to trip list.
+  <div class="pros-cons">
+    <div class="pros"><strong>✓ Pros</strong><br>• Maximum context — full screen for the job<br>• Best for complex actions (multiple proof uploads, detailed log review)<br>• Simplest to implement<br>• URL-addressable — can share link to a specific job</div>
+    <div class="cons"><strong>✕ Cons</strong><br>• Slowest — full page navigation + back button<br>• Loses trip list context (can't see other trips while working on one job)<br>• 50 status changes/day × 2 navigations each = 100 page loads<br>• Kills scanning flow</div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="nav-mini">TripManager <span class="active">Trips</span> › PTRIP12302100002 › <strong>Job J01</strong></div>
+  <div class="screen-inner" style="min-height:280px;">
+    <div style="font-size:11px;color:#9ca3af;margin-bottom:16px;">← Back to Trips › <span class="mono" style="font-size:10px;background:#f3f4f6;padding:1px 5px;border-radius:4px;">PTRIP12302100002</span> › Job J01</div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+      <span style="font-size:22px;font-weight:800;letter-spacing:-0.5px;">Hoboken</span>
+      <span class="badge b-blue"><span class="dot"></span>In Progress</span>
+    </div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;">
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;">
+        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin-bottom:12px;">Route & Services</div>
+        <div style="font-size:13px;font-weight:600;">📍 Yantian Port → 📍 Dongguan Cross-dock</div>
+        <div class="mono" style="font-size:10px;color:#9ca3af;margin-top:4px;">09 Mar 2026 · 06:00 → 14:00</div>
+        <div style="display:flex;gap:4px;margin-top:10px;">
+          <span class="svc-pill"><span class="code">CR</span></span>
+          <span class="svc-pill"><span class="code">FM</span></span>
+        </div>
+      </div>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;">
+        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin-bottom:12px;">Status + Activity</div>
+        <div style="font-size:12px;padding:6px 0;"><span class="badge b-blue" style="font-size:10px;"><span class="dot"></span>In Progress</span> ← click to change</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:8px;">2 activity log entries</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="verdict">
+  <h3>Recommendation: Option B (Slide-Out Panel)</h3>
+  <p>
+    The slide-out panel is the best balance for ops planners who change status 50x/day:
+  </p>
+  <ul>
+    <li><strong>Fast enough:</strong> 1 click to open, 1 click to change status. Not as fast as inline dropdown (Option A) but close.</li>
+    <li><strong>Enough context:</strong> Status picker, route, services, proof upload, and activity log — all visible without navigation. Prevents misclicks because the user can see WHAT they're changing.</li>
+    <li><strong>Proof upload in flow:</strong> The killer advantage. When a vendor completes a job, the planner can change status to "Completed" AND upload the proof document in the same interaction — without navigating to a separate page.</li>
+    <li><strong>Trip list stays visible:</strong> The dimmed trip list behind the panel provides context and allows quick switching between jobs.</li>
+    <li><strong>Full detail as escape hatch:</strong> "Open full detail →" link at the bottom for cases that need the complete job detail page.</li>
+  </ul>
+  <p style="margin-top:12px;">
+    <strong>Option A (inline dropdown)</strong> is fastest but lacks proof upload and rejection reason context — it would need follow-up prompts that negate the speed advantage.
+    <strong>Option C (navigate)</strong> is too slow for the volume of status changes ops does daily.
+  </p>
+</div>
+
+</div>
+</body>
+</html>

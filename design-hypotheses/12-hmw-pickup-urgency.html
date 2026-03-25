@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW: Pickup Urgency</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #0D9488; }
+  .hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #0D9488; border-radius: 0 6px 6px 0; }
+  .context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+  .label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+  .pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+  .cons { background: #fefafa; border: 1px solid #fecaca; }
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+  .verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+  /* Dense table system */
+  .nav { display: flex; align-items: center; height: 40px; padding: 0 16px; background: #fff; border-bottom: 1px solid #e5e7eb; font-size: 11px; color: #9ca3af; gap: 10px; }
+  .nav .logo { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 12px; color: #111827; }
+  .nav .logo-icon { width: 22px; height: 22px; background: #0D9488; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: white; font-size: 9px; font-weight: 800; }
+  .nav-item { font-size: 11px; color: #9ca3af; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+  .nav-item.active { color: #0D9488; background: rgba(13,148,136,0.08); font-weight: 600; }
+  .nav-spacer { flex: 1; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 8px 12px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; font-size: 12px; }
+  tr.hoverable { cursor: pointer; }
+  tr.hoverable:hover { background: #f9fafb; }
+
+  .chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+  .chip-n { border: 1px solid #e5e7eb; background: #fff; color: #6b7280; }
+  .chip-g { border: 1px solid #a7f3d0; background: #f0fdf4; color: #059669; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+  .svc-p { padding: 1px 5px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.1); display: inline-flex; align-items: center; gap: 3px; }
+  .svc-p .c { color: #0D9488; font-family: monospace; }
+
+  .time-urgent { color: #dc2626; font-weight: 600; }
+  .time-today { color: #111827; }
+  .time-future { color: #9ca3af; }
+
+  .countdown { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 700; font-family: 'SF Mono', 'Fira Code', monospace; }
+  .countdown-red { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+  .countdown-default { background: #fff; color: #111827; border: 1px solid #e5e7eb; }
+  .countdown-muted { background: #f9fafb; color: #9ca3af; border: 1px solid #e5e7eb; }
+
+  .sort-arrow { font-size: 8px; margin-left: 2px; color: #0D9488; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>H12: Pickup Urgency</h1>
+<div class="hmw">"How might we help ops see at a glance which orders are picking up soon vs. days away?"</div>
+
+<div class="context">
+  <strong>Problem:</strong> The pickup date column shows dates but doesn't convey urgency. An order picking up in 45 minutes should feel different from one 3 days out. Right now, ops has to mentally parse "25 Mar, 14:30" and compare it against the current time. When scanning 50 rows, this mental math adds up. Critical pickups get missed because a "26 Mar" date doesn't scream "that's in 90 minutes."
+</div>
+
+<!-- ======================================== -->
+<h2>Option A: Color-Coded Pickup Time</h2>
+<span class="label" style="background:#ecfdf5;color:#059669;">Recommended (combined with C)</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> The pickup date text uses color to signal urgency. Less than 2 hours: red text (#dc2626) -- urgent. 2-24 hours: default text (#111827) -- today. More than 24 hours: muted text (#9ca3af) -- not urgent. The date format stays the same; only the color changes.
+
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>
+      Zero layout change -- just text color<br>
+      Instant pattern recognition: red = act now<br>
+      Consistent with 3-color system (red = urgent)<br>
+      Works with any date format
+    </div>
+    <div class="cons"><strong>Cons</strong><br>
+      Ops still needs to read the date to know exactly when<br>
+      Red text might be confused with "rejected" status<br>
+      Colorblind users may miss the signal
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <div class="nav-item active">Orders</div>
+    <div class="nav-item">Vendors</div>
+    <div class="nav-spacer"></div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:24px;"></th>
+        <th>Customer</th>
+        <th>MAWB</th>
+        <th>Vendor</th>
+        <th>Service</th>
+        <th>Pickup <span class="sort-arrow">&#9650;</span></th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="hoverable">
+        <td style="color:#d1d5db;font-size:10px;">&#9654;</td>
+        <td style="font-weight:600;">Shein</td>
+        <td class="mono" style="font-size:10px;color:#6b7280;">160-83291045</td>
+        <td style="font-weight:600;">ThaiKee</td>
+        <td><span class="svc-p"><span class="c">FM</span></span></td>
+        <td class="time-urgent">25 Mar, 14:30</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+      </tr>
+      <tr class="hoverable">
+        <td style="color:#d1d5db;font-size:10px;">&#9654;</td>
+        <td style="font-weight:600;">Temu</td>
+        <td class="mono" style="font-size:10px;color:#6b7280;">160-83291198</td>
+        <td style="font-weight:600;">The Lorry</td>
+        <td><span class="svc-p"><span class="c">CS</span></span></td>
+        <td class="time-today">25 Mar, 22:00</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>In Progress</span></td>
+      </tr>
+      <tr class="hoverable">
+        <td style="color:#d1d5db;font-size:10px;">&#9654;</td>
+        <td style="font-weight:600;">TikTok</td>
+        <td class="mono" style="font-size:10px;color:#6b7280;">160-83291302</td>
+        <td style="font-weight:600;">HaleSun</td>
+        <td><span class="svc-p"><span class="c">CR</span></span></td>
+        <td class="time-future">28 Mar, 09:00</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+      </tr>
+    </tbody>
+  </table>
+  <div style="padding:6px 12px;font-size:10px;color:#9ca3af;background:#f9fafb;border-top:1px solid #e5e7eb;">
+    <span class="time-urgent" style="font-size:10px;">&#9679;</span> &lt; 2 hours &nbsp;&nbsp;
+    <span style="color:#111827;font-size:10px;">&#9679;</span> 2-24 hours &nbsp;&nbsp;
+    <span class="time-future" style="font-size:10px;">&#9679;</span> &gt; 24 hours
+  </div>
+</div>
+
+<!-- ======================================== -->
+<h2>Option B: Countdown Badge</h2>
+<span class="label" style="background:#eff6ff;color:#2563eb;">Relative time display</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Replace the absolute date with a relative countdown: "45m", "3h", "2d". Color-coded: red for &lt; 2h, default for same day, muted for future days. The absolute date appears on hover as a tooltip.
+
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>
+      Immediate comprehension -- "45m" is faster than parsing a date<br>
+      Compact -- saves horizontal space<br>
+      Color + text reinforces urgency double<br>
+      Very common pattern in logistics dashboards
+    </div>
+    <div class="cons"><strong>Cons</strong><br>
+      Loses the absolute date at a glance (need hover)<br>
+      Countdown changes constantly -- "45m" becomes "44m" a minute later<br>
+      Requires real-time clock updates (timer logic)<br>
+      Ops may want to see the actual date for coordination calls
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <div class="nav-item active">Orders</div>
+    <div class="nav-item">Vendors</div>
+    <div class="nav-spacer"></div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:24px;"></th>
+        <th>Customer</th>
+        <th>MAWB</th>
+        <th>Vendor</th>
+        <th>Service</th>
+        <th>Pickup</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="hoverable">
+        <td style="color:#d1d5db;font-size:10px;">&#9654;</td>
+        <td style="font-weight:600;">Shein</td>
+        <td class="mono" style="font-size:10px;color:#6b7280;">160-83291045</td>
+        <td style="font-weight:600;">ThaiKee</td>
+        <td><span class="svc-p"><span class="c">FM</span></span></td>
+        <td><span class="countdown countdown-red">45m</span></td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+      </tr>
+      <tr class="hoverable">
+        <td style="color:#d1d5db;font-size:10px;">&#9654;</td>
+        <td style="font-weight:600;">Temu</td>
+        <td class="mono" style="font-size:10px;color:#6b7280;">160-83291198</td>
+        <td style="font-weight:600;">The Lorry</td>
+        <td><span class="svc-p"><span class="c">CS</span></span></td>
+        <td><span class="countdown countdown-default">8h</span></td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>In Progress</span></td>
+      </tr>
+      <tr class="hoverable">
+        <td style="color:#d1d5db;font-size:10px;">&#9654;</td>
+        <td style="font-weight:600;">TikTok</td>
+        <td class="mono" style="font-size:10px;color:#6b7280;">160-83291302</td>
+        <td style="font-weight:600;">HaleSun</td>
+        <td><span class="svc-p"><span class="c">CR</span></span></td>
+        <td><span class="countdown countdown-muted">3d</span></td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ======================================== -->
+<h2>Option C: Sort by Urgency by Default</h2>
+<span class="label" style="background:#fffbeb;color:#d97706;">Structural change</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> The table is auto-sorted by pickup date (soonest first) as the default sort order. No visual change to the cells themselves -- the soonest pickup is always at the top. Combined with Option A, the first few rows are red-text urgent pickups, then default-text today pickups, then muted future ones.
+
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>
+      Zero visual noise -- just reorders what's already there<br>
+      The most urgent order is always at the top of the list<br>
+      Combined with color-coding, creates a natural urgency gradient<br>
+      Ops can override by clicking another column header
+    </div>
+    <div class="cons"><strong>Cons</strong><br>
+      By itself, not enough -- "28 Mar" at row 3 doesn't say "relax"<br>
+      Ops may prefer to sort by customer or MAWB for other tasks<br>
+      Row positions shift as time passes -- can be disorienting
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <div class="nav-item active">Orders</div>
+    <div class="nav-item">Vendors</div>
+    <div class="nav-spacer"></div>
+  </div>
+  <div style="padding:6px 12px;background:#f0fdfa;border-bottom:1px solid #ccfbf1;font-size:10px;color:#0D9488;font-weight:600;">
+    Sorted by pickup date (soonest first) &nbsp;&#183;&nbsp; Click any column header to change
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:24px;"></th>
+        <th>Customer</th>
+        <th>MAWB</th>
+        <th>Vendor</th>
+        <th>Service</th>
+        <th style="color:#0D9488;">Pickup <span class="sort-arrow">&#9650;</span></th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="hoverable">
+        <td style="color:#d1d5db;font-size:10px;">&#9654;</td>
+        <td style="font-weight:600;">Shein</td>
+        <td class="mono" style="font-size:10px;color:#6b7280;">160-83291045</td>
+        <td style="font-weight:600;">ThaiKee</td>
+        <td><span class="svc-p"><span class="c">FM</span></span></td>
+        <td class="time-urgent">25 Mar, 14:30</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+      </tr>
+      <tr class="hoverable">
+        <td style="color:#d1d5db;font-size:10px;">&#9654;</td>
+        <td style="font-weight:600;">Temu</td>
+        <td class="mono" style="font-size:10px;color:#6b7280;">160-83291198</td>
+        <td style="font-weight:600;">The Lorry</td>
+        <td><span class="svc-p"><span class="c">CS</span></span></td>
+        <td class="time-today">25 Mar, 22:00</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>In Progress</span></td>
+      </tr>
+      <tr class="hoverable">
+        <td style="color:#d1d5db;font-size:10px;">&#9654;</td>
+        <td style="font-weight:600;">Shopee</td>
+        <td class="mono" style="font-size:10px;color:#6b7280;">160-83291255</td>
+        <td style="font-weight:600;">SevenSeas</td>
+        <td><span class="svc-p"><span class="c">OH</span></span></td>
+        <td class="time-today">26 Mar, 08:00</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+      </tr>
+      <tr class="hoverable">
+        <td style="color:#d1d5db;font-size:10px;">&#9654;</td>
+        <td style="font-weight:600;">TikTok</td>
+        <td class="mono" style="font-size:10px;color:#6b7280;">160-83291302</td>
+        <td style="font-weight:600;">HaleSun</td>
+        <td><span class="svc-p"><span class="c">CR</span></span></td>
+        <td class="time-future">28 Mar, 09:00</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+      </tr>
+      <tr class="hoverable">
+        <td style="color:#d1d5db;font-size:10px;">&#9654;</td>
+        <td style="font-weight:600;">AliExpress</td>
+        <td class="mono" style="font-size:10px;color:#6b7280;">160-83291410</td>
+        <td style="font-weight:600;">Gonda</td>
+        <td><span class="svc-p"><span class="c">EC</span></span></td>
+        <td class="time-future">30 Mar, 15:00</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ======================================== -->
+<div class="verdict">
+  <h3>Recommendation: Option A + C Combined -- Color-Coded Dates + Default Urgency Sort</h3>
+  <p style="font-size:12px;line-height:1.7;color:#374151;">
+    The combination of color-coded pickup text (Option A) and default sort by soonest pickup (Option C) delivers the biggest impact with the smallest change. The table opens with the most urgent orders on top, and the red/default/muted text coloring creates a natural visual gradient -- red rows at the top demand action, muted rows at the bottom can wait. Option B's countdown badges are tempting but lose the absolute date that ops needs when coordinating with vendors on the phone ("pickup is at 14:30" not "pickup is in 45 minutes"). The countdown can be explored as a Phase 2 enhancement.
+  </p>
+</div>
+
+</div>
+</body>
+</html>

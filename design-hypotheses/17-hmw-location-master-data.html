@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW: Location Master Data</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #0D9488; }
+  h3 { font-size: 14px; font-weight: 700; margin: 24px 0 8px; }
+  .hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #0D9488; border-radius: 0 6px 6px 0; }
+  .context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+  .rationale strong { color: #111827; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+  .label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+  .pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+  .cons { background: #fefafa; border: 1px solid #fecaca; }
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+  .verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { text-align: left; padding: 5px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; }
+  tr:hover { background: #f9fafb; }
+
+  .nav-dense { height: 40px; padding: 0 16px; background: #fff; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 2px; font-size: 12px; }
+  .nav-dense a { padding: 4px 10px; border-radius: 4px; color: #9ca3af; text-decoration: none; }
+  .nav-dense a.active { color: #0D9488; background: rgba(13,148,136,0.06); font-weight: 600; }
+  .nav-dense .logo { display: flex; align-items: center; gap: 6px; margin-right: 16px; font-weight: 700; font-size: 13px; color: #111827; }
+  .nav-dense .logo-dot { width: 20px; height: 20px; background: #0D9488; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 9px; }
+
+  .form-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; margin-bottom: 12px; }
+  .step-badge { width: 22px; height: 22px; border-radius: 5px; background: #0D9488; color: #fff; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+
+  .loc-code { font-family: 'SF Mono', monospace; font-size: 10px; color: #9ca3af; }
+  .loc-type { padding: 1px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; display: inline-block; }
+  .loc-warehouse { background: #eff6ff; color: #2563eb; }
+  .loc-port { background: #f0fdf4; color: #059669; }
+  .loc-airport { background: #faf5ff; color: #7c3aed; }
+  .loc-checkpoint { background: #fffbeb; color: #d97706; }
+  .loc-hub { background: #fef2f2; color: #dc2626; }
+
+  select.loc-select { border: 1px solid #e5e7eb; border-radius: 4px; padding: 6px 10px; font-size: 11px; font-family: inherit; width: 260px; background: #fff; color: #111827; }
+  select.loc-select:focus { outline: none; border-color: #0D9488; box-shadow: 0 0 0 2px rgba(13,148,136,0.1); }
+
+  .autocomplete-wrap { position: relative; display: inline-block; }
+  .autocomplete-input { border: 1px solid #e5e7eb; border-radius: 4px; padding: 6px 10px; font-size: 11px; font-family: inherit; width: 260px; background: #fff; color: #111827; }
+  .autocomplete-input:focus { outline: none; border-color: #0D9488; box-shadow: 0 0 0 2px rgba(13,148,136,0.1); }
+  .autocomplete-dropdown { position: absolute; top: 100%; left: 0; width: 320px; background: #fff; border: 1px solid #d1d5db; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 10; margin-top: 2px; max-height: 220px; overflow-y: auto; }
+  .autocomplete-item { padding: 6px 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 11px; }
+  .autocomplete-item:hover { background: #f9fafb; }
+  .autocomplete-item.highlighted { background: rgba(13,148,136,0.06); }
+  .autocomplete-match { font-weight: 700; color: #0D9488; }
+  .autocomplete-zone { font-size: 10px; color: #9ca3af; margin-left: auto; }
+
+  .inline-form { background: #f9fafb; border: 1px dashed #d1d5db; border-radius: 6px; padding: 12px; margin-top: 4px; }
+  .inline-form label { display: block; font-size: 10px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 3px; }
+  .inline-form input, .inline-form select { border: 1px solid #e5e7eb; border-radius: 4px; padding: 5px 8px; font-size: 11px; font-family: inherit; width: 100%; background: #fff; }
+  .inline-form input:focus, .inline-form select:focus { outline: none; border-color: #0D9488; }
+
+  .btn-sm { padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: pointer; font-family: inherit; border: none; }
+  .btn-teal { background: #0D9488; color: #fff; }
+  .btn-ghost { background: transparent; color: #9ca3af; border: 1px solid #e5e7eb; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW: Location Master Data</h1>
+<div class="hmw">"How might we structure locations as managed master data — so rate lookups, route matching, and reporting all work reliably instead of depending on free text?"</div>
+
+<div class="context">
+  <strong>Current problem:</strong> Ops types locations as free text — "TikTok WH, Shenzhen" vs "TikTok Warehouse, Shenzhen" vs "tiktok wh shenzhen". These are treated as three different locations by the system.<br><br>
+  <strong>Impact:</strong> Rate cards need exact location matches to work. If the rate is set for "TikTok WH, Shenzhen" but ops types "TikTok Warehouse Shenzhen", the lookup returns nothing. Reporting groups by exact string, so shipment volume at the same warehouse appears as three separate entries. This is the <strong>#1 prerequisite</strong> for rate management — without consistent location IDs, rate lookups break silently.
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2>Option A: Location Dropdown in Job Form</h2>
+<span class="label" style="background:#eff6ff;color:#2563eb;">Strict control</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Replace free-text origin/destination fields with dropdown selects populated from a managed locations master list. Each location has a code (LOC-001), display name, zone, and type (warehouse/port/airport/checkpoint/hub). Only admin can add new locations. Ops always picks from the list.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>- Perfect consistency — every job references a canonical location ID<br>- Rate lookup works 100% of the time (exact match on location code)<br>- Clean reporting — no duplicates, grouping always correct<br>- Simple UI — just a dropdown, no fuzzy logic needed</div>
+    <div class="cons"><strong>Cons</strong><br>- Ops can't enter a new location without admin adding it first<br>- Could slow down order creation if a new warehouse appears<br>- Ops must wait or message admin to unblock themselves<br>- If the list grows large, dropdowns become hard to scan</div>
+  </div>
+</div>
+
+<!-- Mockup A1: Job form with dropdown -->
+<h3>Create form with location dropdowns</h3>
+<div class="screen">
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a href="#">Delivery Orders</a>
+    <a class="active" href="#">New Order</a>
+    <a href="#">Rates</a>
+    <a href="#">Master Data</a>
+  </div>
+  <div style="padding:16px;max-width:900px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+      <span style="color:#9ca3af;">&#8592;</span>
+      <span style="font-size:16px;font-weight:800;">Create Delivery Order</span>
+    </div>
+
+    <div class="form-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+        <span class="step-badge">2</span>
+        <span style="font-size:13px;font-weight:700;">Assign vendors & services</span>
+      </div>
+
+      <!-- Job 1: FM Trucking with route -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+          <span style="font-size:11px;font-weight:700;color:#0D9488;">J01</span>
+          <span style="padding:1px 5px;border-radius:99px;font-size:9px;font-weight:600;background:rgba(13,148,136,0.06);border:1px solid rgba(13,148,136,0.1);"><span style="color:#0D9488;font-family:monospace;">FM</span> Trucking</span>
+          <span style="font-size:11px;font-weight:600;color:#374151;margin-left:4px;">HaleSun</span>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <div>
+            <div style="font-size:9px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">Origin</div>
+            <select class="loc-select">
+              <option>TikTok WH, Shenzhen</option>
+              <option>Yiwu Warehouse</option>
+              <option>Dongguan Cross-dock</option>
+            </select>
+          </div>
+          <span style="color:#9ca3af;margin-top:14px;">&#8594;</span>
+          <div>
+            <div style="font-size:9px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">Destination</div>
+            <select class="loc-select">
+              <option>SZX Airport Cargo Terminal</option>
+              <option>Yantian Port</option>
+              <option>Shekou Port</option>
+              <option>Shenzhen Bay Checkpoint</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+          <span style="font-size:10px;color:#9ca3af;">Rate:</span>
+          <span class="mono" style="font-size:11px;font-weight:600;color:#0D9488;">RM 450.00</span>
+        </div>
+      </div>
+
+      <!-- Job 2: EC at location -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+          <span style="font-size:11px;font-weight:700;color:#0D9488;">J02</span>
+          <span style="padding:1px 5px;border-radius:99px;font-size:9px;font-weight:600;background:rgba(13,148,136,0.06);border:1px solid rgba(13,148,136,0.1);"><span style="color:#0D9488;font-family:monospace;">EC</span> Export Customs</span>
+          <span style="font-size:11px;font-weight:600;color:#374151;margin-left:4px;">Gonda</span>
+        </div>
+        <div>
+          <div style="font-size:9px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">Location</div>
+          <select class="loc-select">
+            <option>SZX Airport Cargo Terminal</option>
+            <option>Shenzhen Bay Checkpoint</option>
+            <option>Huanggang Port</option>
+            <option>Guangzhou Baiyun Airport</option>
+          </select>
+        </div>
+        <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+          <span style="font-size:10px;color:#9ca3af;">Rate:</span>
+          <span class="mono" style="font-size:11px;font-weight:600;color:#0D9488;">RM 150.00</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mockup A2: Locations master data page -->
+<h3>Locations master data page</h3>
+<div class="screen">
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a href="#">Delivery Orders</a>
+    <a href="#">Rates</a>
+    <a class="active" href="#">Master Data</a>
+  </div>
+  <div style="padding:16px;">
+    <!-- Sub-nav -->
+    <div style="display:flex;gap:4px;margin-bottom:14px;">
+      <span style="padding:4px 10px;border-radius:4px;font-size:11px;color:#9ca3af;">Vendors</span>
+      <span style="padding:4px 10px;border-radius:4px;font-size:11px;color:#9ca3af;">Customers</span>
+      <span style="padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(13,148,136,0.06);color:#0D9488;">Locations</span>
+      <span style="padding:4px 10px;border-radius:4px;font-size:11px;color:#9ca3af;">Services</span>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;">
+      <div>
+        <div style="font-size:16px;font-weight:800;">Locations</div>
+        <div style="font-size:11px;color:#9ca3af;">12 locations managed &middot; Used in rate cards, jobs, and reporting</div>
+      </div>
+      <button style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;background:#0D9488;color:#fff;border:none;cursor:pointer;font-family:inherit;">+ Add Location</button>
+    </div>
+
+    <!-- Filter -->
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <span style="padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;background:rgba(13,148,136,0.06);color:#0D9488;cursor:pointer;">All</span>
+      <span style="padding:3px 8px;border-radius:4px;font-size:10px;color:#9ca3af;cursor:pointer;">Warehouse</span>
+      <span style="padding:3px 8px;border-radius:4px;font-size:10px;color:#9ca3af;cursor:pointer;">Port</span>
+      <span style="padding:3px 8px;border-radius:4px;font-size:10px;color:#9ca3af;cursor:pointer;">Airport</span>
+      <span style="padding:3px 8px;border-radius:4px;font-size:10px;color:#9ca3af;cursor:pointer;">Checkpoint</span>
+      <span style="padding:3px 8px;border-radius:4px;font-size:10px;color:#9ca3af;cursor:pointer;">Hub</span>
+    </div>
+
+    <div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Zone</th>
+            <th>Type</th>
+            <th>Rates linked</th>
+            <th>Jobs (30d)</th>
+            <th style="width:40px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="loc-code">LOC-001</span></td>
+            <td style="font-weight:600;">TikTok WH, Shenzhen</td>
+            <td>Shenzhen</td>
+            <td><span class="loc-type loc-warehouse">Warehouse</span></td>
+            <td class="mono" style="font-size:10px;">8</td>
+            <td class="mono" style="font-size:10px;">142</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td><span class="loc-code">LOC-002</span></td>
+            <td style="font-weight:600;">Yantian Port</td>
+            <td>Shenzhen</td>
+            <td><span class="loc-type loc-port">Port</span></td>
+            <td class="mono" style="font-size:10px;">6</td>
+            <td class="mono" style="font-size:10px;">98</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td><span class="loc-code">LOC-003</span></td>
+            <td style="font-weight:600;">Shenzhen Bay Checkpoint</td>
+            <td>Shenzhen</td>
+            <td><span class="loc-type loc-checkpoint">Checkpoint</span></td>
+            <td class="mono" style="font-size:10px;">4</td>
+            <td class="mono" style="font-size:10px;">67</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td><span class="loc-code">LOC-004</span></td>
+            <td style="font-weight:600;">SZX Airport Cargo Terminal</td>
+            <td>Shenzhen</td>
+            <td><span class="loc-type loc-airport">Airport</span></td>
+            <td class="mono" style="font-size:10px;">7</td>
+            <td class="mono" style="font-size:10px;">115</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td><span class="loc-code">LOC-005</span></td>
+            <td style="font-weight:600;">Dongguan Cross-dock</td>
+            <td>Dongguan</td>
+            <td><span class="loc-type loc-hub">Hub</span></td>
+            <td class="mono" style="font-size:10px;">3</td>
+            <td class="mono" style="font-size:10px;">41</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td><span class="loc-code">LOC-006</span></td>
+            <td style="font-weight:600;">Huanggang Port</td>
+            <td>Shenzhen</td>
+            <td><span class="loc-type loc-checkpoint">Checkpoint</span></td>
+            <td class="mono" style="font-size:10px;">3</td>
+            <td class="mono" style="font-size:10px;">52</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td><span class="loc-code">LOC-007</span></td>
+            <td style="font-weight:600;">Guangzhou Baiyun Airport</td>
+            <td>Guangzhou</td>
+            <td><span class="loc-type loc-airport">Airport</span></td>
+            <td class="mono" style="font-size:10px;">5</td>
+            <td class="mono" style="font-size:10px;">78</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td><span class="loc-code">LOC-008</span></td>
+            <td style="font-weight:600;">Shekou Port</td>
+            <td>Shenzhen</td>
+            <td><span class="loc-type loc-port">Port</span></td>
+            <td class="mono" style="font-size:10px;">4</td>
+            <td class="mono" style="font-size:10px;">36</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td><span class="loc-code">LOC-009</span></td>
+            <td style="font-weight:600;">Lantau Terminals</td>
+            <td>Hong Kong</td>
+            <td><span class="loc-type loc-port">Port</span></td>
+            <td class="mono" style="font-size:10px;">3</td>
+            <td class="mono" style="font-size:10px;">29</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td><span class="loc-code">LOC-010</span></td>
+            <td style="font-weight:600;">Hong Kong Airport</td>
+            <td>Hong Kong</td>
+            <td><span class="loc-type loc-airport">Airport</span></td>
+            <td class="mono" style="font-size:10px;">5</td>
+            <td class="mono" style="font-size:10px;">44</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td><span class="loc-code">LOC-011</span></td>
+            <td style="font-weight:600;">Ningbo Port</td>
+            <td>Ningbo</td>
+            <td><span class="loc-type loc-port">Port</span></td>
+            <td class="mono" style="font-size:10px;">2</td>
+            <td class="mono" style="font-size:10px;">18</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+          <tr>
+            <td><span class="loc-code">LOC-012</span></td>
+            <td style="font-weight:600;">Yiwu Warehouse</td>
+            <td>Yiwu</td>
+            <td><span class="loc-type loc-warehouse">Warehouse</span></td>
+            <td class="mono" style="font-size:10px;">2</td>
+            <td class="mono" style="font-size:10px;">15</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">&#9998;</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2>Option B: Autocomplete with Fuzzy Matching</h2>
+<span class="label" style="background:#eff6ff;color:#2563eb;">Flexible input</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Keep text inputs for origin/destination, but add autocomplete powered by the locations master list. Typing "tiktok" shows "TikTok WH, Shenzhen" as the top match. Typing "yant" shows "Yantian Port". If no match is found, ops can type a new name and it gets created as a new location in master data (with a confirmation prompt to set zone and type).
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>- Fast for both known and new locations<br>- Doesn't block ops when a new location appears<br>- Fuzzy matching catches misspellings and abbreviations<br>- Feels like typing, not picking from a list</div>
+    <div class="cons"><strong>Cons</strong><br>- Still possible to create duplicates ("TikTok WH" and "TikTok Warehouse")<br>- Needs dedup logic or manual cleanup by admin<br>- Fuzzy matching quality depends on the algorithm<br>- New locations may be created with incomplete metadata</div>
+  </div>
+</div>
+
+<!-- Mockup B: Autocomplete in action -->
+<h3>Autocomplete matching "tiktok"</h3>
+<div class="screen">
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a href="#">Delivery Orders</a>
+    <a class="active" href="#">New Order</a>
+    <a href="#">Rates</a>
+    <a href="#">Master Data</a>
+  </div>
+  <div style="padding:16px;max-width:900px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+      <span style="color:#9ca3af;">&#8592;</span>
+      <span style="font-size:16px;font-weight:800;">Create Delivery Order</span>
+    </div>
+
+    <div class="form-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+        <span class="step-badge">2</span>
+        <span style="font-size:13px;font-weight:700;">Assign vendors & services</span>
+      </div>
+
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+          <span style="font-size:11px;font-weight:700;color:#0D9488;">J01</span>
+          <span style="padding:1px 5px;border-radius:99px;font-size:9px;font-weight:600;background:rgba(13,148,136,0.06);border:1px solid rgba(13,148,136,0.1);"><span style="color:#0D9488;font-family:monospace;">FM</span> Trucking</span>
+          <span style="font-size:11px;font-weight:600;color:#374151;margin-left:4px;">HaleSun</span>
+        </div>
+
+        <div style="display:flex;gap:12px;align-items:flex-start;">
+          <!-- Origin with autocomplete open -->
+          <div style="position:relative;">
+            <div style="font-size:9px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">Origin</div>
+            <input class="autocomplete-input" value="tiktok" style="border-color:#0D9488;box-shadow:0 0 0 2px rgba(13,148,136,0.1);">
+            <div class="autocomplete-dropdown">
+              <div class="autocomplete-item highlighted">
+                <span class="loc-type loc-warehouse" style="flex-shrink:0;">WH</span>
+                <div>
+                  <div><span class="autocomplete-match">TikTok</span> WH, Shenzhen</div>
+                  <div style="font-size:9px;color:#9ca3af;">LOC-001 &middot; Shenzhen zone</div>
+                </div>
+                <span class="autocomplete-zone">8 rates</span>
+              </div>
+              <div style="padding:6px 10px;border-top:1px dashed #e5e7eb;">
+                <div style="font-size:10px;color:#9ca3af;display:flex;align-items:center;gap:4px;cursor:pointer;">
+                  <span style="color:#0D9488;font-weight:700;">+</span> Create "tiktok" as new location...
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <span style="color:#9ca3af;margin-top:24px;">&#8594;</span>
+
+          <!-- Destination with autocomplete showing multiple matches -->
+          <div style="position:relative;">
+            <div style="font-size:9px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">Destination</div>
+            <input class="autocomplete-input" value="szx" style="border-color:#0D9488;box-shadow:0 0 0 2px rgba(13,148,136,0.1);">
+            <div class="autocomplete-dropdown">
+              <div class="autocomplete-item highlighted">
+                <span class="loc-type loc-airport" style="flex-shrink:0;">AIR</span>
+                <div>
+                  <div><span class="autocomplete-match">SZX</span> Airport Cargo Terminal</div>
+                  <div style="font-size:9px;color:#9ca3af;">LOC-004 &middot; Shenzhen zone</div>
+                </div>
+                <span class="autocomplete-zone">7 rates</span>
+              </div>
+              <div class="autocomplete-item">
+                <span class="loc-type loc-checkpoint" style="flex-shrink:0;">CHK</span>
+                <div>
+                  <div>Shenzhen Bay Checkpoint</div>
+                  <div style="font-size:9px;color:#9ca3af;">LOC-003 &middot; Shenzhen zone</div>
+                </div>
+                <span class="autocomplete-zone">4 rates</span>
+              </div>
+              <div class="autocomplete-item">
+                <span class="loc-type loc-port" style="flex-shrink:0;">PORT</span>
+                <div>
+                  <div>Shekou Port</div>
+                  <div style="font-size:9px;color:#9ca3af;">LOC-008 &middot; Shenzhen zone</div>
+                </div>
+                <span class="autocomplete-zone">4 rates</span>
+              </div>
+              <div style="padding:6px 10px;border-top:1px dashed #e5e7eb;">
+                <div style="font-size:10px;color:#9ca3af;display:flex;align-items:center;gap:4px;cursor:pointer;">
+                  <span style="color:#0D9488;font-weight:700;">+</span> Create "szx" as new location...
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2>Option C: Dropdown + "Add New" Option</h2>
+<span class="label" style="background:#ecfdf5;color:#059669;">Recommended</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Dropdown like Option A (strict, from master list), but with an "Add new location" option at the bottom of every dropdown. Clicking it opens a small inline form right below the dropdown where ops enters: name, zone, and type. The new location is immediately available for selection and gets added to master data. Admin can review and clean up later.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>- Consistency by default — 99% of the time ops picks from the list<br>- Flexibility when needed — new locations don't block ops<br>- New locations enter the system with proper metadata (zone, type)<br>- Rate lookup works reliably, just like Option A</div>
+    <div class="cons"><strong>Cons</strong><br>- Slightly more complex UI than a plain dropdown<br>- Ops could still create near-duplicates ("Yantian" vs "Yantian Port")<br>- Admin needs a way to see recently-added locations and merge duplicates</div>
+  </div>
+</div>
+
+<!-- Mockup C1: Dropdown with "Add new" expanded -->
+<h3>Dropdown with "Add new location" expanded</h3>
+<div class="screen">
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a href="#">Delivery Orders</a>
+    <a class="active" href="#">New Order</a>
+    <a href="#">Rates</a>
+    <a href="#">Master Data</a>
+  </div>
+  <div style="padding:16px;max-width:900px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+      <span style="color:#9ca3af;">&#8592;</span>
+      <span style="font-size:16px;font-weight:800;">Create Delivery Order</span>
+    </div>
+
+    <div class="form-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+        <span class="step-badge">2</span>
+        <span style="font-size:13px;font-weight:700;">Assign vendors & services</span>
+      </div>
+
+      <!-- Job with dropdown open -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+          <span style="font-size:11px;font-weight:700;color:#0D9488;">J01</span>
+          <span style="padding:1px 5px;border-radius:99px;font-size:9px;font-weight:600;background:rgba(13,148,136,0.06);border:1px solid rgba(13,148,136,0.1);"><span style="color:#0D9488;font-family:monospace;">OH</span> Origin Handling</span>
+          <span style="font-size:11px;font-weight:600;color:#374151;margin-left:4px;">ThaiKee</span>
+        </div>
+
+        <div style="display:flex;gap:12px;align-items:flex-start;">
+          <div style="position:relative;">
+            <div style="font-size:9px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">Location</div>
+            <!-- Dropdown simulated as open -->
+            <div style="border:1px solid #0D9488;border-radius:4px;padding:6px 10px;font-size:11px;width:280px;background:#fff;color:#9ca3af;box-shadow:0 0 0 2px rgba(13,148,136,0.1);">
+              Select location...
+            </div>
+            <!-- Dropdown menu -->
+            <div style="position:absolute;top:100%;left:0;width:320px;background:#fff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:10;margin-top:2px;max-height:300px;overflow-y:auto;">
+              <!-- Search -->
+              <div style="padding:6px 10px;border-bottom:1px solid #f3f4f6;">
+                <input style="border:1px solid #e5e7eb;border-radius:4px;padding:4px 8px;font-size:10px;width:100%;font-family:inherit;" placeholder="Search locations...">
+              </div>
+              <!-- Grouped: Warehouses -->
+              <div style="padding:4px 10px 2px;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;">Warehouses</div>
+              <div style="padding:5px 10px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+                <span class="loc-type loc-warehouse" style="font-size:8px;">WH</span>
+                <span>TikTok WH, Shenzhen</span>
+                <span style="margin-left:auto;font-size:9px;color:#9ca3af;">LOC-001</span>
+              </div>
+              <div style="padding:5px 10px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+                <span class="loc-type loc-warehouse" style="font-size:8px;">WH</span>
+                <span>Yiwu Warehouse</span>
+                <span style="margin-left:auto;font-size:9px;color:#9ca3af;">LOC-012</span>
+              </div>
+              <!-- Grouped: Ports -->
+              <div style="padding:4px 10px 2px;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin-top:4px;">Ports</div>
+              <div style="padding:5px 10px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+                <span class="loc-type loc-port" style="font-size:8px;">PORT</span>
+                <span>Yantian Port</span>
+                <span style="margin-left:auto;font-size:9px;color:#9ca3af;">LOC-002</span>
+              </div>
+              <div style="padding:5px 10px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+                <span class="loc-type loc-port" style="font-size:8px;">PORT</span>
+                <span>Shekou Port</span>
+                <span style="margin-left:auto;font-size:9px;color:#9ca3af;">LOC-008</span>
+              </div>
+              <div style="padding:5px 10px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+                <span class="loc-type loc-port" style="font-size:8px;">PORT</span>
+                <span>Lantau Terminals</span>
+                <span style="margin-left:auto;font-size:9px;color:#9ca3af;">LOC-009</span>
+              </div>
+              <!-- Grouped: Airports -->
+              <div style="padding:4px 10px 2px;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin-top:4px;">Airports</div>
+              <div style="padding:5px 10px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+                <span class="loc-type loc-airport" style="font-size:8px;">AIR</span>
+                <span>SZX Airport Cargo Terminal</span>
+                <span style="margin-left:auto;font-size:9px;color:#9ca3af;">LOC-004</span>
+              </div>
+              <div style="padding:5px 10px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+                <span class="loc-type loc-airport" style="font-size:8px;">AIR</span>
+                <span>Guangzhou Baiyun Airport</span>
+                <span style="margin-left:auto;font-size:9px;color:#9ca3af;">LOC-007</span>
+              </div>
+              <div style="padding:5px 10px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+                <span class="loc-type loc-airport" style="font-size:8px;">AIR</span>
+                <span>Hong Kong Airport</span>
+                <span style="margin-left:auto;font-size:9px;color:#9ca3af;">LOC-010</span>
+              </div>
+              <!-- Grouped: Checkpoints -->
+              <div style="padding:4px 10px 2px;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin-top:4px;">Checkpoints</div>
+              <div style="padding:5px 10px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+                <span class="loc-type loc-checkpoint" style="font-size:8px;">CHK</span>
+                <span>Shenzhen Bay Checkpoint</span>
+                <span style="margin-left:auto;font-size:9px;color:#9ca3af;">LOC-003</span>
+              </div>
+              <div style="padding:5px 10px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+                <span class="loc-type loc-checkpoint" style="font-size:8px;">CHK</span>
+                <span>Huanggang Port</span>
+                <span style="margin-left:auto;font-size:9px;color:#9ca3af;">LOC-006</span>
+              </div>
+              <!-- Hubs -->
+              <div style="padding:4px 10px 2px;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin-top:4px;">Hubs</div>
+              <div style="padding:5px 10px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+                <span class="loc-type loc-hub" style="font-size:8px;">HUB</span>
+                <span>Dongguan Cross-dock</span>
+                <span style="margin-left:auto;font-size:9px;color:#9ca3af;">LOC-005</span>
+              </div>
+              <!-- Add new -->
+              <div style="padding:8px 10px;border-top:1px solid #e5e7eb;background:#f9fafb;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#0D9488;border-radius:0 0 6px 6px;">
+                <span style="font-size:14px;line-height:1;">+</span> Add new location
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Inline form for adding new location -->
+        <div class="inline-form" style="margin-top:12px;">
+          <div style="font-size:11px;font-weight:700;color:#0D9488;margin-bottom:8px;">New Location</div>
+          <div style="display:grid;grid-template-columns:1fr 120px 120px auto;gap:8px;align-items:end;">
+            <div>
+              <label>Name</label>
+              <input value="Foshan Distribution Center" placeholder="Location name">
+            </div>
+            <div>
+              <label>Zone</label>
+              <input value="Foshan" placeholder="City / area">
+            </div>
+            <div>
+              <label>Type</label>
+              <select>
+                <option>Warehouse</option>
+                <option>Port</option>
+                <option>Airport</option>
+                <option>Checkpoint</option>
+                <option selected>Hub</option>
+              </select>
+            </div>
+            <div style="display:flex;gap:4px;">
+              <button class="btn-sm btn-teal">Add</button>
+              <button class="btn-sm btn-ghost">Cancel</button>
+            </div>
+          </div>
+          <div style="font-size:9px;color:#9ca3af;margin-top:6px;">New location will be assigned code LOC-013 and available immediately in all dropdowns.</div>
+        </div>
+      </div>
+
+      <!-- Job 2: already selected location -->
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin-top:8px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+          <span style="font-size:11px;font-weight:700;color:#0D9488;">J02</span>
+          <span style="padding:1px 5px;border-radius:99px;font-size:9px;font-weight:600;background:rgba(13,148,136,0.06);border:1px solid rgba(13,148,136,0.1);"><span style="color:#0D9488;font-family:monospace;">FM</span> Trucking</span>
+          <span style="font-size:11px;font-weight:600;color:#374151;margin-left:4px;">SevenSeas</span>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <div>
+            <div style="font-size:9px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">Origin</div>
+            <select class="loc-select">
+              <option selected>TikTok WH, Shenzhen</option>
+            </select>
+          </div>
+          <span style="color:#9ca3af;">&#8594;</span>
+          <div>
+            <div style="font-size:9px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">Destination</div>
+            <select class="loc-select">
+              <option selected>Yantian Port</option>
+            </select>
+          </div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:6px;">
+            <span style="font-size:10px;color:#9ca3af;">Rate:</span>
+            <span class="mono" style="font-size:11px;font-weight:600;color:#0D9488;">RM 380.00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mockup C2: Location master data with "recently added" alert -->
+<h3>Admin view: recently added locations needing review</h3>
+<div class="screen">
+  <div style="padding:12px 16px;">
+    <div style="font-size:12px;font-weight:700;margin-bottom:8px;">Recently Added Locations</div>
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:8px 10px;font-size:10px;color:#92400e;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+      <span style="font-weight:700;">2 new locations</span> added by ops this week. Review for duplicates and complete metadata.
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Name</th>
+          <th>Zone</th>
+          <th>Type</th>
+          <th>Added by</th>
+          <th>Added</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background:#fffbeb;">
+          <td><span class="loc-code">LOC-013</span></td>
+          <td style="font-weight:600;">Foshan Distribution Center</td>
+          <td>Foshan</td>
+          <td><span class="loc-type loc-hub">Hub</span></td>
+          <td style="font-size:10px;">Ops: Sarah</td>
+          <td class="mono" style="font-size:10px;color:#9ca3af;">24 Mar 2026</td>
+          <td><span style="padding:1px 6px;border-radius:3px;font-size:9px;font-weight:600;background:#fffbeb;border:1px solid #fde68a;color:#d97706;">Pending review</span></td>
+          <td>
+            <span style="color:#059669;cursor:pointer;font-weight:600;font-size:10px;">Approve</span>
+            <span style="color:#9ca3af;margin:0 4px;">|</span>
+            <span style="color:#dc2626;cursor:pointer;font-weight:600;font-size:10px;">Merge</span>
+          </td>
+        </tr>
+        <tr style="background:#fffbeb;">
+          <td><span class="loc-code">LOC-014</span></td>
+          <td style="font-weight:600;">Nansha Port Terminal</td>
+          <td>Guangzhou</td>
+          <td><span class="loc-type loc-port">Port</span></td>
+          <td style="font-size:10px;">Ops: Wei Lin</td>
+          <td class="mono" style="font-size:10px;color:#9ca3af;">25 Mar 2026</td>
+          <td><span style="padding:1px 6px;border-radius:3px;font-size:9px;font-weight:600;background:#fffbeb;border:1px solid #fde68a;color:#d97706;">Pending review</span></td>
+          <td>
+            <span style="color:#059669;cursor:pointer;font-weight:600;font-size:10px;">Approve</span>
+            <span style="color:#9ca3af;margin:0 4px;">|</span>
+            <span style="color:#dc2626;cursor:pointer;font-weight:600;font-size:10px;">Merge</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="verdict">
+  <h3>Recommendation: Option C — Dropdown + "Add New"</h3>
+  <p style="font-size:12px;line-height:1.7;color:#374151;">
+    <strong>Why Option C:</strong> The dropdown enforces consistency by default — 99% of jobs use existing locations, so rate lookups and reporting work reliably. The "Add new" escape hatch prevents ops from being blocked when a genuinely new location appears (new warehouse, new port terminal). New locations enter the system with proper metadata (name, zone, type) from day one.
+  </p>
+  <p style="font-size:12px;line-height:1.7;color:#374151;margin-top:8px;">
+    <strong>Admin review workflow:</strong> New locations created by ops are flagged as "Pending review" in the Master Data page. Admin can approve, edit, or merge with an existing location. This catches near-duplicates without slowing down ops.
+  </p>
+  <p style="font-size:12px;line-height:1.7;color:#374151;margin-top:8px;">
+    <strong>Data model:</strong> Add a <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;font-size:11px;">Location</code> entity: <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;font-size:11px;">{ code, name, zone, type, status: "active" | "pending_review" }</code>. Replace free-text origin/destination in Jobs with location code references. Seed with 12 known locations. This is the foundation for rate management — build this first.
+  </p>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW: Rate Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #0D9488; }
+  h3 { font-size: 14px; font-weight: 700; margin: 24px 0 8px; }
+  .hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #0D9488; border-radius: 0 6px 6px 0; }
+  .context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+  .rationale strong { color: #111827; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+  .label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+  .pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+  .cons { background: #fefafa; border: 1px solid #fecaca; }
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+  .verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+  /* Data model diagram */
+  .model { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; margin: 12px 0; font-family: 'SF Mono', monospace; font-size: 11px; line-height: 1.8; color: #374151; white-space: pre; overflow-x: auto; }
+
+  /* Table styles */
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { text-align: left; padding: 5px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; }
+  tr:hover { background: #f9fafb; }
+
+  .svc-p { padding: 1px 5px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.1); display: inline-flex; align-items: center; gap: 3px; }
+  .svc-p .c { color: #0D9488; font-family: monospace; }
+  .rate { font-family: 'SF Mono', monospace; font-weight: 600; color: #111827; }
+  .rate-muted { font-family: 'SF Mono', monospace; color: #9ca3af; }
+  .cost-total { font-family: 'SF Mono', monospace; font-weight: 700; font-size: 13px; color: #0D9488; }
+  .nav-dense { height: 40px; padding: 0 16px; background: #fff; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 2px; font-size: 12px; }
+  .nav-dense a { padding: 4px 10px; border-radius: 4px; color: #9ca3af; text-decoration: none; }
+  .nav-dense a.active { color: #0D9488; background: rgba(13,148,136,0.06); font-weight: 600; }
+  .nav-dense .logo { display: flex; align-items: center; gap: 6px; margin-right: 16px; font-weight: 700; font-size: 13px; color: #111827; }
+  .nav-dense .logo-dot { width: 20px; height: 20px; background: #0D9488; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 9px; }
+
+  .form-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; margin-bottom: 12px; }
+  .step-badge { width: 22px; height: 22px; border-radius: 5px; background: #0D9488; color: #fff; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .alert-box { padding: 8px 12px; border-radius: 4px; font-size: 11px; display: flex; align-items: center; gap: 8px; }
+  .alert-teal { background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.12); color: #0D9488; }
+  .alert-amber { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW: Rate Management</h1>
+<div class="hmw">"How might we incorporate vendor rate cards into the delivery order workflow — so ops sees costs while booking, and billing admin can validate invoices against agreed rates?"</div>
+
+<div class="context">
+  <strong>Rate structure:</strong><br>
+  • <strong>CR, CS, EC, OH</strong> → rate per vendor per <strong>location</strong> (e.g., Gonda charges RM 150 for EC at Shenzhen Bay)<br>
+  • <strong>FM Trucking</strong> → rate per vendor per <strong>origin-destination pair</strong> (e.g., HaleSun charges RM 450 from TikTok WH → SZX Airport)<br><br>
+  <strong>Why this matters:</strong> Without rate visibility, ops creates orders blind to cost. Billing admin reconciles invoices manually against spreadsheet rate cards. Rate disputes are common — vendor says RM 500, Teleport expected RM 450. A rate management system prevents this.
+</div>
+
+<!-- Data model -->
+<h3>Proposed Data Model</h3>
+<div class="model">VendorRate {
+  vendorCode: string        // "V-001" (HaleSun)
+  serviceCode: string       // "FM", "EC", "CR", "CS", "OH"
+  rateType: "location" | "route"
+
+  // For location-based (CR, CS, EC, OH):
+  location?: string         // "Shenzhen Bay Checkpoint"
+  rate: number              // 150.00
+
+  // For route-based (FM):
+  origin?: string           // "TikTok WH, Shenzhen"
+  destination?: string      // "SZX Airport Cargo Terminal"
+  rate: number              // 450.00
+
+  currency: "MYR" | "CNY" | "USD"
+  effectiveFrom: string     // "2026-01-01"
+  effectiveTo?: string      // null = still active
+}</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2>Option A: Inline Rate Display</h2>
+<span class="label" style="background:#ecfdf5;color:#059669;">Recommended</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Rates appear inline wherever vendors and services are shown — in the create form, in the sub-table, and in the slide-out panel. No separate "Rate Management" page for Phase 1. Rates are loaded from a rate card JSON file (same pattern as vendor/customer master data). When ops selects a vendor + service + location, the rate auto-populates. Each order shows estimated total cost.
+  <div class="pros-cons">
+    <div class="pros"><strong>✓ Pros</strong><br>• Zero navigation — rates visible in context<br>• Ops sees cost while creating the order<br>• Sub-table shows rate per job + order total<br>• Simple to implement — just lookup + display</div>
+    <div class="cons"><strong>✕ Cons</strong><br>• No rate editing UI (admin edits JSON/master data directly)<br>• Can't see rate history or compare vendors by rate<br>• Rate disputes still need manual investigation</div>
+  </div>
+</div>
+
+<!-- Mockup: Create form with rates -->
+<div class="screen">
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a href="#">Delivery Orders</a>
+    <a class="active" href="#">New Order</a>
+    <a href="#">Rates</a>
+    <a href="#">Master Data</a>
+  </div>
+  <div style="padding:16px;max-width:900px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+      <span style="color:#9ca3af;">←</span>
+      <span style="font-size:16px;font-weight:800;">Create Delivery Order</span>
+    </div>
+
+    <!-- Step 2: Jobs with rates -->
+    <div class="form-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <span class="step-badge">2</span>
+        <span style="font-size:13px;font-weight:700;">Assign vendors & services</span>
+      </div>
+
+      <div style="border:1px dashed #d1d5db;border-radius:6px;background:#f9fafb;padding:12px;">
+        <!-- Job 1 -->
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <span style="font-size:11px;font-weight:700;color:#0D9488;">J01</span>
+            <div class="alert-teal" style="padding:3px 8px;font-size:10px;font-weight:700;">
+              Rate: <span class="mono">RM 450.00</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;font-size:11px;">
+            <select style="border:1px solid #e5e7eb;border-radius:4px;padding:4px 8px;font-size:11px;width:130px;"><option>HaleSun</option></select>
+            <select style="border:1px solid #e5e7eb;border-radius:4px;padding:4px 8px;font-size:11px;width:100px;"><option>FM Trucking</option></select>
+            <span style="color:#9ca3af;">TikTok WH → SZX Airport</span>
+          </div>
+        </div>
+
+        <!-- Job 2 -->
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <span style="font-size:11px;font-weight:700;color:#0D9488;">J02</span>
+            <div class="alert-teal" style="padding:3px 8px;font-size:10px;font-weight:700;">
+              Rate: <span class="mono">RM 150.00</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;font-size:11px;">
+            <select style="border:1px solid #e5e7eb;border-radius:4px;padding:4px 8px;font-size:11px;width:130px;"><option>Gonda</option></select>
+            <select style="border:1px solid #e5e7eb;border-radius:4px;padding:4px 8px;font-size:11px;width:100px;"><option>EC Customs</option></select>
+            <span style="color:#9ca3af;">@ SZX Airport Cargo Terminal</span>
+          </div>
+        </div>
+
+        <!-- Job 3 -->
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <span style="font-size:11px;font-weight:700;color:#0D9488;">J03</span>
+            <div class="alert-teal" style="padding:3px 8px;font-size:10px;font-weight:700;">
+              Rate: <span class="mono">RM 80.00</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;font-size:11px;">
+            <select style="border:1px solid #e5e7eb;border-radius:4px;padding:4px 8px;font-size:11px;width:130px;"><option>Gonda</option></select>
+            <select style="border:1px solid #e5e7eb;border-radius:4px;padding:4px 8px;font-size:11px;width:100px;"><option>CS Submission</option></select>
+            <span style="color:#9ca3af;">@ SZX Airport Cargo Terminal</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order total -->
+      <div style="display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid #f3f4f6;">
+        <span style="font-size:11px;color:#9ca3af;">Estimated Order Total:</span>
+        <span class="cost-total">RM 680.00</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mockup: Sub-table with rates -->
+<h3>In the expanded sub-table</h3>
+<div class="screen">
+  <div style="padding:8px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;">
+    <span style="font-weight:700;font-size:12px;">TikTok</span>
+    <span class="mono" style="font-size:9px;color:#9ca3af;margin-left:6px;">DO-20260308-001</span>
+    <span style="font-size:11px;color:#9ca3af;margin-left:12px;">24 bags · 1240 kg</span>
+    <span style="float:right;font-size:11px;font-weight:700;color:#0D9488;" class="mono">Total: RM 680.00</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Job</th>
+        <th>Vendor</th>
+        <th>Service</th>
+        <th>Origin → Destination</th>
+        <th>Rate</th>
+        <th>Status</th>
+        <th>Proofs</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="font-weight:600;color:#0D9488;">J01</td>
+        <td style="font-weight:600;">HaleSun</td>
+        <td><span class="svc-p"><span class="c">FM</span> Trucking</span></td>
+        <td style="color:#374151;">TikTok WH → SZX Airport</td>
+        <td><span class="rate">RM 450.00</span></td>
+        <td><span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #a7f3d0;background:#f0fdf4;color:#059669;"><span style="width:5px;height:5px;border-radius:50%;background:#059669;display:inline-block;"></span>Completed</span></td>
+        <td style="color:#059669;font-weight:700;">✓</td>
+      </tr>
+      <tr>
+        <td style="font-weight:600;color:#0D9488;">J02</td>
+        <td style="font-weight:600;">Gonda</td>
+        <td><span class="svc-p"><span class="c">EC</span> Export Customs</span></td>
+        <td style="color:#374151;">@ SZX Airport Cargo Terminal</td>
+        <td><span class="rate">RM 150.00</span></td>
+        <td><span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #a7f3d0;background:#f0fdf4;color:#059669;"><span style="width:5px;height:5px;border-radius:50%;background:#059669;display:inline-block;"></span>Completed</span></td>
+        <td style="color:#059669;font-weight:700;">✓</td>
+      </tr>
+      <tr>
+        <td style="font-weight:600;color:#0D9488;">J03</td>
+        <td style="font-weight:600;">Gonda</td>
+        <td><span class="svc-p"><span class="c">CS</span> Submission</span></td>
+        <td style="color:#374151;">@ SZX Airport Cargo Terminal</td>
+        <td><span class="rate">RM 80.00</span></td>
+        <td><span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #a7f3d0;background:#f0fdf4;color:#059669;"><span style="width:5px;height:5px;border-radius:50%;background:#059669;display:inline-block;"></span>Completed</span></td>
+        <td style="color:#059669;font-weight:700;">✓</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2>Option B: Rate Management Page + Inline Display</h2>
+<span class="label" style="background:#eff6ff;color:#2563eb;">Full solution</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Everything in Option A, plus a dedicated "Rates" page in the nav where admin can view, add, edit, and deactivate vendor rates. Two sub-tabs: "By Vendor" (see all rates for HaleSun) and "By Service" (see all FM Trucking rates across vendors).
+  <div class="pros-cons">
+    <div class="pros"><strong>✓ Pros</strong><br>• Full rate lifecycle management in the app<br>• Admin can compare rates across vendors (who's cheapest for FM from Yantian?)<br>• Rate history — see when rates changed<br>• Can flag anomalies (vendor charging above agreed rate)</div>
+    <div class="cons"><strong>✕ Cons</strong><br>• More pages to build (Rate list, Rate add/edit form)<br>• More data model complexity (rate history, effective dates)<br>• Scope creep risk — could become a full procurement system</div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a href="#">Delivery Orders</a>
+    <a href="#">New Order</a>
+    <a class="active" href="#">Rates</a>
+    <a href="#">Master Data</a>
+  </div>
+  <div style="padding:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;">
+      <div>
+        <div style="font-size:16px;font-weight:800;">Vendor Rate Cards</div>
+        <div style="font-size:11px;color:#9ca3af;">Manage agreed rates per vendor, service, and location</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;background:#fff;color:#374151;border:1px solid #e5e7eb;cursor:pointer;font-family:inherit;">↓ Export</button>
+        <button style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;background:#0D9488;color:#fff;border:none;cursor:pointer;font-family:inherit;">+ Add Rate</button>
+      </div>
+    </div>
+
+    <!-- Filter tabs -->
+    <div style="display:flex;gap:4px;margin-bottom:12px;">
+      <span style="padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(13,148,136,0.06);color:#0D9488;">By Vendor</span>
+      <span style="padding:4px 10px;border-radius:4px;font-size:11px;color:#9ca3af;">By Service</span>
+    </div>
+
+    <!-- Vendor: HaleSun -->
+    <div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:12px;">
+      <div style="padding:8px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-weight:700;font-size:12px;">HaleSun</span>
+        <span style="font-size:10px;color:#9ca3af;">4 rates active</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Type</th>
+            <th>Location / Route</th>
+            <th>Rate</th>
+            <th>Currency</th>
+            <th>Effective</th>
+            <th style="width:40px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="svc-p"><span class="c">FM</span></span></td>
+            <td style="color:#9ca3af;">Route</td>
+            <td>TikTok WH → SZX Airport</td>
+            <td><span class="rate">450.00</span></td>
+            <td>MYR</td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">01 Jan 2026</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">✎</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-p"><span class="c">FM</span></span></td>
+            <td style="color:#9ca3af;">Route</td>
+            <td>Guangzhou WH → Huangpu Port</td>
+            <td><span class="rate">380.00</span></td>
+            <td>MYR</td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">01 Jan 2026</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">✎</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-p"><span class="c">CR</span></span></td>
+            <td style="color:#9ca3af;">Location</td>
+            <td>Yantian Port</td>
+            <td><span class="rate">120.00</span></td>
+            <td>MYR</td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">15 Feb 2026</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">✎</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-p"><span class="c">CR</span></span></td>
+            <td style="color:#9ca3af;">Location</td>
+            <td>Dongguan Cross-dock</td>
+            <td><span class="rate">95.00</span></td>
+            <td>MYR</td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">15 Feb 2026</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">✎</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Vendor: Gonda -->
+    <div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:12px;">
+      <div style="padding:8px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-weight:700;font-size:12px;">Gonda</span>
+        <span style="font-size:10px;color:#9ca3af;">3 rates active</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Type</th>
+            <th>Location / Route</th>
+            <th>Rate</th>
+            <th>Currency</th>
+            <th>Effective</th>
+            <th style="width:40px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="svc-p"><span class="c">EC</span></span></td>
+            <td style="color:#9ca3af;">Location</td>
+            <td>SZX Airport Cargo Terminal</td>
+            <td><span class="rate">150.00</span></td>
+            <td>MYR</td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">01 Jan 2026</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">✎</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-p"><span class="c">CS</span></span></td>
+            <td style="color:#9ca3af;">Location</td>
+            <td>SZX Airport Cargo Terminal</td>
+            <td><span class="rate">80.00</span></td>
+            <td>MYR</td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">01 Jan 2026</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">✎</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-p"><span class="c">EC</span></span></td>
+            <td style="color:#9ca3af;">Location</td>
+            <td>Shenzhen Bay Checkpoint</td>
+            <td><span class="rate">160.00</span></td>
+            <td>MYR</td>
+            <td class="mono" style="font-size:10px;color:#9ca3af;">01 Mar 2026</td>
+            <td><span style="color:#9ca3af;cursor:pointer;">✎</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Rate anomaly in billing -->
+<h3>Rate anomaly detection in billing</h3>
+<div class="screen">
+  <div style="padding:12px 16px;">
+    <div style="font-size:12px;font-weight:700;margin-bottom:8px;">Billing Validation — DO-20260312-007</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Job</th>
+          <th>Vendor</th>
+          <th>Service</th>
+          <th>Agreed Rate</th>
+          <th>Invoice Amount</th>
+          <th>Variance</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="font-weight:600;color:#0D9488;">J01</td>
+          <td style="font-weight:600;">HaleSun</td>
+          <td><span class="svc-p"><span class="c">FM</span></span></td>
+          <td><span class="rate">RM 380.00</span></td>
+          <td><span class="rate">RM 380.00</span></td>
+          <td style="color:#059669;font-weight:600;">RM 0</td>
+          <td style="color:#059669;font-weight:600;">✓ Match</td>
+        </tr>
+        <tr style="background:#fefafa;">
+          <td style="font-weight:600;color:#0D9488;">J02</td>
+          <td style="font-weight:600;">Gonda</td>
+          <td><span class="svc-p"><span class="c">EC</span></span></td>
+          <td><span class="rate">RM 150.00</span></td>
+          <td><span class="rate" style="color:#dc2626;">RM 180.00</span></td>
+          <td style="color:#dc2626;font-weight:600;">+RM 30</td>
+          <td style="color:#dc2626;font-weight:600;">⚠ Over</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="alert-amber" style="margin-top:8px;">
+      <span style="font-weight:700;">⚠</span> Gonda EC rate at HK Airport is RM 30 above agreed rate (RM 150 vs invoiced RM 180). Review before approving.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2>Option C: Rate Suggestion Engine</h2>
+<span class="label" style="background:#fffbeb;color:#92400e;">Future vision</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Everything in Option B, plus the system suggests the cheapest vendor for each service based on rate cards. When creating an order, ops sees "HaleSun RM 450 | SevenSeas RM 420 | The Lorry RM 510" and can pick the best option.
+  <div class="pros-cons">
+    <div class="pros"><strong>✓ Pros</strong><br>• Ops makes cost-optimal decisions<br>• Reduces back-and-forth on vendor selection<br>• Could save 10-20% on transport costs</div>
+    <div class="cons"><strong>✕ Cons</strong><br>• Requires complete rate cards for all vendors (data quality issue)<br>• Cheapest isn't always best (reliability, availability matter)<br>• Complex to implement — needs vendor capacity awareness too</div>
+  </div>
+</div>
+
+<div class="screen">
+  <div style="padding:12px 16px;">
+    <div style="font-size:12px;font-weight:700;margin-bottom:8px;">Vendor suggestion for FM Trucking: TikTok WH → SZX Airport</div>
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Vendor</th>
+          <th>Rate</th>
+          <th>Avg Completion</th>
+          <th>Rejections (30d)</th>
+          <th>Recommendation</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background:#f0fdf4;">
+          <td><input type="radio" checked></td>
+          <td style="font-weight:600;">SevenSeas</td>
+          <td><span class="rate">RM 420.00</span></td>
+          <td style="color:#059669;">98%</td>
+          <td>0</td>
+          <td><span style="color:#059669;font-weight:600;font-size:10px;">★ Best value</span></td>
+        </tr>
+        <tr>
+          <td><input type="radio"></td>
+          <td style="font-weight:600;">HaleSun</td>
+          <td><span class="rate">RM 450.00</span></td>
+          <td>95%</td>
+          <td>1</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><input type="radio"></td>
+          <td style="font-weight:600;">The Lorry</td>
+          <td><span class="rate">RM 510.00</span></td>
+          <td>92%</td>
+          <td>2</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="verdict">
+  <h3>Recommendation: Start with Option A, build toward B</h3>
+  <p style="font-size:12px;line-height:1.7;color:#374151;">
+    <strong>Phase 1: Option A (inline rate display).</strong> Add rate lookup to the create form and sub-table. Rates stored as JSON constants (same as vendors/customers). Ops sees estimated cost per job + order total. Takes ~1 day to implement.
+  </p>
+  <p style="font-size:12px;line-height:1.7;color:#374151;margin-top:8px;">
+    <strong>Phase 2: Option B (rate management page).</strong> Build the "Rates" nav section where admin can CRUD vendor rates. Add the rate anomaly detection to the Validation page. This is a natural extension once the data model is in place.
+  </p>
+  <p style="font-size:12px;line-height:1.7;color:#374151;margin-top:8px;">
+    <strong>Phase 3: Option C (suggestion engine).</strong> Only after rate cards are complete for all vendors. This is the "10x" feature but requires data quality to be high first.
+  </p>
+  <p style="font-size:12px;line-height:1.7;color:#374151;margin-top:8px;">
+    <strong>Data model impact:</strong> Add `VendorRate` entity to mockData.ts. Add a `rate` field to the Job interface (populated from lookup during order creation). The rate column in the sub-table shows per-job cost. The order header shows total.
+  </p>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW: Create Order Flow</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #0D9488; }
+  h3 { font-size: 14px; font-weight: 700; margin: 24px 0 8px; }
+  .hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #0D9488; border-radius: 0 6px 6px 0; }
+  .context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+  .rationale strong { color: #111827; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+  .label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+  .pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+  .cons { background: #fefafa; border: 1px solid #fecaca; }
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+  .verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { text-align: left; padding: 5px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; }
+  tr:hover { background: #f9fafb; }
+
+  .nav-dense { height: 40px; padding: 0 16px; background: #fff; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 2px; font-size: 12px; }
+  .nav-dense a { padding: 4px 10px; border-radius: 4px; color: #9ca3af; text-decoration: none; }
+  .nav-dense a.active { color: #0D9488; background: rgba(13,148,136,0.06); font-weight: 600; }
+  .nav-dense .logo { display: flex; align-items: center; gap: 6px; margin-right: 16px; font-weight: 700; font-size: 13px; color: #111827; }
+  .nav-dense .logo-dot { width: 20px; height: 20px; background: #0D9488; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 9px; }
+
+  .svc-p { padding: 1px 5px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.1); display: inline-flex; align-items: center; gap: 3px; }
+  .svc-p .c { color: #0D9488; font-family: monospace; }
+
+  .form-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; margin-bottom: 12px; }
+  .step-badge { width: 22px; height: 22px; border-radius: 5px; background: #0D9488; color: #fff; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge.dim { background: #d1d5db; }
+
+  .btn-sm { padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: pointer; font-family: inherit; border: none; }
+  .btn-teal { background: #0D9488; color: #fff; }
+  .btn-ghost { background: transparent; color: #9ca3af; border: 1px solid #e5e7eb; }
+
+  select.form-select { border: 1px solid #e5e7eb; border-radius: 4px; padding: 5px 8px; font-size: 11px; font-family: inherit; width: 140px; background: #fff; }
+  input.form-input { border: 1px solid #e5e7eb; border-radius: 4px; padding: 5px 8px; font-size: 11px; font-family: inherit; background: #fff; }
+  input.form-input:focus, select.form-select:focus { outline: none; border-color: #0D9488; box-shadow: 0 0 0 2px rgba(13,148,136,0.1); }
+
+  .svc-chip { display: inline-flex; align-items: center; justify-content: center; padding: 6px 14px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer; border: 1px solid #e5e7eb; background: #fff; color: #374151; transition: all 0.15s; user-select: none; }
+  .svc-chip:hover { border-color: #0D9488; color: #0D9488; background: rgba(13,148,136,0.04); }
+  .svc-chip.selected { border-color: #0D9488; background: #0D9488; color: #fff; }
+
+  .check-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 4px; cursor: pointer; margin-bottom: 6px; }
+  .check-item:hover { border-color: #0D9488; }
+  .check-item.checked { border-color: #0D9488; background: rgba(13,148,136,0.04); }
+  .check-box { width: 16px; height: 16px; border: 2px solid #d1d5db; border-radius: 3px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .check-item.checked .check-box { background: #0D9488; border-color: #0D9488; color: #fff; font-size: 10px; }
+
+  .job-row { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 12px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
+  .svc-tag { padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; background: rgba(13,148,136,0.08); color: #0D9488; border: 1px solid rgba(13,148,136,0.15); white-space: nowrap; }
+  .svc-tag-locked { padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; background: #0D9488; color: #fff; white-space: nowrap; }
+
+  .quick-bar { display: flex; gap: 6px; padding: 10px 14px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 12px; align-items: center; }
+  .quick-bar .lbl { font-size: 10px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.04em; margin-right: 4px; white-space: nowrap; }
+  .quick-btn { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer; border: 1px solid #e5e7eb; background: #fff; color: #374151; transition: all 0.15s; }
+  .quick-btn:hover { border-color: #0D9488; color: #0D9488; background: rgba(13,148,136,0.04); }
+  .quick-btn .plus { color: #0D9488; font-weight: 800; font-size: 12px; }
+  .quick-btn.used { border-color: rgba(13,148,136,0.3); background: rgba(13,148,136,0.06); color: #0D9488; }
+  .quick-btn.used .count { background: #0D9488; color: #fff; font-size: 9px; padding: 0 4px; border-radius: 3px; margin-left: 2px; }
+
+  .remove-btn { width: 20px; height: 20px; border-radius: 4px; border: 1px solid #e5e7eb; background: #fff; color: #9ca3af; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-left: auto; flex-shrink: 0; }
+  .remove-btn:hover { border-color: #dc2626; color: #dc2626; background: #fef2f2; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW: Create Order Flow</h1>
+<div class="hmw">"How might we redesign the create order flow so ops can think 'what services do I need?' first -- then assign vendors -- without losing the simplicity of the 1-service-per-job model?"</div>
+
+<div class="context">
+  <strong>Current problem:</strong> The old 3-step flow had Step 2 = "check off services" and Step 3 = "assign vendors." We simplified to 2 steps by removing the service checklist. But this lost the service-first mental model: ops thinks "I need FM, EC, CS for this shipment" BEFORE they think about which vendor does each one. Currently they have to mentally plan the jobs and add them one by one.<br><br>
+  <strong>Repetitive friction:</strong> For a 4-job order, ops does 4x: click "Add Job" &rarr; pick service dropdown &rarr; pick vendor dropdown &rarr; pick route. The service picker is the least interesting choice (ops already knows which services are needed) but it's gating every job row creation. In a typical TikTok shipment (FM + EC + CS + OH), that's 4 rounds of the same dance.<br><br>
+  <strong>Goal:</strong> Let ops express the service plan upfront ("this order needs FM, EC, CS"), then fill in the vendor details per job. Each job still has exactly 1 service -- we're just changing the ORDER of decisions, not the data model.
+</div>
+
+<!-- ======================================================= -->
+<h2>Option A: Restore the Service Checklist (3-Step Flow)</h2>
+<span class="label" style="background:#fffbeb;color:#d97706;">Reversal</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Bring back the original 3-step form. Step 1: order details (customer, MAWB, bags, weight). Step 2: check off which services this order needs (FM, EC, CS, CR, OH). Step 3: system auto-creates one job row per checked service with the service pre-filled and locked. Ops just fills in vendor + route for each row. The key difference from the old design: each job gets exactly 1 service (pre-filled from Step 2). No multi-service jobs.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>- Service-first thinking preserved -- matches ops mental model<br>- Less repetitive: service is pre-filled, ops only picks vendor + route<br>- Explicit step for "what services does this order need?"<br>- Easy to understand -- each step has one clear purpose</div>
+    <div class="cons"><strong>Cons</strong><br>- Extra step adds friction for simple 1-job orders<br>- 3 steps feels heavier than 2 for power users<br>- Can't add duplicate services (e.g., two FM jobs for different routes) without going back<br>- The service checklist step is very sparse -- just 5 checkboxes</div>
+  </div>
+</div>
+
+<h3>3-step form: Step 1 (order details) &rarr; Step 2 (service checklist) &rarr; Step 3 (vendor assignment)</h3>
+<div class="screen">
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a href="#">Delivery Orders</a>
+    <a class="active" href="#">New Order</a>
+    <a href="#">Rates</a>
+    <a href="#">Master Data</a>
+  </div>
+  <div style="padding:16px;max-width:900px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+      <span style="color:#9ca3af;font-size:14px;">&larr;</span>
+      <span style="font-size:16px;font-weight:800;">Create Delivery Order</span>
+    </div>
+
+    <!-- Step indicator -->
+    <div style="display:flex;gap:4px;align-items:center;margin-bottom:16px;font-size:10px;font-weight:600;color:#9ca3af;">
+      <span style="color:#0D9488;">Step 1: Details</span>
+      <span style="margin:0 4px;">&rarr;</span>
+      <span style="color:#0D9488;text-decoration:underline;">Step 2: Services</span>
+      <span style="margin:0 4px;">&rarr;</span>
+      <span>Step 3: Vendors</span>
+    </div>
+
+    <!-- Step 1: Completed summary -->
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px;margin-bottom:12px;display:flex;gap:24px;font-size:11px;">
+      <div><span style="color:#9ca3af;">Customer:</span> <strong>TikTok</strong></div>
+      <div><span style="color:#9ca3af;">MAWB:</span> <strong class="mono">160-84729301</strong></div>
+      <div><span style="color:#9ca3af;">Bags:</span> <strong class="mono">36</strong></div>
+      <div><span style="color:#9ca3af;">Weight:</span> <strong class="mono">1,840 kg</strong></div>
+    </div>
+
+    <!-- Step 2: Service checklist -->
+    <div class="form-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <span class="step-badge">2</span>
+        <span style="font-size:13px;font-weight:700;">Select services needed</span>
+      </div>
+      <div style="font-size:10px;color:#9ca3af;margin-bottom:14px;margin-left:30px;">Check all services this delivery order requires. Each creates one job.</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;max-width:480px;">
+        <div class="check-item checked">
+          <div class="check-box">&#10003;</div>
+          <div><strong style="font-size:12px;">FM</strong><br><span style="font-size:10px;color:#6b7280;">First Mile pickup</span></div>
+        </div>
+        <div class="check-item checked">
+          <div class="check-box">&#10003;</div>
+          <div><strong style="font-size:12px;">EC</strong><br><span style="font-size:10px;color:#6b7280;">Export customs</span></div>
+        </div>
+        <div class="check-item checked">
+          <div class="check-box">&#10003;</div>
+          <div><strong style="font-size:12px;">CS</strong><br><span style="font-size:10px;color:#6b7280;">Cross-border shipping</span></div>
+        </div>
+        <div class="check-item">
+          <div class="check-box"></div>
+          <div><strong style="font-size:12px;">CR</strong><br><span style="font-size:10px;color:#6b7280;">Customs clearance</span></div>
+        </div>
+        <div class="check-item checked">
+          <div class="check-box">&#10003;</div>
+          <div><strong style="font-size:12px;">OH</strong><br><span style="font-size:10px;color:#6b7280;">On-hand delivery</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn-sm btn-ghost">&larr; Back</button>
+        <button class="btn-sm btn-teal">Next: Assign Vendors &rarr;</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Preview (dimmed) -->
+    <div class="form-card" style="opacity:0.4;pointer-events:none;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <span class="step-badge dim">3</span>
+        <span style="font-size:13px;font-weight:700;">Assign vendors &amp; routes</span>
+      </div>
+      <div style="font-size:10px;color:#9ca3af;margin-left:30px;">4 jobs will be created based on selected services.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<h2>Option B: 2-Step with Service-First Job Creation</h2>
+<span class="label" style="background:#eff6ff;color:#2563eb;">Hybrid</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Keep the 2-step form. Step 1: order details. Step 2: instead of a generic "Add Job" button, ops sees service chips (FM, EC, CS, CR, OH). Clicking a chip creates a new job row with that service pre-filled and locked. Ops then fills vendor + route in the row. Adding a job IS selecting a service -- the two actions are merged into a single click. Can click the same service again to create a second job with that service (rare, but supported).
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>- Only 2 steps -- no extra page for service selection<br>- Service-first by design: the first action per job is choosing a service<br>- Each click maps to exactly 1 job -- clear mental model<br>- Supports duplicate services (two FM jobs for different legs)</div>
+    <div class="cons"><strong>Cons</strong><br>- Slightly non-standard pattern: clicking a chip creates a row<br>- Less explicit "plan all services first" step -- ops may still go one-by-one<br>- The chips and job rows coexist, which is visually busier than Option A</div>
+  </div>
+</div>
+
+<h3>Step 2: service chips create job rows on click</h3>
+<div class="screen">
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a href="#">Delivery Orders</a>
+    <a class="active" href="#">New Order</a>
+    <a href="#">Rates</a>
+    <a href="#">Master Data</a>
+  </div>
+  <div style="padding:16px;max-width:900px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+      <span style="color:#9ca3af;font-size:14px;">&larr;</span>
+      <span style="font-size:16px;font-weight:800;">Create Delivery Order</span>
+    </div>
+
+    <!-- Step 1: Completed summary -->
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px;margin-bottom:12px;display:flex;gap:24px;font-size:11px;">
+      <div><span style="color:#9ca3af;">Customer:</span> <strong>TikTok</strong></div>
+      <div><span style="color:#9ca3af;">MAWB:</span> <strong class="mono">160-84729301</strong></div>
+      <div><span style="color:#9ca3af;">Bags:</span> <strong class="mono">36</strong></div>
+      <div><span style="color:#9ca3af;">Weight:</span> <strong class="mono">1,840 kg</strong></div>
+    </div>
+
+    <!-- Step 2: Service chips + job rows -->
+    <div class="form-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <span class="step-badge">2</span>
+        <span style="font-size:13px;font-weight:700;">Add jobs by service</span>
+      </div>
+      <div style="font-size:10px;color:#9ca3af;margin-bottom:14px;margin-left:30px;">Click a service to create a job. Each job has exactly 1 service.</div>
+
+      <!-- Service chips -->
+      <div style="display:flex;gap:6px;margin-bottom:14px;margin-left:30px;">
+        <div class="svc-chip selected">+ FM</div>
+        <div class="svc-chip selected">+ EC</div>
+        <div class="svc-chip selected">+ CS</div>
+        <div class="svc-chip">+ CR</div>
+        <div class="svc-chip">+ OH</div>
+      </div>
+
+      <!-- Job rows generated from chip clicks -->
+      <div style="margin-left:30px;">
+        <!-- Job 1: FM - filled -->
+        <div class="job-row">
+          <span style="font-size:10px;color:#9ca3af;font-weight:600;width:18px;">J1</span>
+          <span class="svc-tag-locked">FM</span>
+          <select class="form-select" style="width:130px;">
+            <option selected>HaleSun</option>
+            <option>SevenSeas</option>
+            <option>Gonda</option>
+          </select>
+          <input class="form-input" style="width:200px;" value="TikTok Warehouse KUL &rarr; KLIA Cargo" />
+          <button class="remove-btn" title="Remove">&times;</button>
+        </div>
+
+        <!-- Job 2: EC - filled -->
+        <div class="job-row">
+          <span style="font-size:10px;color:#9ca3af;font-weight:600;width:18px;">J2</span>
+          <span class="svc-tag-locked">EC</span>
+          <select class="form-select" style="width:130px;">
+            <option>HaleSun</option>
+            <option selected>Gonda</option>
+            <option>ThaiKee</option>
+          </select>
+          <input class="form-input" style="width:200px;" value="KLIA Cargo Terminal" />
+          <button class="remove-btn" title="Remove">&times;</button>
+        </div>
+
+        <!-- Job 3: CS - vendor not yet selected -->
+        <div class="job-row" style="border-color:#fde68a;background:#fffefb;">
+          <span style="font-size:10px;color:#9ca3af;font-weight:600;width:18px;">J3</span>
+          <span class="svc-tag-locked">CS</span>
+          <select class="form-select" style="width:130px;border-color:#fde68a;">
+            <option value="">Select vendor...</option>
+            <option>SevenSeas</option>
+            <option>The Lorry</option>
+          </select>
+          <input class="form-input" style="width:200px;border-color:#fde68a;" placeholder="Origin &rarr; Destination" />
+          <button class="remove-btn" title="Remove">&times;</button>
+        </div>
+
+        <div style="font-size:10px;color:#9ca3af;margin-top:8px;margin-bottom:4px;">Click another service chip above to add more jobs, or click + OH, + CR.</div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn-sm btn-ghost">&larr; Back</button>
+        <button class="btn-sm btn-teal">Create Order (3 jobs)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<h2>Option C: Quick-Add Service Bar</h2>
+<span class="label" style="background:#f0fdf4;color:#059669;">Recommended</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Step 1: order details. Step 2: a prominent horizontal "quick-add" bar sits at the top: [FM] [EC] [CS] [CR] [OH]. Each button shows a + icon. Click any service button &rarr; a job row instantly appears below with that service locked in. The bar persists -- ops can click services in any order, click the same one multiple times (two FM legs), and see a running count on each button. Job rows accumulate below and can be filled in or removed. The bar is the command center; the rows are the result.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>- Fastest flow: 1 click per job, no dropdowns for service<br>- All 5 services visible at all times -- ops can scan and click what's needed<br>- Running count shows which services are assigned (FM: 1, EC: 1, CS: 1)<br>- Supports duplicate services naturally (click FM twice = two FM rows)<br>- Service-first by design: the first and only action is clicking a service</div>
+    <div class="cons"><strong>Cons</strong><br>- Similar to Option B conceptually -- the bar is just a more visual version of chips<br>- Ops might click too fast and create unwanted rows (easy to remove though)<br>- New pattern that ops needs to learn (but very intuitive once seen)</div>
+  </div>
+</div>
+
+<h3>Step 2: quick-add bar + accumulating job rows</h3>
+<div class="screen">
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a href="#">Delivery Orders</a>
+    <a class="active" href="#">New Order</a>
+    <a href="#">Rates</a>
+    <a href="#">Master Data</a>
+  </div>
+  <div style="padding:16px;max-width:940px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+      <span style="color:#9ca3af;font-size:14px;">&larr;</span>
+      <span style="font-size:16px;font-weight:800;">Create Delivery Order</span>
+    </div>
+
+    <!-- Step 1: Completed summary -->
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px;margin-bottom:12px;display:flex;gap:24px;font-size:11px;">
+      <div><span style="color:#9ca3af;">Customer:</span> <strong>TikTok</strong></div>
+      <div><span style="color:#9ca3af;">MAWB:</span> <strong class="mono">160-84729301</strong></div>
+      <div><span style="color:#9ca3af;">Bags:</span> <strong class="mono">36</strong></div>
+      <div><span style="color:#9ca3af;">Weight:</span> <strong class="mono">1,840 kg</strong></div>
+    </div>
+
+    <!-- Step 2: Quick-add bar + job rows -->
+    <div class="form-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <span class="step-badge">2</span>
+        <span style="font-size:13px;font-weight:700;">Assign vendors &amp; services</span>
+      </div>
+      <div style="font-size:10px;color:#9ca3af;margin-bottom:12px;margin-left:30px;">Click a service to add a job. Each click creates one job row below.</div>
+
+      <!-- Quick-add bar -->
+      <div class="quick-bar" style="margin-left:30px;">
+        <span class="lbl">Add job:</span>
+        <button class="quick-btn used"><span class="plus">+</span> FM <span class="count">1</span></button>
+        <button class="quick-btn used"><span class="plus">+</span> EC <span class="count">1</span></button>
+        <button class="quick-btn used"><span class="plus">+</span> CS <span class="count">1</span></button>
+        <button class="quick-btn"><span class="plus">+</span> CR</button>
+        <button class="quick-btn used"><span class="plus">+</span> OH <span class="count">1</span></button>
+      </div>
+
+      <!-- Accumulated job rows -->
+      <div style="margin-left:30px;">
+        <!-- Header row -->
+        <div style="display:flex;gap:10px;padding:0 12px;margin-bottom:4px;align-items:center;">
+          <span style="width:18px;font-size:9px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em;">#</span>
+          <span style="width:42px;font-size:9px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em;">Svc</span>
+          <span style="width:130px;font-size:9px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em;">Vendor</span>
+          <span style="flex:1;font-size:9px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em;">Route</span>
+          <span style="width:20px;"></span>
+        </div>
+
+        <!-- Job 1: FM -->
+        <div class="job-row">
+          <span style="font-size:10px;color:#9ca3af;font-weight:600;width:18px;">J1</span>
+          <span class="svc-tag-locked" style="width:34px;text-align:center;">FM</span>
+          <select class="form-select" style="width:130px;">
+            <option selected>HaleSun</option>
+            <option>SevenSeas</option>
+            <option>Gonda</option>
+            <option>ThaiKee</option>
+            <option>The Lorry</option>
+          </select>
+          <input class="form-input" style="flex:1;" value="TikTok WH Cyberjaya &rarr; KLIA Cargo" />
+          <button class="remove-btn" title="Remove">&times;</button>
+        </div>
+
+        <!-- Job 2: EC -->
+        <div class="job-row">
+          <span style="font-size:10px;color:#9ca3af;font-weight:600;width:18px;">J2</span>
+          <span class="svc-tag-locked" style="width:34px;text-align:center;">EC</span>
+          <select class="form-select" style="width:130px;">
+            <option>HaleSun</option>
+            <option selected>Gonda</option>
+            <option>ThaiKee</option>
+          </select>
+          <input class="form-input" style="flex:1;" value="KLIA Cargo Terminal" />
+          <button class="remove-btn" title="Remove">&times;</button>
+        </div>
+
+        <!-- Job 3: CS -->
+        <div class="job-row">
+          <span style="font-size:10px;color:#9ca3af;font-weight:600;width:18px;">J3</span>
+          <span class="svc-tag-locked" style="width:34px;text-align:center;">CS</span>
+          <select class="form-select" style="width:130px;">
+            <option selected>SevenSeas</option>
+            <option>The Lorry</option>
+          </select>
+          <input class="form-input" style="flex:1;" value="KLIA &rarr; Suvarnabhumi BKK" />
+          <button class="remove-btn" title="Remove">&times;</button>
+        </div>
+
+        <!-- Job 4: OH -->
+        <div class="job-row">
+          <span style="font-size:10px;color:#9ca3af;font-weight:600;width:18px;">J4</span>
+          <span class="svc-tag-locked" style="width:34px;text-align:center;">OH</span>
+          <select class="form-select" style="width:130px;">
+            <option>Gonda</option>
+            <option selected>ThaiKee</option>
+            <option>The Lorry</option>
+          </select>
+          <input class="form-input" style="flex:1;" value="BKK Cargo &rarr; TikTok TH Hub" />
+          <button class="remove-btn" title="Remove">&times;</button>
+        </div>
+      </div>
+
+      <!-- Summary line -->
+      <div style="margin-left:30px;margin-top:12px;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:11px;color:#6b7280;">
+          <strong style="color:#111827;">4 jobs</strong> &middot;
+          <span class="svc-p"><span class="c">FM</span></span>
+          <span class="svc-p"><span class="c">EC</span></span>
+          <span class="svc-p"><span class="c">CS</span></span>
+          <span class="svc-p"><span class="c">OH</span></span>
+          &middot; 3 vendors assigned
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-sm btn-ghost">&larr; Back</button>
+          <button class="btn-sm btn-teal">Create Order (4 jobs)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Comparison: before vs after -->
+<h3>Before vs After: adding a 4-job TikTok order</h3>
+<div class="screen" style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
+  <div style="padding:14px;border-right:1px solid #e5e7eb;background:#fafafa;">
+    <div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:8px;">CURRENT: Generic "Add Job" button</div>
+    <div style="font-size:10px;color:#6b7280;line-height:1.6;">
+      1. Click "+ Add Job"<br>
+      2. Select service: FM &darr;<br>
+      3. Select vendor: HaleSun &darr;<br>
+      4. Type route<br>
+      5. Click "+ Add Job" again<br>
+      6. Select service: EC &darr;<br>
+      7. Select vendor: Gonda &darr;<br>
+      8. Type route<br>
+      9. Click "+ Add Job" again<br>
+      10. Select service: CS &darr;<br>
+      11. Select vendor: SevenSeas &darr;<br>
+      12. Type route<br>
+      13. Click "+ Add Job" again<br>
+      14. Select service: OH &darr;<br>
+      15. Select vendor: ThaiKee &darr;<br>
+      16. Type route<br>
+      <br>
+      <strong style="color:#dc2626;">16 actions, 4 dropdown selections for service</strong>
+    </div>
+  </div>
+  <div style="padding:14px;">
+    <div style="font-size:11px;font-weight:700;color:#059669;margin-bottom:8px;">OPTION C: Quick-add bar</div>
+    <div style="font-size:10px;color:#6b7280;line-height:1.6;">
+      1. Click [FM] in quick-add bar<br>
+      2. Click [EC] in quick-add bar<br>
+      3. Click [CS] in quick-add bar<br>
+      4. Click [OH] in quick-add bar<br>
+      <span style="color:#9ca3af;">&mdash; 4 rows appear with services locked &mdash;</span><br>
+      5. Select vendor: HaleSun &darr; (row 1)<br>
+      6. Type route (row 1)<br>
+      7. Select vendor: Gonda &darr; (row 2)<br>
+      8. Type route (row 2)<br>
+      9. Select vendor: SevenSeas &darr; (row 3)<br>
+      10. Type route (row 3)<br>
+      11. Select vendor: ThaiKee &darr; (row 4)<br>
+      12. Type route (row 4)<br>
+      <br>
+      <strong style="color:#059669;">12 actions, 0 service dropdowns</strong>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<div class="verdict">
+  <h3>Verdict: Option C -- Quick-Add Service Bar</h3>
+  <p style="font-size:12px;line-height:1.6;color:#374151;">
+    The quick-add bar is the fastest and most visual approach. Ops sees all 5 services at a glance, clicks the ones they need, and each click creates a pre-filled job row with the service locked. It preserves the service-first mental model (ops plans services before vendors) without adding an extra form step. The running count on each button ("FM: 1") gives instant feedback on the order's shape.
+  </p>
+  <p style="font-size:12px;line-height:1.6;color:#374151;margin-top:8px;">
+    <strong>Why not Option A?</strong> The 3-step flow adds a sparse page (just 5 checkboxes) that doesn't justify its own step. Power users will find it slow. <strong>Why not Option B?</strong> It's conceptually identical to C, just less visual. The dedicated bar with counts is clearer than inline chips. <strong>Why C?</strong> It saves 4 actions on a typical 4-job order, the bar doubles as a service summary, and duplicate services are naturally supported. The pattern is immediately intuitive: click a service, get a job row.
+  </p>
+</div>
+
+</div>
+</body>
+</html>

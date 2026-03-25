@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW: Rate Anomaly & Billing</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #0D9488; }
+  h3 { font-size: 14px; font-weight: 700; margin: 24px 0 8px; }
+  .hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #0D9488; border-radius: 0 6px 6px 0; }
+  .context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+  .rationale strong { color: #111827; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+  .label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+  .pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+  .cons { background: #fefafa; border: 1px solid #fecaca; }
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+  .verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { text-align: left; padding: 5px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; }
+  tr:hover { background: #f9fafb; }
+
+  .svc-p { padding: 1px 5px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.1); display: inline-flex; align-items: center; gap: 3px; }
+  .svc-p .c { color: #0D9488; font-family: monospace; }
+  .rate { font-family: 'SF Mono', monospace; font-weight: 600; color: #111827; }
+  .unit-badge { padding: 1px 5px; border-radius: 3px; font-size: 9px; font-weight: 600; font-family: 'SF Mono', monospace; }
+  .unit-flat { background: #f3f4f6; color: #6b7280; }
+  .unit-bag { background: #faf5ff; color: #7c3aed; }
+  .unit-kg { background: #eff6ff; color: #2563eb; }
+
+  .nav-dense { height: 40px; padding: 0 16px; background: #fff; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 2px; font-size: 12px; }
+  .nav-dense a { padding: 4px 10px; border-radius: 4px; color: #9ca3af; text-decoration: none; }
+  .nav-dense a.active { color: #0D9488; background: rgba(13,148,136,0.06); font-weight: 600; }
+  .nav-dense .logo { display: flex; align-items: center; gap: 6px; margin-right: 16px; font-weight: 700; font-size: 13px; color: #111827; }
+  .nav-dense .logo-dot { width: 20px; height: 20px; background: #0D9488; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 9px; }
+
+  /* Variance styling */
+  .var-match { color: #059669; font-weight: 600; }
+  .var-over { color: #dc2626; font-weight: 600; }
+  .var-under { color: #2563eb; font-weight: 600; }
+  .var-none { color: #d97706; font-weight: 600; }
+
+  .status-match { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; border: 1px solid #a7f3d0; background: #f0fdf4; color: #059669; }
+  .status-over { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; border: 1px solid #fecaca; background: #fef2f2; color: #dc2626; }
+  .status-under { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; border: 1px solid #bfdbfe; background: #eff6ff; color: #2563eb; }
+  .status-no-rate { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; border: 1px solid #fde68a; background: #fffbeb; color: #d97706; }
+
+  .dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+
+  .invoice-input { border: 1px solid #e5e7eb; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-family: 'SF Mono', monospace; width: 100px; text-align: right; background: #fff; }
+  .invoice-input:focus { outline: none; border-color: #0D9488; box-shadow: 0 0 0 2px rgba(13,148,136,0.1); }
+  .invoice-input.flagged { border-color: #dc2626; background: #fef2f2; }
+
+  .summary-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; display: flex; gap: 24px; }
+  .summary-stat { text-align: center; }
+  .summary-stat .num { font-size: 20px; font-weight: 800; font-family: 'SF Mono', monospace; }
+  .summary-stat .lbl { font-size: 9px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.04em; }
+
+  .split-view { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .split-left { border-right: 1px solid #e5e7eb; padding: 16px; background: #fafafa; }
+  .split-right { padding: 16px; }
+
+  .btn-sm { padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: pointer; font-family: inherit; border: none; }
+  .btn-teal { background: #0D9488; color: #fff; }
+  .btn-red { background: #dc2626; color: #fff; }
+  .btn-ghost { background: transparent; color: #9ca3af; border: 1px solid #e5e7eb; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW: Rate Anomaly & Billing</h1>
+<div class="hmw">"How might we help billing admin catch rate discrepancies between agreed vendor rates and actual invoices — before approving payment?"</div>
+
+<div class="context">
+  <strong>Current problem:</strong> Vendor invoices sometimes don't match agreed rates. Gonda invoices RM 180 for EC when the agreed rate is RM 150. HaleSun invoices RM 500 for FM when the rate card says RM 450. Currently, billing admin manually checks each invoice line against a spreadsheet.<br><br>
+  <strong>Scale:</strong> Teleport processes ~200 delivery orders per month, each with 3-5 jobs. That's 600-1000 invoice line items to validate. Manual checking takes ~2 hours per day. With rate cards now in the system, we can automate the comparison and flag anomalies instantly.<br><br>
+  <strong>Impact:</strong> Rate discrepancies average RM 15-30 per flagged job. At ~10% flag rate, that's 60-100 flagged jobs saving RM 900-3,000/month in overcharges caught.
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2>Option A: Inline Variance in Validation Page</h2>
+<span class="label" style="background:#eff6ff;color:#2563eb;">Lightweight</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> The existing validation page (from the billing flow) gains new columns: "Agreed Rate", "Invoice Amount", and "Variance". For each job, the system shows the rate from the rate card. Admin enters the vendor's invoiced amount. The system instantly calculates variance and color-codes: green = match, red = over, blue = under, amber = no rate on file. Admin reviews flagged lines and approves or disputes.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>- Integrates with existing validation workflow<br>- Simple — just extra columns in a table admin already uses<br>- Variance is calculated automatically<br>- Clear visual hierarchy: flagged rows stand out</div>
+    <div class="cons"><strong>Cons</strong><br>- Admin still enters invoice amounts manually per job<br>- No invoice document view alongside the comparison<br>- Works per order, not per vendor (can't see all Gonda overcharges at once)<br>- No historical trend ("Gonda has been overcharging EC for 3 months")</div>
+  </div>
+</div>
+
+<!-- Mockup A: Validation table with rate columns -->
+<h3>Validation page with rate comparison</h3>
+<div class="screen">
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a href="#">Delivery Orders</a>
+    <a href="#">Rates</a>
+    <a class="active" href="#">Billing</a>
+    <a href="#">Master Data</a>
+  </div>
+  <div style="padding:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;">
+      <div>
+        <div style="font-size:16px;font-weight:800;">Billing Validation</div>
+        <div style="font-size:11px;color:#9ca3af;">Compare vendor invoices against agreed rate cards</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <select style="border:1px solid #e5e7eb;border-radius:4px;padding:4px 8px;font-size:11px;font-family:inherit;">
+          <option>All vendors</option>
+          <option>HaleSun</option>
+          <option>Gonda</option>
+          <option>SevenSeas</option>
+          <option>ThaiKee</option>
+          <option>The Lorry</option>
+        </select>
+        <select style="border:1px solid #e5e7eb;border-radius:4px;padding:4px 8px;font-size:11px;font-family:inherit;">
+          <option>Mar 2026</option>
+          <option>Feb 2026</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="summary-card" style="margin-bottom:14px;">
+      <div class="summary-stat">
+        <div class="num" style="color:#111827;">24</div>
+        <div class="lbl">Orders to validate</div>
+      </div>
+      <div class="summary-stat">
+        <div class="num" style="color:#111827;">87</div>
+        <div class="lbl">Job lines</div>
+      </div>
+      <div class="summary-stat">
+        <div class="num" style="color:#059669;">64</div>
+        <div class="lbl">Match</div>
+      </div>
+      <div class="summary-stat">
+        <div class="num" style="color:#dc2626;">8</div>
+        <div class="lbl">Over rate</div>
+      </div>
+      <div class="summary-stat">
+        <div class="num" style="color:#2563eb;">3</div>
+        <div class="lbl">Under rate</div>
+      </div>
+      <div class="summary-stat">
+        <div class="num" style="color:#d97706;">12</div>
+        <div class="lbl">No rate on file</div>
+      </div>
+      <div class="summary-stat" style="margin-left:auto;">
+        <div class="num" style="color:#dc2626;">+RM 340</div>
+        <div class="lbl">Total overcharge</div>
+      </div>
+    </div>
+
+    <!-- Order 1: DO with mixed results -->
+    <div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:12px;">
+      <div style="padding:8px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <span style="font-weight:700;font-size:12px;">Temu</span>
+          <span class="mono" style="font-size:9px;color:#9ca3af;margin-left:6px;">DO-20260312-007</span>
+          <span style="font-size:10px;color:#9ca3af;margin-left:8px;">42 bags &middot; 2,180 kg</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="status-over"><span class="dot" style="background:#dc2626;"></span> 1 over</span>
+          <span style="font-size:10px;color:#9ca3af;">Vendor: Gonda, HaleSun</span>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Job</th>
+            <th>Vendor</th>
+            <th>Service</th>
+            <th>Location / Route</th>
+            <th>Unit</th>
+            <th>Qty</th>
+            <th>Agreed Rate</th>
+            <th>Agreed Cost</th>
+            <th>Invoice Amt</th>
+            <th>Variance</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-weight:600;color:#0D9488;">J01</td>
+            <td style="font-weight:600;">HaleSun</td>
+            <td><span class="svc-p"><span class="c">FM</span></span></td>
+            <td>TikTok WH &rarr; Shekou Port</td>
+            <td><span class="unit-badge unit-flat">flat</span></td>
+            <td class="mono" style="color:#9ca3af;">&mdash;</td>
+            <td><span class="rate">430.00</span></td>
+            <td><span class="rate">430.00</span></td>
+            <td><input class="invoice-input" value="430.00"></td>
+            <td><span class="var-match mono">RM 0</span></td>
+            <td><span class="status-match"><span class="dot" style="background:#059669;"></span> Match</span></td>
+          </tr>
+          <tr style="background:#fef2f2;">
+            <td style="font-weight:600;color:#0D9488;">J02</td>
+            <td style="font-weight:600;">Gonda</td>
+            <td><span class="svc-p"><span class="c">EC</span></span></td>
+            <td>@ Shekou Port</td>
+            <td><span class="unit-badge unit-flat">flat</span></td>
+            <td class="mono" style="color:#9ca3af;">&mdash;</td>
+            <td><span class="rate">150.00</span></td>
+            <td><span class="rate">150.00</span></td>
+            <td><input class="invoice-input flagged" value="180.00"></td>
+            <td><span class="var-over mono">+RM 30</span></td>
+            <td><span class="status-over"><span class="dot" style="background:#dc2626;"></span> Over</span></td>
+          </tr>
+          <tr>
+            <td style="font-weight:600;color:#0D9488;">J03</td>
+            <td style="font-weight:600;">HaleSun</td>
+            <td><span class="svc-p"><span class="c">CR</span></span></td>
+            <td>@ Shekou Port</td>
+            <td><span class="unit-badge unit-bag">/bag</span></td>
+            <td class="mono">42</td>
+            <td><span class="rate">25.00</span></td>
+            <td><span class="rate">1,050.00</span></td>
+            <td><input class="invoice-input" value="1,050.00"></td>
+            <td><span class="var-match mono">RM 0</span></td>
+            <td><span class="status-match"><span class="dot" style="background:#059669;"></span> Match</span></td>
+          </tr>
+          <tr>
+            <td style="font-weight:600;color:#0D9488;">J04</td>
+            <td style="font-weight:600;">Gonda</td>
+            <td><span class="svc-p"><span class="c">CS</span></span></td>
+            <td>@ Shekou Port</td>
+            <td><span class="unit-badge unit-flat">flat</span></td>
+            <td class="mono" style="color:#9ca3af;">&mdash;</td>
+            <td><span class="rate">80.00</span></td>
+            <td><span class="rate">80.00</span></td>
+            <td><input class="invoice-input" value="80.00"></td>
+            <td><span class="var-match mono">RM 0</span></td>
+            <td><span class="status-match"><span class="dot" style="background:#059669;"></span> Match</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <!-- Flagged row action -->
+      <div style="padding:8px 12px;background:#fef2f2;border-top:1px solid #fecaca;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:10px;color:#dc2626;font-weight:600;">
+          J02: Gonda EC invoiced RM 180 vs agreed RM 150 (+RM 30 / +20%)
+        </div>
+        <div style="display:flex;gap:4px;">
+          <button class="btn-sm btn-ghost" style="color:#dc2626;border-color:#fecaca;">Dispute</button>
+          <button class="btn-sm btn-ghost">Accept variance</button>
+          <button class="btn-sm btn-teal">Approve matched</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Order 2: All match -->
+    <div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:12px;">
+      <div style="padding:8px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <span style="font-weight:700;font-size:12px;">TikTok</span>
+          <span class="mono" style="font-size:9px;color:#9ca3af;margin-left:6px;">DO-20260314-011</span>
+          <span style="font-size:10px;color:#9ca3af;margin-left:8px;">24 bags &middot; 1,240 kg</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="status-match"><span class="dot" style="background:#059669;"></span> All match</span>
+          <button class="btn-sm btn-teal">Approve all</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Job</th>
+            <th>Vendor</th>
+            <th>Service</th>
+            <th>Location / Route</th>
+            <th>Unit</th>
+            <th>Qty</th>
+            <th>Agreed Rate</th>
+            <th>Agreed Cost</th>
+            <th>Invoice Amt</th>
+            <th>Variance</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-weight:600;color:#0D9488;">J01</td>
+            <td style="font-weight:600;">SevenSeas</td>
+            <td><span class="svc-p"><span class="c">FM</span></span></td>
+            <td>TikTok WH &rarr; Yantian Port</td>
+            <td><span class="unit-badge unit-flat">flat</span></td>
+            <td class="mono" style="color:#9ca3af;">&mdash;</td>
+            <td><span class="rate">380.00</span></td>
+            <td><span class="rate">380.00</span></td>
+            <td><input class="invoice-input" value="380.00"></td>
+            <td><span class="var-match mono">RM 0</span></td>
+            <td><span class="status-match"><span class="dot" style="background:#059669;"></span> Match</span></td>
+          </tr>
+          <tr>
+            <td style="font-weight:600;color:#0D9488;">J02</td>
+            <td style="font-weight:600;">Gonda</td>
+            <td><span class="svc-p"><span class="c">EC</span></span></td>
+            <td>@ Yantian Port</td>
+            <td><span class="unit-badge unit-flat">flat</span></td>
+            <td class="mono" style="color:#9ca3af;">&mdash;</td>
+            <td><span class="rate">155.00</span></td>
+            <td><span class="rate">155.00</span></td>
+            <td><input class="invoice-input" value="155.00"></td>
+            <td><span class="var-match mono">RM 0</span></td>
+            <td><span class="status-match"><span class="dot" style="background:#059669;"></span> Match</span></td>
+          </tr>
+          <tr>
+            <td style="font-weight:600;color:#0D9488;">J03</td>
+            <td style="font-weight:600;">ThaiKee</td>
+            <td><span class="svc-p"><span class="c">OH</span></span></td>
+            <td>@ TikTok WH, Shenzhen</td>
+            <td><span class="unit-badge unit-kg">/kg</span></td>
+            <td class="mono">1,240</td>
+            <td><span class="rate">10.50</span></td>
+            <td><span class="rate">13,020.00</span></td>
+            <td><input class="invoice-input" value="13,020.00"></td>
+            <td><span class="var-match mono">RM 0</span></td>
+            <td><span class="status-match"><span class="dot" style="background:#059669;"></span> Match</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2>Option B: Invoice Upload + Side-by-Side View</h2>
+<span class="label" style="background:#eff6ff;color:#2563eb;">Full solution</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Admin uploads the vendor invoice (PDF or image) and it displays on the left side of a split view. The right side shows the agreed rates from the rate card. Admin reads the invoice and enters actual amounts — the system highlights discrepancies. The invoice stays visible for reference while admin works through each line.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>- Invoice and rate card side by side — less context switching<br>- Admin can reference the actual document while entering amounts<br>- Professional workflow — similar to accounting software<br>- Could support invoice OCR in the future</div>
+    <div class="cons"><strong>Cons</strong><br>- Invoice parsing/OCR is hard (different formats per vendor)<br>- Still requires manual amount entry for Phase 1<br>- Split view uses more screen space<br>- Upload workflow adds a step before validation can begin</div>
+  </div>
+</div>
+
+<!-- Mockup B: Split view with invoice -->
+<h3>Split view: invoice on left, rate comparison on right</h3>
+<div class="screen">
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a href="#">Delivery Orders</a>
+    <a href="#">Rates</a>
+    <a class="active" href="#">Billing</a>
+  </div>
+  <div class="split-view">
+    <!-- Left: Invoice -->
+    <div class="split-left">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div>
+          <div style="font-size:12px;font-weight:700;">Vendor Invoice</div>
+          <div style="font-size:10px;color:#9ca3af;">Gonda &middot; INV-2026-0347 &middot; Mar 2026</div>
+        </div>
+        <button class="btn-sm btn-ghost" style="font-size:9px;">Replace file</button>
+      </div>
+      <!-- Simulated invoice document -->
+      <div style="background:#fff;border:1px solid #d1d5db;border-radius:4px;padding:16px;font-size:10px;line-height:1.8;">
+        <div style="text-align:center;font-weight:800;font-size:14px;margin-bottom:12px;">INVOICE</div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
+          <div>
+            <div style="font-weight:700;">Gonda Logistics Sdn Bhd</div>
+            <div style="color:#6b7280;">No. 12, Jalan Industri 3/4</div>
+            <div style="color:#6b7280;">Subang Jaya, Selangor</div>
+          </div>
+          <div style="text-align:right;">
+            <div><strong>Invoice:</strong> INV-2026-0347</div>
+            <div><strong>Date:</strong> 20 Mar 2026</div>
+            <div><strong>Due:</strong> 20 Apr 2026</div>
+          </div>
+        </div>
+        <div style="font-weight:600;margin-bottom:6px;">Bill To: Teleport Logistics</div>
+        <table style="font-size:10px;border:1px solid #d1d5db;">
+          <thead>
+            <tr style="background:#f3f4f6;">
+              <th style="font-size:8px;padding:4px 6px;">Ref</th>
+              <th style="font-size:8px;padding:4px 6px;">Description</th>
+              <th style="font-size:8px;padding:4px 6px;text-align:right;">Amount (RM)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding:4px 6px;">DO-007-J02</td>
+              <td style="padding:4px 6px;">Export Customs - Shekou Port</td>
+              <td style="padding:4px 6px;text-align:right;font-weight:600;"><span style="background:#fef2f2;padding:0 3px;border-radius:2px;">180.00</span></td>
+            </tr>
+            <tr>
+              <td style="padding:4px 6px;">DO-007-J04</td>
+              <td style="padding:4px 6px;">Customs Submission - Shekou Port</td>
+              <td style="padding:4px 6px;text-align:right;font-weight:600;">80.00</td>
+            </tr>
+            <tr>
+              <td style="padding:4px 6px;">DO-011-J02</td>
+              <td style="padding:4px 6px;">Export Customs - Yantian Port</td>
+              <td style="padding:4px 6px;text-align:right;font-weight:600;">155.00</td>
+            </tr>
+            <tr>
+              <td style="padding:4px 6px;">DO-015-J01</td>
+              <td style="padding:4px 6px;">Export Customs - SZX Airport</td>
+              <td style="padding:4px 6px;text-align:right;font-weight:600;">150.00</td>
+            </tr>
+            <tr style="background:#f3f4f6;">
+              <td style="padding:4px 6px;" colspan="2"><strong>Total</strong></td>
+              <td style="padding:4px 6px;text-align:right;font-weight:800;">565.00</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Right: Rate comparison -->
+    <div class="split-right">
+      <div style="font-size:12px;font-weight:700;margin-bottom:4px;">Rate Comparison</div>
+      <div style="font-size:10px;color:#9ca3af;margin-bottom:12px;">Gonda &middot; 4 invoice lines &middot; Agreed total: RM 535 &middot; Invoiced: RM 565</div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Order / Job</th>
+            <th>Service</th>
+            <th>Location</th>
+            <th>Agreed</th>
+            <th>Invoiced</th>
+            <th>Var</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="background:#fef2f2;">
+            <td class="mono" style="font-size:10px;">DO-007 / J02</td>
+            <td><span class="svc-p"><span class="c">EC</span></span></td>
+            <td>Shekou Port</td>
+            <td><span class="rate">150.00</span></td>
+            <td><span class="rate" style="color:#dc2626;">180.00</span></td>
+            <td><span class="var-over mono">+30</span></td>
+            <td><span class="status-over"><span class="dot" style="background:#dc2626;"></span> Over</span></td>
+          </tr>
+          <tr>
+            <td class="mono" style="font-size:10px;">DO-007 / J04</td>
+            <td><span class="svc-p"><span class="c">CS</span></span></td>
+            <td>Shekou Port</td>
+            <td><span class="rate">80.00</span></td>
+            <td><span class="rate">80.00</span></td>
+            <td><span class="var-match mono">0</span></td>
+            <td><span class="status-match"><span class="dot" style="background:#059669;"></span> Match</span></td>
+          </tr>
+          <tr>
+            <td class="mono" style="font-size:10px;">DO-011 / J02</td>
+            <td><span class="svc-p"><span class="c">EC</span></span></td>
+            <td>Yantian Port</td>
+            <td><span class="rate">155.00</span></td>
+            <td><span class="rate">155.00</span></td>
+            <td><span class="var-match mono">0</span></td>
+            <td><span class="status-match"><span class="dot" style="background:#059669;"></span> Match</span></td>
+          </tr>
+          <tr>
+            <td class="mono" style="font-size:10px;">DO-015 / J01</td>
+            <td><span class="svc-p"><span class="c">EC</span></span></td>
+            <td>SZX Airport</td>
+            <td><span class="rate">150.00</span></td>
+            <td><span class="rate">150.00</span></td>
+            <td><span class="var-match mono">0</span></td>
+            <td><span class="status-match"><span class="dot" style="background:#059669;"></span> Match</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top:12px;padding:10px;background:#fef2f2;border:1px solid #fecaca;border-radius:4px;">
+        <div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:4px;">1 discrepancy found</div>
+        <div style="font-size:10px;color:#991b1b;">
+          Gonda EC at Shekou Port: agreed RM 150 flat, invoiced RM 180 (+RM 30 / +20%). This is the 3rd consecutive overcharge for EC at this location.
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid #e5e7eb;">
+        <div style="font-size:11px;">
+          <span style="color:#9ca3af;">Agreed total:</span> <span class="rate">535.00</span>
+          <span style="color:#9ca3af;margin-left:12px;">Invoiced:</span> <span class="rate" style="color:#dc2626;">565.00</span>
+          <span style="color:#dc2626;font-weight:600;margin-left:8px;">+RM 30</span>
+        </div>
+        <div style="display:flex;gap:4px;">
+          <button class="btn-sm btn-ghost" style="color:#dc2626;border-color:#fecaca;">Dispute DO-007 J02</button>
+          <button class="btn-sm btn-teal">Approve 3 matched</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2>Option C: Invoice Amount Field Per Job</h2>
+<span class="label" style="background:#ecfdf5;color:#059669;">Recommended</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> Add an "Invoice Amount" field to each job, editable by billing admin in the validation workflow. When admin enters the amount, the system auto-compares against the agreed rate and shows variance inline: RM 0 (match), +RM 30 (over), -RM 20 (under). The sub-table gains "Invoice" and "Variance" columns visible only in validation mode. No separate page needed — the comparison lives right in the existing order detail view.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>- Lightweight — just one new field per job<br>- Lives in the existing sub-table, no new page<br>- Variance calculated automatically per job<br>- Admin works in the same context as the order data<br>- Easy to implement — add field + calculation + styling</div>
+    <div class="cons"><strong>Cons</strong><br>- Admin enters amounts manually (no invoice upload)<br>- No side-by-side invoice view<br>- Validation happens per order, not per vendor batch<br>- Per-kg/per-bag rates need quantity-aware variance calculation</div>
+  </div>
+</div>
+
+<!-- Mockup C1: Sub-table with invoice + variance columns -->
+<h3>Sub-table in validation mode (billing admin view)</h3>
+<div class="screen">
+  <div class="nav-dense">
+    <div class="logo"><span class="nav-dense logo-dot">T</span> Teleport OS</div>
+    <a href="#">Delivery Orders</a>
+    <a href="#">Rates</a>
+    <a class="active" href="#">Billing</a>
+  </div>
+  <div style="padding:16px;">
+    <!-- Mode toggle -->
+    <div style="display:flex;gap:4px;margin-bottom:14px;">
+      <span style="padding:4px 10px;border-radius:4px;font-size:11px;color:#9ca3af;">All Orders</span>
+      <span style="padding:4px 10px;border-radius:4px;font-size:11px;color:#9ca3af;">Ready for Billing</span>
+      <span style="padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(13,148,136,0.06);color:#0D9488;">Validation</span>
+      <span style="padding:4px 10px;border-radius:4px;font-size:11px;color:#9ca3af;">Approved</span>
+    </div>
+
+    <!-- Order 1: Shopee -->
+    <div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:12px;">
+      <div style="padding:8px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <span style="font-weight:700;font-size:12px;">Shopee</span>
+          <span class="mono" style="font-size:9px;color:#9ca3af;margin-left:6px;">DO-20260318-014</span>
+          <span style="font-size:10px;color:#9ca3af;margin-left:8px;">28 bags &middot; 1,420 kg</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:10px;color:#9ca3af;">Agreed: <span class="rate">RM 1,840.00</span></span>
+          <span style="font-size:10px;color:#9ca3af;">Invoiced: <span class="rate">RM 1,870.00</span></span>
+          <span class="var-over mono" style="font-size:10px;">+RM 30</span>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Job</th>
+            <th>Vendor</th>
+            <th>Service</th>
+            <th>Location / Route</th>
+            <th>Rate</th>
+            <th>Unit</th>
+            <th>Qty</th>
+            <th>Agreed Cost</th>
+            <th style="background:#fffbeb;">Invoice</th>
+            <th style="background:#fffbeb;">Variance</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-weight:600;color:#0D9488;">J01</td>
+            <td style="font-weight:600;">SevenSeas</td>
+            <td><span class="svc-p"><span class="c">FM</span></span></td>
+            <td>TikTok WH &rarr; Lantau Terminals</td>
+            <td><span class="rate">420.00</span></td>
+            <td><span class="unit-badge unit-flat">flat</span></td>
+            <td class="mono" style="color:#9ca3af;">&mdash;</td>
+            <td><span class="rate">420.00</span></td>
+            <td style="background:#fffdf7;"><input class="invoice-input" value="420.00"></td>
+            <td style="background:#fffdf7;"><span class="var-match mono">RM 0</span></td>
+            <td><span class="status-match" style="font-size:9px;">Match</span></td>
+          </tr>
+          <tr>
+            <td style="font-weight:600;color:#0D9488;">J02</td>
+            <td style="font-weight:600;">HaleSun</td>
+            <td><span class="svc-p"><span class="c">CR</span></span></td>
+            <td>@ Lantau Terminals</td>
+            <td><span class="rate">28.00</span></td>
+            <td><span class="unit-badge unit-bag">/bag</span></td>
+            <td class="mono">28</td>
+            <td><span class="rate">784.00</span></td>
+            <td style="background:#fffdf7;"><input class="invoice-input" value="784.00"></td>
+            <td style="background:#fffdf7;"><span class="var-match mono">RM 0</span></td>
+            <td><span class="status-match" style="font-size:9px;">Match</span></td>
+          </tr>
+          <tr style="background:#fef2f2;">
+            <td style="font-weight:600;color:#0D9488;">J03</td>
+            <td style="font-weight:600;">Gonda</td>
+            <td><span class="svc-p"><span class="c">EC</span></span></td>
+            <td>@ Hong Kong Airport</td>
+            <td><span class="rate">150.00</span></td>
+            <td><span class="unit-badge unit-flat">flat</span></td>
+            <td class="mono" style="color:#9ca3af;">&mdash;</td>
+            <td><span class="rate">150.00</span></td>
+            <td style="background:#fef2f2;"><input class="invoice-input flagged" value="180.00"></td>
+            <td style="background:#fef2f2;"><span class="var-over mono">+RM 30</span></td>
+            <td>
+              <div style="display:flex;gap:3px;">
+                <button class="btn-sm btn-ghost" style="color:#dc2626;border-color:#fecaca;font-size:9px;padding:2px 6px;">Flag</button>
+                <button class="btn-sm btn-ghost" style="font-size:9px;padding:2px 6px;">Accept</button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="font-weight:600;color:#0D9488;">J04</td>
+            <td style="font-weight:600;">ThaiKee</td>
+            <td><span class="svc-p"><span class="c">OH</span></span></td>
+            <td>@ TikTok WH, Shenzhen</td>
+            <td><span class="rate">10.50</span></td>
+            <td><span class="unit-badge unit-kg">/kg</span></td>
+            <td class="mono">1,420</td>
+            <td><span class="rate">14,910.00</span></td>
+            <td style="background:#fffdf7;"><input class="invoice-input" value="14,910.00"></td>
+            <td style="background:#fffdf7;"><span class="var-match mono">RM 0</span></td>
+            <td><span class="status-match" style="font-size:9px;">Match</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="padding:8px 12px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:10px;color:#6b7280;">3 of 4 jobs match. 1 flagged: J03 Gonda EC +RM 30.</span>
+        <div style="display:flex;gap:4px;">
+          <button class="btn-sm btn-teal">Approve 3 matched</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Order 2: AliExpress - with "no rate" scenario -->
+    <div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:12px;">
+      <div style="padding:8px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <span style="font-weight:700;font-size:12px;">AliExpress</span>
+          <span class="mono" style="font-size:9px;color:#9ca3af;margin-left:6px;">DO-20260319-016</span>
+          <span style="font-size:10px;color:#9ca3af;margin-left:8px;">18 bags &middot; 960 kg</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="status-no-rate"><span class="dot" style="background:#d97706;"></span> 1 no rate</span>
+          <span class="status-under"><span class="dot" style="background:#2563eb;"></span> 1 under</span>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Job</th>
+            <th>Vendor</th>
+            <th>Service</th>
+            <th>Location / Route</th>
+            <th>Rate</th>
+            <th>Unit</th>
+            <th>Qty</th>
+            <th>Agreed Cost</th>
+            <th style="background:#fffbeb;">Invoice</th>
+            <th style="background:#fffbeb;">Variance</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-weight:600;color:#0D9488;">J01</td>
+            <td style="font-weight:600;">The Lorry</td>
+            <td><span class="svc-p"><span class="c">FM</span></span></td>
+            <td>Yiwu Warehouse &rarr; Ningbo Port</td>
+            <td><span class="rate">490.00</span></td>
+            <td><span class="unit-badge unit-flat">flat</span></td>
+            <td class="mono" style="color:#9ca3af;">&mdash;</td>
+            <td><span class="rate">490.00</span></td>
+            <td style="background:#fffdf7;"><input class="invoice-input" value="490.00"></td>
+            <td style="background:#fffdf7;"><span class="var-match mono">RM 0</span></td>
+            <td><span class="status-match" style="font-size:9px;">Match</span></td>
+          </tr>
+          <tr style="background:#eff6ff;">
+            <td style="font-weight:600;color:#0D9488;">J02</td>
+            <td style="font-weight:600;">SevenSeas</td>
+            <td><span class="svc-p"><span class="c">CR</span></span></td>
+            <td>@ Ningbo Port</td>
+            <td><span class="rate">32.00</span></td>
+            <td><span class="unit-badge unit-bag">/bag</span></td>
+            <td class="mono">18</td>
+            <td><span class="rate">576.00</span></td>
+            <td style="background:#eff6ff;"><input class="invoice-input" value="540.00" style="border-color:#2563eb;background:#eff6ff;"></td>
+            <td style="background:#eff6ff;"><span class="var-under mono">-RM 36</span></td>
+            <td><span class="status-under" style="font-size:9px;">Under</span></td>
+          </tr>
+          <tr style="background:#fffbeb;">
+            <td style="font-weight:600;color:#0D9488;">J03</td>
+            <td style="font-weight:600;">Gonda</td>
+            <td><span class="svc-p"><span class="c">EC</span></span></td>
+            <td>@ Ningbo Port</td>
+            <td style="color:#d97706;font-style:italic;">No rate</td>
+            <td style="color:#9ca3af;">&mdash;</td>
+            <td class="mono" style="color:#9ca3af;">&mdash;</td>
+            <td style="color:#d97706;font-style:italic;">N/A</td>
+            <td style="background:#fffbeb;"><input class="invoice-input" value="165.00" style="border-color:#fde68a;background:#fffbeb;"></td>
+            <td style="background:#fffbeb;"><span class="var-none mono">?</span></td>
+            <td><span class="status-no-rate" style="font-size:9px;">No rate</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="padding:8px 12px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:10px;color:#6b7280;">
+          J02: SevenSeas invoiced RM 36 less than agreed (credit?). J03: No rate on file for Gonda EC at Ningbo Port — <a href="#" style="color:#0D9488;">add rate</a>?
+        </div>
+        <div style="display:flex;gap:4px;">
+          <button class="btn-sm btn-teal">Approve J01</button>
+          <button class="btn-sm btn-ghost">Review J02, J03</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mockup C2: Vendor anomaly summary across orders -->
+<h3>Anomaly summary: recurring overcharges by vendor</h3>
+<div class="screen">
+  <div style="padding:16px;">
+    <div style="font-size:12px;font-weight:700;margin-bottom:4px;">Rate Anomaly Summary — March 2026</div>
+    <div style="font-size:10px;color:#9ca3af;margin-bottom:12px;">Flagged discrepancies across all validated orders this month</div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Vendor</th>
+          <th>Service</th>
+          <th>Location</th>
+          <th>Agreed Rate</th>
+          <th>Avg Invoiced</th>
+          <th>Avg Variance</th>
+          <th>Occurrences</th>
+          <th>Total Overcharge</th>
+          <th>Pattern</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background:#fef2f2;">
+          <td style="font-weight:700;">Gonda</td>
+          <td><span class="svc-p"><span class="c">EC</span></span></td>
+          <td>Shekou Port</td>
+          <td><span class="rate">150.00</span></td>
+          <td><span class="rate" style="color:#dc2626;">180.00</span></td>
+          <td><span class="var-over mono">+RM 30</span></td>
+          <td class="mono">5</td>
+          <td><span class="rate" style="color:#dc2626;">+RM 150</span></td>
+          <td><span style="font-size:9px;color:#dc2626;font-weight:600;">Recurring &middot; 3 months</span></td>
+        </tr>
+        <tr style="background:#fef2f2;">
+          <td style="font-weight:700;">Gonda</td>
+          <td><span class="svc-p"><span class="c">EC</span></span></td>
+          <td>Hong Kong Airport</td>
+          <td><span class="rate">150.00</span></td>
+          <td><span class="rate" style="color:#dc2626;">175.00</span></td>
+          <td><span class="var-over mono">+RM 25</span></td>
+          <td class="mono">3</td>
+          <td><span class="rate" style="color:#dc2626;">+RM 75</span></td>
+          <td><span style="font-size:9px;color:#dc2626;font-weight:600;">Recurring &middot; 2 months</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:700;">The Lorry</td>
+          <td><span class="svc-p"><span class="c">FM</span></span></td>
+          <td>Dongguan &rarr; Shekou</td>
+          <td><span class="rate">380.00</span></td>
+          <td><span class="rate" style="color:#dc2626;">400.00</span></td>
+          <td><span class="var-over mono">+RM 20</span></td>
+          <td class="mono">2</td>
+          <td><span class="rate" style="color:#dc2626;">+RM 40</span></td>
+          <td><span style="font-size:9px;color:#d97706;">New this month</span></td>
+        </tr>
+        <tr style="background:#eff6ff;">
+          <td style="font-weight:700;">SevenSeas</td>
+          <td><span class="svc-p"><span class="c">CR</span></span></td>
+          <td>Ningbo Port</td>
+          <td><span class="rate">32.00</span> <span class="unit-badge unit-bag">/bag</span></td>
+          <td><span class="rate" style="color:#2563eb;">30.00</span></td>
+          <td><span class="var-under mono">-RM 2/bag</span></td>
+          <td class="mono">2</td>
+          <td><span class="rate" style="color:#2563eb;">-RM 72</span></td>
+          <td><span style="font-size:9px;color:#2563eb;">Undercharge &middot; update rate?</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:10px;padding:10px;background:#fef2f2;border:1px solid #fecaca;border-radius:4px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#dc2626;">Action required: Gonda EC rates</div>
+        <div style="font-size:10px;color:#991b1b;">Gonda has consistently invoiced EC above agreed rate at 2 locations for 2-3 months. Total overcharge: RM 225. Consider renegotiating or updating the rate card to RM 180.</div>
+      </div>
+      <div style="display:flex;gap:4px;flex-shrink:0;">
+        <button class="btn-sm btn-ghost" style="color:#dc2626;border-color:#fecaca;">Send dispute</button>
+        <button class="btn-sm btn-ghost">Update rate to RM 180</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="verdict">
+  <h3>Recommendation: Option C — Invoice Amount Field Per Job</h3>
+  <p style="font-size:12px;line-height:1.7;color:#374151;">
+    <strong>Why Option C:</strong> It's the lightest implementation that gives immediate value. One new field per job ("Invoice Amount"), plus automatic variance calculation. No new pages needed — the comparison lives right in the sub-table, visible in the billing admin's validation workflow. Admin enters the amount, the system does the math, red flags appear instantly.
+  </p>
+  <p style="font-size:12px;line-height:1.7;color:#374151;margin-top:8px;">
+    <strong>Unit-aware variance:</strong> For per-bag and per-kg rates, the system compares the total calculated cost (rate x quantity) against the invoiced amount — not the unit rate itself. This handles volume-based services correctly. Example: agreed RM 25/bag x 42 bags = RM 1,050 agreed, invoiced RM 1,100 = +RM 50 variance.
+  </p>
+  <p style="font-size:12px;line-height:1.7;color:#374151;margin-top:8px;">
+    <strong>Three variance states:</strong> Green "Match" (RM 0 variance), Red "Over" (vendor charged more than agreed), Blue "Under" (vendor charged less — possibly a credit or updated rate). Amber "No rate" when no rate card exists for this vendor/service/location — a signal to add one.
+  </p>
+  <p style="font-size:12px;line-height:1.7;color:#374151;margin-top:8px;">
+    <strong>Future: anomaly summary.</strong> Once we have a few months of data, surface the recurring overcharges in a summary view (shown in the last mockup). This turns one-off disputes into a pattern: "Gonda has overcharged EC at Shekou Port 5 times this month — renegotiate or update the rate card."
+  </p>
+  <p style="font-size:12px;line-height:1.7;color:#374151;margin-top:8px;">
+    <strong>Data model:</strong> Add <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;font-size:11px;">invoiceAmount?: number</code> and <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;font-size:11px;">varianceStatus?: "match" | "over" | "under" | "no_rate"</code> to the Job interface. The variance is calculated on entry, not stored — it's always <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;font-size:11px;">invoiceAmount - agreedCost</code>.
+  </p>
+</div>
+
+</div>
+</body>
+</html>

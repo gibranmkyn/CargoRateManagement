@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW: Quick Duplicate Orders</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+  .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+  .page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #0D9488; }
+  .hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #0D9488; border-radius: 0 6px 6px 0; }
+  .context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+  .screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+  .label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+  .pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+  .cons { background: #fefafa; border: 1px solid #fecaca; }
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+  .verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+  /* Dense table system */
+  .nav { display: flex; align-items: center; height: 40px; padding: 0 16px; background: #fff; border-bottom: 1px solid #e5e7eb; font-size: 11px; color: #9ca3af; gap: 10px; }
+  .nav .logo { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 12px; color: #111827; }
+  .nav .logo-icon { width: 22px; height: 22px; background: #0D9488; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: white; font-size: 9px; font-weight: 800; }
+  .nav-item { font-size: 11px; color: #9ca3af; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+  .nav-item.active { color: #0D9488; background: rgba(13,148,136,0.08); font-weight: 600; }
+  .nav-spacer { flex: 1; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 8px 12px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; font-size: 12px; }
+  tr.hoverable { cursor: pointer; }
+  tr.hoverable:hover { background: #f9fafb; }
+
+  .chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+  .chip-n { border: 1px solid #e5e7eb; background: #fff; color: #6b7280; }
+  .chip-g { border: 1px solid #a7f3d0; background: #f0fdf4; color: #059669; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+  .svc-p { padding: 1px 5px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.1); display: inline-flex; align-items: center; gap: 3px; }
+  .svc-p .c { color: #0D9488; font-family: monospace; }
+
+  .btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #374151; cursor: pointer; }
+  .btn-primary { background: #0D9488; color: #fff; border-color: #0D9488; }
+  .btn-sm { padding: 3px 8px; font-size: 10px; }
+  .btn-ghost { border: none; background: none; color: #0D9488; padding: 3px 6px; }
+
+  .dup-btn { display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; color: #0D9488; background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.15); cursor: pointer; opacity: 0; transition: opacity 0.15s; }
+  tr.hoverable:hover .dup-btn { opacity: 1; }
+
+  /* Slide-out panel */
+  .slideout { width: 340px; border-left: 1px solid #e5e7eb; background: #fff; }
+  .slideout-header { padding: 12px 16px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
+  .slideout-header h4 { font-size: 13px; font-weight: 700; }
+  .slideout-close { width: 24px; height: 24px; border-radius: 4px; border: 1px solid #e5e7eb; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #9ca3af; cursor: pointer; }
+  .slideout-body { padding: 12px 16px; }
+  .slideout-field { margin-bottom: 10px; }
+  .slideout-field label { display: block; font-size: 9px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 3px; }
+  .slideout-field .val { font-size: 12px; font-weight: 600; color: #111827; }
+
+  /* Recent orders section */
+  .recent-card { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 4px; margin-bottom: 6px; cursor: pointer; transition: border-color 0.15s; }
+  .recent-card:hover { border-color: #0D9488; background: #f0fdfa; }
+  .recent-card .rc-customer { font-weight: 700; font-size: 12px; }
+  .recent-card .rc-meta { font-size: 10px; color: #6b7280; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>H13: Quick Duplicate Orders</h1>
+<div class="hmw">"How might we let ops create similar orders in seconds -- since many follow the same vendor/route pattern?"</div>
+
+<div class="context">
+  <strong>Problem:</strong> Ops creates 10-50 orders/day. Many go to the same warehouses with the same vendors. For example, TikTok ships daily from Dongguan via HaleSun for first-mile trucking. Creating each order from scratch -- selecting customer, adding jobs, picking vendors, entering routes -- takes 2-3 minutes per order. Over 30 orders, that is over an hour of repetitive form-filling.
+</div>
+
+<!-- ======================================== -->
+<h2>Option A: "Duplicate" Button on Each Order Row</h2>
+<span class="label" style="background:#ecfdf5;color:#059669;">Recommended</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> A small duplicate icon appears on hover at the end of each row. Click it to create a new order pre-filled with the same customer, jobs, routes, and vendors. MAWB and dates are left blank (must be unique per order). The user lands on the create form with all fields pre-populated, ready to adjust and submit.
+
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>
+      One click from the table -- fastest path to duplication<br>
+      No navigation needed -- hover, click, done<br>
+      Hidden on non-hover keeps the table clean<br>
+      Pre-fills everything except what must be unique (MAWB, dates)
+    </div>
+    <div class="cons"><strong>Cons</strong><br>
+      Hover-only means mobile/touch can't access it easily<br>
+      Accidental clicks could create unwanted draft orders<br>
+      The button competes with row-click (expand) interaction
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <div class="nav-item active">Orders</div>
+    <div class="nav-item">Vendors</div>
+    <div class="nav-spacer"></div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:24px;"></th>
+        <th>Customer</th>
+        <th>MAWB</th>
+        <th>Vendor</th>
+        <th>Service</th>
+        <th>Pickup</th>
+        <th>Status</th>
+        <th style="width:70px;"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="hoverable">
+        <td style="color:#d1d5db;font-size:10px;">&#9654;</td>
+        <td style="font-weight:600;">TikTok</td>
+        <td class="mono" style="font-size:10px;color:#6b7280;">160-83291045</td>
+        <td style="font-weight:600;">HaleSun</td>
+        <td><span class="svc-p"><span class="c">FM</span></span></td>
+        <td>25 Mar, 14:30</td>
+        <td><span class="chip chip-g"><span class="dot" style="background:#059669;"></span>Completed</span></td>
+        <td><span class="dup-btn" style="opacity:0;">&#x2398; Duplicate</span></td>
+      </tr>
+      <!-- This row shows the hover state with visible duplicate button -->
+      <tr class="hoverable" style="background:#f9fafb;">
+        <td style="color:#d1d5db;font-size:10px;">&#9654;</td>
+        <td style="font-weight:600;">Shopee</td>
+        <td class="mono" style="font-size:10px;color:#6b7280;">160-83291102</td>
+        <td style="font-weight:600;">SevenSeas</td>
+        <td><span class="svc-p"><span class="c">CR</span></span> <span class="svc-p"><span class="c">EC</span></span></td>
+        <td>26 Mar, 09:00</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>In Progress</span></td>
+        <td><span class="dup-btn" style="opacity:1;">&#x2398; Duplicate</span></td>
+      </tr>
+      <tr class="hoverable">
+        <td style="color:#d1d5db;font-size:10px;">&#9654;</td>
+        <td style="font-weight:600;">AliExpress</td>
+        <td class="mono" style="font-size:10px;color:#6b7280;">160-83291287</td>
+        <td style="font-weight:600;">Gonda</td>
+        <td><span class="svc-p"><span class="c">OH</span></span></td>
+        <td>27 Mar, 16:00</td>
+        <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+        <td><span class="dup-btn" style="opacity:0;">&#x2398; Duplicate</span></td>
+      </tr>
+    </tbody>
+  </table>
+  <div style="padding:8px 12px;font-size:10px;color:#9ca3af;background:#f9fafb;border-top:1px solid #e5e7eb;">
+    Hover over any row to see the Duplicate button (shown on row 2 above)
+  </div>
+</div>
+
+<!-- ======================================== -->
+<h2>Option B: "Create Similar" in Slide-Out Panel</h2>
+<span class="label" style="background:#eff6ff;color:#2563eb;">Contextual action</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> When viewing a job in the slide-out panel, a "Create similar order" link appears at the bottom. Clicking it opens the create form pre-filled with the parent order's customer, vendor, service, and route details. MAWB and dates are blank.
+
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>
+      Contextual -- user is already looking at the order details<br>
+      No accidental clicks -- requires deliberate navigation to the panel<br>
+      Works on touch devices (no hover dependency)<br>
+      Can show a summary of what will be duplicated before navigating
+    </div>
+    <div class="cons"><strong>Cons</strong><br>
+      Requires 2 clicks: expand row + click link in panel<br>
+      Slower path than a table-level action<br>
+      User must open the panel even when they already know they want to duplicate<br>
+      Link at the bottom of the panel may be below the fold
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div style="display:flex;">
+    <!-- Table (dimmed) -->
+    <div style="flex:1;opacity:0.5;">
+      <div class="nav">
+        <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+        <div class="nav-item active">Orders</div>
+        <div class="nav-spacer"></div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:24px;"></th>
+            <th>Customer</th>
+            <th>MAWB</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="background:#f0fdfa;">
+            <td style="color:#0D9488;font-size:10px;">&#9660;</td>
+            <td style="font-weight:600;">Shopee</td>
+            <td class="mono" style="font-size:10px;color:#6b7280;">160-83291102</td>
+            <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>In Progress</span></td>
+          </tr>
+          <tr>
+            <td style="color:#d1d5db;font-size:10px;">&#9654;</td>
+            <td style="font-weight:600;">AliExpress</td>
+            <td class="mono" style="font-size:10px;color:#6b7280;">160-83291287</td>
+            <td><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>Pending</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- Slide-out panel -->
+    <div class="slideout">
+      <div class="slideout-header">
+        <h4>Job J01 -- SevenSeas</h4>
+        <div class="slideout-close">&times;</div>
+      </div>
+      <div class="slideout-body">
+        <div class="slideout-field">
+          <label>Customer</label>
+          <div class="val">Shopee</div>
+        </div>
+        <div class="slideout-field">
+          <label>Service</label>
+          <div class="val"><span class="svc-p"><span class="c">CR</span> Cargo Retrieval</span></div>
+        </div>
+        <div class="slideout-field">
+          <label>Vendor</label>
+          <div class="val">SevenSeas</div>
+        </div>
+        <div class="slideout-field">
+          <label>Route</label>
+          <div class="val">Yantian Port &rarr; Dongguan WH</div>
+        </div>
+        <div class="slideout-field">
+          <label>Status</label>
+          <div class="val"><span class="chip chip-n"><span class="dot" style="background:#9ca3af;"></span>In Progress</span></div>
+        </div>
+        <div style="border-top:1px solid #f3f4f6;padding-top:12px;margin-top:12px;">
+          <a href="#" style="display:inline-flex;align-items:center;gap:5px;color:#0D9488;font-size:11px;font-weight:600;text-decoration:none;">
+            &#x2398; Create similar order &rarr;
+          </a>
+          <div style="font-size:10px;color:#9ca3af;margin-top:4px;">Pre-fills customer, vendor, service, and route. MAWB and dates left blank.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================== -->
+<h2>Option C: Recent Orders Quick-Pick on Create Page</h2>
+<span class="label" style="background:#fffbeb;color:#d97706;">Template-based approach</span>
+
+<div class="rationale">
+  <strong>How it works:</strong> On the create order page, a "Recent orders" section at the top shows the last 5 orders. Click any order to pre-fill the form with that order's pattern (customer, vendors, routes, services). The user can then modify any field before submitting.
+
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>
+      Visible on the create page -- natural workflow location<br>
+      Shows multiple templates at once -- not limited to one order<br>
+      Could evolve into saved templates / favorites<br>
+      Works on all devices -- no hover needed
+    </div>
+    <div class="cons"><strong>Cons</strong><br>
+      User must navigate to create page first -- extra step<br>
+      Recent orders may not be the right templates (what if today's pattern differs)<br>
+      Takes vertical space on the create page<br>
+      More complex to build than a simple duplicate button
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="nav">
+    <div class="logo"><div class="logo-icon">T</div> TripManager</div>
+    <div class="nav-item">Orders</div>
+    <div class="nav-item active" style="color:#0D9488;">+ New Order</div>
+    <div class="nav-spacer"></div>
+  </div>
+  <div style="padding:16px;">
+    <div style="font-size:14px;font-weight:700;margin-bottom:4px;">Create New Order</div>
+    <div style="font-size:11px;color:#6b7280;margin-bottom:12px;">Start from scratch or use a recent order as a template</div>
+
+    <div style="margin-bottom:16px;">
+      <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;margin-bottom:8px;">Recent orders -- click to use as template</div>
+      <div class="recent-card">
+        <div style="flex:1;">
+          <div class="rc-customer">TikTok</div>
+          <div class="rc-meta">HaleSun &middot; FM &middot; Dongguan &rarr; Shenzhen Port</div>
+        </div>
+        <span style="font-size:10px;color:#9ca3af;">Today</span>
+      </div>
+      <div class="recent-card" style="border-color:#0D9488;background:#f0fdfa;">
+        <div style="flex:1;">
+          <div class="rc-customer">Shopee</div>
+          <div class="rc-meta">SevenSeas &middot; CR + EC &middot; Yantian &rarr; Dongguan WH</div>
+        </div>
+        <span style="font-size:10px;color:#0D9488;font-weight:600;">Selected</span>
+      </div>
+      <div class="recent-card">
+        <div style="flex:1;">
+          <div class="rc-customer">Shein</div>
+          <div class="rc-meta">ThaiKee &middot; FM + CS &middot; Guangzhou &rarr; Nansha Port</div>
+        </div>
+        <span style="font-size:10px;color:#9ca3af;">Yesterday</span>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid #e5e7eb;padding-top:14px;">
+      <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;margin-bottom:8px;">Order details (pre-filled from Shopee template)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label style="display:block;font-size:9px;font-weight:600;color:#9ca3af;text-transform:uppercase;margin-bottom:3px;">Customer</label>
+          <div style="padding:6px 10px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-weight:600;background:#f9fafb;">Shopee</div>
+        </div>
+        <div>
+          <label style="display:block;font-size:9px;font-weight:600;color:#9ca3af;text-transform:uppercase;margin-bottom:3px;">MAWB</label>
+          <div style="padding:6px 10px;border:1.5px solid #0D9488;border-radius:4px;font-size:12px;color:#9ca3af;background:#fff;">Enter MAWB...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================== -->
+<div class="verdict">
+  <h3>Recommendation: Option A -- Duplicate Button on Row Hover</h3>
+  <p style="font-size:12px;line-height:1.7;color:#374151;">
+    The hover duplicate button offers the fastest path: one click from the table, no navigation needed. Ops scanning the table already sees the order they want to copy -- they hover, click "Duplicate," and land on a pre-filled create form. This saves the most time compared to Option B (2 clicks + panel navigation) or Option C (navigate to create page + select template). The hover-only visibility keeps the table clean. For touch/mobile support, we can add the duplicate action to the row's context menu or the slide-out panel as a fallback (borrowing from Option B), but the primary desktop workflow should be the fastest path.
+  </p>
+</div>
+
+</div>
+</body>
+</html>
