@@ -4,7 +4,7 @@ import { vendors, TRUCK_TYPES, SERVICE_HIERARCHY, ALL_L2_SERVICES, formatCurrenc
 import type { FtlRate, TruckType, Currency, VendorRate, L2SubService } from '../data/mockData';
 import { ALL_DISTRICTS } from '../data/chinaRegions';
 
-type RateTab = 'trucking' | 'services';
+type RateTab = 'trucking' | 'EC' | 'CS' | 'CR' | 'OH';
 
 const UNIT_LABELS: Record<string, string> = { flat: '/trip', 'per-kg': '/kg', 'per-bag': '/bag', 'per-cbm': '/CBM', 'per-km': '/km' };
 
@@ -101,30 +101,40 @@ export default function RatesPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 8 }}>
           <div>
             <h1 style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.3px', margin: 0 }}>Rate Cards</h1>
-            <p style={{ fontSize: 11, color: '#9ca3af', margin: '2px 0 0' }}>Manage vendor rate cards for trucking and services</p>
+            <p style={{ fontSize: 11, color: '#9ca3af', margin: '2px 0 0' }}>Manage vendor rate cards</p>
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={downloadCsv} style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, border: '1px solid #e5e7eb', background: '#fff', color: '#374151', cursor: 'pointer', fontFamily: 'inherit' }}>↓ Download CSV</button>
-            <label style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, border: 'none', background: '#152CFF', color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>↑ Upload CSV<input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleUpload} /></label>
+            {rateTab === 'trucking' && <>
+              <button onClick={downloadCsv} style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, border: '1px solid #e5e7eb', background: '#fff', color: '#374151', cursor: 'pointer', fontFamily: 'inherit' }}>↓ Download CSV</button>
+              <label style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, border: 'none', background: '#152CFF', color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>↑ Upload CSV<input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleUpload} /></label>
+            </>}
           </div>
         </div>
 
-        {/* Rate type tabs */}
-        <div style={{ display: 'flex', gap: 2, marginBottom: 12, borderBottom: '1px solid #e5e7eb', paddingBottom: 0 }}>
-          {([['trucking', '🚛 Trucking (FM)'], ['services', '📦 Services (EC, CS, CR, OH)']] as const).map(([key, label]) => (
-            <button key={key} onClick={() => { setRateTab(key); setUploadResult(null); }} style={{ padding: '6px 14px', borderRadius: '4px 4px 0 0', border: 'none', borderBottom: rateTab === key ? '2px solid #152CFF' : '2px solid transparent', background: 'transparent', color: rateTab === key ? '#152CFF' : '#9ca3af', fontWeight: rateTab === key ? 600 : 400, fontSize: 12, cursor: 'pointer' }}>{label}</button>
-          ))}
+        {/* Vendor selector — single, shared across all tabs */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 12, alignItems: 'center' }}>
+          <span style={{ fontSize: 11, color: '#9ca3af' }}>Vendor:</span>
+          <select value={selectedVendor} onChange={(e) => { setSelectedVendor(e.target.value); setSearch(''); setUploadResult(null); }} style={{ fontSize: 11, padding: '4px 8px', border: '1px solid #e5e7eb', borderRadius: 4, fontWeight: 600, color: '#111827' }}>
+            {vendors.map((v) => <option key={v.code} value={v.code}>{v.name}</option>)}
+          </select>
+          <span style={{ fontSize: 10, color: '#9ca3af' }}>
+            {ftlRates.filter((r) => r.vendorCode === selectedVendor && r.isActive).length} FTL routes ·{' '}
+            {rates.filter((r) => r.vendorCode === selectedVendor && r.isActive && r.serviceCode !== 'FM').length} service fees
+          </span>
         </div>
 
-        {/* Vendor pills */}
-        {rateTab === 'trucking' && <><div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-          {vendors.map((v) => {
-            const count = ftlRates.filter((r) => r.vendorCode === v.code && r.isActive).length;
-            if (count === 0 && v.code !== selectedVendor) return null;
-            const isAct = v.code === selectedVendor;
-            return <button key={v.code} onClick={() => { setSelectedVendor(v.code); setSearch(''); setUploadResult(null); }} style={{ padding: '4px 12px', borderRadius: 99, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', border: isAct ? '1px solid #152CFF' : '1px solid #e5e7eb', background: isAct ? 'rgba(21,44,255,0.06)' : '#fff', color: isAct ? '#152CFF' : '#6b7280', fontWeight: isAct ? 600 : 400 }}>{v.name} <span style={{ fontSize: 9, color: isAct ? '#152CFF' : '#d1d5db', marginLeft: 2 }}>{count}</span></button>;
+        {/* Service tabs — L1 services as mental model */}
+        <div style={{ display: 'flex', gap: 2, marginBottom: 12, borderBottom: '1px solid #e5e7eb', paddingBottom: 0 }}>
+          {([['trucking', 'FM Trucking'], ['EC', 'Export Customs'], ['CS', 'Cargo Submission'], ['CR', 'Cargo Retrieval'], ['OH', 'Origin Handling']] as const).map(([key, label]) => {
+            const isActive = rateTab === key;
+            return (
+              <button key={key} onClick={() => { setRateTab(key as RateTab); setUploadResult(null); }} style={{ padding: '5px 12px', borderRadius: '4px 4px 0 0', border: 'none', borderBottom: isActive ? '2px solid #152CFF' : '2px solid transparent', background: 'transparent', color: isActive ? '#152CFF' : '#9ca3af', fontWeight: isActive ? 600 : 400, fontSize: 11, cursor: 'pointer' }}>{label}</button>
+            );
           })}
         </div>
+
+        {/* ═══ FM TRUCKING TAB ═══ */}
+        {rateTab === 'trucking' && <>
 
         {uploadResult && (
           <div style={{ padding: '10px 12px', marginBottom: 12, borderRadius: 6, background: uploadResult.errorCount > 0 && uploadResult.newCount + uploadResult.updatedCount === 0 ? '#fef2f2' : 'rgba(21,44,255,0.04)', border: `1px solid ${uploadResult.errorCount > 0 && uploadResult.newCount + uploadResult.updatedCount === 0 ? '#fecaca' : 'rgba(21,44,255,0.12)'}` }}>
@@ -190,18 +200,18 @@ export default function RatesPage() {
           </div>
         )}
 
-        {/* ═══ SERVICES TAB (EC, CS, CR, OH) ═══ */}
-        {rateTab === 'services' && <ServicesRateView rates={rates} getLocationById={getLocationById} />}
+        {/* ═══ SERVICE TABS (EC, CS, CR, OH) ═══ */}
+        {rateTab !== 'trucking' && <ServiceRateView serviceCode={rateTab} rates={rates} selectedVendor={selectedVendor} getLocationById={getLocationById} />}
       </div>
     </div>
   );
 }
 
-// ═══ Services Rate View — grouped by location, fees listed vertically ═══
+// ═══ Service Rate View — single service, grouped by location ═══
 
-function ServicesRateView({ rates, getLocationById }: { rates: VendorRate[]; getLocationById: (id: string) => any }) {
-  const [selectedVendor, setSelectedVendor] = useState(vendors[0].code);
-  const activeRates = useMemo(() => rates.filter((r) => r.vendorCode === selectedVendor && r.isActive && r.serviceCode !== 'FM'), [rates, selectedVendor]);
+function ServiceRateView({ serviceCode, rates, selectedVendor, getLocationById }: { serviceCode: string; rates: VendorRate[]; selectedVendor: string; getLocationById: (id: string) => any }) {
+  const activeRates = useMemo(() => rates.filter((r) => r.vendorCode === selectedVendor && r.serviceCode === serviceCode && r.isActive), [rates, selectedVendor, serviceCode]);
+  const l1 = SERVICE_HIERARCHY.find((l) => l.code === serviceCode);
 
   // Group by location
   const byLocation = useMemo(() => {
@@ -211,92 +221,52 @@ function ServicesRateView({ rates, getLocationById }: { rates: VendorRate[]; get
       if (!lid) continue;
       const existing = map.get(lid);
       if (existing) { existing.rates.push(r); }
-      else {
-        const loc = getLocationById(lid);
-        map.set(lid, { name: loc?.name ?? lid, rates: [r] });
-      }
+      else { map.set(lid, { name: getLocationById(lid)?.name ?? lid, rates: [r] }); }
     }
     return map;
   }, [activeRates, getLocationById]);
 
-  return (
-    <>
-      {/* Vendor pills */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-        {vendors.map((v) => {
-          const count = rates.filter((r) => r.vendorCode === v.code && r.isActive && r.serviceCode !== 'FM').length;
-          if (count === 0 && v.code !== selectedVendor) return null;
-          const isAct = v.code === selectedVendor;
-          return <button key={v.code} onClick={() => setSelectedVendor(v.code)} style={{ padding: '4px 12px', borderRadius: 99, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', border: isAct ? '1px solid #152CFF' : '1px solid #e5e7eb', background: isAct ? 'rgba(21,44,255,0.06)' : '#fff', color: isAct ? '#152CFF' : '#6b7280', fontWeight: isAct ? 600 : 400 }}>{v.name} <span style={{ fontSize: 9, color: isAct ? '#152CFF' : '#d1d5db', marginLeft: 2 }}>{count}</span></button>;
-        })}
-      </div>
+  const vendorName = vendors.find((v) => v.code === selectedVendor)?.name ?? selectedVendor;
 
-      {byLocation.size > 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {Array.from(byLocation.entries()).map(([locId, { name, rates: locRates }]) => {
-            // Group rates within this location by L1 service
-            const byL1 = new Map<string, VendorRate[]>();
-            for (const r of locRates) byL1.set(r.serviceCode, [...(byL1.get(r.serviceCode) ?? []), r]);
-
-            return (
-              <div key={locId} style={{ border: '1px solid #e5e7eb', borderRadius: 6, overflow: 'hidden' }}>
-                {/* Location header */}
-                <div style={{ padding: '8px 12px', background: '#111827', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 12, fontWeight: 600 }}>{name}</span>
-                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)' }}>{locRates.length} fees</span>
-                </div>
-
-                {/* Fee table */}
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th style={{ textAlign: 'left', padding: '4px 12px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>Service / Fee</th>
-                      <th style={{ textAlign: 'left', padding: '4px 12px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', width: 70 }}>Unit</th>
-                      <th style={{ textAlign: 'right', padding: '4px 12px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', width: 100 }}>Rate</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {SERVICE_HIERARCHY.filter((l1) => l1.rateType === 'location').map((l1) => {
-                      const l1Rates = byL1.get(l1.code);
-                      if (!l1Rates || l1Rates.length === 0) return null;
-                      return [
-                        <tr key={`h-${l1.code}`}>
-                          <td colSpan={3} style={{ padding: '5px 12px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontSize: 10, fontWeight: 600 }}>
-                            <span style={{ padding: '1px 6px', borderRadius: 99, fontSize: 9, fontWeight: 600, color: '#fff', background: l1.color, marginRight: 6 }}>{l1.code}</span>
-                            {l1.label}
-                          </td>
-                        </tr>,
-                        ...l1Rates.map((r) => {
-                          const l2 = ALL_L2_SERVICES.find((l) => l.costId === r.costId);
-                          return (
-                            <tr key={r.id}>
-                              <td style={{ padding: '5px 12px 5px 24px', fontSize: 11, borderBottom: '1px solid #f3f4f6', color: '#374151' }}>
-                                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: '#9ca3af', marginRight: 4 }}>{r.costId}</span>
-                                {l2?.name ?? r.costId}
-                              </td>
-                              <td style={{ padding: '5px 12px', fontSize: 9, borderBottom: '1px solid #f3f4f6', color: '#9ca3af' }}>
-                                {UNIT_LABELS[r.unit] ?? r.unit}
-                              </td>
-                              <td style={{ padding: '5px 12px', textAlign: 'right', borderBottom: '1px solid #f3f4f6', fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 600, color: '#111827' }}>
-                                {formatCurrency(r.currency, r.amount)}
-                              </td>
-                            </tr>
-                          );
-                        }),
-                      ];
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            );
-          })}
+  return byLocation.size > 0 ? (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {Array.from(byLocation.entries()).map(([locId, { name, rates: locRates }]) => (
+        <div key={locId} style={{ border: '1px solid #e5e7eb', borderRadius: 6, overflow: 'hidden' }}>
+          <div style={{ padding: '8px 12px', background: '#111827', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 12, fontWeight: 600 }}>{name}</span>
+            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)' }}>{locRates.length} fees</span>
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: 'left', padding: '4px 12px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>L2 Fee</th>
+                <th style={{ textAlign: 'left', padding: '4px 12px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', width: 70 }}>Unit</th>
+                <th style={{ textAlign: 'right', padding: '4px 12px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', width: 100 }}>Rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {locRates.map((r) => {
+                const l2 = ALL_L2_SERVICES.find((l) => l.costId === r.costId);
+                return (
+                  <tr key={r.id}>
+                    <td style={{ padding: '5px 12px', fontSize: 11, borderBottom: '1px solid #f3f4f6', color: '#374151' }}>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: '#9ca3af', marginRight: 4 }}>{r.costId}</span>
+                      {l2?.name ?? r.costId}
+                    </td>
+                    <td style={{ padding: '5px 12px', fontSize: 9, borderBottom: '1px solid #f3f4f6', color: '#9ca3af' }}>{UNIT_LABELS[r.unit] ?? r.unit}</td>
+                    <td style={{ padding: '5px 12px', textAlign: 'right', borderBottom: '1px solid #f3f4f6', fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 600, color: '#111827' }}>{formatCurrency(r.currency, r.amount)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
-      ) : (
-        <div style={{ textAlign: 'center', padding: '48px 16px', color: '#9ca3af' }}>
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>No service rates for {vendors.find((v) => v.code === selectedVendor)?.name}</div>
-          <div style={{ fontSize: 11 }}>Service rates (EC, CS, CR, OH) are managed per L2 fee type and facility</div>
-        </div>
-      )}
-    </>
+      ))}
+    </div>
+  ) : (
+    <div style={{ textAlign: 'center', padding: '48px 16px', color: '#9ca3af' }}>
+      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>No {l1?.label ?? serviceCode} rates for {vendorName}</div>
+      <div style={{ fontSize: 11 }}>Rates for this service are managed per L2 fee type and facility</div>
+    </div>
   );
 }
