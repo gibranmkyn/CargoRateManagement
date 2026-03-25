@@ -108,7 +108,11 @@ export default function RatesPage() {
           const v = vendors.find((v) => v.code === vc);
           return (
             <div key={vc} style={{ marginBottom: 20 }}>
-              <h3 style={{ fontSize: 13, fontWeight: 600, color: '#111827', margin: '0 0 8px' }}>{v?.name ?? vc}</h3>
+              <h3 style={{ fontSize: 12, fontWeight: 700, color: '#111827', margin: '0 0 8px', padding: '6px 10px', background: '#f9fafb', borderRadius: 4, border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 3, height: 14, borderRadius: 2, background: '#152CFF', display: 'inline-block' }} />
+                {v?.name ?? vc}
+                <span style={{ fontSize: 9, fontWeight: 500, color: '#9ca3af', marginLeft: 'auto' }}>{rts.length} rate{rts.length !== 1 ? 's' : ''}</span>
+              </h3>
               <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #e5e7eb', borderRadius: 6 }}>
                 <thead><tr><th style={th}>Service</th><th style={th}>Route / Location</th><th style={th}>Rate</th><th style={th}>Unit</th><th style={th}>Effective</th></tr></thead>
                 <tbody>{rts.map(renderRateRow)}</tbody>
@@ -121,7 +125,11 @@ export default function RatesPage() {
           const s = serviceTypes.find((s) => s.code === sc);
           return (
             <div key={sc} style={{ marginBottom: 20 }}>
-              <h3 style={{ fontSize: 13, fontWeight: 600, color: '#111827', margin: '0 0 8px' }}>{s?.label ?? sc}</h3>
+              <h3 style={{ fontSize: 12, fontWeight: 700, color: '#111827', margin: '0 0 8px', padding: '6px 10px', background: '#f9fafb', borderRadius: 4, border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 3, height: 14, borderRadius: 2, background: '#152CFF', display: 'inline-block' }} />
+                {s?.label ?? sc}
+                <span style={{ fontSize: 9, fontWeight: 500, color: '#9ca3af', marginLeft: 'auto' }}>{rts.length} rate{rts.length !== 1 ? 's' : ''}</span>
+              </h3>
               <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #e5e7eb', borderRadius: 6 }}>
                 <thead><tr><th style={th}>Vendor</th><th style={th}>Route / Location</th><th style={th}>Rate</th><th style={th}>Unit</th><th style={th}>Effective</th></tr></thead>
                 <tbody>{rts.map(renderRateRow)}</tbody>
