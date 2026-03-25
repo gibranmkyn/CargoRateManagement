@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer, useEffect, useCallback, type ReactNode } from 'react';
-import type { Location, VendorRate, FtlRate, FtlRateLog } from '../data/mockData';
-import { seedLocations, seedRates, seedFtlRates, seedFtlLogs } from '../data/mockData';
+import type { Location, VendorRate, FtlRate, FtlRateLog, VendorFee, VendorFeeLog } from '../data/mockData';
+import { seedLocations, seedRates, seedFtlRates, seedFtlLogs, seedVendorFees, seedVendorFeeLogs } from '../data/mockData';
 
 // --- State ---
 
@@ -9,6 +9,8 @@ interface RateState {
   rates: VendorRate[];
   ftlRates: FtlRate[];
   ftlLogs: FtlRateLog[];
+  vendorFees: VendorFee[];
+  vendorFeeLogs: VendorFeeLog[];
   isLoaded: boolean;
 }
 
@@ -17,6 +19,8 @@ const initialState: RateState = {
   rates: [],
   ftlRates: [],
   ftlLogs: [],
+  vendorFees: [],
+  vendorFeeLogs: [],
   isLoaded: false,
 };
 
@@ -32,7 +36,8 @@ type RateAction =
   | { type: 'DEACTIVATE_RATE'; payload: { rateId: string } }
   | { type: 'AUTO_END_RATE'; payload: { rateId: string; effectiveTo: string } }
   | { type: 'SET_FTL_RATES'; payload: { ftlRates: FtlRate[]; log: FtlRateLog } }
-  | { type: 'ADD_FTL_LOG'; payload: FtlRateLog };
+  | { type: 'ADD_FTL_LOG'; payload: FtlRateLog }
+  | { type: 'SET_VENDOR_FEES'; payload: { vendorFees: VendorFee[]; log: VendorFeeLog } };
 
 // --- Reducer ---
 
@@ -44,6 +49,9 @@ function rateReducer(state: RateState, action: RateAction): RateState {
     case 'SET_FTL_RATES':
       return { ...state, ftlRates: action.payload.ftlRates, ftlLogs: [...state.ftlLogs, action.payload.log] };
 
+
+    case 'SET_VENDOR_FEES':
+      return { ...state, vendorFees: action.payload.vendorFees, vendorFeeLogs: [...state.vendorFeeLogs, action.payload.log] };
     case 'ADD_FTL_LOG':
       return { ...state, ftlLogs: [...state.ftlLogs, action.payload] };
 
@@ -126,8 +134,11 @@ interface RateContextValue {
   rates: VendorRate[];
   ftlRates: FtlRate[];
   ftlLogs: FtlRateLog[];
+  vendorFees: VendorFee[];
+  vendorFeeLogs: VendorFeeLog[];
   isLoaded: boolean;
   setFtlRates: (ftlRates: FtlRate[], log: FtlRateLog) => void;
+  setVendorFees: (vendorFees: VendorFee[], log: VendorFeeLog) => void;
   addLocation: (location: Location) => void;
   updateLocation: (locationId: string, updates: Partial<Omit<Location, 'id'>>) => void;
   deleteLocation: (locationId: string) => void;
@@ -154,7 +165,7 @@ export function RateProvider({ children }: { children: ReactNode }) {
 
   // Hydrate from localStorage on mount
   // Version key: bump this to force reseed when seed data changes
-  const SEED_VERSION = 'v6-ftl-rates';
+  const SEED_VERSION = 'v7-vendor-fees';
 
   useEffect(() => {
     try {
@@ -162,24 +173,24 @@ export function RateProvider({ children }: { children: ReactNode }) {
       const storedVersion = localStorage.getItem(STORAGE_KEY + '_version');
       if (stored && storedVersion === SEED_VERSION) {
         const parsed = JSON.parse(stored);
-        dispatch({ type: 'LOAD_STATE', payload: { locations: parsed.locations ?? [], rates: parsed.rates ?? [], ftlRates: parsed.ftlRates ?? [], ftlLogs: parsed.ftlLogs ?? [] } });
+        dispatch({ type: 'LOAD_STATE', payload: { locations: parsed.locations ?? [], rates: parsed.rates ?? [], ftlRates: parsed.ftlRates ?? [], ftlLogs: parsed.ftlLogs ?? [], vendorFees: parsed.vendorFees ?? [], vendorFeeLogs: parsed.vendorFeeLogs ?? [] } });
       } else {
         localStorage.removeItem(STORAGE_KEY);
         localStorage.setItem(STORAGE_KEY + '_version', SEED_VERSION);
-        dispatch({ type: 'LOAD_STATE', payload: { locations: seedLocations, rates: seedRates, ftlRates: seedFtlRates, ftlLogs: seedFtlLogs } });
+        dispatch({ type: 'LOAD_STATE', payload: { locations: seedLocations, rates: seedRates, ftlRates: seedFtlRates, ftlLogs: seedFtlLogs, vendorFees: seedVendorFees, vendorFeeLogs: seedVendorFeeLogs } });
       }
     } catch {
       localStorage.setItem(STORAGE_KEY + '_version', SEED_VERSION);
-      dispatch({ type: 'LOAD_STATE', payload: { locations: seedLocations, rates: seedRates, ftlRates: seedFtlRates, ftlLogs: seedFtlLogs } });
+      dispatch({ type: 'LOAD_STATE', payload: { locations: seedLocations, rates: seedRates, ftlRates: seedFtlRates, ftlLogs: seedFtlLogs, vendorFees: seedVendorFees, vendorFeeLogs: seedVendorFeeLogs } });
     }
   }, []);
 
   // Persist to localStorage on state change
   useEffect(() => {
     if (state.isLoaded) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ locations: state.locations, rates: state.rates, ftlRates: state.ftlRates, ftlLogs: state.ftlLogs }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ locations: state.locations, rates: state.rates, ftlRates: state.ftlRates, ftlLogs: state.ftlLogs, vendorFees: state.vendorFees, vendorFeeLogs: state.vendorFeeLogs }));
     }
-  }, [state.locations, state.rates, state.ftlRates, state.ftlLogs, state.isLoaded]);
+  }, [state.locations, state.rates, state.ftlRates, state.ftlLogs, state.vendorFees, state.vendorFeeLogs, state.isLoaded]);
 
   const addLocation = useCallback((location: Location) => dispatch({ type: 'ADD_LOCATION', payload: location }), []);
   const updateLocation = useCallback((locationId: string, updates: Partial<Omit<Location, 'id'>>) => dispatch({ type: 'UPDATE_LOCATION', payload: { locationId, updates } }), []);
@@ -270,13 +281,19 @@ export function RateProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SET_FTL_RATES', payload: { ftlRates, log } });
   }, []);
 
+  const setVendorFees = useCallback((vendorFees: VendorFee[], log: VendorFeeLog) => {
+    dispatch({ type: 'SET_VENDOR_FEES', payload: { vendorFees, log } });
+  }, []);
+
   const value: RateContextValue = {
     locations: state.locations,
     rates: state.rates,
     ftlRates: state.ftlRates,
     ftlLogs: state.ftlLogs,
+    vendorFees: state.vendorFees,
+    vendorFeeLogs: state.vendorFeeLogs,
     isLoaded: state.isLoaded,
-    setFtlRates,
+    setFtlRates, setVendorFees,
     addLocation, updateLocation, deleteLocation,
     addRate, updateRate, deactivateRate,
     getLocationsGroupedByZone, getRatesForVendor, getRatesForService, lookupRate, lookupAllL2Rates,

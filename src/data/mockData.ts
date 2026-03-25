@@ -90,23 +90,43 @@ export interface Job {
 
 export interface FeeLineItem {
   id: string;
-  name: string;           // "Base rate", "Fuel surcharge", etc.
-  rateId?: string;        // linked to VendorRate if auto-populated
+  name: string;           // vendor's own fee name (e.g., "前置仓操作费")
+  feeId?: string;         // linked to VendorFee if auto-populated
   currency: Currency;
-  rate: number;           // locked from rate card — not editable
+  rate: number;           // locked from vendor fee schedule — not editable
   unit: RateUnit;
-  quantity: number;       // editable per fee until job is Completed
-  amount: number;         // = rate × quantity (calculated, stored for billing)
+  quantity: number;       // editable per fee until validated
+  amount: number;         // = rate × quantity (calculated)
+  minCharge?: number;     // minimum charge from vendor schedule
+  active: boolean;        // true = included, false = removed by ops (subtractive model)
 }
 
-export const FEE_CATALOG = [
-  'Fuel surcharge',
-  'Toll fees',
-  'Waiting time',
-  'Special handling',
-  'Overtime',
-  'Insurance',
-] as const;
+// --- Vendor Fee Schedule (replaces old VendorRate for services) ---
+// Each vendor has their own fee names per service+location. Not forced into L2 codes.
+
+export interface VendorFee {
+  id: string;
+  vendorCode: string;
+  serviceCode: string;       // L1 service: EC, CS, CR, OH
+  locationId: string;        // facility where this fee applies
+  name: string;              // vendor's own fee name (e.g., "前置仓操作费", "装板服务")
+  nameEn?: string;           // English name (optional)
+  currency: Currency;
+  rate: number;
+  unit: RateUnit;
+  minCharge?: number;        // minimum charge per shipment
+  isActive: boolean;
+  costId?: string;           // optional L2 tag for reporting (e.g., "OH001")
+}
+
+export interface VendorFeeLog {
+  id: string;
+  timestamp: string;
+  action: string;
+  user: string;
+  details?: string;
+  filename?: string;
+}
 
 export function calcFeeAmount(rate: number, unit: RateUnit, quantity: number): number {
   return rate * quantity;
@@ -483,48 +503,44 @@ export const seedLocations: Location[] = [
   { id: 'LOC-023', name: 'Ningbo Port', code: 'NB-PT', zone: 'Ningbo', type: 'port' },
 ];
 
-// --- Seed Rates (Phase 2) ---
-export const seedRates: VendorRate[] = [
-  // HaleSun FM routes (MYR)
-  { id: 'RT-001', vendorCode: 'V-001', serviceCode: 'FM', costId: 'FM001', rateType: 'route', originLocationId: 'LOC-001', destinationLocationId: 'LOC-002', currency: 'MYR', amount: 450, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-002', vendorCode: 'V-001', serviceCode: 'FM', costId: 'FM001', rateType: 'route', originLocationId: 'LOC-019', destinationLocationId: 'LOC-011', currency: 'MYR', amount: 520, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-003', vendorCode: 'V-001', serviceCode: 'FM', costId: 'FM001', rateType: 'route', originLocationId: 'LOC-014', destinationLocationId: 'LOC-015', currency: 'MYR', amount: 380, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-004', vendorCode: 'V-001', serviceCode: 'FM', costId: 'FM001', rateType: 'route', originLocationId: 'LOC-001', destinationLocationId: 'LOC-010', currency: 'MYR', amount: 470, unit: 'flat', effectiveFrom: '2026-03-01', isActive: true },
-  // HaleSun CR (per-bag, CNY)
-  { id: 'RT-005', vendorCode: 'V-001', serviceCode: 'CR', costId: 'CR002', rateType: 'location', locationId: 'LOC-021', currency: 'CNY', amount: 25, unit: 'per-bag', effectiveFrom: '2026-01-01', isActive: true },
-  // Gonda EC locations (MYR)
-  { id: 'RT-006', vendorCode: 'V-003', serviceCode: 'EC', costId: 'EC001', rateType: 'location', locationId: 'LOC-002', currency: 'MYR', amount: 120, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-007', vendorCode: 'V-003', serviceCode: 'EC', costId: 'EC001', rateType: 'location', locationId: 'LOC-005', currency: 'MYR', amount: 130, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-008', vendorCode: 'V-003', serviceCode: 'EC', costId: 'EC001', rateType: 'location', locationId: 'LOC-015', currency: 'MYR', amount: 150, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-009', vendorCode: 'V-003', serviceCode: 'EC', costId: 'EC001', rateType: 'location', locationId: 'LOC-007', currency: 'CNY', amount: 680, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  // Gonda CS locations (MYR)
-  { id: 'RT-010', vendorCode: 'V-003', serviceCode: 'CS', costId: 'CS001', rateType: 'location', locationId: 'LOC-003', currency: 'MYR', amount: 80, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-011', vendorCode: 'V-003', serviceCode: 'CS', costId: 'CS001', rateType: 'location', locationId: 'LOC-017', currency: 'MYR', amount: 95, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  // SevenSeas EC locations (CNY)
-  { id: 'RT-012', vendorCode: 'V-002', serviceCode: 'EC', costId: 'EC001', rateType: 'location', locationId: 'LOC-011', currency: 'CNY', amount: 580, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-013', vendorCode: 'V-002', serviceCode: 'EC', costId: 'EC001', rateType: 'location', locationId: 'LOC-012', currency: 'CNY', amount: 600, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  // SevenSeas OH (per-kg, MYR)
-  { id: 'RT-014', vendorCode: 'V-002', serviceCode: 'OH', costId: 'OH003', rateType: 'location', locationId: 'LOC-023', currency: 'MYR', amount: 0.85, unit: 'per-kg', effectiveFrom: '2026-01-01', isActive: true },
-  // SevenSeas CR (per-bag, CNY)
-  { id: 'RT-015', vendorCode: 'V-002', serviceCode: 'CR', costId: 'CR002', rateType: 'location', locationId: 'LOC-006', currency: 'CNY', amount: 30, unit: 'per-bag', effectiveFrom: '2026-01-01', isActive: true },
-  // ThaiKee FM route (MYR)
-  { id: 'RT-016', vendorCode: 'V-004', serviceCode: 'FM', costId: 'FM001', rateType: 'route', originLocationId: 'LOC-013', destinationLocationId: 'LOC-013', currency: 'MYR', amount: 280, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  // ThaiKee OH (per-kg, MYR)
-  { id: 'RT-017', vendorCode: 'V-004', serviceCode: 'OH', costId: 'OH003', rateType: 'location', locationId: 'LOC-013', currency: 'MYR', amount: 0.65, unit: 'per-kg', effectiveFrom: '2026-01-01', isActive: true },
-  // The Lorry FM routes (CNY)
-  { id: 'RT-018', vendorCode: 'V-005', serviceCode: 'FM', costId: 'FM001', rateType: 'route', originLocationId: 'LOC-006', destinationLocationId: 'LOC-007', currency: 'CNY', amount: 2800, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-019', vendorCode: 'V-005', serviceCode: 'FM', costId: 'FM001', rateType: 'route', originLocationId: 'LOC-022', destinationLocationId: 'LOC-023', currency: 'CNY', amount: 3200, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-020', vendorCode: 'V-005', serviceCode: 'FM', costId: 'FM001', rateType: 'route', originLocationId: 'LOC-008', destinationLocationId: 'LOC-007', currency: 'MYR', amount: 320, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  // Expired rate example: old HaleSun FM rate for TikTok WH -> SZ Bay (replaced by RT-001)
-  { id: 'RT-021', vendorCode: 'V-001', serviceCode: 'FM', costId: 'FM001', rateType: 'route', originLocationId: 'LOC-001', destinationLocationId: 'LOC-002', currency: 'MYR', amount: 420, unit: 'flat', effectiveFrom: '2025-06-01', effectiveTo: '2025-12-31', isActive: false },
-  // Additional L2 rates: HaleSun FM002 (Pickup Fee) and FM003 (Cross-Border)
-  { id: 'RT-022', vendorCode: 'V-001', serviceCode: 'FM', costId: 'FM002', rateType: 'route', originLocationId: 'LOC-001', destinationLocationId: 'LOC-002', currency: 'MYR', amount: 30, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-023', vendorCode: 'V-001', serviceCode: 'FM', costId: 'FM003', rateType: 'route', originLocationId: 'LOC-001', destinationLocationId: 'LOC-002', currency: 'MYR', amount: 45, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-024', vendorCode: 'V-001', serviceCode: 'FM', costId: 'FM002', rateType: 'route', originLocationId: 'LOC-019', destinationLocationId: 'LOC-011', currency: 'MYR', amount: 35, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-025', vendorCode: 'V-001', serviceCode: 'FM', costId: 'FM002', rateType: 'route', originLocationId: 'LOC-014', destinationLocationId: 'LOC-015', currency: 'MYR', amount: 25, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  // Gonda EC additional L2: EC002 + EC003 at SZ Bay Checkpoint
-  { id: 'RT-026', vendorCode: 'V-003', serviceCode: 'EC', costId: 'EC002', rateType: 'location', locationId: 'LOC-002', currency: 'MYR', amount: 45, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
-  { id: 'RT-027', vendorCode: 'V-003', serviceCode: 'EC', costId: 'EC003', rateType: 'location', locationId: 'LOC-002', currency: 'MYR', amount: 25, unit: 'flat', effectiveFrom: '2026-01-01', isActive: true },
+// --- Vendor Fee Schedules (from real vendor Excel rate cards) ---
+// Replaces old VendorRate with vendor-specific fee names per service+location
+export const seedVendorFees: VendorFee[] = [
+  // HaleSun — Origin Handling at Shenzhen Pre-position WH (LOC-003 SZX Airport Cargo Terminal)
+  { id: 'VF-001', vendorCode: 'V-001', serviceCode: 'OH', locationId: 'LOC-003', name: '前置仓操作费', nameEn: 'Pre-position WH handling', currency: 'MYR', rate: 0.30, unit: 'per-kg', minCharge: 50, isActive: true, costId: 'OH003' },
+  { id: 'VF-002', vendorCode: 'V-001', serviceCode: 'OH', locationId: 'LOC-003', name: '提单费', nameEn: 'AWB fee', currency: 'MYR', rate: 50, unit: 'flat', minCharge: 50, isActive: true, costId: 'OH001' },
+  { id: 'VF-003', vendorCode: 'V-001', serviceCode: 'OH', locationId: 'LOC-003', name: '仓储费', nameEn: 'Storage (3 days free)', currency: 'MYR', rate: 0.10, unit: 'per-kg', minCharge: 30, isActive: true },
+  { id: 'VF-004', vendorCode: 'V-001', serviceCode: 'OH', locationId: 'LOC-003', name: '装卸费', nameEn: 'Loading/unloading', currency: 'MYR', rate: 0.20, unit: 'per-kg', minCharge: 50, isActive: true, costId: 'OH002' },
+  { id: 'VF-005', vendorCode: 'V-001', serviceCode: 'OH', locationId: 'LOC-003', name: '安检费', nameEn: 'Security X-ray', currency: 'MYR', rate: 0.30, unit: 'per-kg', minCharge: 100, isActive: true },
+  { id: 'VF-006', vendorCode: 'V-001', serviceCode: 'OH', locationId: 'LOC-003', name: '托盘费', nameEn: 'Pallet (standard wood)', currency: 'MYR', rate: 120, unit: 'flat', isActive: true, costId: 'OH005' },
+  { id: 'VF-007', vendorCode: 'V-001', serviceCode: 'OH', locationId: 'LOC-003', name: '包装膜', nameEn: 'Wrapping (≤15kg/ctn)', currency: 'MYR', rate: 6, unit: 'per-bag', minCharge: 20, isActive: true },
+  { id: 'VF-008', vendorCode: 'V-001', serviceCode: 'OH', locationId: 'LOC-003', name: '贴标费', nameEn: 'Labeling', currency: 'MYR', rate: 1.50, unit: 'per-bag', minCharge: 30, isActive: true },
+  { id: 'VF-009', vendorCode: 'V-001', serviceCode: 'OH', locationId: 'LOC-003', name: '复磅费', nameEn: 'Re-weighing', currency: 'MYR', rate: 0.10, unit: 'per-kg', minCharge: 30, isActive: true },
+  { id: 'VF-010', vendorCode: 'V-001', serviceCode: 'OH', locationId: 'LOC-003', name: '分货费', nameEn: 'Sorting', currency: 'MYR', rate: 1.50, unit: 'per-bag', minCharge: 30, isActive: true, costId: 'OH004' },
+
+  // Gonda — Origin Handling at HKG Airport Warehouse (LOC-018 Hong Kong Airport)
+  { id: 'VF-020', vendorCode: 'V-003', serviceCode: 'OH', locationId: 'LOC-018', name: '装板服务', nameEn: 'ULD build-up (all-in)', currency: 'MYR', rate: 1.95, unit: 'per-kg', minCharge: 200, isActive: true, costId: 'OH005' },
+  { id: 'VF-021', vendorCode: 'V-003', serviceCode: 'OH', locationId: 'LOC-018', name: '提单打单费', nameEn: 'AWB processing', currency: 'MYR', rate: 150, unit: 'flat', isActive: true, costId: 'OH001' },
+  { id: 'VF-022', vendorCode: 'V-003', serviceCode: 'OH', locationId: 'LOC-018', name: '登记费', nameEn: 'Registration', currency: 'MYR', rate: 350, unit: 'flat', isActive: true },
+  { id: 'VF-023', vendorCode: 'V-003', serviceCode: 'OH', locationId: 'LOC-018', name: '停车费', nameEn: 'Parking', currency: 'MYR', rate: 150, unit: 'flat', isActive: true },
+  { id: 'VF-024', vendorCode: 'V-003', serviceCode: 'OH', locationId: 'LOC-018', name: 'X-Ray', nameEn: 'X-Ray screening', currency: 'MYR', rate: 0.80, unit: 'per-kg', minCharge: 100, isActive: true },
+  { id: 'VF-025', vendorCode: 'V-003', serviceCode: 'OH', locationId: 'LOC-018', name: '香港仓到货运站运输费', nameEn: 'WH to terminal transport', currency: 'MYR', rate: 0.60, unit: 'per-kg', minCharge: 500, isActive: true },
+
+  // Gonda — Export Customs at Shenzhen Bay Checkpoint (LOC-002)
+  { id: 'VF-030', vendorCode: 'V-003', serviceCode: 'EC', locationId: 'LOC-002', name: '报关费', nameEn: 'Customs declaration', currency: 'MYR', rate: 120, unit: 'flat', isActive: true, costId: 'EC001' },
+  { id: 'VF-031', vendorCode: 'V-003', serviceCode: 'EC', locationId: 'LOC-002', name: '查验费', nameEn: 'Customs inspection', currency: 'MYR', rate: 45, unit: 'flat', isActive: true, costId: 'EC002' },
+  { id: 'VF-032', vendorCode: 'V-003', serviceCode: 'EC', locationId: 'LOC-002', name: '报关服务费', nameEn: 'Customs service', currency: 'MYR', rate: 25, unit: 'flat', isActive: true, costId: 'EC003' },
+
+  // Gonda — Cargo Submission at SZX Airport Cargo Terminal (LOC-003)
+  { id: 'VF-040', vendorCode: 'V-003', serviceCode: 'CS', locationId: 'LOC-003', name: '地面操作费', nameEn: 'Ground handling', currency: 'MYR', rate: 80, unit: 'flat', isActive: true, costId: 'CS006' },
+  { id: 'VF-041', vendorCode: 'V-003', serviceCode: 'CS', locationId: 'LOC-003', name: '安检费', nameEn: 'Security X-ray screening', currency: 'MYR', rate: 0.30, unit: 'per-kg', minCharge: 100, isActive: true, costId: 'CS004' },
+  { id: 'VF-042', vendorCode: 'V-003', serviceCode: 'CS', locationId: 'LOC-003', name: '货站操作费', nameEn: 'Terminal handling', currency: 'MYR', rate: 0.25, unit: 'per-kg', minCharge: 80, isActive: true, costId: 'CS005' },
+];
+
+export const seedVendorFeeLogs: VendorFeeLog[] = [
+  { id: 'VFL-001', timestamp: '2026-01-01 11:00', action: 'CSV uploaded', user: 'Ops Admin', details: 'HaleSun OH at SZX — 10 fees loaded', filename: 'HaleSun_OH_SZX.csv' },
+  { id: 'VFL-002', timestamp: '2026-01-01 11:05', action: 'CSV uploaded', user: 'Ops Admin', details: 'Gonda OH at HKG — 6 fees loaded', filename: 'Gonda_OH_HKG.csv' },
+  { id: 'VFL-003', timestamp: '2026-01-01 11:10', action: 'CSV uploaded', user: 'Ops Admin', details: 'Gonda EC at SZ Bay — 3 fees loaded', filename: 'Gonda_EC_SZBAY.csv' },
 ];
 
 // --- Seed FTL Rates (from real vendor Excel rate cards) ---

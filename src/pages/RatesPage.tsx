@@ -9,7 +9,7 @@ type RateTab = 'trucking' | 'EC' | 'CS' | 'CR' | 'OH';
 const UNIT_LABELS: Record<string, string> = { flat: '/trip', 'per-kg': '/kg', 'per-bag': '/bag', 'per-cbm': '/CBM', 'per-km': '/km' };
 
 export default function RatesPage() {
-  const { ftlRates, ftlLogs, setFtlRates, rates, getLocationById } = useRates();
+  const { ftlRates, ftlLogs, setFtlRates, rates, vendorFees, getLocationById } = useRates();
   const [rateTab, setRateTab] = useState<RateTab>('trucking');
   const [selectedVendor, setSelectedVendor] = useState(vendors[0].code);
   const [search, setSearch] = useState('');
@@ -119,7 +119,7 @@ export default function RatesPage() {
           </select>
           <span style={{ fontSize: 10, color: '#9ca3af' }}>
             {ftlRates.filter((r) => r.vendorCode === selectedVendor && r.isActive).length} FTL routes ·{' '}
-            {rates.filter((r) => r.vendorCode === selectedVendor && r.isActive && r.serviceCode !== 'FM').length} service fees
+            {vendorFees.filter((r) => r.vendorCode === selectedVendor && r.isActive).length} service fees
           </span>
         </div>
 
@@ -201,7 +201,7 @@ export default function RatesPage() {
         )}
 
         {/* ═══ SERVICE TABS (EC, CS, CR, OH) ═══ */}
-        {rateTab !== 'trucking' && <ServiceRateView serviceCode={rateTab} rates={rates} selectedVendor={selectedVendor} getLocationById={getLocationById} />}
+        {rateTab !== 'trucking' && <ServiceRateView serviceCode={rateTab} vendorFees={vendorFees} selectedVendor={selectedVendor} getLocationById={getLocationById} />}
       </div>
     </div>
   );
@@ -209,19 +209,19 @@ export default function RatesPage() {
 
 // ═══ Service Rate View — single service, grouped by location ═══
 
-function ServiceRateView({ serviceCode, rates, selectedVendor, getLocationById }: { serviceCode: string; rates: VendorRate[]; selectedVendor: string; getLocationById: (id: string) => any }) {
-  const activeRates = useMemo(() => rates.filter((r) => r.vendorCode === selectedVendor && r.serviceCode === serviceCode && r.isActive), [rates, selectedVendor, serviceCode]);
+function ServiceRateView({ serviceCode, vendorFees, selectedVendor, getLocationById }: { serviceCode: string; vendorFees: VendorFee[]; selectedVendor: string; getLocationById: (id: string) => any }) {
+  const activeRates = useMemo(() => vendorFees.filter((r) => r.vendorCode === selectedVendor && r.serviceCode === serviceCode && r.isActive), [vendorFees, selectedVendor, serviceCode]);
   const l1 = SERVICE_HIERARCHY.find((l) => l.code === serviceCode);
 
   // Group by location
   const byLocation = useMemo(() => {
-    const map = new Map<string, { name: string; rates: VendorRate[] }>();
+    const map = new Map<string, { name: string; fees: typeof activeRates }>();
     for (const r of activeRates) {
       const lid = r.locationId ?? '';
       if (!lid) continue;
       const existing = map.get(lid);
-      if (existing) { existing.rates.push(r); }
-      else { map.set(lid, { name: getLocationById(lid)?.name ?? lid, rates: [r] }); }
+      if (existing) { existing.fees.push(r); }
+      else { map.set(lid, { name: getLocationById(lid)?.name ?? lid, fees: [r] }); }
     }
     return map;
   }, [activeRates, getLocationById]);
@@ -230,34 +230,34 @@ function ServiceRateView({ serviceCode, rates, selectedVendor, getLocationById }
 
   return byLocation.size > 0 ? (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {Array.from(byLocation.entries()).map(([locId, { name, rates: locRates }]) => (
+      {Array.from(byLocation.entries()).map(([locId, { name, fees: locFees }]) => (
         <div key={locId} style={{ border: '1px solid #e5e7eb', borderRadius: 6, overflow: 'hidden' }}>
           <div style={{ padding: '8px 12px', background: '#111827', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 12, fontWeight: 600 }}>{name}</span>
-            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)' }}>{locRates.length} fees</span>
+            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)' }}>{locFees.length} fees</span>
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th style={{ textAlign: 'left', padding: '4px 12px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>L2 Fee</th>
+                <th style={{ textAlign: 'left', padding: '4px 12px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>Fee</th>
                 <th style={{ textAlign: 'left', padding: '4px 12px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', width: 70 }}>Unit</th>
                 <th style={{ textAlign: 'right', padding: '4px 12px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', width: 100 }}>Rate</th>
+                <th style={{ textAlign: 'right', padding: '4px 12px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', width: 70 }}>Min</th>
               </tr>
             </thead>
             <tbody>
-              {locRates.map((r) => {
-                const l2 = ALL_L2_SERVICES.find((l) => l.costId === r.costId);
-                return (
-                  <tr key={r.id}>
-                    <td style={{ padding: '5px 12px', fontSize: 11, borderBottom: '1px solid #f3f4f6', color: '#374151' }}>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: '#9ca3af', marginRight: 4 }}>{r.costId}</span>
-                      {l2?.name ?? r.costId}
-                    </td>
-                    <td style={{ padding: '5px 12px', fontSize: 9, borderBottom: '1px solid #f3f4f6', color: '#9ca3af' }}>{UNIT_LABELS[r.unit] ?? r.unit}</td>
-                    <td style={{ padding: '5px 12px', textAlign: 'right', borderBottom: '1px solid #f3f4f6', fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 600, color: '#111827' }}>{formatCurrency(r.currency, r.amount)}</td>
-                  </tr>
-                );
-              })}
+              {locFees.map((fee) => (
+                <tr key={fee.id}>
+                  <td style={{ padding: '5px 12px', fontSize: 11, borderBottom: '1px solid #f3f4f6', color: '#374151' }}>
+                    {fee.name}
+                    {fee.nameEn && <span style={{ fontSize: 9, color: '#9ca3af', marginLeft: 4 }}>{fee.nameEn}</span>}
+                    {fee.costId && <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, color: '#d1d5db', marginLeft: 4 }}>{fee.costId}</span>}
+                  </td>
+                  <td style={{ padding: '5px 12px', fontSize: 9, borderBottom: '1px solid #f3f4f6', color: '#9ca3af' }}>{UNIT_LABELS[fee.unit] ?? fee.unit}</td>
+                  <td style={{ padding: '5px 12px', textAlign: 'right', borderBottom: '1px solid #f3f4f6', fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 600, color: '#111827' }}>{formatCurrency(fee.currency, fee.rate)}</td>
+                  <td style={{ padding: '5px 12px', textAlign: 'right', borderBottom: '1px solid #f3f4f6', fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: '#9ca3af' }}>{fee.minCharge ? formatCurrency(fee.currency, fee.minCharge) : '—'}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -266,7 +266,7 @@ function ServiceRateView({ serviceCode, rates, selectedVendor, getLocationById }
   ) : (
     <div style={{ textAlign: 'center', padding: '48px 16px', color: '#9ca3af' }}>
       <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>No {l1?.label ?? serviceCode} rates for {vendorName}</div>
-      <div style={{ fontSize: 11 }}>Rates for this service are managed per L2 fee type and facility</div>
+      <div style={{ fontSize: 11 }}>Upload a CSV to add this vendor's fee schedule for this service</div>
     </div>
   );
 }
