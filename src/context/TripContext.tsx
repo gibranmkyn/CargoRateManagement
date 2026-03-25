@@ -249,9 +249,10 @@ export function TripProvider({ children }: { children: ReactNode }) {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        // Migration: if old data has `services` (array) instead of `service` (singular), reset to seed
+        // Migration: reset if old format or missing Phase 2 rate data on seed trips
         const hasOldFormat = parsed.trips?.some((t: any) => t.jobs?.some((j: any) => Array.isArray(j.services)));
-        if (hasOldFormat) {
+        const missingRates = parsed.trips?.some((t: any) => t.id === 'DO-20260308-001' && t.jobs?.[0] && !t.jobs[0].agreedRate);
+        if (hasOldFormat || missingRates) {
           localStorage.removeItem(STORAGE_KEY);
           dispatch({ type: 'LOAD_STATE', payload: { trips: seedTrips, templates: seedTemplates } });
         } else {

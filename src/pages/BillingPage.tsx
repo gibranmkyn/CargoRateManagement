@@ -44,8 +44,8 @@ export default function BillingPage() {
   const [filter, setFilter] = useState<Filter>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // All orders with at least one job that has a completed status or an agreed rate
-  const billingOrders = trips.filter((t) => t.jobs.some((j) => j.agreedCost || j.invoiceAmount || j.status === 'Completed'));
+  // All orders with at least one job that has an agreed rate, invoice, or completed status
+  const billingOrders = trips.filter((t) => t.jobs.some((j) => j.agreedCost || j.agreedRate || j.invoiceAmount || j.status === 'Completed'));
 
   // Sort by severity
   const sorted = [...billingOrders].sort((a, b) => getOrderSeverity(a) - getOrderSeverity(b));

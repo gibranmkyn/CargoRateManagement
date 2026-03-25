@@ -307,6 +307,16 @@ export default function TripsPage() {
                                   <td style={{ padding: '6px 10px', fontSize: 10, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: '#111827' }}>
                                     {(() => {
                                       if (job.agreedCost) return formatCurrency(job.agreedCost.currency, job.agreedCost.amount);
+                                      // Calculate from live rate lookup
+                                      const originLoc = getLocationByName(job.origin.location);
+                                      const destLoc = getLocationByName(job.destination.location);
+                                      const liveRate = originLoc || destLoc ? lookupRate(job.vendor.code, job.service.code, originLoc?.id === destLoc?.id ? originLoc?.id : undefined, originLoc?.id, destLoc?.id) : null;
+                                      if (liveRate) {
+                                        let cost = liveRate.amount;
+                                        if (liveRate.unit === 'per-kg') cost *= trip.weight;
+                                        else if (liveRate.unit === 'per-bag') cost *= trip.bags;
+                                        return <span style={{ color: '#6b7280' }}>{formatCurrency(liveRate.currency, cost)}</span>;
+                                      }
                                       return <span style={{ color: '#9ca3af', fontWeight: 400 }}>&mdash;</span>;
                                     })()}
                                   </td>

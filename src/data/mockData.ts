@@ -147,7 +147,7 @@ function doc(id: string, name: string, type: string, ts: string): ProofDocument 
 
 // Each job has exactly 1 service. Same vendor can appear multiple times.
 export const seedTrips: Trip[] = [
-  // DO-001: TikTok Shenzhen → SZX Airport (completed)
+  // DO-001: TikTok Shenzhen → SZX Airport (completed, all invoiced — 2 match, 1 over)
   {
     id: 'DO-20260308-001',
     customer: { name: 'TikTok', code: 'CUST-001' },
@@ -157,12 +157,12 @@ export const seedTrips: Trip[] = [
     remarks: 'Fragile cargo',
     createdAt: '08 Mar 2026, 09:00',
     jobs: [
-      { id: 'DO-20260308-001-J01', vendor: { code: 'V-001', name: 'HaleSun' }, origin: { location: 'TikTok WH, Shenzhen', date: '2026-03-08 10:00' }, destination: { location: 'Shenzhen Bay Checkpoint', date: '2026-03-08 14:00' }, service: { code: 'FM', label: 'Trucking' }, status: 'Completed', duration: '04:00', execution: '2026-03-08 10:05', activityLog: [log('l1','2026-03-08 09:00','Job created','Ops Admin','Assigned to HaleSun'), log('l2','2026-03-08 10:05','Status → In Progress'), log('l3','2026-03-08 14:00','Status → Completed')], proofDocuments: [doc('d1','POD-tiktok-szbay.jpg','image/jpeg','2026-03-08 13:55')] },
-      { id: 'DO-20260308-001-J02', vendor: { code: 'V-003', name: 'Gonda' }, origin: { location: 'Shenzhen Bay Checkpoint', date: '2026-03-08 15:00' }, destination: { location: 'SZX Airport Cargo Terminal', date: '2026-03-08 18:00' }, service: { code: 'EC', label: 'Export Custom Clearance' }, status: 'Completed', duration: '03:00', execution: '2026-03-08 15:10', activityLog: [log('l4','2026-03-08 09:00','Job created'), log('l5','2026-03-08 18:00','Status → Completed')], proofDocuments: [doc('d2','customs-clearance-001.pdf','application/pdf','2026-03-08 17:50')] },
-      { id: 'DO-20260308-001-J03', vendor: { code: 'V-003', name: 'Gonda' }, origin: { location: 'SZX Airport Cargo Terminal', date: '2026-03-08 19:00' }, destination: { location: 'SZX Airport Cargo Terminal', date: '2026-03-08 21:00' }, service: { code: 'CS', label: 'Cargo Submission' }, status: 'Completed', duration: '02:00', execution: '2026-03-08 19:05', activityLog: [log('l6','2026-03-08 09:00','Job created'), log('l7','2026-03-08 21:00','Status → Completed')], proofDocuments: [doc('d3','xray-submission-receipt.pdf','application/pdf','2026-03-08 20:55')] },
+      { id: 'DO-20260308-001-J01', vendor: { code: 'V-001', name: 'HaleSun' }, origin: { location: 'TikTok WH, Shenzhen', date: '2026-03-08 10:00' }, destination: { location: 'Shenzhen Bay Checkpoint', date: '2026-03-08 14:00' }, service: { code: 'FM', label: 'Trucking' }, status: 'Completed', duration: '04:00', execution: '2026-03-08 10:05', activityLog: [log('l1','2026-03-08 09:00','Job created','Ops Admin','Assigned to HaleSun'), log('l2','2026-03-08 10:05','Status → In Progress'), log('l3','2026-03-08 14:00','Status → Completed')], proofDocuments: [doc('d1','POD-tiktok-szbay.jpg','image/jpeg','2026-03-08 13:55')], rateId: 'RT-001', agreedRate: { currency: 'MYR', amount: 450, unit: 'flat' }, agreedCost: { currency: 'MYR', amount: 450 }, invoiceAmount: { currency: 'MYR', amount: 450 } },
+      { id: 'DO-20260308-001-J02', vendor: { code: 'V-003', name: 'Gonda' }, origin: { location: 'Shenzhen Bay Checkpoint', date: '2026-03-08 15:00' }, destination: { location: 'SZX Airport Cargo Terminal', date: '2026-03-08 18:00' }, service: { code: 'EC', label: 'Export Custom Clearance' }, status: 'Completed', duration: '03:00', execution: '2026-03-08 15:10', activityLog: [log('l4','2026-03-08 09:00','Job created'), log('l5','2026-03-08 18:00','Status → Completed')], proofDocuments: [doc('d2','customs-clearance-001.pdf','application/pdf','2026-03-08 17:50')], rateId: 'RT-006', agreedRate: { currency: 'MYR', amount: 120, unit: 'flat' }, agreedCost: { currency: 'MYR', amount: 120 }, invoiceAmount: { currency: 'MYR', amount: 120 } },
+      { id: 'DO-20260308-001-J03', vendor: { code: 'V-003', name: 'Gonda' }, origin: { location: 'SZX Airport Cargo Terminal', date: '2026-03-08 19:00' }, destination: { location: 'SZX Airport Cargo Terminal', date: '2026-03-08 21:00' }, service: { code: 'CS', label: 'Cargo Submission' }, status: 'Completed', duration: '02:00', execution: '2026-03-08 19:05', activityLog: [log('l6','2026-03-08 09:00','Job created'), log('l7','2026-03-08 21:00','Status → Completed')], proofDocuments: [doc('d3','xray-submission-receipt.pdf','application/pdf','2026-03-08 20:55')], rateId: 'RT-010', agreedRate: { currency: 'MYR', amount: 80, unit: 'flat' }, agreedCost: { currency: 'MYR', amount: 80 }, invoiceAmount: { currency: 'MYR', amount: 95 } },
     ],
   },
-  // DO-002: Shopee Yantian → KUL (in progress)
+  // DO-002: Shopee Yantian → KUL (in progress, mixed currencies)
   {
     id: 'DO-20260309-002',
     customer: { name: 'Shopee', code: 'CUST-002' },
@@ -172,9 +172,9 @@ export const seedTrips: Trip[] = [
     remarks: '',
     createdAt: '09 Mar 2026, 08:30',
     jobs: [
-      { id: 'DO-20260309-002-J01', vendor: { code: 'V-001', name: 'HaleSun' }, origin: { location: 'Yantian Port', date: '2026-03-09 10:00' }, destination: { location: 'Dongguan Cross-dock', date: '2026-03-09 14:00' }, service: { code: 'CR', label: 'Cargo Retrieval' }, status: 'Completed', duration: '04:00', execution: '2026-03-09 10:10', activityLog: [log('l1','2026-03-09 08:30','Job created'), log('l2','2026-03-09 14:00','Status → Completed')], proofDocuments: [doc('d1','retrieval-yantian.jpg','image/jpeg','2026-03-09 13:50')] },
-      { id: 'DO-20260309-002-J02', vendor: { code: 'V-001', name: 'HaleSun' }, origin: { location: 'Dongguan Cross-dock', date: '2026-03-09 15:00' }, destination: { location: 'Shenzhen Airport', date: '2026-03-09 19:00' }, service: { code: 'FM', label: 'Trucking' }, status: 'In Progress', duration: null, execution: '2026-03-09 15:05', activityLog: [log('l3','2026-03-09 08:30','Job created'), log('l4','2026-03-09 15:05','Status → In Progress')], proofDocuments: [] },
-      { id: 'DO-20260309-002-J03', vendor: { code: 'V-002', name: 'SevenSeas' }, origin: { location: 'Shenzhen Airport', date: '2026-03-09 20:00' }, destination: { location: 'Shenzhen Airport', date: '2026-03-09 23:00' }, service: { code: 'EC', label: 'Export Custom Clearance' }, status: 'Pending', duration: null, execution: null, activityLog: [log('l5','2026-03-09 08:30','Job created')], proofDocuments: [] },
+      { id: 'DO-20260309-002-J01', vendor: { code: 'V-001', name: 'HaleSun' }, origin: { location: 'Yantian Port', date: '2026-03-09 10:00' }, destination: { location: 'Dongguan Cross-dock', date: '2026-03-09 14:00' }, service: { code: 'CR', label: 'Cargo Retrieval' }, status: 'Completed', duration: '04:00', execution: '2026-03-09 10:10', activityLog: [log('l1','2026-03-09 08:30','Job created'), log('l2','2026-03-09 14:00','Status → Completed')], proofDocuments: [doc('d1','retrieval-yantian.jpg','image/jpeg','2026-03-09 13:50')], rateId: 'RT-005', agreedRate: { currency: 'CNY', amount: 25, unit: 'per-bag' }, agreedCost: { currency: 'CNY', amount: 400 }, invoiceAmount: { currency: 'CNY', amount: 400 } },
+      { id: 'DO-20260309-002-J02', vendor: { code: 'V-001', name: 'HaleSun' }, origin: { location: 'Dongguan Cross-dock', date: '2026-03-09 15:00' }, destination: { location: 'Shenzhen Airport', date: '2026-03-09 19:00' }, service: { code: 'FM', label: 'Trucking' }, status: 'In Progress', duration: null, execution: '2026-03-09 15:05', activityLog: [log('l3','2026-03-09 08:30','Job created'), log('l4','2026-03-09 15:05','Status → In Progress')], proofDocuments: [], rateId: 'RT-002', agreedRate: { currency: 'MYR', amount: 520, unit: 'flat' }, agreedCost: { currency: 'MYR', amount: 520 } },
+      { id: 'DO-20260309-002-J03', vendor: { code: 'V-002', name: 'SevenSeas' }, origin: { location: 'Shenzhen Airport', date: '2026-03-09 20:00' }, destination: { location: 'Shenzhen Airport', date: '2026-03-09 23:00' }, service: { code: 'EC', label: 'Export Custom Clearance' }, status: 'Pending', duration: null, execution: null, activityLog: [log('l5','2026-03-09 08:30','Job created')], proofDocuments: [], rateId: 'RT-012', agreedRate: { currency: 'CNY', amount: 580, unit: 'flat' }, agreedCost: { currency: 'CNY', amount: 580 } },
     ],
   },
   // DO-003: TikTok Qianhai → Huanggang (rejected)
@@ -192,7 +192,7 @@ export const seedTrips: Trip[] = [
       { id: 'DO-20260310-003-J02', vendor: { code: 'V-003', name: 'Gonda' }, origin: { location: 'Huanggang Port', date: '2026-03-10 13:00' }, destination: { location: 'Huanggang Port', date: '2026-03-10 16:00' }, service: { code: 'EC', label: 'Export Custom Clearance' }, status: 'Pending', duration: null, execution: null, activityLog: [log('l3','2026-03-10 07:00','Job created')], proofDocuments: [] },
     ],
   },
-  // DO-004: Shein Guangzhou → Airport
+  // DO-004: Shein Guangzhou → Airport (1 completed with under-invoice, 1 in progress)
   {
     id: 'DO-20260310-004',
     customer: { name: 'Shein', code: 'CUST-003' },
@@ -202,11 +202,11 @@ export const seedTrips: Trip[] = [
     remarks: 'Temperature sensitive',
     createdAt: '10 Mar 2026, 10:00',
     jobs: [
-      { id: 'DO-20260310-004-J01', vendor: { code: 'V-004', name: 'ThaiKee' }, origin: { location: 'Guangzhou Baiyun Airport', date: '2026-03-10 14:00' }, destination: { location: 'Guangzhou Baiyun Airport', date: '2026-03-10 17:00' }, service: { code: 'FM', label: 'Trucking' }, status: 'Completed', duration: '03:00', execution: '2026-03-10 14:05', activityLog: [log('l1','2026-03-10 10:00','Job created'), log('l2','2026-03-10 17:00','Status → Completed')], proofDocuments: [doc('d1','gz-trucking-receipt.pdf','application/pdf','2026-03-10 16:50')] },
-      { id: 'DO-20260310-004-J02', vendor: { code: 'V-004', name: 'ThaiKee' }, origin: { location: 'Guangzhou Baiyun Airport', date: '2026-03-10 18:00' }, destination: { location: 'Guangzhou Region Airport', date: '2026-03-10 21:00' }, service: { code: 'OH', label: 'Origin Handling' }, status: 'In Progress', duration: null, execution: '2026-03-10 18:10', activityLog: [log('l3','2026-03-10 10:00','Job created'), log('l4','2026-03-10 18:10','Status → In Progress')], proofDocuments: [] },
+      { id: 'DO-20260310-004-J01', vendor: { code: 'V-004', name: 'ThaiKee' }, origin: { location: 'Guangzhou Baiyun Airport', date: '2026-03-10 14:00' }, destination: { location: 'Guangzhou Baiyun Airport', date: '2026-03-10 17:00' }, service: { code: 'FM', label: 'Trucking' }, status: 'Completed', duration: '03:00', execution: '2026-03-10 14:05', activityLog: [log('l1','2026-03-10 10:00','Job created'), log('l2','2026-03-10 17:00','Status → Completed')], proofDocuments: [doc('d1','gz-trucking-receipt.pdf','application/pdf','2026-03-10 16:50')], rateId: 'RT-016', agreedRate: { currency: 'MYR', amount: 280, unit: 'flat' }, agreedCost: { currency: 'MYR', amount: 280 }, invoiceAmount: { currency: 'MYR', amount: 250 } },
+      { id: 'DO-20260310-004-J02', vendor: { code: 'V-004', name: 'ThaiKee' }, origin: { location: 'Guangzhou Baiyun Airport', date: '2026-03-10 18:00' }, destination: { location: 'Guangzhou Region Airport', date: '2026-03-10 21:00' }, service: { code: 'OH', label: 'Origin Handling' }, status: 'In Progress', duration: null, execution: '2026-03-10 18:10', activityLog: [log('l3','2026-03-10 10:00','Job created'), log('l4','2026-03-10 18:10','Status → In Progress')], proofDocuments: [], rateId: 'RT-017', agreedRate: { currency: 'MYR', amount: 0.65, unit: 'per-kg' }, agreedCost: { currency: 'MYR', amount: 338 } },
     ],
   },
-  // DO-005: Temu SZX → Lantau
+  // DO-005: Temu SZX → Lantau (all pending, rates assigned, mixed currencies)
   {
     id: 'DO-20260311-005',
     customer: { name: 'Temu', code: 'CUST-005' },
@@ -216,13 +216,13 @@ export const seedTrips: Trip[] = [
     remarks: 'Export commitment',
     createdAt: '11 Mar 2026, 06:00',
     jobs: [
-      { id: 'DO-20260311-005-J01', vendor: { code: 'V-002', name: 'SevenSeas' }, origin: { location: 'Shenzhen Bao An Airport', date: '2026-03-11 08:00' }, destination: { location: 'Shenzhen Bao An Airport', date: '2026-03-11 10:00' }, service: { code: 'CR', label: 'Cargo Retrieval' }, status: 'Pending', duration: null, execution: null, activityLog: [log('l1','2026-03-11 06:00','Job created')], proofDocuments: [] },
-      { id: 'DO-20260311-005-J02', vendor: { code: 'V-005', name: 'The Lorry' }, origin: { location: 'Shenzhen Bao An Airport', date: '2026-03-11 11:00' }, destination: { location: 'Shekou Port', date: '2026-03-11 15:00' }, service: { code: 'FM', label: 'Trucking' }, status: 'Pending', duration: null, execution: null, activityLog: [log('l2','2026-03-11 06:00','Job created')], proofDocuments: [] },
-      { id: 'DO-20260311-005-J03', vendor: { code: 'V-003', name: 'Gonda' }, origin: { location: 'Shekou Port', date: '2026-03-11 16:00' }, destination: { location: 'Lantau Terminals', date: '2026-03-11 20:00' }, service: { code: 'EC', label: 'Export Custom Clearance' }, status: 'Pending', duration: null, execution: null, activityLog: [log('l3','2026-03-11 06:00','Job created')], proofDocuments: [] },
-      { id: 'DO-20260311-005-J04', vendor: { code: 'V-003', name: 'Gonda' }, origin: { location: 'Lantau Terminals', date: '2026-03-11 21:00' }, destination: { location: 'Lantau Terminals', date: '2026-03-11 23:00' }, service: { code: 'CS', label: 'Cargo Submission' }, status: 'Pending', duration: null, execution: null, activityLog: [log('l4','2026-03-11 06:00','Job created')], proofDocuments: [] },
+      { id: 'DO-20260311-005-J01', vendor: { code: 'V-002', name: 'SevenSeas' }, origin: { location: 'Shenzhen Bao An Airport', date: '2026-03-11 08:00' }, destination: { location: 'Shenzhen Bao An Airport', date: '2026-03-11 10:00' }, service: { code: 'CR', label: 'Cargo Retrieval' }, status: 'Pending', duration: null, execution: null, activityLog: [log('l1','2026-03-11 06:00','Job created')], proofDocuments: [], rateId: 'RT-015', agreedRate: { currency: 'CNY', amount: 30, unit: 'per-bag' }, agreedCost: { currency: 'CNY', amount: 1440 } },
+      { id: 'DO-20260311-005-J02', vendor: { code: 'V-005', name: 'The Lorry' }, origin: { location: 'Shenzhen Bao An Airport', date: '2026-03-11 11:00' }, destination: { location: 'Shekou Port', date: '2026-03-11 15:00' }, service: { code: 'FM', label: 'Trucking' }, status: 'Pending', duration: null, execution: null, activityLog: [log('l2','2026-03-11 06:00','Job created')], proofDocuments: [], rateId: 'RT-018', agreedRate: { currency: 'CNY', amount: 2800, unit: 'flat' }, agreedCost: { currency: 'CNY', amount: 2800 } },
+      { id: 'DO-20260311-005-J03', vendor: { code: 'V-003', name: 'Gonda' }, origin: { location: 'Shekou Port', date: '2026-03-11 16:00' }, destination: { location: 'Lantau Terminals', date: '2026-03-11 20:00' }, service: { code: 'EC', label: 'Export Custom Clearance' }, status: 'Pending', duration: null, execution: null, activityLog: [log('l3','2026-03-11 06:00','Job created')], proofDocuments: [], rateId: 'RT-009', agreedRate: { currency: 'CNY', amount: 680, unit: 'flat' }, agreedCost: { currency: 'CNY', amount: 680 } },
+      { id: 'DO-20260311-005-J04', vendor: { code: 'V-003', name: 'Gonda' }, origin: { location: 'Lantau Terminals', date: '2026-03-11 21:00' }, destination: { location: 'Lantau Terminals', date: '2026-03-11 23:00' }, service: { code: 'CS', label: 'Cargo Submission' }, status: 'Pending', duration: null, execution: null, activityLog: [log('l4','2026-03-11 06:00','Job created')], proofDocuments: [], rateId: 'RT-011', agreedRate: { currency: 'MYR', amount: 95, unit: 'flat' }, agreedCost: { currency: 'MYR', amount: 95 } },
     ],
   },
-  // DO-006: AliExpress Yiwu → Ningbo
+  // DO-006: AliExpress Yiwu → Ningbo (in progress, rates assigned)
   {
     id: 'DO-20260311-006',
     customer: { name: 'AliExpress', code: 'CUST-004' },
@@ -232,11 +232,11 @@ export const seedTrips: Trip[] = [
     remarks: '',
     createdAt: '11 Mar 2026, 09:00',
     jobs: [
-      { id: 'DO-20260311-006-J01', vendor: { code: 'V-005', name: 'The Lorry' }, origin: { location: 'Yiwu Warehouse', date: '2026-03-11 10:00' }, destination: { location: 'Ningbo Port', date: '2026-03-11 16:00' }, service: { code: 'FM', label: 'Trucking' }, status: 'In Progress', duration: null, execution: '2026-03-11 10:15', activityLog: [log('l1','2026-03-11 09:00','Job created'), log('l2','2026-03-11 10:15','Status → In Progress')], proofDocuments: [] },
-      { id: 'DO-20260311-006-J02', vendor: { code: 'V-002', name: 'SevenSeas' }, origin: { location: 'Ningbo Port', date: '2026-03-11 17:00' }, destination: { location: 'Ningbo Port', date: '2026-03-11 20:00' }, service: { code: 'OH', label: 'Origin Handling' }, status: 'Pending', duration: null, execution: null, activityLog: [log('l3','2026-03-11 09:00','Job created')], proofDocuments: [] },
+      { id: 'DO-20260311-006-J01', vendor: { code: 'V-005', name: 'The Lorry' }, origin: { location: 'Yiwu Warehouse', date: '2026-03-11 10:00' }, destination: { location: 'Ningbo Port', date: '2026-03-11 16:00' }, service: { code: 'FM', label: 'Trucking' }, status: 'In Progress', duration: null, execution: '2026-03-11 10:15', activityLog: [log('l1','2026-03-11 09:00','Job created'), log('l2','2026-03-11 10:15','Status → In Progress')], proofDocuments: [], rateId: 'RT-019', agreedRate: { currency: 'CNY', amount: 3200, unit: 'flat' }, agreedCost: { currency: 'CNY', amount: 3200 } },
+      { id: 'DO-20260311-006-J02', vendor: { code: 'V-002', name: 'SevenSeas' }, origin: { location: 'Ningbo Port', date: '2026-03-11 17:00' }, destination: { location: 'Ningbo Port', date: '2026-03-11 20:00' }, service: { code: 'OH', label: 'Origin Handling' }, status: 'Pending', duration: null, execution: null, activityLog: [log('l3','2026-03-11 09:00','Job created')], proofDocuments: [], rateId: 'RT-014', agreedRate: { currency: 'MYR', amount: 0.85, unit: 'per-kg' }, agreedCost: { currency: 'MYR', amount: 2720 } },
     ],
   },
-  // DO-007: Shopee Guangzhou → HK
+  // DO-007: Shopee Guangzhou → HK (completed, all match)
   {
     id: 'DO-20260312-007',
     customer: { name: 'Shopee', code: 'CUST-002' },
@@ -246,8 +246,8 @@ export const seedTrips: Trip[] = [
     remarks: 'Oversized items',
     createdAt: '12 Mar 2026, 07:30',
     jobs: [
-      { id: 'DO-20260312-007-J01', vendor: { code: 'V-001', name: 'HaleSun' }, origin: { location: 'Guangzhou Warehouse', date: '2026-03-12 09:00' }, destination: { location: 'Huangpu Port', date: '2026-03-12 13:00' }, service: { code: 'FM', label: 'Trucking' }, status: 'Completed', duration: '04:00', execution: '2026-03-12 09:10', activityLog: [log('l1','2026-03-12 07:30','Job created'), log('l2','2026-03-12 13:00','Status → Completed')], proofDocuments: [doc('d1','gz-huangpu-pod.jpg','image/jpeg','2026-03-12 12:55')] },
-      { id: 'DO-20260312-007-J02', vendor: { code: 'V-003', name: 'Gonda' }, origin: { location: 'Huangpu Port', date: '2026-03-12 14:00' }, destination: { location: 'Hong Kong Airport', date: '2026-03-12 18:00' }, service: { code: 'EC', label: 'Export Custom Clearance' }, status: 'Completed', duration: '04:00', execution: '2026-03-12 14:05', activityLog: [log('l3','2026-03-12 07:30','Job created'), log('l4','2026-03-12 18:00','Status → Completed')], proofDocuments: [doc('d2','hk-customs-clearance.pdf','application/pdf','2026-03-12 17:50')] },
+      { id: 'DO-20260312-007-J01', vendor: { code: 'V-001', name: 'HaleSun' }, origin: { location: 'Guangzhou Warehouse', date: '2026-03-12 09:00' }, destination: { location: 'Huangpu Port', date: '2026-03-12 13:00' }, service: { code: 'FM', label: 'Trucking' }, status: 'Completed', duration: '04:00', execution: '2026-03-12 09:10', activityLog: [log('l1','2026-03-12 07:30','Job created'), log('l2','2026-03-12 13:00','Status → Completed')], proofDocuments: [doc('d1','gz-huangpu-pod.jpg','image/jpeg','2026-03-12 12:55')], rateId: 'RT-003', agreedRate: { currency: 'MYR', amount: 380, unit: 'flat' }, agreedCost: { currency: 'MYR', amount: 380 }, invoiceAmount: { currency: 'MYR', amount: 380 } },
+      { id: 'DO-20260312-007-J02', vendor: { code: 'V-003', name: 'Gonda' }, origin: { location: 'Huangpu Port', date: '2026-03-12 14:00' }, destination: { location: 'Hong Kong Airport', date: '2026-03-12 18:00' }, service: { code: 'EC', label: 'Export Custom Clearance' }, status: 'Completed', duration: '04:00', execution: '2026-03-12 14:05', activityLog: [log('l3','2026-03-12 07:30','Job created'), log('l4','2026-03-12 18:00','Status → Completed')], proofDocuments: [doc('d2','hk-customs-clearance.pdf','application/pdf','2026-03-12 17:50')], rateId: 'RT-008', agreedRate: { currency: 'MYR', amount: 150, unit: 'flat' }, agreedCost: { currency: 'MYR', amount: 150 }, invoiceAmount: { currency: 'MYR', amount: 150 } },
     ],
   },
   // DO-008: TikTok Shenzhen → SZX (all pending)
@@ -260,7 +260,7 @@ export const seedTrips: Trip[] = [
     remarks: '',
     createdAt: '12 Mar 2026, 11:00',
     jobs: [
-      { id: 'DO-20260312-008-J01', vendor: { code: 'V-001', name: 'HaleSun' }, origin: { location: 'TikTok WH, Shenzhen', date: '2026-03-12 14:00' }, destination: { location: 'SZX Cargo Terminal', date: '2026-03-12 18:00' }, service: { code: 'FM', label: 'Trucking' }, status: 'Pending', duration: null, execution: null, activityLog: [log('l1','2026-03-12 11:00','Job created')], proofDocuments: [] },
+      { id: 'DO-20260312-008-J01', vendor: { code: 'V-001', name: 'HaleSun' }, origin: { location: 'TikTok WH, Shenzhen', date: '2026-03-12 14:00' }, destination: { location: 'SZX Cargo Terminal', date: '2026-03-12 18:00' }, service: { code: 'FM', label: 'Trucking' }, status: 'Pending', duration: null, execution: null, activityLog: [log('l1','2026-03-12 11:00','Job created')], proofDocuments: [], rateId: 'RT-004', agreedRate: { currency: 'MYR', amount: 470, unit: 'flat' }, agreedCost: { currency: 'MYR', amount: 470 } },
       { id: 'DO-20260312-008-J02', vendor: { code: 'V-003', name: 'Gonda' }, origin: { location: 'SZX Cargo Terminal', date: '2026-03-12 19:00' }, destination: { location: 'SZX Cargo Terminal', date: '2026-03-12 22:00' }, service: { code: 'CS', label: 'Cargo Submission' }, status: 'Pending', duration: null, execution: null, activityLog: [log('l2','2026-03-12 11:00','Job created')], proofDocuments: [] },
     ],
   },
@@ -290,7 +290,7 @@ export const seedTrips: Trip[] = [
     remarks: '',
     createdAt: '13 Mar 2026, 09:00',
     jobs: [
-      { id: 'DO-20260313-010-J01', vendor: { code: 'V-005', name: 'The Lorry' }, origin: { location: 'Shenzhen Nanshan WH', date: '2026-03-13 10:00' }, destination: { location: 'Shekou Port', date: '2026-03-13 13:00' }, service: { code: 'FM', label: 'Trucking' }, status: 'In Progress', duration: null, execution: '2026-03-13 10:05', activityLog: [log('l1','2026-03-13 09:00','Job created'), log('l2','2026-03-13 10:05','Status → In Progress')], proofDocuments: [] },
+      { id: 'DO-20260313-010-J01', vendor: { code: 'V-005', name: 'The Lorry' }, origin: { location: 'Shenzhen Nanshan WH', date: '2026-03-13 10:00' }, destination: { location: 'Shekou Port', date: '2026-03-13 13:00' }, service: { code: 'FM', label: 'Trucking' }, status: 'In Progress', duration: null, execution: '2026-03-13 10:05', activityLog: [log('l1','2026-03-13 09:00','Job created'), log('l2','2026-03-13 10:05','Status → In Progress')], proofDocuments: [], rateId: 'RT-020', agreedRate: { currency: 'MYR', amount: 320, unit: 'flat' }, agreedCost: { currency: 'MYR', amount: 320 } },
     ],
   },
 ];
