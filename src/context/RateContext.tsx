@@ -137,16 +137,23 @@ export function RateProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(rateReducer, initialState);
 
   // Hydrate from localStorage on mount
+  // Version key: bump this to force reseed when seed data changes
+  const SEED_VERSION = 'v2-rates';
+
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
+      const storedVersion = localStorage.getItem(STORAGE_KEY + '_version');
+      if (stored && storedVersion === SEED_VERSION) {
         const parsed = JSON.parse(stored);
         dispatch({ type: 'LOAD_STATE', payload: { locations: parsed.locations ?? [], rates: parsed.rates ?? [] } });
       } else {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.setItem(STORAGE_KEY + '_version', SEED_VERSION);
         dispatch({ type: 'LOAD_STATE', payload: { locations: seedLocations, rates: seedRates } });
       }
     } catch {
+      localStorage.setItem(STORAGE_KEY + '_version', SEED_VERSION);
       dispatch({ type: 'LOAD_STATE', payload: { locations: seedLocations, rates: seedRates } });
     }
   }, []);

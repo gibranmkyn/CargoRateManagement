@@ -244,24 +244,24 @@ export function TripProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(tripReducer, initialState);
 
   // Hydrate from localStorage on mount
+  // Version key: bump this to force reseed when seed data changes
+  const SEED_VERSION = 'v2-rates';
+
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
+      const storedVersion = localStorage.getItem(STORAGE_KEY + '_version');
+      if (stored && storedVersion === SEED_VERSION) {
         const parsed = JSON.parse(stored);
-        // Migration: reset if old format or missing Phase 2 rate data on seed trips
-        const hasOldFormat = parsed.trips?.some((t: any) => t.jobs?.some((j: any) => Array.isArray(j.services)));
-        const missingRates = parsed.trips?.some((t: any) => t.id === 'DO-20260308-001' && t.jobs?.[0] && !t.jobs[0].agreedRate);
-        if (hasOldFormat || missingRates) {
-          localStorage.removeItem(STORAGE_KEY);
-          dispatch({ type: 'LOAD_STATE', payload: { trips: seedTrips, templates: seedTemplates } });
-        } else {
-          dispatch({ type: 'LOAD_STATE', payload: { trips: parsed.trips ?? [], templates: parsed.templates ?? [] } });
-        }
+        dispatch({ type: 'LOAD_STATE', payload: { trips: parsed.trips ?? [], templates: parsed.templates ?? [] } });
       } else {
+        // First load or version mismatch — reseed
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.setItem(STORAGE_KEY + '_version', SEED_VERSION);
         dispatch({ type: 'LOAD_STATE', payload: { trips: seedTrips, templates: seedTemplates } });
       }
     } catch {
+      localStorage.setItem(STORAGE_KEY + '_version', SEED_VERSION);
       dispatch({ type: 'LOAD_STATE', payload: { trips: seedTrips, templates: seedTemplates } });
     }
   }, []);
