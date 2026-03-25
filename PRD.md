@@ -168,9 +168,40 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 - [x] Teleport.it brand: Future Blue #152CFF, dark nav, Instrument Sans
 - [x] Nav: Delivery Orders | Rates | Master Data
 
+### Iteration 9 — FTL Trucking Rates + L1/L2 Services + Regions (completed)
+- [x] L1/L2 service hierarchy: 5 L1 services → 20 L2 sub-services with Cost IDs (HMW-35/36)
+- [x] Services master data tab: expandable L1/L2 tree with unit types, vendor/rate counts
+- [x] L2 fee × location rate sheet for service-based rates (EC, CS, CR, OH)
+- [x] China administrative regions master data: 33 provinces, 344 cities, 3,077 districts (GB/T 2260)
+- [x] Regions tab in Master Data: searchable province → city → district tree
+- [x] Renamed Locations tab to Facilities
+- [x] FTL rate data model: origin district → destination district × truck type (HMW-37/39)
+- [x] 8 truck types: 1.5T, 3T, 5T, 8T, 10T, 12T, 40HQ, 45HQ with capacity specs
+- [x] Simple FTL rate page: vendor pills, rate table, city collapse, search (HMW-42)
+- [x] CSV upload with name matching — accepts Chinese district names, no codes needed
+- [x] CSV download for current rates
+- [x] Activity log for rate changes (CSV uploads tracked with timestamp/user/filename)
+- [x] Master Data tabs: Facilities | Regions | Vendors | Customers | Services
+
+### Known Scaling Limitations (address in Phase 3)
+- **Vendor selector pills** — works for 5-8 vendors but breaks at 30+. Needs to become a searchable dropdown or sidebar list.
+- **No cross-vendor comparison** — can't compare rates for the same route across vendors. Needs a route-first view (pick a route, see all vendors' rates) in addition to the current vendor-first view.
+- **Activity log is flat** — at 30+ vendors uploading CSVs regularly, the log becomes a firehose. Needs per-vendor filtering or a separate audit page.
+- **No vendor grouping** — if HaleSun has sub-entities (HaleSun-SZ, HaleSun-GZ), there's no hierarchy. Needs vendor groups.
+- **localStorage** — with 30 vendors × 100 routes × 8 truck types = 24,000 rate records, localStorage will hit size limits. Needs a backend with server-side pagination.
+- **CSV upload is vendor-scoped** — uploading for 30 vendors means 30 separate CSV uploads. Needs a multi-vendor CSV format or batch upload.
+
 ### Deferred (Phase 3)
-- [ ] Vendor comparison popover during order creation (HMW-19)
+- [ ] Vendor selector at scale: searchable dropdown / sidebar for 30+ vendors
+- [ ] Route-first rate comparison view across vendors
+- [ ] Vendor grouping / sub-entities
+- [ ] Multi-vendor CSV upload
+- [ ] Backend with server-side rate storage
+- [ ] Address geocoding: lat/long → district auto-resolution (US-033)
 - [ ] Rate suggestion engine (HMW-16 Option C)
+- [ ] Excel import (in addition to CSV) for vendor rate card onboarding
+- [ ] Inline cell editing for quick single-rate fixes
+- [ ] Vendor comparison popover during order creation (HMW-19)
 - [ ] Job detail page update for proof/fee model
 - [ ] Inline edit mode for orders (HMW-11)
 - [ ] Trip templates
