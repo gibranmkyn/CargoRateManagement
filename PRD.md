@@ -115,21 +115,44 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 - [x] Reactive slide-out panel (HMW-23) — derives data from context by ID, always fresh
 - [x] Toast on order creation
 
-### Remaining (Phase 1 polish)
-- [ ] L2 cost IDs display in slide-out/detail
+### Iteration 6 — Rate Management (completed)
+- [x] Location master data with CRUD, zone grouping, inline add (HMW-17)
+- [x] Vendor rate cards: rate + unit type per service/location (HMW-18)
+- [x] Rate management page under "Rates" nav with vendor/service tabs (HMW-16)
+- [x] Add Rate slide-out form with dynamic route vs location fields
+- [x] Rate versioning: auto-end previous rate when adding new rate
+- [x] Location dropdown with zone grouping, search, inline "Add new" (HMW-17)
+- [x] Inline rate display in create form with cost breakdown
+- [x] Multi-currency support (MYR, CNY, USD)
+- [x] Rate + Cost columns in delivery orders sub-table
+- [x] Seed data: 23 locations, 21 rates, 10 orders with rate data
 
-### Phase 2 — Rate Management & Billing
-Prerequisites resolved via HMW-17 through HMW-20:
-- [ ] Location master data: dropdown + "Add new" (HMW-17) — prerequisite for rates
-- [ ] Vendor rate cards: rate + unit type per service/location (HMW-18)
-- [ ] Inline rate display in create form + sub-table (HMW-16 Option A)
-- [ ] Vendor comparison popover during order creation (HMW-19)
-- [ ] Rate management page under "Rates" nav (HMW-16 Option B)
-- [ ] Invoice amount per job + variance detection (HMW-20)
-- [ ] Validation page with rate anomaly flagging (US-015)
+### Iteration 7 — Multi-Fee Model (completed)
+- [x] FeeLineItem model: each job has N fee line items (L2 cost IDs) (HMW-25)
+- [x] Fee = locked rate × editable quantity = calculated amount (HMW-26)
+- [x] Per-job quantities (bags/weight/volume), editable until validated
+- [x] Simplified sub-table: flat rows, click to slide-out for details (HMW-27)
+- [x] Total Cost column shows sum of all fees
+- [x] Removed priority tags (overdesign)
+- [x] Removed pickup date urgency coloring
+
+### Iteration 8 — Proof-Centric + Brand (completed)
+- [x] Proof-centric job lifecycle replacing manual status (HMW-30):
+  - Awaiting proof → Proof uploaded (auto) → Validated → Disputed
+  - Only 2 manual actions: Validate and Dispute
+  - No more Pending/In Progress/Completed/Rejected status picker
+- [x] Rate-locked fees: removed free-text "+ Add fee", all fees from rate cards (HMW-30)
+- [x] Smart default filter: Active/All/Completed with Active as default (HMW-28)
+- [x] Date period picker for All/Completed: Today/This week/This month/Last month (HMW-29)
+- [x] Pagination at 50/page for historical views
+- [x] Dropped billing module — redundant with proof-centric delivery orders
+- [x] Teleport.it brand: Future Blue #152CFF, dark nav, Instrument Sans
+- [x] Nav: Delivery Orders | Rates | Master Data
 
 ### Deferred (Phase 3)
+- [ ] Vendor comparison popover during order creation (HMW-19)
 - [ ] Rate suggestion engine (HMW-16 Option C)
+- [ ] Job detail page update for proof/fee model
 - [ ] Inline edit mode for orders (HMW-11)
 - [ ] Trip templates
 - [ ] Vendor portal (US-014)
