@@ -40,7 +40,7 @@ function getChipColor(status: JobStatus): { border: string; bg: string; text: st
 export default function TripsPage() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { trips, updateJobStatus, addProofDocument, removeProofDocument, addActivityLog, updateJob, updateFeeQty, updateJobQty, validateJob, disputeJob } = useTrips();
+  const { trips, updateJobStatus, addProofDocument, removeProofDocument, addActivityLog, updateJob, updateFeeQty, toggleFee, updateJobQty, validateJob, disputeJob } = useTrips();
   const [statusFilter, setStatusFilter] = useState<'active' | 'all' | 'completed'>('active');
   const [datePeriod, setDatePeriod] = useState<'today' | 'week' | 'month' | 'last-month' | 'all-time'>('month');
   const [page, setPage] = useState(1);
@@ -467,6 +467,7 @@ export default function TripsPage() {
             onValidate={() => { validateJob(panelTrip.id, panelJob.id); toast.success('Proof validated — ready for payment'); }}
             onDispute={(reason) => { disputeJob(panelTrip.id, panelJob.id, reason); toast.error('Proof disputed — vendor must re-upload'); }}
             onUpdateFeeQty={(feeId, qty) => updateFeeQty(panelTrip.id, panelJob.id, feeId, qty)}
+            onToggleFee={(feeId) => toggleFee(panelTrip.id, panelJob.id, feeId)}
             onUpdateJobQty={(qtys) => updateJobQty(panelTrip.id, panelJob.id, qtys)}
           />
         )}

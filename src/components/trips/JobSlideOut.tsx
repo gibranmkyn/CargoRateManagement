@@ -35,6 +35,7 @@ interface Props {
   onValidate?: () => void;
   onDispute?: (reason: string) => void;
   onUpdateFeeQty?: (feeId: string, quantity: number) => void;
+  onToggleFee?: (feeId: string) => void;
   onUpdateJobQty?: (qtys: { jobBags?: number; jobWeight?: number; jobVolume?: number }) => void;
 }
 
@@ -42,7 +43,7 @@ function docIcon(doc: ProofDocument) {
   return doc.type.startsWith('image/') ? <Image size={12} style={{ color: '#152CFF' }} /> : <FileText size={12} style={{ color: '#152CFF' }} />;
 }
 
-export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemoveProof, onValidate, onDispute, onUpdateFeeQty, onUpdateJobQty }: Props) {
+export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemoveProof, onValidate, onDispute, onUpdateFeeQty, onToggleFee, onUpdateJobQty }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const log = job.activityLog ?? [];
   const proofs = job.proofDocuments ?? [];
@@ -58,9 +59,10 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
     if (fileRef.current) fileRef.current.value = '';
   }
 
-  // Calculate fee totals
+  // Calculate fee totals (only active fees)
+  const activeFees = fees.filter((f) => f.active !== false);
   const feeTotals = new Map<string, number>();
-  fees.forEach((f) => feeTotals.set(f.currency, (feeTotals.get(f.currency) ?? 0) + f.amount));
+  activeFees.forEach((f) => feeTotals.set(f.currency, (feeTotals.get(f.currency) ?? 0) + f.amount));
 
   const inputStyle: React.CSSProperties = { fontSize: 10, padding: '3px 6px', border: '1px solid #e5e7eb', borderRadius: 3, outline: 'none', fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 };
 
@@ -198,45 +200,60 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
         </div>
       </div>
 
-      {/* Fee Breakdown — ALL FROM RATE CARDS, NO ADD BUTTON */}
+      {/* Fee Breakdown — subtractive model (HMW-43) */}
       <div>
-        <div style={sectionTitle}>Fees — from rate card</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', ...sectionTitle }}>
+          <span>Fees — from vendor schedule</span>
+          <span style={{ fontSize: 8, fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: '#152CFF' }}>
+            {activeFees.length} of {fees.length} active
+          </span>
+        </div>
         {fees.length > 0 ? (
           <div style={{ border: '1px solid #e5e7eb', borderRadius: 6, overflow: 'hidden', marginBottom: 8 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
+                  <th style={{ textAlign: 'center', padding: '4px 4px', fontSize: 8, fontWeight: 600, color: '#9ca3af', background: '#f9fafb', width: 24 }}></th>
                   <th style={{ textAlign: 'left', padding: '4px 8px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb' }}>Fee</th>
-                  <th style={{ textAlign: 'left', padding: '4px 8px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb' }}>Rate</th>
                   <th style={{ textAlign: 'center', padding: '4px 8px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', width: 50 }}>Qty</th>
-                  <th style={{ textAlign: 'right', padding: '4px 8px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', width: 80 }}>Amount</th>
+                  <th style={{ textAlign: 'right', padding: '4px 8px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', width: 70 }}>Amount</th>
                 </tr>
               </thead>
               <tbody>
-                {fees.map((fee) => (
-                  <tr key={fee.id}>
-                    <td style={{ padding: '5px 8px', fontSize: 10, color: '#374151', borderBottom: '1px solid #f3f4f6' }}>
-                      <div>{fee.name}</div>
-                      {fee.feeId && <div style={{ fontSize: 8, color: '#9ca3af' }}>Rate card</div>}
-                    </td>
-                    <td style={{ padding: '5px 8px', fontSize: 10, fontFamily: "'JetBrains Mono', monospace", color: '#9ca3af', borderBottom: '1px solid #f3f4f6' }}>
-                      {formatCurrency(fee.currency, fee.rate)} <span style={{ fontSize: 8 }}>/{fee.unit === 'flat' ? 'trip' : fee.unit.replace('per-', '')}</span>
-                    </td>
-                    <td style={{ padding: '5px 8px', textAlign: 'center', borderBottom: '1px solid #f3f4f6' }}>
-                      {isValidated
-                        ? <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10 }}>{fee.quantity}</span>
-                        : <input type="number" value={fee.quantity} onChange={(e) => onUpdateFeeQty?.(fee.id, Number(e.target.value) || 0)} style={{ ...inputStyle, width: 40, textAlign: 'center' }} />
-                      }
-                    </td>
-                    <td style={{ padding: '5px 8px', fontSize: 10, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: '#111827', textAlign: 'right', borderBottom: '1px solid #f3f4f6' }}>
-                      {formatCurrency(fee.currency, fee.amount)}
-                    </td>
-                  </tr>
-                ))}
+                {fees.map((fee) => {
+                  const isActive = fee.active !== false;
+                  return (
+                    <tr key={fee.id} style={{ opacity: isActive ? 1 : 0.4 }}>
+                      <td style={{ padding: '4px 4px', textAlign: 'center', borderBottom: '1px solid #f3f4f6' }}>
+                        {!isValidated && (
+                          <button onClick={() => onToggleFee?.(fee.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, fontSize: 12, color: isActive ? '#152CFF' : '#d1d5db' }}>
+                            {isActive ? '✓' : '+'}
+                          </button>
+                        )}
+                      </td>
+                      <td style={{ padding: '4px 8px', fontSize: 10, borderBottom: '1px solid #f3f4f6', color: isActive ? '#374151' : '#9ca3af', textDecoration: isActive ? 'none' : 'line-through' }}>
+                        <div>{fee.name}</div>
+                        <div style={{ fontSize: 8, color: '#9ca3af' }}>
+                          {formatCurrency(fee.currency, fee.rate)} /{fee.unit === 'flat' ? 'trip' : fee.unit.replace('per-', '')}
+                        </div>
+                      </td>
+                      <td style={{ padding: '4px 8px', textAlign: 'center', borderBottom: '1px solid #f3f4f6' }}>
+                        {isActive ? (
+                          isValidated
+                            ? <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10 }}>{fee.quantity}</span>
+                            : <input type="number" value={fee.quantity} onChange={(e) => onUpdateFeeQty?.(fee.id, Number(e.target.value) || 0)} style={{ ...inputStyle, width: 40, textAlign: 'center' }} />
+                        ) : <span style={{ color: '#d1d5db' }}>—</span>}
+                      </td>
+                      <td style={{ padding: '4px 8px', fontSize: 10, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, textAlign: 'right', borderBottom: '1px solid #f3f4f6', color: isActive ? '#111827' : '#d1d5db' }}>
+                        {isActive ? formatCurrency(fee.currency, fee.amount) : '—'}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             <div style={{ padding: '6px 8px', background: '#f9fafb', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' }}>Job Total</span>
+              <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' }}>Job Total ({activeFees.length} fees)</span>
               <div>
                 {Array.from(feeTotals.entries()).map(([curr, total]) => (
                   <div key={curr} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700, color: '#152CFF', textAlign: 'right' }}>
@@ -248,11 +265,10 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
           </div>
         ) : (
           <div style={{ padding: 12, textAlign: 'center', fontSize: 10, color: '#d1d5db', fontStyle: 'italic', border: '1px dashed #e5e7eb', borderRadius: 6, marginBottom: 8 }}>
-            No fees — rates not configured for this vendor/service
+            No fees — vendor schedule not configured
           </div>
         )}
 
-        {/* No "+ Add fee" — link to Rates page instead */}
         <div style={{ fontSize: 10, color: '#9ca3af', textAlign: 'center', padding: '6px', border: '1px dashed #e5e7eb', borderRadius: 4 }}>
           Fees are configured in <Link to="/rates" style={{ color: '#152CFF', textDecoration: 'none', fontWeight: 600 }}>Rates →</Link>
         </div>

@@ -38,6 +38,7 @@ type TripAction =
   | { type: 'REMOVE_FEE'; payload: { tripId: string; jobId: string; feeId: string } }
   | { type: 'UPDATE_FEE_QTY'; payload: { tripId: string; jobId: string; feeId: string; quantity: number } }
   | { type: 'UPDATE_JOB_QTY'; payload: { tripId: string; jobId: string; jobBags?: number; jobWeight?: number; jobVolume?: number } }
+  | { type: 'TOGGLE_FEE'; payload: { tripId: string; jobId: string; feeId: string } }
   | { type: 'VALIDATE_JOB'; payload: { tripId: string; jobId: string } }
   | { type: 'DISPUTE_JOB'; payload: { tripId: string; jobId: string; reason: string } };
 
@@ -247,6 +248,21 @@ function tripReducer(state: TripState, action: TripAction): TripState {
       };
     }
 
+    case 'TOGGLE_FEE': {
+      const { tripId, jobId, feeId } = action.payload;
+      return {
+        ...state,
+        trips: state.trips.map((t) =>
+          t.id === tripId
+            ? { ...t, jobs: t.jobs.map((j) => j.id === jobId ? {
+                ...j,
+                fees: (j.fees ?? []).map((f) => f.id === feeId ? { ...f, active: !f.active } : f),
+              } : j) }
+            : t
+        ),
+      };
+    }
+
     case 'VALIDATE_JOB':
       return {
         ...state,
@@ -308,6 +324,7 @@ interface TripContextValue {
   addFee: (tripId: string, jobId: string, fee: FeeLineItem) => void;
   removeFee: (tripId: string, jobId: string, feeId: string) => void;
   updateFeeQty: (tripId: string, jobId: string, feeId: string, quantity: number) => void;
+  toggleFee: (tripId: string, jobId: string, feeId: string) => void;
   updateJobQty: (tripId: string, jobId: string, qtys: { jobBags?: number; jobWeight?: number; jobVolume?: number }) => void;
   validateJob: (tripId: string, jobId: string) => void;
   disputeJob: (tripId: string, jobId: string, reason: string) => void;
@@ -369,6 +386,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
   const addFee = useCallback((tripId: string, jobId: string, fee: FeeLineItem) => dispatch({ type: 'ADD_FEE', payload: { tripId, jobId, fee } }), []);
   const removeFee = useCallback((tripId: string, jobId: string, feeId: string) => dispatch({ type: 'REMOVE_FEE', payload: { tripId, jobId, feeId } }), []);
   const updateFeeQty = useCallback((tripId: string, jobId: string, feeId: string, quantity: number) => dispatch({ type: 'UPDATE_FEE_QTY', payload: { tripId, jobId, feeId, quantity } }), []);
+  const toggleFee = useCallback((tripId: string, jobId: string, feeId: string) => dispatch({ type: 'TOGGLE_FEE', payload: { tripId, jobId, feeId } }), []);
   const updateJobQty = useCallback((tripId: string, jobId: string, qtys: { jobBags?: number; jobWeight?: number; jobVolume?: number }) => dispatch({ type: 'UPDATE_JOB_QTY', payload: { tripId, jobId, ...qtys } }), []);
   const validateJob = useCallback((tripId: string, jobId: string) => dispatch({ type: 'VALIDATE_JOB', payload: { tripId, jobId } }), []);
   const disputeJob = useCallback((tripId: string, jobId: string, reason: string) => dispatch({ type: 'DISPUTE_JOB', payload: { tripId, jobId, reason } }), []);
@@ -382,7 +400,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
     addActivityLog, addProofDocument, removeProofDocument,
     saveTemplate, deleteTemplate,
     setJobInvoice, bulkApplyAgreedRates,
-    addFee, removeFee, updateFeeQty, updateJobQty,
+    addFee, removeFee, updateFeeQty, toggleFee, updateJobQty,
     validateJob, disputeJob,
   };
 
