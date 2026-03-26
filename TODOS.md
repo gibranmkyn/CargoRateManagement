@@ -1,21 +1,15 @@
 # TODOS — Teleport OS
 
-## Critical — Next Session
+## Completed
 
-### TODO-010: Create form — FM truck type + district picker (US-026/027)
-- **What:** When creating an FM Trucking job, ops picks origin district (from Regions), destination district, and truck type (chip buttons). System looks up FTL rate for that combo.
-- **Why:** Create form still uses old facility-based location dropdowns for FM. No truck type selector. FTL rate data exists but isn't connected to job creation.
-- **Depends on:** FtlRate data model (done), Regions master data (done)
+### ~~TODO-010: Create form — FM truck type + district picker (US-026/027)~~ ✅
+Implemented: district pickers from Regions + truck type chip selector + FTL rate lookup.
 
-### TODO-011: Create form — vendor fee auto-populate for services (US-031)
-- **What:** When creating an EC/CS/CR/OH job, auto-populate all fees from vendor's fee schedule for that service+location. Ops removes exceptions.
-- **Why:** Create form still uses old L2 rate system. VendorFee data exists but isn't connected to job creation.
-- **Depends on:** VendorFee data model (done)
+### ~~TODO-011: Create form — vendor fee auto-populate for services (US-031)~~ ✅
+Implemented: VendorFee lookup auto-populates all fees with subtractive model.
 
-### TODO-012: Slide-out — subtractive fee selection (HMW-43)
-- **What:** Fee breakdown in slide-out shows all vendor fees with ✓ toggle. Active fees have editable qty. Removed fees show muted line-through. Click + to re-add.
-- **Why:** Slide-out still shows old FeeLineItem model without active/inactive toggle. HMW-43 design is done but not implemented.
-- **Depends on:** FeeLineItem.active field (done)
+### ~~TODO-012: Slide-out — subtractive fee selection (HMW-43)~~ ✅
+Implemented: ✓/+ toggle per fee, muted line-through for removed, active fee count, locked on validate.
 
 ## Medium Priority
 
