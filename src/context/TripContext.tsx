@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useEffect, useCallback, type ReactNode } from 'react';
-import type { Trip, Job, JobStatus, ProofStatus, TripTemplate, ActivityLogEntry, ProofDocument, Currency, FeeLineItem, RateUnit } from '../data/mockData';
+import type { Trip, Job, JobStatus, TripTemplate, ActivityLogEntry, ProofDocument, Currency, FeeLineItem } from '../data/mockData';
 import { seedTrips, seedTemplates, calcFeeAmount } from '../data/mockData';
 
 // --- State ---

@@ -27,7 +27,7 @@ const initialState: RateState = {
 // --- Actions ---
 
 type RateAction =
-  | { type: 'LOAD_STATE'; payload: { locations: Location[]; rates: VendorRate[] } }
+  | { type: 'LOAD_STATE'; payload: Omit<RateState, 'isLoaded'> }
   | { type: 'ADD_LOCATION'; payload: Location }
   | { type: 'UPDATE_LOCATION'; payload: { locationId: string; updates: Partial<Omit<Location, 'id'>> } }
   | { type: 'DELETE_LOCATION'; payload: { locationId: string } }

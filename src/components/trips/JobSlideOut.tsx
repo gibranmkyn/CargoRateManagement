@@ -217,7 +217,7 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
                   <tr key={fee.id}>
                     <td style={{ padding: '5px 8px', fontSize: 10, color: '#374151', borderBottom: '1px solid #f3f4f6' }}>
                       <div>{fee.name}</div>
-                      {fee.rateId && <div style={{ fontSize: 8, color: '#9ca3af' }}>Rate card</div>}
+                      {fee.feeId && <div style={{ fontSize: 8, color: '#9ca3af' }}>Rate card</div>}
                     </td>
                     <td style={{ padding: '5px 8px', fontSize: 10, fontFamily: "'JetBrains Mono', monospace", color: '#9ca3af', borderBottom: '1px solid #f3f4f6' }}>
                       {formatCurrency(fee.currency, fee.rate)} <span style={{ fontSize: 8 }}>/{fee.unit === 'flat' ? 'trip' : fee.unit.replace('per-', '')}</span>

@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo } from 'react';
 import { useRates } from '../context/RateContext';
-import { vendors, TRUCK_TYPES, SERVICE_HIERARCHY, ALL_L2_SERVICES, formatCurrency } from '../data/mockData';
-import type { FtlRate, TruckType, Currency, VendorRate, L2SubService } from '../data/mockData';
+import { vendors, TRUCK_TYPES, SERVICE_HIERARCHY, formatCurrency } from '../data/mockData';
+import type { FtlRate, TruckType, Currency, VendorFee } from '../data/mockData';
 import { ALL_DISTRICTS } from '../data/chinaRegions';
 
 type RateTab = 'trucking' | 'EC' | 'CS' | 'CR' | 'OH';
@@ -9,7 +9,7 @@ type RateTab = 'trucking' | 'EC' | 'CS' | 'CR' | 'OH';
 const UNIT_LABELS: Record<string, string> = { flat: '/trip', 'per-kg': '/kg', 'per-bag': '/bag', 'per-cbm': '/CBM', 'per-km': '/km' };
 
 export default function RatesPage() {
-  const { ftlRates, ftlLogs, setFtlRates, rates, vendorFees, getLocationById } = useRates();
+  const { ftlRates, ftlLogs, setFtlRates, vendorFees, getLocationById } = useRates();
   const [rateTab, setRateTab] = useState<RateTab>('trucking');
   const [selectedVendor, setSelectedVendor] = useState(vendors[0].code);
   const [search, setSearch] = useState('');
