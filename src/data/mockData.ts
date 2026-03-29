@@ -100,6 +100,12 @@ export interface FeeLineItem {
   active: boolean;        // true = included, false = removed by ops (subtractive model)
 }
 
+// --- Legacy VendorRate stub (removed in TODO-017, kept for RateContext compat) ---
+/** @deprecated Use VendorFee instead */
+export interface VendorRate { id: string; [key: string]: unknown; }
+/** @deprecated Removed — no legacy rates */
+export const seedRates: VendorRate[] = [];
+
 // --- Vendor Fee Schedule ---
 // Each vendor has their own fee names per service+location. Not forced into L2 codes.
 

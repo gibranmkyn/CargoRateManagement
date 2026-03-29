@@ -4,7 +4,7 @@ import type { Job, JobStatus } from '../../data/mockData';
 import StatusBadge from './StatusBadge';
 import ServiceTag from './ServiceTag';
 
-const allStatuses: JobStatus[] = ['Pending', 'In Progress', 'Completed', 'Rejected', 'Cancelled'];
+const allStatuses: JobStatus[] = ['Pending', 'In Progress', 'Completed', 'Verified', 'Rejected', 'Cancelled'];
 
 function fmt(dt: string) {
   const d = new Date(dt.replace(' ', 'T'));
@@ -39,7 +39,7 @@ export default function JobTable({ jobs, tripId, onStatusChange }: JobTableProps
     // Out-of-sequence check
     const jobIndex = jobs.findIndex((j) => j.id === job.id);
     const statusRank: Record<JobStatus, number> = {
-      Pending: 0, 'In Progress': 1, Completed: 2, Rejected: -1, Cancelled: -1,
+      Pending: 0, 'In Progress': 1, Completed: 2, Verified: 3, Rejected: -1, Cancelled: -1,
     };
 
     if (statusRank[newStatus] >= 1 && jobIndex > 0) {
@@ -76,10 +76,11 @@ export default function JobTable({ jobs, tripId, onStatusChange }: JobTableProps
             {/* Job indicator */}
             <div className="w-6 text-center">
               <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-mono font-medium
-                ${job.status === 'Completed' ? 'bg-emerald-100 text-emerald-700'
+                ${job.status === 'Verified' ? 'bg-emerald-100 text-emerald-700'
+                : job.status === 'Completed' ? 'bg-amber-100 text-amber-700'
                 : job.status === 'In Progress' ? 'bg-blue-100 text-blue-700'
                 : job.status === 'Rejected' ? 'bg-red-100 text-red-600'
-                : 'bg-[var(--color-surface-raised)] text-[var(--color-ink-muted)] border border-[var(--color-border)]'}`}>
+                : 'bg-gray-100 text-gray-400 border border-gray-200'}`}>
                 {i + 1}
               </span>
             </div>

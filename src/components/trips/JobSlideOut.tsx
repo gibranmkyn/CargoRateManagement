@@ -3,7 +3,7 @@ import { ArrowRight, MapPin, Upload, FileText, Image, X, Clock, ExternalLink } f
 import { Link } from 'react-router-dom';
 import type { Job, Trip, ProofDocument } from '../../data/mockData';
 // ProofStatus removed — unified status lifecycle (TODO-020)
-import { formatCurrency } from '../../data/mockData';
+import { formatCurrency, vendors } from '../../data/mockData';
 import ServiceTag from './ServiceTag';
 
 function fmtDateTime(dt: string) {
@@ -37,6 +37,8 @@ interface Props {
   onUploadProof: (file: File) => void;
   onRemoveProof: (docId: string) => void;
   onVerify?: () => void;
+  onStartJob?: () => void;
+  onReassign?: (vendorCode: string) => void;
   onUpdateFeeQty?: (feeId: string, quantity: number) => void;
   onToggleFee?: (feeId: string) => void;
   onUpdateJobQty?: (qtys: { jobBags?: number; jobWeight?: number; jobVolume?: number }) => void;
@@ -46,13 +48,12 @@ function docIcon(doc: ProofDocument) {
   return doc.type.startsWith('image/') ? <Image size={12} style={{ color: '#152CFF' }} /> : <FileText size={12} style={{ color: '#152CFF' }} />;
 }
 
-export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemoveProof, onVerify, onUpdateFeeQty, onToggleFee, onUpdateJobQty }: Props) {
+export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemoveProof, onVerify, onStartJob, onReassign, onUpdateFeeQty, onToggleFee, onUpdateJobQty }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const log = job.activityLog ?? [];
   const proofs = job.proofDocuments ?? [];
   const fees = job.fees ?? [];
   const isVerified = job.status === 'Verified';
-  const hasProofs = proofs.length > 0;
   const ps = STATUS_LABELS[job.status] ?? STATUS_LABELS.Pending;
 
   function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -73,9 +74,6 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
       {/* Header */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600, background: ps.bg, border: `1px solid ${ps.border}`, color: ps.color }}>
-            {ps.icon} {ps.label}
-          </span>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, padding: '1px 5px', borderRadius: 4, background: '#f3f4f6', border: '1px solid #e5e7eb', color: '#9ca3af' }}>
             J{String(jobIndex + 1).padStart(2, '0')}/{trip.jobs.length}
           </span>
@@ -87,6 +85,83 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10 }}>{trip.mawb}</span>
         </div>
       </div>
+
+      {/* Status Action Bar */}
+      {job.status === 'Rejected' && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 6, padding: '10px 12px', borderRadius: 6, background: '#fef2f2', border: '1px solid #fecaca' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 4, fontSize: 10, fontWeight: 700, background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626' }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#dc2626', display: 'inline-block' }} /> Rejected
+            </span>
+          </div>
+          {job.rejectionReason && (
+            <div style={{ fontSize: 10, color: '#dc2626', padding: '6px 8px', background: '#fff', borderRadius: 4, border: '1px solid #fecaca' }}>
+              {job.rejectionReason}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Reassign Vendor — only for rejected jobs */}
+      {job.status === 'Rejected' && onReassign && (
+        <div>
+          <div style={sectionTitle}>Reassign Vendor</div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <select id="reassign-vendor" style={{ flex: 1, fontSize: 11, padding: '6px 8px', border: '1px solid #e5e7eb', borderRadius: 4, fontFamily: 'inherit' }}>
+              <option value="">Select new vendor...</option>
+              {vendors.filter(v => v.code !== job.vendor.code).map(v => (
+                <option key={v.code} value={v.code}>{v.name}</option>
+              ))}
+            </select>
+            <button onClick={() => { const sel = document.getElementById('reassign-vendor') as HTMLSelectElement; if (sel?.value) onReassign(sel.value); }} style={{ padding: '6px 14px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: '#152CFF', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Reassign</button>
+          </div>
+          <div style={{ fontSize: 9, color: '#9ca3af', marginTop: 4 }}>Status will reset to Pending with new vendor</div>
+        </div>
+      )}
+
+      {job.status !== 'Rejected' && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 6,
+          ...(job.status === 'Pending' ? { background: '#f9fafb', border: '1px solid #e5e7eb' } :
+            job.status === 'In Progress' ? { background: 'rgba(21,44,255,0.04)', border: '1px solid rgba(21,44,255,0.12)' } :
+            job.status === 'Completed' ? { background: '#fefce8', border: '1px solid #fde68a' } :
+            job.status === 'Verified' ? { background: '#f0fdf4', border: '1px solid #a7f3d0' } :
+            { background: '#f9fafb', border: '1px solid #e5e7eb' }),
+        }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 4, fontSize: 10, fontWeight: 700,
+            ...(job.status === 'Pending' ? { background: '#f9fafb', border: '1px solid #e5e7eb', color: '#9ca3af' } :
+              job.status === 'In Progress' ? { background: 'rgba(21,44,255,0.06)', border: '1px solid rgba(21,44,255,0.15)', color: '#152CFF' } :
+              job.status === 'Completed' ? { background: '#fefce8', border: '1px solid #fde68a', color: '#a16207' } :
+              job.status === 'Verified' ? { background: '#f0fdf4', border: '1px solid #a7f3d0', color: '#059669' } :
+              { background: '#f3f4f6', border: '1px solid #e5e7eb', color: '#9ca3af' }),
+          }}>
+            <span style={{
+              width: 5, height: 5, borderRadius: '50%', display: 'inline-block',
+              background: job.status === 'Pending' ? '#9ca3af' : job.status === 'In Progress' ? '#152CFF' : job.status === 'Completed' ? '#a16207' : job.status === 'Verified' ? '#059669' : '#9ca3af',
+            }} />
+            {job.status === 'Verified' ? '✓ Verified' : ps.label}
+          </span>
+
+          {/* Right side: action or hint */}
+          {job.status === 'Pending' && (
+            <button onClick={() => onStartJob?.()} style={{ marginLeft: 'auto', padding: '6px 14px', borderRadius: 6, fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4, background: '#152CFF', color: '#fff' }}>
+              Start Job →
+            </button>
+          )}
+          {job.status === 'In Progress' && (
+            <span style={{ marginLeft: 'auto', fontSize: 10, color: '#9ca3af' }}>Upload proof to complete →</span>
+          )}
+          {job.status === 'Completed' && (
+            <button onClick={() => onVerify?.()} style={{ marginLeft: 'auto', padding: '6px 14px', borderRadius: 6, fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4, background: '#059669', color: '#fff' }}>
+              ✓ Verify
+            </button>
+          )}
+          {job.status === 'Verified' && (
+            <span style={{ marginLeft: 'auto', fontSize: 10, color: '#059669' }}>Ready for billing</span>
+          )}
+        </div>
+      )}
 
       {/* Route */}
       <div>
@@ -127,7 +202,7 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
           </div>
         ) : (
           <div style={{ padding: 16, textAlign: 'center', fontSize: 10, color: '#d1d5db', fontStyle: 'italic', border: '1px dashed #e5e7eb', borderRadius: 6, marginBottom: 8 }}>
-            No proof uploaded yet — upload to advance this job
+            No proof yet — upload when work is done
           </div>
         )}
 
@@ -144,20 +219,6 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
           </label>
         )}
 
-        {/* === VALIDATE / DISPUTE — only when proof is uploaded === */}
-        {job.status === 'Completed' && hasProofs && (
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={() => onVerify?.()} style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: 'none', background: '#059669', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-              ✓ Verify
-            </button>
-          </div>
-        )}
-
-        {isVerified && (
-          <div style={{ padding: '8px 12px', background: '#f0fdf4', border: '1px solid #a7f3d0', borderRadius: 6, fontSize: 11, fontWeight: 600, color: '#059669', textAlign: 'center' }}>
-            ✓ Verified — ready for payment
-          </div>
-        )}
       </div>
 
       {/* Quantities (editable until verified) */}

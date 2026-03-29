@@ -1,4 +1,4 @@
-import { Ship, TrendingUp, CheckCircle2, Clock } from 'lucide-react';
+import { Ship, TrendingUp, CheckCircle2, Clock, ShieldCheck } from 'lucide-react';
 import { useTrips } from '../../context/TripContext';
 
 export default function DashboardCards() {
@@ -9,8 +9,9 @@ export default function DashboardCards() {
   const totalJobs = allJobs.length;
   const active = allJobs.filter((j) => j.status === 'In Progress').length;
   const completed = allJobs.filter((j) => j.status === 'Completed').length;
+  const verified = allJobs.filter((j) => j.status === 'Verified').length;
   const pending = allJobs.filter((j) => j.status === 'Pending').length;
-  const completionRate = totalJobs > 0 ? Math.round((completed / totalJobs) * 100) : 0;
+  const verifiedRate = totalJobs > 0 ? Math.round((verified / totalJobs) * 100) : 0;
 
   const cards = [
     {
@@ -18,41 +19,50 @@ export default function DashboardCards() {
       value: totalTrips,
       sub: `${totalJobs} jobs total`,
       icon: Ship,
-      color: 'var(--color-accent)',
-      bg: 'var(--color-accent-soft)',
-      borderColor: 'rgba(13, 148, 136, 0.15)',
+      color: '#152CFF',
+      bg: 'rgba(21,44,255,0.04)',
+      borderColor: 'rgba(21,44,255,0.15)',
     },
     {
-      label: 'Active Jobs',
+      label: 'In Progress',
       value: active,
-      sub: 'in progress now',
+      sub: 'active now',
       icon: TrendingUp,
-      color: 'var(--color-status-active)',
-      bg: 'var(--color-status-active-bg)',
-      borderColor: 'var(--color-status-active-border)',
+      color: '#152CFF',
+      bg: 'rgba(21,44,255,0.04)',
+      borderColor: 'rgba(21,44,255,0.15)',
     },
     {
       label: 'Completed',
       value: completed,
-      sub: `${completionRate}% completion`,
+      sub: 'awaiting verification',
       icon: CheckCircle2,
-      color: 'var(--color-status-completed)',
-      bg: 'var(--color-status-completed-bg)',
-      borderColor: 'var(--color-status-completed-border)',
+      color: '#a16207',
+      bg: '#fefce8',
+      borderColor: '#fde68a',
+    },
+    {
+      label: 'Verified',
+      value: verified,
+      sub: `${verifiedRate}% of all jobs`,
+      icon: ShieldCheck,
+      color: '#059669',
+      bg: '#f0fdf4',
+      borderColor: '#a7f3d0',
     },
     {
       label: 'Pending',
       value: pending,
       sub: 'awaiting action',
       icon: Clock,
-      color: 'var(--color-status-pending)',
-      bg: 'var(--color-status-pending-bg)',
-      borderColor: 'var(--color-status-pending-border)',
+      color: '#9ca3af',
+      bg: '#f9fafb',
+      borderColor: '#e5e7eb',
     },
   ];
 
   return (
-    <div className="grid grid-cols-4 gap-4 mb-6">
+    <div className="grid grid-cols-5 gap-4 mb-6">
       {cards.map(({ label, value, sub, icon: Icon, color, bg, borderColor }) => (
         <div
           key={label}

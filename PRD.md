@@ -99,6 +99,7 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 2. **Dense data design:** 40px nav, stats bar (no dashboard cards), 8px table cells, 4-6px radius.
 3. **5-color status system:** Gray (pending), blue (in progress), amber (completed/needs verification), green (verified), red (rejected).
 4. **Unified job status lifecycle:** Pending → In Progress → Completed (proof uploaded) → Verified (admin sign-off). Replaces old dual status + proofStatus fields. Researched Flexport, project44, Uber Freight, TAI TMS. (HMW-47)
+   - **Cancelled** (not Rejected): Admin cancels a job — terminal state. 3PL vendors cannot reject jobs in the current system (no vendor portal). "Cancelled" is the admin action when a job is no longer needed or the vendor can't fulfill. Admin can reassign to a different vendor (resets to Pending) or cancel outright.
 5. **Two complementary views:** Delivery Orders (demand-side, grouped by client request) + Jobs (supply-side, flat table with vendor/service/status focus). (HMW-44→48)
 6. **Sub-table for expanded jobs:** Not cards. Expanded orders show a nested table.
 7. **Slide-out panel for actions:** Proof upload + verification + fee management + activity log in one panel.

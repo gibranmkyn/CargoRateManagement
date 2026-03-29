@@ -3,6 +3,7 @@ import { Ship } from 'lucide-react';
 
 const navItems = [
   { to: '/trips', label: 'Delivery Orders' },
+  { to: '/jobs', label: 'Jobs' },
   { to: '/rates', label: 'Rates' },
   { to: '/master-data', label: 'Master Data' },
 ];

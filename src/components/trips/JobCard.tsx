@@ -3,27 +3,15 @@ import { ArrowRight } from 'lucide-react';
 import type { Job, JobStatus } from '../../data/mockData';
 import ServiceTag from './ServiceTag';
 
-function getBorderColor(status: JobStatus): string {
+function getStatusColors(status: JobStatus): { border: string; text: string; dot: string } {
   switch (status) {
-    case 'Completed': return '#a7f3d0';
-    case 'Rejected': return '#fecaca';
-    default: return '#e5e7eb';
-  }
-}
-
-function getStatusTextColor(status: JobStatus): string {
-  switch (status) {
-    case 'Completed': return '#059669';
-    case 'Rejected': return '#dc2626';
-    default: return '#6b7280';
-  }
-}
-
-function getStatusDotColor(status: JobStatus): string {
-  switch (status) {
-    case 'Completed': return '#059669';
-    case 'Rejected': return '#dc2626';
-    default: return '#9ca3af';
+    case 'In Progress': return { border: 'rgba(21,44,255,0.15)', text: '#152CFF', dot: '#152CFF' };
+    case 'Completed':   return { border: '#fde68a', text: '#a16207', dot: '#a16207' };
+    case 'Verified':    return { border: '#a7f3d0', text: '#059669', dot: '#059669' };
+    case 'Rejected':    return { border: '#fecaca', text: '#dc2626', dot: '#dc2626' };
+    case 'Cancelled':
+    case 'Pending':
+    default:            return { border: '#e5e7eb', text: '#9ca3af', dot: '#9ca3af' };
   }
 }
 
@@ -36,7 +24,8 @@ interface JobCardProps {
 }
 
 export default function JobCard({ job, index, tripId, totalJobs, onClick }: JobCardProps) {
-  const bc = getBorderColor(job.status);
+  const sc = getStatusColors(job.status);
+  const bc = sc.border;
 
   return (
     <div
@@ -115,7 +104,7 @@ export default function JobCard({ job, index, tripId, totalJobs, onClick }: JobC
             display: 'flex',
             alignItems: 'center',
             gap: 5,
-            color: getStatusTextColor(job.status),
+            color: sc.text,
           }}
         >
           <span
@@ -123,7 +112,7 @@ export default function JobCard({ job, index, tripId, totalJobs, onClick }: JobC
               width: 5,
               height: 5,
               borderRadius: '50%',
-              background: getStatusDotColor(job.status),
+              background: sc.dot,
             }}
           />
           {job.status}

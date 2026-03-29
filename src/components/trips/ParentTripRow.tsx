@@ -18,14 +18,15 @@ function getStatusCounts(trip: Trip) {
   return c;
 }
 
-const pillCls: Record<JobStatus, string> = {
-  Completed:     'bg-[var(--color-status-completed-bg)] text-[var(--color-status-completed)] border-[var(--color-status-completed-border)]',
-  'In Progress': 'bg-[var(--color-status-active-bg)] text-[var(--color-status-active)] border-[var(--color-status-active-border)]',
-  Pending:       'bg-[var(--color-status-pending-bg)] text-[var(--color-status-pending)] border-[var(--color-status-pending-border)]',
-  Rejected:      'bg-[var(--color-status-rejected-bg)] text-[var(--color-status-rejected)] border-[var(--color-status-rejected-border)]',
-  Cancelled:     'bg-[var(--color-status-cancelled-bg)] text-[var(--color-status-cancelled)] border-[var(--color-status-cancelled-border)]',
+const pillColors: Record<JobStatus, { bg: string; text: string; border: string }> = {
+  Pending:       { bg: '#f9fafb', text: '#9ca3af', border: '#e5e7eb' },
+  'In Progress': { bg: 'rgba(21,44,255,0.04)', text: '#152CFF', border: 'rgba(21,44,255,0.15)' },
+  Completed:     { bg: '#fefce8', text: '#a16207', border: '#fde68a' },
+  Verified:      { bg: '#f0fdf4', text: '#059669', border: '#a7f3d0' },
+  Rejected:      { bg: '#fef2f2', text: '#dc2626', border: '#fecaca' },
+  Cancelled:     { bg: '#f9fafb', text: '#9ca3af', border: '#e5e7eb' },
 };
-const pillOrder: JobStatus[] = ['Completed', 'In Progress', 'Pending', 'Rejected', 'Cancelled'];
+const pillOrder: JobStatus[] = ['Verified', 'Completed', 'In Progress', 'Pending', 'Rejected', 'Cancelled'];
 
 interface Props {
   trip: Trip;
@@ -109,8 +110,21 @@ export default function ParentTripRow({ trip, isFirst, onStatusChange, onUploadP
             {pillOrder.map((s) => {
               const n = sc[s];
               if (!n) return null;
+              const pc = pillColors[s];
               return (
-                <span key={s} className={`px-2 py-[2px] rounded-full text-[10px] font-bold border leading-tight ${pillCls[s]}`}>
+                <span
+                  key={s}
+                  style={{
+                    padding: '2px 8px',
+                    borderRadius: 9999,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    lineHeight: '1.25',
+                    border: `1px solid ${pc.border}`,
+                    background: pc.bg,
+                    color: pc.text,
+                  }}
+                >
                   {n} {s === 'In Progress' ? 'Active' : s}
                 </span>
               );

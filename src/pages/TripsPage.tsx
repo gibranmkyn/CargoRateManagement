@@ -17,25 +17,15 @@ function buildRoute(trip: Trip): string {
   return locs.filter((l, i) => i === 0 || l !== locs[i - 1]).join(' \u2192 ');
 }
 
-function getStatusChip(status: JobStatus): { border: string; bg: string; text: string; label: string; icon: string } {
+function getStatusColors(status: JobStatus): { border: string; bg: string; text: string; dot: string } {
   switch (status) {
-    case 'Verified': return { border: '#a7f3d0', bg: '#f0fdf4', text: '#059669', label: 'Verified', icon: '✓' };
-    case 'Completed': return { border: 'rgba(180,83,9,0.15)', bg: 'rgba(180,83,9,0.04)', text: '#b45309', label: 'Completed', icon: '📄' };
-    case 'In Progress': return { border: 'rgba(37,99,235,0.15)', bg: 'rgba(37,99,235,0.04)', text: '#2563eb', label: 'In Progress', icon: '◉' };
-    case 'Rejected': return { border: '#fecaca', bg: '#fef2f2', text: '#dc2626', label: 'Rejected', icon: '✕' };
-    case 'Cancelled': return { border: '#e5e7eb', bg: '#f3f4f6', text: '#9ca3af', label: 'Cancelled', icon: '—' };
-    default: return { border: '#e5e7eb', bg: '#f3f4f6', text: '#9ca3af', label: 'Pending', icon: '○' };
-  }
-}
-
-// Keep for backward compat with parent row rejected highlighting
-function getChipColor(status: JobStatus): { border: string; bg: string; text: string; dot: string } {
-  switch (status) {
-    case 'Verified': return { border: '#a7f3d0', bg: '#f0fdf4', text: '#059669', dot: '#059669' };
-    case 'Completed': return { border: 'rgba(180,83,9,0.15)', bg: 'rgba(180,83,9,0.04)', text: '#b45309', dot: '#b45309' };
-    case 'In Progress': return { border: 'rgba(37,99,235,0.15)', bg: 'rgba(37,99,235,0.04)', text: '#2563eb', dot: '#2563eb' };
-    case 'Rejected': return { border: '#fecaca', bg: '#fef2f2', text: '#dc2626', dot: '#dc2626' };
-    default: return { border: '#e5e7eb', bg: '#fff', text: '#6b7280', dot: '#9ca3af' };
+    case 'In Progress': return { border: 'rgba(21,44,255,0.15)', bg: 'rgba(21,44,255,0.04)', text: '#152CFF', dot: '#152CFF' };
+    case 'Completed':   return { border: '#fde68a', bg: '#fefce8', text: '#a16207', dot: '#a16207' };
+    case 'Verified':    return { border: '#a7f3d0', bg: '#f0fdf4', text: '#059669', dot: '#059669' };
+    case 'Rejected':    return { border: '#fecaca', bg: '#fef2f2', text: '#dc2626', dot: '#dc2626' };
+    case 'Cancelled':
+    case 'Pending':
+    default:            return { border: '#e5e7eb', bg: '#f9fafb', text: '#9ca3af', dot: '#9ca3af' };
   }
 }
 
@@ -44,7 +34,7 @@ function getChipColor(status: JobStatus): { border: string; bg: string; text: st
 export default function TripsPage() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { trips, updateJobStatus, addProofDocument, removeProofDocument, addActivityLog, updateJob, updateFeeQty, toggleFee, updateJobQty, verifyJob } = useTrips();
+  const { trips, updateJobStatus, addProofDocument, removeProofDocument, addActivityLog, updateJob, updateFeeQty, toggleFee, updateJobQty, startJob, verifyJob } = useTrips();
   const [statusFilter, setStatusFilter] = useState<'active' | 'all' | 'completed'>('active');
   const [datePeriod, setDatePeriod] = useState<'today' | 'week' | 'month' | 'last-month' | 'all-time'>('month');
   const [page, setPage] = useState(1);
@@ -60,8 +50,8 @@ export default function TripsPage() {
   const panelJob = panelTrip ? panelTrip.jobs.find((j) => j.id === panelIds.jobId) : null;
   const panelJobIdx = panelTrip && panelJob ? panelTrip.jobs.indexOf(panelJob) : -1;
 
-  // Status counts — active = any job NOT verified
-  const isOrderActive = (t: Trip) => t.jobs.some((j) => j.status !== 'Verified');
+  // Status counts — active = any job NOT verified and NOT cancelled; completed = ALL verified
+  const isOrderActive = (t: Trip) => t.jobs.some((j) => j.status !== 'Verified' && j.status !== 'Cancelled');
   const activeCount = trips.filter(isOrderActive).length;
   const completedCount = trips.filter((t) => !isOrderActive(t)).length;
   const showDatePicker = statusFilter !== 'active';
@@ -145,9 +135,11 @@ export default function TripsPage() {
   const allJobs = trips.flatMap((t) => t.jobs);
   const stats = {
     orders: trips.length,
-    awaiting: allJobs.filter((j) => j.status === 'Pending' || j.status === 'In Progress').length,
-    uploaded: allJobs.filter((j) => j.status === 'Completed').length,
-    validated: allJobs.filter((j) => j.status === 'Verified').length,
+    pending: allJobs.filter((j) => j.status === 'Pending').length,
+    inProgress: allJobs.filter((j) => j.status === 'In Progress').length,
+    completed: allJobs.filter((j) => j.status === 'Completed').length,
+    verified: allJobs.filter((j) => j.status === 'Verified').length,
+    rejected: allJobs.filter((j) => j.status === 'Rejected').length,
   };
 
   // -- Table header style --
@@ -160,11 +152,17 @@ export default function TripsPage() {
       <div style={{ display: 'flex', alignItems: 'center', padding: '8px 16px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontSize: 12, gap: 0 }}>
         <span style={{ color: '#111827', fontWeight: 600 }}>{filtered.length} orders</span>
         <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-        <span style={{ color: '#9ca3af', fontWeight: 600 }}>{stats.awaiting} awaiting proof</span>
+        <span style={{ color: '#9ca3af', fontWeight: 600 }}>{stats.pending} pending</span>
         <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-        <span style={{ color: '#152CFF', fontWeight: 600 }}>{stats.uploaded} uploaded</span>
+        <span style={{ color: '#152CFF', fontWeight: 600 }}>{stats.inProgress} in progress</span>
         <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-        <span style={{ color: '#059669', fontWeight: 600 }}>{stats.validated} validated</span>
+        <span style={{ color: '#a16207', fontWeight: 600 }}>{stats.completed} completed</span>
+        <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
+        <span style={{ color: '#059669', fontWeight: 600 }}>{stats.verified} verified</span>
+        {stats.rejected > 0 && (<>
+          <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
+          <span style={{ color: '#dc2626', fontWeight: 600 }}>{stats.rejected} rejected</span>
+        </>)}
       </div>
 
       {/* -- Page header -- */}
@@ -310,7 +308,7 @@ export default function TripsPage() {
                   <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                       {trip.jobs.map((job, i) => {
-                        const c = getChipColor(job.status);
+                        const c = getStatusColors(job.status);
                         return (
                           <button
                             key={job.id}
@@ -351,12 +349,11 @@ export default function TripsPage() {
                               <th style={subTh}>Service</th>
                               <th style={subTh}>Route</th>
                               <th style={{ ...subTh, width: 100 }}>Total Cost</th>
-                              <th style={{ ...subTh, width: 120 }}>Proof</th>
+                              <th style={{ ...subTh, width: 120 }}>Status</th>
                             </tr>
                           </thead>
                           <tbody>
                             {trip.jobs.map((job, i) => {
-                              const proofCount = (job.proofDocuments ?? []).length;
                               const fees = job.fees ?? [];
                               const costMap = new Map<string, number>();
                               fees.forEach((f) => costMap.set(f.currency, (costMap.get(f.currency) ?? 0) + f.amount));
@@ -391,14 +388,15 @@ export default function TripsPage() {
                                   </td>
                                   <td style={{ padding: '6px 10px' }}>
                                     {(() => {
-                                      const pc = getStatusChip(job.status);
+                                      const sc = getStatusColors(job.status);
                                       return (
                                         <span style={{
-                                          display: 'inline-flex', alignItems: 'center', gap: 4,
-                                          padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600,
-                                          border: `1px solid ${pc.border}`, background: pc.bg, color: pc.text,
+                                          display: 'inline-flex', alignItems: 'center', gap: 5,
+                                          padding: '1px 7px', borderRadius: 4, fontSize: 10, fontWeight: 600,
+                                          border: `1px solid ${sc.border}`, background: sc.bg, color: sc.text,
                                         }}>
-                                          {pc.icon} {pc.label}
+                                          <span style={{ width: 5, height: 5, borderRadius: '50%', background: sc.dot, display: 'inline-block' }} />
+                                          {job.status}
                                         </span>
                                       );
                                     })()}
@@ -471,6 +469,8 @@ export default function TripsPage() {
             onUploadProof={(f) => onUpload(panelTrip.id, panelJob.id, f)}
             onRemoveProof={(d) => onRemoveProof(panelTrip.id, panelJob.id, d)}
             onVerify={() => { verifyJob(panelTrip.id, panelJob.id); toast.success('Job verified — ready for payment'); }}
+            onStartJob={() => { startJob(panelTrip.id, panelJob.id); toast.success('Job started — status is now In Progress'); }}
+            onReassign={(vendorCode) => onReassign(panelTrip.id, panelJob.id, vendorCode)}
             onUpdateFeeQty={(feeId, qty) => updateFeeQty(panelTrip.id, panelJob.id, feeId, qty)}
             onToggleFee={(feeId) => toggleFee(panelTrip.id, panelJob.id, feeId)}
             onUpdateJobQty={(qtys) => updateJobQty(panelTrip.id, panelJob.id, qtys)}
