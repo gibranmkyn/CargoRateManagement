@@ -1,4 +1,4 @@
-# Design System — Teleport OS (Shipment Management)
+# Design System — Teleport OS Admin (Shipment Management)
 
 > Source of truth: `design-hypotheses/08-hmw-data-density.html` + `09-hmw-expanded-jobs.html`
 > Aesthetic: **Smart spreadsheet with personality** — dense enough for Excel users, clear enough to prevent mistakes.
@@ -79,9 +79,10 @@
 ## Layout
 
 ### Navbar
-- 40px height, white bg, 1px border-bottom
-- Logo: 20x20 teal square (radius 5) + "Teleport OS" at 13px/700
+- 40px height, dark bg (#111827), 1px border-bottom
+- Logo: 20x20 blue square (radius 5) + "Teleport OS" at 13px/700 + "Admin" label (10px/500, rgba(255,255,255,0.35))
 - Nav links: 12px, padding 4px 10px, radius 4px
+- See `../vendor/DESIGN.md` for the vendor-side nav (same structure, different items + vendor identity)
 
 ### Stats Bar (replaces dashboard cards)
 - Single line, #f9fafb bg, 1px border-bottom

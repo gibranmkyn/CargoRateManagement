@@ -1,4 +1,4 @@
-# Teleport OS — Shipment Management
+# Teleport OS Admin — Shipment Management
 
 > **Terminology:** "Trip" in the codebase = "Shipment" in the UI. "Job" = a vendor assignment within a shipment.
 

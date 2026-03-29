@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teleport OS — Vendor Design Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --font-sans: 'Instrument Sans', -apple-system, system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+    --ink-primary: #111827;
+    --ink-secondary: #374151;
+    --ink-muted: #6b7280;
+    --ink-faint: #9ca3af;
+    --ink-ghost: #d1d5db;
+    --surface-page: #f3f4f6;
+    --surface-card: #ffffff;
+    --surface-raised: #f9fafb;
+    --border-default: #e5e7eb;
+    --border-subtle: #f3f4f6;
+    --accent: #152CFF;
+    --accent-hover: #1024CC;
+    --accent-soft: rgba(21,44,255,0.06);
+    --status-pending-text: #9ca3af;
+    --status-pending-bg: #f9fafb;
+    --status-pending-border: #e5e7eb;
+    --status-progress-text: #152CFF;
+    --status-progress-bg: rgba(21,44,255,0.04);
+    --status-progress-border: rgba(21,44,255,0.15);
+    --status-completed-text: #a16207;
+    --status-completed-bg: #fefce8;
+    --status-completed-border: #fde68a;
+    --status-verified-text: #059669;
+    --status-verified-bg: #f0fdf4;
+    --status-verified-border: #a7f3d0;
+    --status-cancelled-text: #dc2626;
+    --status-cancelled-bg: #fef2f2;
+    --status-cancelled-border: #fecaca;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--surface-page);
+    color: var(--ink-primary);
+    -webkit-font-smoothing: antialiased;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .preview-header {
+    background: var(--ink-primary);
+    color: #fff;
+    padding: 40px 32px;
+    text-align: center;
+  }
+  .preview-header h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px; }
+  .preview-header p { font-size: 13px; color: rgba(255,255,255,0.5); }
+  .preview-header .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 3px 10px;
+    border-radius: 99px;
+    background: rgba(21,44,255,0.2);
+    color: rgba(21,44,255,0.9);
+    border: 1px solid rgba(21,44,255,0.3);
+    margin-bottom: 12px;
+  }
+
+  .screen-section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 48px 24px 0;
+  }
+  .screen-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
+    margin-bottom: 12px;
+  }
+  .screen-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: var(--ink-primary);
+    margin-bottom: 6px;
+  }
+  .screen-desc {
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin-bottom: 24px;
+    max-width: 600px;
+  }
+
+  /* ---- NAVBAR ---- */
+  .vendor-nav {
+    height: 40px;
+    padding: 0 16px;
+    background: #111827;
+    display: flex;
+    align-items: center;
+    border-radius: 6px 6px 0 0;
+    overflow: hidden;
+  }
+  .vendor-nav .logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 24px;
+  }
+  .vendor-nav .logo-icon {
+    width: 20px;
+    height: 20px;
+    background: #152CFF;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .vendor-nav .logo-icon svg { width: 10px; height: 10px; }
+  .vendor-nav .logo-text {
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: -0.3px;
+    color: #ffffff;
+  }
+  .vendor-nav .logo-vendor {
+    font-size: 10px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.35);
+    margin-left: 2px;
+  }
+  .vendor-nav .nav-item {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    color: rgba(255,255,255,0.5);
+    text-decoration: none;
+    font-weight: 400;
+  }
+  .vendor-nav .nav-item.active {
+    color: #fff;
+    background: rgba(255,255,255,0.1);
+    font-weight: 600;
+  }
+  .vendor-nav .nav-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .vendor-nav .vendor-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.7);
+  }
+  .vendor-nav .vendor-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.6);
+  }
+
+  /* ---- STATS BAR ---- */
+  .stats-bar {
+    padding: 8px 16px;
+    background: var(--surface-raised);
+    border-bottom: 1px solid var(--border-default);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--ink-muted);
+  }
+  .stats-bar .stat-num { font-weight: 700; font-family: var(--font-mono); font-size: 11px; }
+  .stats-bar .stat-sep { color: var(--ink-ghost); }
+
+  /* ---- FILTER BAR ---- */
+  .filter-bar {
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border-default);
+    background: var(--surface-card);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .pill-group { display: flex; gap: 2px; }
+  .pill {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border-default);
+    background: var(--surface-card);
+    color: var(--ink-muted);
+    cursor: pointer;
+    font-weight: 500;
+    font-family: var(--font-sans);
+  }
+  .pill.active {
+    background: var(--ink-primary);
+    color: #fff;
+    border-color: var(--ink-primary);
+    font-weight: 600;
+  }
+  .pill .pill-count {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    margin-left: 4px;
+    opacity: 0.6;
+  }
+  .svc-pill {
+    font-size: 9px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 99px;
+    background: var(--accent-soft);
+    border: 1px solid rgba(21,44,255,0.1);
+    color: var(--accent);
+    cursor: pointer;
+    font-family: var(--font-mono);
+  }
+  .svc-pill.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .filter-sep {
+    width: 1px;
+    height: 20px;
+    background: var(--border-default);
+  }
+  .filter-label {
+    font-size: 10px;
+    color: var(--ink-faint);
+    font-weight: 500;
+  }
+
+  /* ---- TABLE ---- */
+  .data-table-wrap {
+    background: var(--surface-card);
+    border: 1px solid var(--border-default);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    overflow: hidden;
+  }
+  table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  table.data-table thead th {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    background: var(--surface-raised);
+    padding: 6px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-default);
+    white-space: nowrap;
+  }
+  table.data-table tbody td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: middle;
+    color: var(--ink-secondary);
+  }
+  table.data-table tbody tr:hover { background: var(--surface-raised); cursor: pointer; }
+  table.data-table tbody tr.cancelled-row { background: #fef2f2; }
+  table.data-table tbody tr.cancelled-row:hover { background: #fde8e8; }
+
+  .mono { font-family: var(--font-mono); font-size: 10px; }
+  .bold { font-weight: 600; color: var(--ink-primary); }
+  .muted { color: var(--ink-muted); }
+  .faint { color: var(--ink-faint); }
+
+  /* Status chips */
+  .status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .status-chip .dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+  }
+  .status-pending { background: var(--status-pending-bg); border: 1px solid var(--status-pending-border); color: var(--status-pending-text); }
+  .status-pending .dot { background: var(--status-pending-text); }
+  .status-progress { background: var(--status-progress-bg); border: 1px solid var(--status-progress-border); color: var(--status-progress-text); }
+  .status-progress .dot { background: var(--status-progress-text); }
+  .status-completed { background: var(--status-completed-bg); border: 1px solid var(--status-completed-border); color: var(--status-completed-text); }
+  .status-completed .dot { background: var(--status-completed-text); }
+  .status-verified { background: var(--status-verified-bg); border: 1px solid var(--status-verified-border); color: var(--status-verified-text); }
+  .status-verified .dot { background: var(--status-verified-text); }
+  .status-cancelled { background: var(--status-cancelled-bg); border: 1px solid var(--status-cancelled-border); color: var(--status-cancelled-text); }
+  .status-cancelled .dot { background: var(--status-cancelled-text); }
+
+  /* Service tag */
+  .svc-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 5px;
+    border-radius: 99px;
+    font-size: 9px;
+    font-weight: 600;
+    background: rgba(21,44,255,0.06);
+    border: 1px solid rgba(21,44,255,0.1);
+  }
+  .svc-tag .code { color: #152CFF; font-family: var(--font-mono); }
+  .svc-tag .label { color: var(--ink-secondary); }
+
+  /* ---- JOB DETAIL PAGE ---- */
+  .detail-page {
+    background: var(--surface-card);
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .detail-header {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-default);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .detail-back {
+    font-size: 11px;
+    color: var(--ink-faint);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .detail-header-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+  }
+  .detail-job-id {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--surface-raised);
+    border: 1px solid var(--border-default);
+    color: var(--ink-faint);
+  }
+  .detail-vendor {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    color: var(--ink-primary);
+  }
+
+  /* Status action bar */
+  .action-bar {
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .action-bar.pending { background: var(--status-pending-bg); border-bottom: 1px solid var(--status-pending-border); }
+  .action-bar.progress { background: var(--status-progress-bg); border-bottom: 1px solid var(--status-progress-border); }
+  .action-bar.completed { background: var(--status-completed-bg); border-bottom: 1px solid var(--status-completed-border); }
+  .action-bar.verified { background: var(--status-verified-bg); border-bottom: 1px solid var(--status-verified-border); }
+  .action-bar.cancelled { background: var(--status-cancelled-bg); border-bottom: 1px solid var(--status-cancelled-border); }
+  .action-bar .bar-text { font-size: 11px; color: var(--ink-muted); }
+
+  .btn {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-upload { background: var(--accent); color: #fff; }
+  .btn-ghost { background: transparent; color: var(--ink-muted); border: 1px solid var(--border-default); }
+
+  /* Detail sections */
+  .detail-body {
+    padding: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .detail-section {
+    background: var(--surface-card);
+  }
+  .detail-section.full-width { grid-column: 1 / -1; }
+  .section-title {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    margin-bottom: 10px;
+  }
+
+  /* Route card */
+  .route-card {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+  .route-point {
+    flex: 1;
+    padding: 10px;
+    border-radius: 6px;
+    background: var(--surface-raised);
+    border: 1px solid var(--border-default);
+  }
+  .route-point .rp-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); margin-bottom: 4px; }
+  .route-point .rp-location { font-size: 12px; font-weight: 600; color: var(--ink-primary); margin-bottom: 2px; }
+  .route-point .rp-date { font-family: var(--font-mono); font-size: 10px; color: var(--ink-muted); }
+  .route-arrow {
+    display: flex;
+    align-items: center;
+    color: var(--ink-ghost);
+    font-size: 16px;
+  }
+
+  /* Fee table */
+  table.fee-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+  table.fee-table thead th {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-faint);
+    padding: 5px 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-default);
+  }
+  table.fee-table thead th:last-child { text-align: right; }
+  table.fee-table tbody td {
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--ink-secondary);
+  }
+  table.fee-table tbody td:last-child { text-align: right; font-family: var(--font-mono); font-size: 10px; font-weight: 600; }
+  table.fee-table tbody tr.fee-inactive { opacity: 0.4; text-decoration: line-through; }
+  table.fee-table tfoot td {
+    padding: 8px 8px;
+    font-weight: 700;
+    border-top: 2px solid var(--border-default);
+    font-size: 12px;
+  }
+  table.fee-table tfoot td:last-child { font-family: var(--font-mono); font-size: 11px; }
+
+  /* Proof section */
+  .proof-list { display: flex; flex-direction: column; gap: 6px; }
+  .proof-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    background: var(--surface-raised);
+    border: 1px solid var(--border-default);
+    font-size: 11px;
+  }
+  .proof-icon { color: var(--accent); font-size: 12px; }
+  .proof-name { font-weight: 500; color: var(--ink-primary); flex: 1; }
+  .proof-date { font-family: var(--font-mono); font-size: 9px; color: var(--ink-faint); }
+  .upload-zone {
+    margin-top: 8px;
+    padding: 16px;
+    border: 2px dashed var(--border-default);
+    border-radius: 6px;
+    text-align: center;
+    color: var(--ink-faint);
+    font-size: 11px;
+  }
+  .upload-zone .upload-cta { color: var(--accent); font-weight: 600; cursor: pointer; }
+
+  /* Activity log */
+  .log-list { display: flex; flex-direction: column; gap: 0; }
+  .log-item {
+    display: flex;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 11px;
+  }
+  .log-time { font-family: var(--font-mono); font-size: 9px; color: var(--ink-faint); white-space: nowrap; min-width: 90px; }
+  .log-action { color: var(--ink-secondary); }
+  .log-user { color: var(--ink-muted); font-weight: 500; }
+
+  /* Cargo info */
+  .cargo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .cargo-item {
+    padding: 8px;
+    border-radius: 4px;
+    background: var(--surface-raised);
+    border: 1px solid var(--border-default);
+  }
+  .cargo-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-faint); margin-bottom: 2px; }
+  .cargo-value { font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--ink-primary); }
+
+  /* ---- STATUS BAR VARIANTS ---- */
+  .status-variants {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* ---- RESPONSIVE DEMO ---- */
+  .responsive-demo {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  .resp-frame {
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--surface-card);
+  }
+  .resp-label {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    padding: 6px 10px;
+    background: var(--surface-raised);
+    border-bottom: 1px solid var(--border-default);
+  }
+
+  /* Divider */
+  .divider { height: 1px; background: var(--border-default); margin: 48px 0; }
+
+  /* Footer */
+  .preview-footer {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--ink-faint);
+    font-size: 11px;
+  }
+
+  /* Comparison grid */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-top: 24px;
+  }
+  .compare-card {
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .compare-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    padding: 8px 12px;
+    background: var(--surface-raised);
+    border-bottom: 1px solid var(--border-default);
+  }
+  .compare-body { padding: 0; }
+</style>
+</head>
+<body>
+
+<!-- PREVIEW HEADER -->
+<div class="preview-header">
+  <div class="badge">Design Preview</div>
+  <h1>Teleport OS — Vendor</h1>
+  <p>Same design system, different interaction posture. Vendor-scoped, read-heavy, action-focused.</p>
+</div>
+
+<!-- ============================================ -->
+<!-- SCREEN 1: MY JOBS PAGE -->
+<!-- ============================================ -->
+<div class="screen-section">
+  <div class="screen-label">Screen 1 / 3</div>
+  <div class="screen-title">My Jobs (Job List)</div>
+  <div class="screen-desc">The vendor's primary view. Same flat table pattern as admin Jobs page, but no vendor column (you ARE the vendor), no Group By toggle. Status pills + service pills for filtering.</div>
+
+  <!-- Nav -->
+  <div class="vendor-nav">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7-6H4a2 2 0 0 0-2 2Z"/><path d="M12 10v6"/><path d="m9 13 3 3 3-3"/></svg>
+      </div>
+      <span class="logo-text">Teleport OS</span>
+      <span class="logo-vendor">Vendor</span>
+    </div>
+    <a class="nav-item active">My Jobs</a>
+    <div class="nav-right">
+      <span class="vendor-name">HaleSun Logistics</span>
+      <div class="vendor-avatar">HS</div>
+    </div>
+  </div>
+
+  <!-- Stats bar -->
+  <div class="stats-bar" style="border-left: 1px solid var(--border-default); border-right: 1px solid var(--border-default);">
+    <span class="stat-num" style="color: var(--ink-primary);">18</span> jobs
+    <span class="stat-sep">&middot;</span>
+    <span class="stat-num" style="color: var(--status-pending-text);">4</span> pending
+    <span class="stat-sep">&middot;</span>
+    <span class="stat-num" style="color: var(--status-progress-text);">6</span> in progress
+    <span class="stat-sep">&middot;</span>
+    <span class="stat-num" style="color: var(--status-completed-text);">3</span> completed
+    <span class="stat-sep">&middot;</span>
+    <span class="stat-num" style="color: var(--status-verified-text);">5</span> verified
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar" style="border-left: 1px solid var(--border-default); border-right: 1px solid var(--border-default);">
+    <div class="pill-group">
+      <div class="pill active">Active <span class="pill-count">10</span></div>
+      <div class="pill">Completed <span class="pill-count">3</span></div>
+      <div class="pill">Verified <span class="pill-count">5</span></div>
+      <div class="pill">Cancelled <span class="pill-count">1</span></div>
+      <div class="pill">All <span class="pill-count">19</span></div>
+    </div>
+    <div class="filter-sep"></div>
+    <div class="svc-pill">FM</div>
+    <div class="svc-pill active">EC</div>
+    <div class="svc-pill">CS</div>
+    <div class="svc-pill">OH</div>
+    <div style="margin-left: auto;">
+      <button class="btn btn-ghost" style="font-size: 10px; padding: 3px 10px;">
+        <span style="font-size: 10px;">&#8615;</span> Export CSV
+      </button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="data-table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 10%">Shipment</th>
+          <th style="width: 13%">Customer</th>
+          <th style="width: 7%">Service</th>
+          <th style="width: 35%">Route</th>
+          <th style="width: 10%">Pickup</th>
+          <th style="width: 11%">Status</th>
+          <th style="width: 10%; text-align: right;">Cost</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="mono" style="color: var(--ink-faint);">DO-2603-001</span></td>
+          <td class="bold">TikTok Global</td>
+          <td><span class="svc-tag"><span class="code">EC</span></span></td>
+          <td style="color: var(--ink-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px;">Baoan WH, Shenzhen &rarr; SZX Cargo Terminal</td>
+          <td><span class="mono">29 Mar</span><br><span class="mono faint" style="font-size: 9px;">08:00</span></td>
+          <td><span class="status-chip status-pending"><span class="dot"></span>Pending</span></td>
+          <td style="text-align: right;"><span class="mono bold">CNY 2,800</span></td>
+        </tr>
+        <tr>
+          <td><span class="mono" style="color: var(--ink-faint);">DO-2603-003</span></td>
+          <td class="bold">Shopee SG</td>
+          <td><span class="svc-tag"><span class="code">EC</span></span></td>
+          <td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px;">Nanshan Hub, Shenzhen &rarr; SZX Cargo Terminal</td>
+          <td><span class="mono">29 Mar</span><br><span class="mono faint" style="font-size: 9px;">10:30</span></td>
+          <td><span class="status-chip status-progress"><span class="dot"></span>In Progress</span></td>
+          <td style="text-align: right;"><span class="mono bold">CNY 3,450</span></td>
+        </tr>
+        <tr>
+          <td><span class="mono" style="color: var(--ink-faint);">DO-2603-005</span></td>
+          <td class="bold">Shein CN</td>
+          <td><span class="svc-tag"><span class="code">EC</span></span></td>
+          <td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px;">Panyu WH, Guangzhou &rarr; CAN Airport Terminal</td>
+          <td><span class="mono">28 Mar</span><br><span class="mono faint" style="font-size: 9px;">14:00</span></td>
+          <td><span class="status-chip status-completed"><span class="dot"></span>Completed</span></td>
+          <td style="text-align: right;"><span class="mono bold">CNY 4,100</span></td>
+        </tr>
+        <tr>
+          <td><span class="mono" style="color: var(--ink-faint);">DO-2603-002</span></td>
+          <td class="bold">AliExpress</td>
+          <td><span class="svc-tag"><span class="code">EC</span></span></td>
+          <td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px;">Longhua WH, Shenzhen &rarr; SZX Cargo Terminal</td>
+          <td><span class="mono">28 Mar</span><br><span class="mono faint" style="font-size: 9px;">09:00</span></td>
+          <td><span class="status-chip status-verified"><span class="dot"></span>Verified</span></td>
+          <td style="text-align: right;"><span class="mono bold">CNY 2,650</span></td>
+        </tr>
+        <tr>
+          <td><span class="mono" style="color: var(--ink-faint);">DO-2603-008</span></td>
+          <td class="bold">Temu</td>
+          <td><span class="svc-tag"><span class="code">EC</span></span></td>
+          <td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px;">Futian Depot, Shenzhen &rarr; SZX Cargo Terminal</td>
+          <td><span class="mono">29 Mar</span><br><span class="mono faint" style="font-size: 9px;">11:00</span></td>
+          <td><span class="status-chip status-progress"><span class="dot"></span>In Progress</span></td>
+          <td style="text-align: right;"><span class="mono bold">CNY 1,900</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- SCREEN 2: JOB DETAIL PAGE -->
+<!-- ============================================ -->
+<div class="screen-section">
+  <div class="divider"></div>
+  <div class="screen-label">Screen 2 / 3</div>
+  <div class="screen-title">Job Detail (Full Page)</div>
+  <div class="screen-desc">Full-page detail instead of slide-out. More room for fee reconciliation table, proof uploads, and activity log. Status Action Bar at top drives the vendor's next action.</div>
+
+  <div class="detail-page">
+    <!-- Header -->
+    <div class="detail-header">
+      <a class="detail-back">&larr; My Jobs</a>
+      <div class="detail-header-info">
+        <span class="detail-job-id">J01</span>
+        <span class="detail-vendor">Export Customs Clearance</span>
+        <span class="svc-tag"><span class="code">EC</span><span class="label">Export Customs</span></span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-muted);">
+        <span class="mono" style="color: var(--ink-faint);">DO-2603-001</span>
+        <span>&middot;</span>
+        <span class="bold">TikTok Global</span>
+        <span>&middot;</span>
+        <span class="mono" style="color: var(--ink-faint);">MAWB 160-12345678</span>
+      </div>
+    </div>
+
+    <!-- Status Action Bar: In Progress state -->
+    <div class="action-bar progress">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="status-chip status-progress"><span class="dot"></span>In Progress</span>
+        <span class="bar-text">Upload proof of service to mark this job complete</span>
+      </div>
+      <button class="btn btn-upload">&#8593; Upload Proof</button>
+    </div>
+
+    <!-- Detail body -->
+    <div class="detail-body">
+      <!-- Route -->
+      <div class="detail-section">
+        <div class="section-title">Route</div>
+        <div class="route-card">
+          <div class="route-point">
+            <div class="rp-label">Origin</div>
+            <div class="rp-location">Baoan WH, Shenzhen</div>
+            <div class="rp-date">29 Mar 2026 &middot; 08:00</div>
+          </div>
+          <div class="route-arrow">&rarr;</div>
+          <div class="route-point">
+            <div class="rp-label">Destination</div>
+            <div class="rp-location">SZX Cargo Terminal</div>
+            <div class="rp-date">29 Mar 2026 &middot; 16:00</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cargo -->
+      <div class="detail-section">
+        <div class="section-title">Cargo</div>
+        <div class="cargo-grid">
+          <div class="cargo-item">
+            <div class="cargo-label">Bags</div>
+            <div class="cargo-value">24</div>
+          </div>
+          <div class="cargo-item">
+            <div class="cargo-label">Weight</div>
+            <div class="cargo-value">1,280 kg</div>
+          </div>
+          <div class="cargo-item">
+            <div class="cargo-label">Volume</div>
+            <div class="cargo-value">8.4 CBM</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fees (full width) -->
+      <div class="detail-section full-width">
+        <div class="section-title">Fee Breakdown</div>
+        <table class="fee-table">
+          <thead>
+            <tr>
+              <th>Fee</th>
+              <th>Unit</th>
+              <th>Rate</th>
+              <th>Qty</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="font-weight: 500; color: var(--ink-primary);">Export Declaration Fee</td>
+              <td class="mono" style="font-size: 10px;">per shipment</td>
+              <td class="mono" style="font-size: 10px;">CNY 800</td>
+              <td class="mono" style="font-size: 10px;">1</td>
+              <td>CNY 800</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 500; color: var(--ink-primary);">Inspection &amp; Quarantine</td>
+              <td class="mono" style="font-size: 10px;">per shipment</td>
+              <td class="mono" style="font-size: 10px;">CNY 450</td>
+              <td class="mono" style="font-size: 10px;">1</td>
+              <td>CNY 450</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 500; color: var(--ink-primary);">Document Handling</td>
+              <td class="mono" style="font-size: 10px;">per shipment</td>
+              <td class="mono" style="font-size: 10px;">CNY 200</td>
+              <td class="mono" style="font-size: 10px;">1</td>
+              <td>CNY 200</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 500; color: var(--ink-primary);">X-Ray Screening</td>
+              <td class="mono" style="font-size: 10px;">per bag</td>
+              <td class="mono" style="font-size: 10px;">CNY 15</td>
+              <td class="mono" style="font-size: 10px;">24</td>
+              <td>CNY 360</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 500; color: var(--ink-primary);">Overtime Surcharge</td>
+              <td class="mono" style="font-size: 10px;">per shipment</td>
+              <td class="mono" style="font-size: 10px;">CNY 300</td>
+              <td class="mono" style="font-size: 10px;">1</td>
+              <td>CNY 300</td>
+            </tr>
+            <tr class="fee-inactive">
+              <td style="font-weight: 500;">Hazmat Handling</td>
+              <td class="mono" style="font-size: 10px;">per shipment</td>
+              <td class="mono" style="font-size: 10px;">CNY 500</td>
+              <td class="mono" style="font-size: 10px;">1</td>
+              <td>CNY 500</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="4" style="color: var(--ink-secondary);">Total (active fees)</td>
+              <td style="text-align: right; color: var(--ink-primary);">CNY 2,110</td>
+            </tr>
+          </tfoot>
+        </table>
+        <div style="font-size: 10px; color: var(--ink-faint); margin-top: 6px;">
+          <span style="text-decoration: line-through; opacity: 0.5;">Struck-through</span> fees have been removed by Teleport and will not appear on the settlement.
+        </div>
+      </div>
+
+      <!-- Proof of Service -->
+      <div class="detail-section">
+        <div class="section-title">Proof of Service</div>
+        <div class="proof-list">
+          <div class="proof-item">
+            <span class="proof-icon">&#128196;</span>
+            <span class="proof-name">customs-declaration-stamp.pdf</span>
+            <span class="proof-date">28 Mar 14:22</span>
+          </div>
+          <div class="proof-item">
+            <span class="proof-icon">&#128247;</span>
+            <span class="proof-name">inspection-clearance.jpg</span>
+            <span class="proof-date">28 Mar 15:10</span>
+          </div>
+        </div>
+        <div class="upload-zone">
+          Drop files here or <span class="upload-cta">browse</span><br>
+          <span style="font-size: 10px; color: var(--ink-ghost);">JPEG, PNG, PDF up to 10MB</span>
+        </div>
+      </div>
+
+      <!-- Activity Log -->
+      <div class="detail-section">
+        <div class="section-title">Activity Log</div>
+        <div class="log-list">
+          <div class="log-item">
+            <span class="log-time">29 Mar 08:15</span>
+            <div>
+              <span class="log-action">Proof uploaded</span> &middot; <span class="log-user">HaleSun Logistics</span>
+              <div style="font-size: 10px; color: var(--ink-faint);">inspection-clearance.jpg</div>
+            </div>
+          </div>
+          <div class="log-item">
+            <span class="log-time">29 Mar 08:12</span>
+            <div>
+              <span class="log-action">Proof uploaded</span> &middot; <span class="log-user">HaleSun Logistics</span>
+              <div style="font-size: 10px; color: var(--ink-faint);">customs-declaration-stamp.pdf</div>
+            </div>
+          </div>
+          <div class="log-item">
+            <span class="log-time">28 Mar 16:00</span>
+            <div>
+              <span class="log-action">Job started</span> &middot; <span class="log-user">HaleSun Logistics</span>
+            </div>
+          </div>
+          <div class="log-item">
+            <span class="log-time">28 Mar 09:30</span>
+            <div>
+              <span class="log-action">Job assigned</span> &middot; <span class="log-user">Ops Admin</span>
+              <div style="font-size: 10px; color: var(--ink-faint);">Assigned to HaleSun Logistics</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- SCREEN 3: STATUS ACTION BAR VARIANTS -->
+<!-- ============================================ -->
+<div class="screen-section">
+  <div class="divider"></div>
+  <div class="screen-label">Screen 3 / 3</div>
+  <div class="screen-title">Status Action Bar — All 5 States</div>
+  <div class="screen-desc">Same 5-color system as admin. The bar adapts per lifecycle stage, showing the vendor what to do next (or that there's nothing to do).</div>
+
+  <div class="status-variants" style="border: 1px solid var(--border-default); border-radius: 6px; overflow: hidden;">
+    <!-- Pending -->
+    <div class="action-bar pending" style="border-bottom: 1px solid var(--status-pending-border);">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="status-chip status-pending"><span class="dot"></span>Pending</span>
+        <span class="bar-text">Start this job when you begin work</span>
+      </div>
+      <button class="btn btn-primary">Start Job &rarr;</button>
+    </div>
+
+    <!-- In Progress -->
+    <div class="action-bar progress" style="border-bottom: 1px solid var(--status-progress-border);">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="status-chip status-progress"><span class="dot"></span>In Progress</span>
+        <span class="bar-text">Upload proof of service to mark complete</span>
+      </div>
+      <button class="btn btn-upload">&#8593; Upload Proof</button>
+    </div>
+
+    <!-- Completed -->
+    <div class="action-bar completed" style="border-bottom: 1px solid var(--status-completed-border);">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="status-chip status-completed"><span class="dot"></span>Completed</span>
+        <span class="bar-text">Waiting for Teleport verification</span>
+      </div>
+      <span style="font-size: 10px; color: var(--status-completed-text); font-weight: 500;">Completed 29 Mar 15:30</span>
+    </div>
+
+    <!-- Verified -->
+    <div class="action-bar verified" style="border-bottom: 1px solid var(--status-verified-border);">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="status-chip status-verified"><span class="dot"></span>Verified</span>
+        <span class="bar-text">Verified by Teleport — ready for billing</span>
+      </div>
+      <span style="font-size: 10px; color: var(--status-verified-text); font-weight: 500;">&#10003; Verified 29 Mar 17:00</span>
+    </div>
+
+    <!-- Cancelled -->
+    <div class="action-bar cancelled">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="status-chip status-cancelled"><span class="dot"></span>Cancelled</span>
+        <span class="bar-text">Cancelled by Teleport — "Customer rescheduled pickup to next week"</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- DESIGN COMPARISON: ADMIN vs VENDOR -->
+<!-- ============================================ -->
+<div class="screen-section">
+  <div class="divider"></div>
+  <div class="screen-label">Comparison</div>
+  <div class="screen-title">Teleport OS Admin vs Vendor — Same System, Different Posture</div>
+  <div class="screen-desc">Side-by-side showing how the same design tokens produce different experiences for different users.</div>
+
+  <div class="compare-grid">
+    <div class="compare-card">
+      <div class="compare-label">Teleport OS Admin (4 items, all vendors)</div>
+      <div class="compare-body">
+        <div style="height: 40px; padding: 0 16px; background: #111827; display: flex; align-items: center; gap: 8px;">
+          <div style="width: 20px; height: 20px; background: #152CFF; border-radius: 5px;"></div>
+          <span style="font-weight: 700; font-size: 13px; color: #fff; font-family: var(--font-sans); letter-spacing: -0.3px;">Teleport OS</span>
+          <span style="font-size: 10px; color: rgba(255,255,255,0.35); font-family: var(--font-sans); font-weight: 500;">Admin</span>
+          <div style="display: flex; gap: 2px; margin-left: 12px;">
+            <span style="font-size: 12px; padding: 4px 10px; border-radius: 4px; color: #fff; background: rgba(255,255,255,0.1); font-weight: 600; font-family: var(--font-sans);">Shipments</span>
+            <span style="font-size: 12px; padding: 4px 10px; border-radius: 4px; color: rgba(255,255,255,0.5); font-family: var(--font-sans);">Jobs</span>
+            <span style="font-size: 12px; padding: 4px 10px; border-radius: 4px; color: rgba(255,255,255,0.5); font-family: var(--font-sans);">Rates</span>
+            <span style="font-size: 12px; padding: 4px 10px; border-radius: 4px; color: rgba(255,255,255,0.5); font-family: var(--font-sans);">Master Data</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="compare-card">
+      <div class="compare-label">Teleport OS Vendor (1 item, vendor identity)</div>
+      <div class="compare-body">
+        <div style="height: 40px; padding: 0 16px; background: #111827; display: flex; align-items: center; gap: 8px;">
+          <div style="width: 20px; height: 20px; background: #152CFF; border-radius: 5px;"></div>
+          <span style="font-weight: 700; font-size: 13px; color: #fff; font-family: var(--font-sans); letter-spacing: -0.3px;">Teleport OS</span>
+          <span style="font-size: 10px; color: rgba(255,255,255,0.35); font-family: var(--font-sans); font-weight: 500;">Vendor</span>
+          <div style="display: flex; gap: 2px; margin-left: 12px;">
+            <span style="font-size: 12px; padding: 4px 10px; border-radius: 4px; color: #fff; background: rgba(255,255,255,0.1); font-weight: 600; font-family: var(--font-sans);">My Jobs</span>
+          </div>
+          <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); font-family: var(--font-sans);">HaleSun Logistics</span>
+            <div style="width: 22px; height: 22px; border-radius: 4px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.6); font-family: var(--font-sans);">HS</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 32px;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 12px; background: var(--surface-card); border: 1px solid var(--border-default); border-radius: 6px; overflow: hidden;">
+      <thead>
+        <tr>
+          <th style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); background: var(--surface-raised); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border-default);">Design Token</th>
+          <th style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); background: var(--surface-raised); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border-default);">Teleport OS Admin</th>
+          <th style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); background: var(--surface-raised); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border-default);">Teleport OS Vendor</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--border-subtle); font-weight: 500;">Nav height</td><td style="padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);">40px</td><td style="padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);">40px <span style="color: var(--ink-faint);">(same)</span></td></tr>
+        <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--border-subtle); font-weight: 500;">Nav items</td><td style="padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);">4 (Shipments, Jobs, Rates, Master Data)</td><td style="padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);">1 (My Jobs) + vendor identity</td></tr>
+        <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--border-subtle); font-weight: 500;">Status colors</td><td style="padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);">5-color system</td><td style="padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);">5-color system <span style="color: var(--ink-faint);">(same)</span></td></tr>
+        <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--border-subtle); font-weight: 500;">Job detail</td><td style="padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);">380px slide-out panel</td><td style="padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);"><strong>Full page</strong></td></tr>
+        <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--border-subtle); font-weight: 500;">Table density</td><td style="padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);">8px 12px cells</td><td style="padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);">8px 12px cells <span style="color: var(--ink-faint);">(same)</span></td></tr>
+        <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--border-subtle); font-weight: 500;">Vendor column</td><td style="padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);">Yes (30+ vendors)</td><td style="padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);">No (you ARE the vendor)</td></tr>
+        <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--border-subtle); font-weight: 500;">Fees/quantities</td><td style="padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);">Editable (until Verified)</td><td style="padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);">Read-only (reconciliation view)</td></tr>
+        <tr><td style="padding: 8px 12px; font-weight: 500;">Responsive</td><td style="padding: 8px 12px;">Desktop only (min 1200px)</td><td style="padding: 8px 12px;"><strong>768px+</strong> (tablet-friendly)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="preview-footer">
+  <div class="divider" style="margin-bottom: 24px;"></div>
+  Teleport OS — Vendor &middot; Design Preview &middot; Same system, vendor perspective<br>
+  <span style="color: var(--ink-ghost);">Generated by /design-consultation</span>
+</div>
+
+</body>
+</html>
