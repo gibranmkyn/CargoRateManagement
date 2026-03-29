@@ -1,5 +1,42 @@
 # TODOS — Teleport OS Platform
 
+## PRIORITY: Vendor FM Trucking — Driver & Vehicle Assignment
+
+### TODO-047: Vendor master data — Drivers and Vehicles
+- **What:** Vendors need to manage their own fleet data within Teleport OS Vendor:
+  - **Drivers:** name, phone number, WeChat ID, license plate (if fixed), active/inactive
+  - **Vehicles:** plate number, truck type (1.5T/3T/5T/8T/10T/12T/40HQ/45HQ), capacity, active/inactive
+- **Where:** New "Fleet" or "Master Data" page in vendor app (second nav item after My Jobs)
+- **Data model:** `Driver` and `Vehicle` types in shared/types.ts. Vendor-scoped — each vendor manages their own. Stored in localStorage (prototype).
+- **Files:** `shared/types.ts`, `vendor/src/pages/FleetPage.tsx` (new), `vendor/src/components/Navbar.tsx` (add nav item)
+
+### TODO-048: Assign driver + vehicle to FM Trucking jobs
+- **What:** On vendor Job Detail page for FM Trucking jobs, vendor can assign a driver and vehicle from their fleet master data:
+  - Driver dropdown (from vendor's driver list)
+  - Vehicle dropdown (from vendor's vehicle list, filtered by compatible truck type)
+  - Assignment saved on the job, visible in activity log
+  - Can reassign before job is Completed
+- **Where:** Vendor Job Detail page — new section between Status Action Bar and Fee Breakdown (only for FM service)
+- **Files:** `vendor/src/pages/JobDetailPage.tsx`, `shared/types.ts` (add driverAssignment + vehicleAssignment fields to Job)
+
+### TODO-049: WeChat Mini Program — driver job access
+- **What:** When an FM job is assigned to a driver, the driver accesses the job via WeChat Mini Program:
+  - Driver sees: pickup location + address, delivery location + address, pickup time, cargo details (bags, weight), customer name
+  - Driver can: mark arrived at pickup, mark departed, mark arrived at delivery, upload proof photos (from phone camera)
+  - Status updates from WeChat flow back to Teleport OS Vendor (and then to Admin via shared localStorage/API)
+- **Design needed:** WeChat Mini Program has its own constraints (small screen, WeChat UI kit, camera-first). Needs separate design exploration.
+- **Dependencies:** TODO-047 (driver master data), TODO-048 (driver assignment)
+- **Note:** This introduces a 3rd app in the platform: Admin → Vendor → Driver (WeChat). The data flow is: Admin creates shipment + assigns vendor → Vendor assigns driver + vehicle → Driver executes + uploads proof.
+
+### TODO-050: Driver status updates flow back to vendor + admin
+- **What:** When a driver updates status in WeChat (arrived at pickup, departed, arrived at delivery, proof uploaded), those updates must:
+  - Update the job status in shared state
+  - Add activity log entries with driver name as actor (e.g., "Driver Zhang Wei — Arrived at pickup")
+  - Be visible in both vendor app and admin app
+  - Proof photos uploaded by driver appear in the job's proof documents
+- **Dependencies:** TODO-049 (WeChat Mini Program)
+- **Files:** `shared/TripContext.tsx` (new actions for driver status), `shared/types.ts` (driver status enum)
+
 ## AI Slop Cleanup (from design audit 2026-03-29)
 
 ### TODO-038: Delete or replace DashboardCards component (admin)
