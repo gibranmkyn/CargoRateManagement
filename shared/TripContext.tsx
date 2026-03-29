@@ -347,7 +347,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
 
   // Hydrate from localStorage on mount
   // Version key: bump this to force reseed when seed data changes
-  const SEED_VERSION = 'v9-trip-origin-destination';
+  const SEED_VERSION = 'v10-vendor-app';
 
   useEffect(() => {
     try {

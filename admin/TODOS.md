@@ -28,6 +28,25 @@
 - **What:** `admin/src/components/trips/JobSlideOut.tsx` lines 27-32 use emoji (`📄`, `✓`, `✕`, `—`) as status indicators. Replace with consistent colored dot indicator (same as status chips) or lucide-react icons.
 - **Files:** `admin/src/components/trips/JobSlideOut.tsx`
 
+### TODO-044: Vendor multi-file proof upload
+- **What:** Vendor proof upload currently accepts one file at a time. Allow selecting/dropping multiple files in a single action. Each file becomes a separate ProofDocument entry. Activity log should record all filenames in one entry (e.g., "Uploaded 3 files: pod-front.jpg, pod-back.jpg, customs-stamp.pdf").
+- **Files:** `vendor/src/pages/JobDetailPage.tsx` (upload zone + file input), also consider `admin/src/components/trips/JobSlideOut.tsx` for consistency
+
+### TODO-046: Design brainstorm — service-specific vendor job views
+- **What:** The vendor Job Detail page currently shows the same layout for all 5 service types. But vendor workflows differ significantly by service:
+  - **FM Trucking** — route-based (origin → destination), pickup/delivery dates critical, truck type matters
+  - **EC Export Customs** — single location, document-heavy, customs declaration numbers matter
+  - **CS Cargo Submission** — single location (airport terminal), x-ray/screening focus
+  - **CR Cargo Retrieval** — single location, pickup registration, bag-level tracking
+  - **OH Origin Handling** — single location (warehouse), multiple sub-tasks (weighing, palletizing, labeling)
+- **Questions to explore:** Should the detail page adapt per service type? Different sections, different data emphasis, different proof upload prompts? Or is a generic view sufficient? What does each vendor type actually need to see to do their job and reconcile fees?
+- **Action:** Run HMW design brainstorm before implementing. Consider vendor operator daily workflow per service type.
+- **Files:** `vendor/src/pages/JobDetailPage.tsx`, potentially `vendor/src/pages/MyJobsPage.tsx` (column relevance per service)
+
+### TODO-045: Vendor job detail — show pickup and delivery dates for FM Trucking
+- **What:** On the vendor Job Detail page, the Route section should display origin date (pickup) and destination date (delivery) prominently. Currently the route card shows locations but dates may not be visible or prominent enough, especially for FM Trucking where the vendor needs to know exactly when to pick up and deliver.
+- **Files:** `vendor/src/pages/JobDetailPage.tsx` (Route section)
+
 ### TODO-043: Tighten vendor padding (minor)
 - **What:** Login form padding 32px → 20px. Upload zone padding 20px → 12px. Normalize fee table header fontSize 8 → 9 (match jobs table).
 - **Files:** `vendor/src/pages/LoginPage.tsx`, `vendor/src/pages/JobDetailPage.tsx`
