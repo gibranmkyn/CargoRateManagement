@@ -8,7 +8,7 @@ Logistics operations tool for managing cross-border cargo delivery orders. React
 
 Key principles:
 - **Dense data design** — ops planners come from Excel. Every pixel shows data, not decoration.
-- **5-color status system** — gray (pending), blue (in progress), amber (completed), green (verified), red (rejected).
+- **5-color status system** — gray (pending), blue (in progress), amber (completed), green (verified), red (cancelled).
 - **Tables, not cards** — expanded jobs render as sub-table rows, not card grids.
 - **Inline styles** — all components use inline styles matching the mockup CSS exactly. No Tailwind for visual properties.
 - **Sharp radius** — 4-6px for containers, 4px for inputs/chips. No bubbly SaaS radius.
@@ -31,7 +31,7 @@ Each HMW question has an HTML mockup — these are the source of truth for desig
 - Jobs are PARALLEL, not sequential
 - Each Job has: `status` (unified lifecycle) + `activityLog[]` + `proofDocuments[]`
 - **Unified job status:** `Pending → In Progress → Completed (proof uploaded) → Verified (admin sign-off)`
-- Terminal states: `Rejected` (vendor can't fulfill) + `Cancelled`
+- Terminal state: `Cancelled` (admin cancels — 3PL can't reject, no vendor portal)
 - Replaces old dual `status` + `proofStatus` fields — single `status` field now
 - localStorage auto-migrates old multi-service format to seed data
 
@@ -47,10 +47,10 @@ Each HMW question has an HTML mockup — these are the source of truth for desig
   - In Progress: hint "Upload proof to complete →"
   - Completed: `[✓ Verify]` button
   - Verified: read-only, everything locked
-  - Rejected: rejection reason + reassign vendor dropdown
+  - Cancelled: cancel reason + reassign vendor dropdown
 - **Proof upload:** In slide-out → auto-transitions to Completed (even from Pending, skipping In Progress)
 - **Verification:** Admin clicks Verify → Completed → Verified, locks fees/quantities/proof
-- **Rejections:** Red row + reassignment in slide-out → resets to Pending
+- **Cancellation:** Red row + reassignment in slide-out → resets to Pending (admin action only, no vendor portal)
 - **Editability:** Fees/quantities editable from Pending through Completed. Locked on Verified.
 - **Feedback:** Toast notifications (green/red/gray)
 

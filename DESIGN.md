@@ -35,14 +35,13 @@
 | **In Progress** | `#152CFF` | `rgba(21,44,255,0.04)` | `rgba(21,44,255,0.15)` | `#152CFF` | Work underway (truck moving, customs processing) |
 | **Completed** | `#a16207` | `#fefce8` | `#fde68a` | `#a16207` | Proof uploaded, needs admin verification |
 | **Verified** | `#059669` | `#f0fdf4` | `#a7f3d0` | `#059669` | Proof reviewed, ready for billing |
-| **Rejected** | `#dc2626` | `#fef2f2` | `#fecaca` | `#dc2626` | Vendor can't fulfill — needs reassignment |
+| **Cancelled** | `#dc2626` | `#fef2f2` | `#fecaca` | `#dc2626` | Admin cancelled — needs reassignment or removal |
 
-**Cancelled** uses the same styling as Pending (gray).
-
-**Status lifecycle:** `Pending → In Progress → Completed → Verified` (+ Rejected, Cancelled as terminal states)
+**Status lifecycle:** `Pending → In Progress → Completed → Verified` (+ Cancelled as terminal state)
 - "In Progress" not "In Transit" — works for all service types (customs isn't "in transit")
 - "Completed" not "Delivered" — works for all service types (customs isn't "delivered")
 - Proof upload triggers Completed → Verified is admin sign-off (billing gate)
+- 3PL vendors cannot reject — only admin can cancel jobs (no vendor portal)
 
 ### Other colors
 - **Accent (Future Blue):** `#152CFF` — interactive elements ONLY (buttons, links, active nav, job labels). From Teleport.it brand guidelines.
@@ -188,6 +187,7 @@
 `Delivery Orders | Jobs | Rates | Master Data`
 
 ### Delivery Orders (demand-side — client requests)
+- **Max-width:** 1400px (must match Jobs page for consistent navigation feel)
 - **Active/All/Completed** filter chips (default: Active)
 - **Date period picker** for All/Completed: Today / This week / This month / Last month / All time
 - **Pagination** at 50/page for historical views
@@ -197,20 +197,21 @@
 - **Lock on verify:** fees, quantities, proof uploads all read-only after job Verified (billing gate)
 
 ### Jobs (supply-side — vendor execution) (HMW-48)
-- **Status pills:** Active (Pending + In Progress + Rejected) | Completed | Verified | All
+- **Max-width:** 1400px (same as DO page — must match for consistent feel)
+- **Status pills:** Active (Pending + In Progress + Cancelled) | Completed | Verified | All
 - **Service pills:** FM | EC | CS | CR | OH
 - **Vendor dropdown** with search (supports 30+ vendors)
 - **Group by toggle:** None (default) | Vendor | Service | Date
-- **Columns:** Order · Customer | Vendor | Service | Route | Pickup | Status | Cost
+- **Columns (percentage-based widths):** Order·Customer 11% | Vendor 10% | Service 6% | Route 38% | Pickup 8% | Status 10% | Cost 9%
+- **Route cell:** `overflow: hidden; text-overflow: ellipsis; white-space: nowrap`
 - **Group by: Vendor** — collapsed headers sorted by most outstanding, status badges per vendor
-- **Default sort within Active:** Rejected → In Progress → Pending (fires first)
+- **Default sort within Active:** Cancelled → In Progress → Pending (fires first)
 - Click job row → same slide-out panel. Click DO link → Delivery Orders view.
 
 ### Unified Job Status Lifecycle
 Replaces old dual `status` + `proofStatus` model with single field:
 - **Pending** → In Progress → **Completed** (proof uploaded) → **Verified** (admin sign-off)
-- **Rejected** = vendor can't fulfill (reassignment resets to Pending)
-- **Cancelled** = job cancelled (terminal)
+- **Cancelled** = admin cancels job (3PL cannot reject — no vendor portal). Admin can reassign to a different vendor (resets to Pending) or cancel outright.
 
 ### Rate Management (Rates page)
 - **Single vendor dropdown** at top — shared across all service tabs
@@ -337,3 +338,6 @@ Replaces old dual `status` + `proofStatus` model with single field:
 | 2026-03-29 | Proof upload auto-transitions | Uploading proof triggers Completed (even from Pending, skipping In Progress). No manual "mark complete" button needed. |
 | 2026-03-29 | Editable until Verified | Fees toggleable, quantities editable, proof uploadable from Pending through Completed. Everything locks on Verified (billing gate). |
 | 2026-03-29 | ~~Lock on validate~~ → Lock on verify | Renamed from "validate" to "verify" per unified status terminology. Same behavior: all fields read-only after verification. |
+| 2026-03-29 | ~~Rejected~~ → Cancelled | 3PL vendors can't reject (no vendor portal). Only admin can cancel jobs. Renamed throughout codebase. `cancelReason` replaces `rejectionReason`. |
+| 2026-03-29 | Jobs page column widths (percentage-based) | Order 11%, Vendor 10%, Service 6%, Route 38%, Pickup 8%, Status 10%, Cost 9%. Route truncates with ellipsis. Prevents Route from dominating. |
+| 2026-03-29 | Consistent 1400px max-width across pages | Both DO and Jobs pages use maxWidth: 1400px. Different widths caused a jarring shift when navigating between pages. |

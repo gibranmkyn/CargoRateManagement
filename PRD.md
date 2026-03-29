@@ -47,7 +47,7 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 - **US-005:** As an ops planner, I want to click "Start Job" in the slide-out panel to transition a job from Pending → In Progress, so vendor execution progress is tracked.
 - **US-005b:** As an ops planner, I want uploading a proof document to automatically transition a job to Completed (even from Pending, skipping In Progress), so completion is evidence-based.
 - **US-005c:** As an ops admin, I want to click "Verify" in the slide-out panel to transition a Completed job → Verified, locking all fees/quantities/proof, so there's a billing gate before vendor payment.
-- **US-005d:** As an ops planner, I want the slide-out panel to show a Status Action Bar at the top that adapts per stage (Start Job / Upload hint / Verify / Ready for billing / Rejected + reassign), so I always know what action to take next. (HMW-49)
+- **US-005d:** As an ops planner, I want the slide-out panel to show a Status Action Bar at the top that adapts per stage (Start Job / Upload hint / Verify / Ready for billing / Cancelled + reassign), so I always know what action to take next. (HMW-49)
 - **US-006:** As an ops planner, I want to deep-dive into a job detail page to see full route info, vendor details, and all associated documents.
 - **US-007:** As an ops planner, I want every status change to be automatically logged with timestamp and user, so there's an audit trail for billing.
 - **US-008:** As an ops planner, I want to upload proof-of-service documents (photos, PDFs) per job, which triggers the job to Completed status.
@@ -63,7 +63,7 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 - **US-042:** As an ops planner, I want to filter jobs by service type (FM/EC/CS/CR/OH), vendor, and date, so I can answer specific operational questions.
 - **US-043:** As an ops planner, I want a "Group by" toggle (None/Vendor/Service/Date) so I can batch vendor calls by grouping jobs under vendor headers.
 - **US-044:** As an ops planner, I want vendor group headers to show status breakdown badges (e.g., "2 in progress · 3 pending") so I know the conversation agenda before expanding.
-- **US-045:** As an ops planner, I want rejected jobs to appear at the top of the Active view with red highlighting, so I handle fires first.
+- **US-045:** As an ops planner, I want cancelled jobs to appear at the top of the Active view with red highlighting, so I handle fires first.
 
 ### Dashboard
 - **US-012:** As an ops planner, I want to see summary cards (total trips, active jobs, completed jobs, pending jobs) at the top of the trip list, so I get an instant health check of operations.
@@ -97,9 +97,9 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 ## Key Design Decisions
 1. **1 job = 1 service:** Each job has exactly 1 vendor + 1 service code + origin/destination. Same vendor can appear multiple times. Each job is a billable line item.
 2. **Dense data design:** 40px nav, stats bar (no dashboard cards), 8px table cells, 4-6px radius.
-3. **5-color status system:** Gray (pending), blue (in progress), amber (completed/needs verification), green (verified), red (rejected).
+3. **5-color status system:** Gray (pending), blue (in progress), amber (completed/needs verification), green (verified), red (cancelled).
 4. **Unified job status lifecycle:** Pending → In Progress → Completed (proof uploaded) → Verified (admin sign-off). Replaces old dual status + proofStatus fields. Researched Flexport, project44, Uber Freight, TAI TMS. (HMW-47)
-   - **Cancelled** (not Rejected): Admin cancels a job — terminal state. 3PL vendors cannot reject jobs in the current system (no vendor portal). "Cancelled" is the admin action when a job is no longer needed or the vendor can't fulfill. Admin can reassign to a different vendor (resets to Pending) or cancel outright.
+   - **Cancelled**: Admin cancels a job — terminal state. 3PL vendors cannot reject (no vendor portal). Admin can reassign to a different vendor (resets to Pending) or cancel outright.
 5. **Two complementary views:** Delivery Orders (demand-side, grouped by client request) + Jobs (supply-side, flat table with vendor/service/status focus). (HMW-44→48)
 6. **Sub-table for expanded jobs:** Not cards. Expanded orders show a nested table.
 7. **Slide-out panel for actions:** Proof upload + verification + fee management + activity log in one panel.
@@ -198,10 +198,10 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 
 ### Iteration 10 — Jobs Page + Unified Status Lifecycle (planned)
 - [ ] Unified job status: replace dual `status` + `proofStatus` with single `status` field (HMW-47)
-  - `Pending | In Progress | Completed | Verified | Rejected | Cancelled`
+  - `Pending | In Progress | Completed | Verified | Cancelled`
   - Proof upload triggers Pending/In Progress → Completed
   - Admin verify action triggers Completed → Verified (billing gate)
-  - Vendor rejection → Rejected (reassignment resets to Pending)
+  - Admin cancel → Cancelled (reassignment resets to Pending)
 - [ ] 5-color status system: gray/blue/amber/green/red replacing old 3-color (HMW-48)
 - [ ] Jobs page: flat power table at `/jobs` route (HMW-48)
   - Status pills: Active | Completed | Verified | All
@@ -209,7 +209,7 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
   - Vendor dropdown with search (30+ vendors)
   - Group by toggle: None (default) | Vendor | Service | Date
   - Group by: Vendor — collapsed headers sorted by most outstanding, status badges
-  - Default sort within Active: Rejected → In Progress → Pending
+  - Default sort within Active: Cancelled → In Progress → Pending
   - Click job row → slide-out panel. Click DO link → Delivery Orders view.
 - [ ] Nav update: Delivery Orders | **Jobs** | Rates | Master Data
 - [ ] Update Delivery Orders sub-table to use new status chips
