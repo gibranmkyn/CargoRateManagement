@@ -39,6 +39,7 @@ export default function CreateTripPage() {
   const [bags, setBags] = useState('');
   const [weight, setWeight] = useState('');
   const [remarks, setRemarks] = useState('');
+  const [deliveryDate, setDeliveryDate] = useState('');
   const [jobs, setJobs] = useState<JobDraft[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -222,7 +223,6 @@ export default function CreateTripPage() {
         destination: { location: destName, date: draft.destinationDate || '' },
         service: svc,
         status: 'Pending' as const,
-        proofStatus: 'awaiting' as const,
         duration: null,
         execution: null,
         activityLog: [{ id: `log-${Date.now()}-${i}`, timestamp: now.toISOString().replace('T', ' ').slice(0, 16), action: 'Job created', user: 'Ops Admin', details: `Assigned to ${vendor.name}` }],
@@ -242,6 +242,7 @@ export default function CreateTripPage() {
       weight: Number(weight) || 0,
       remarks,
       createdAt,
+      deliveryDate: deliveryDate || undefined,
       jobs: tripJobs,
     };
 
@@ -296,6 +297,7 @@ export default function CreateTripPage() {
           <div style={{ display: 'flex', gap: 10 }}>
             <div style={{ width: 100 }}><label style={labelStyle}>Bags</label><input type="number" value={bags} onChange={(e) => setBags(e.target.value)} placeholder="0" style={{ width: '100%' }} /></div>
             <div style={{ width: 100 }}><label style={labelStyle}>Weight (kg)</label><input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="0" style={{ width: '100%' }} /></div>
+            <div style={{ width: 140 }}><label style={labelStyle}>Delivery Date</label><input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} style={{ width: '100%', fontFamily: 'var(--font-mono)' }} /></div>
             <div style={{ flex: 1 }}><label style={labelStyle}>Remarks</label><input type="text" value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Optional notes" style={{ width: '100%' }} /></div>
           </div>
         </div>

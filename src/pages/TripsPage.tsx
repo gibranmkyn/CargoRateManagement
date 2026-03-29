@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { Search, Download, Plus, Ship, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { customers, vendors, formatCurrency } from '../data/mockData';
-import type { Trip, JobStatus, ProofStatus } from '../data/mockData';
+import type { Trip, JobStatus } from '../data/mockData';
 import { useTrips } from '../context/TripContext';
 import { useToast } from '../components/Toast';
 import SlideOutPanel from '../components/SlideOutPanel';
@@ -17,19 +17,23 @@ function buildRoute(trip: Trip): string {
   return locs.filter((l, i) => i === 0 || l !== locs[i - 1]).join(' \u2192 ');
 }
 
-function getProofChip(ps: ProofStatus): { border: string; bg: string; text: string; label: string; icon: string } {
-  switch (ps) {
-    case 'validated': return { border: '#a7f3d0', bg: '#f0fdf4', text: '#059669', label: 'Validated', icon: '✓' };
-    case 'uploaded': return { border: 'rgba(21,44,255,0.15)', bg: 'rgba(21,44,255,0.04)', text: '#152CFF', label: 'Uploaded', icon: '📄' };
-    case 'disputed': return { border: '#fecaca', bg: '#fef2f2', text: '#dc2626', label: 'Disputed', icon: '✕' };
-    default: return { border: '#e5e7eb', bg: '#f3f4f6', text: '#9ca3af', label: 'Awaiting', icon: '○' };
+function getStatusChip(status: JobStatus): { border: string; bg: string; text: string; label: string; icon: string } {
+  switch (status) {
+    case 'Verified': return { border: '#a7f3d0', bg: '#f0fdf4', text: '#059669', label: 'Verified', icon: '✓' };
+    case 'Completed': return { border: 'rgba(180,83,9,0.15)', bg: 'rgba(180,83,9,0.04)', text: '#b45309', label: 'Completed', icon: '📄' };
+    case 'In Progress': return { border: 'rgba(37,99,235,0.15)', bg: 'rgba(37,99,235,0.04)', text: '#2563eb', label: 'In Progress', icon: '◉' };
+    case 'Rejected': return { border: '#fecaca', bg: '#fef2f2', text: '#dc2626', label: 'Rejected', icon: '✕' };
+    case 'Cancelled': return { border: '#e5e7eb', bg: '#f3f4f6', text: '#9ca3af', label: 'Cancelled', icon: '—' };
+    default: return { border: '#e5e7eb', bg: '#f3f4f6', text: '#9ca3af', label: 'Pending', icon: '○' };
   }
 }
 
 // Keep for backward compat with parent row rejected highlighting
 function getChipColor(status: JobStatus): { border: string; bg: string; text: string; dot: string } {
   switch (status) {
-    case 'Completed': return { border: '#a7f3d0', bg: '#f0fdf4', text: '#059669', dot: '#059669' };
+    case 'Verified': return { border: '#a7f3d0', bg: '#f0fdf4', text: '#059669', dot: '#059669' };
+    case 'Completed': return { border: 'rgba(180,83,9,0.15)', bg: 'rgba(180,83,9,0.04)', text: '#b45309', dot: '#b45309' };
+    case 'In Progress': return { border: 'rgba(37,99,235,0.15)', bg: 'rgba(37,99,235,0.04)', text: '#2563eb', dot: '#2563eb' };
     case 'Rejected': return { border: '#fecaca', bg: '#fef2f2', text: '#dc2626', dot: '#dc2626' };
     default: return { border: '#e5e7eb', bg: '#fff', text: '#6b7280', dot: '#9ca3af' };
   }
@@ -40,7 +44,7 @@ function getChipColor(status: JobStatus): { border: string; bg: string; text: st
 export default function TripsPage() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { trips, updateJobStatus, addProofDocument, removeProofDocument, addActivityLog, updateJob, updateFeeQty, toggleFee, updateJobQty, validateJob, disputeJob } = useTrips();
+  const { trips, updateJobStatus, addProofDocument, removeProofDocument, addActivityLog, updateJob, updateFeeQty, toggleFee, updateJobQty, verifyJob } = useTrips();
   const [statusFilter, setStatusFilter] = useState<'active' | 'all' | 'completed'>('active');
   const [datePeriod, setDatePeriod] = useState<'today' | 'week' | 'month' | 'last-month' | 'all-time'>('month');
   const [page, setPage] = useState(1);
@@ -56,8 +60,8 @@ export default function TripsPage() {
   const panelJob = panelTrip ? panelTrip.jobs.find((j) => j.id === panelIds.jobId) : null;
   const panelJobIdx = panelTrip && panelJob ? panelTrip.jobs.indexOf(panelJob) : -1;
 
-  // Status counts — proof-centric: active = any job NOT validated
-  const isOrderActive = (t: Trip) => t.jobs.some((j) => j.proofStatus !== 'validated');
+  // Status counts — active = any job NOT verified
+  const isOrderActive = (t: Trip) => t.jobs.some((j) => j.status !== 'Verified');
   const activeCount = trips.filter(isOrderActive).length;
   const completedCount = trips.filter((t) => !isOrderActive(t)).length;
   const showDatePicker = statusFilter !== 'active';
@@ -141,10 +145,9 @@ export default function TripsPage() {
   const allJobs = trips.flatMap((t) => t.jobs);
   const stats = {
     orders: trips.length,
-    awaiting: allJobs.filter((j) => j.proofStatus === 'awaiting').length,
-    uploaded: allJobs.filter((j) => j.proofStatus === 'uploaded').length,
-    validated: allJobs.filter((j) => j.proofStatus === 'validated').length,
-    disputed: allJobs.filter((j) => j.proofStatus === 'disputed').length,
+    awaiting: allJobs.filter((j) => j.status === 'Pending' || j.status === 'In Progress').length,
+    uploaded: allJobs.filter((j) => j.status === 'Completed').length,
+    validated: allJobs.filter((j) => j.status === 'Verified').length,
   };
 
   // -- Table header style --
@@ -162,10 +165,6 @@ export default function TripsPage() {
         <span style={{ color: '#152CFF', fontWeight: 600 }}>{stats.uploaded} uploaded</span>
         <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
         <span style={{ color: '#059669', fontWeight: 600 }}>{stats.validated} validated</span>
-        {stats.disputed > 0 && <>
-          <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-          <span style={{ color: '#dc2626', fontWeight: 600 }}>{stats.disputed} disputed</span>
-        </>}
       </div>
 
       {/* -- Page header -- */}
@@ -249,6 +248,7 @@ export default function TripsPage() {
               <th style={th}>Customer</th>
               <th style={th}>MAWB</th>
               <th style={th}>Pickup Date</th>
+              <th style={th}>Delivery Date</th>
               <th style={th}>Route</th>
               <th style={th}>Cargo</th>
               <th style={th}>Jobs</th>
@@ -258,7 +258,7 @@ export default function TripsPage() {
           <tbody>
             {paginatedFiltered.length > 0 ? paginatedFiltered.flatMap((trip) => {
               const isExpanded = expandedId === trip.id;
-              const hasRejected = trip.jobs.some((j) => j.proofStatus === 'disputed');
+              const hasRejected = trip.jobs.some((j) => j.status === 'Rejected');
               const route = buildRoute(trip);
 
               const rows = [
@@ -296,6 +296,12 @@ export default function TripsPage() {
                     })()}
                   </td>
                   <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
+                    {trip.deliveryDate ? (() => {
+                      const d = new Date(trip.deliveryDate + 'T00:00:00');
+                      return <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#374151' }}>{d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</div>;
+                    })() : <span style={{ fontSize: 11, color: '#d1d5db' }}>—</span>}
+                  </td>
+                  <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
                     <span style={{ fontSize: 11, color: '#374151' }}>{route}</span>
                   </td>
                   <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
@@ -309,7 +315,7 @@ export default function TripsPage() {
                           <button
                             key={job.id}
                             onClick={(e) => { e.stopPropagation(); setPanelIds({ tripId: trip.id, jobId: job.id }); }}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '1px 7px', borderRadius: 4, fontSize: 10, fontWeight: 600, border: `1px solid ${c.border}`, background: c.bg, color: c.text, cursor: 'pointer', fontFamily: 'inherit', transition: 'box-shadow 0.15s' }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600, border: `1px solid ${c.border}`, background: c.bg, color: c.text, cursor: 'pointer', fontFamily: 'inherit', transition: 'box-shadow 0.15s' }}
                           >
                             <span style={{ width: 5, height: 5, borderRadius: '50%', background: c.dot, display: 'inline-block' }} />
                             {job.vendor.name} &middot; {job.service.code}
@@ -335,7 +341,7 @@ export default function TripsPage() {
                 const subTh: React.CSSProperties = { textAlign: 'left', padding: '4px 10px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' };
                 rows.push(
                   <tr key={`${trip.id}-exp`} style={{ background: '#f9fafb' }} onClick={(e) => e.stopPropagation()}>
-                    <td colSpan={8} style={{ padding: 0, borderBottom: '1px solid #e5e7eb' }}>
+                    <td colSpan={9} style={{ padding: 0, borderBottom: '1px solid #e5e7eb' }}>
                       <div style={{ paddingLeft: 40, paddingRight: 12, paddingTop: 4, paddingBottom: 10 }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                           <thead>
@@ -385,7 +391,7 @@ export default function TripsPage() {
                                   </td>
                                   <td style={{ padding: '6px 10px' }}>
                                     {(() => {
-                                      const pc = getProofChip(job.proofStatus);
+                                      const pc = getStatusChip(job.status);
                                       return (
                                         <span style={{
                                           display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -411,7 +417,7 @@ export default function TripsPage() {
               return rows;
             }) : (
               <tr>
-                <td colSpan={8} style={{ padding: '60px 12px', textAlign: 'center' }}>
+                <td colSpan={9} style={{ padding: '60px 12px', textAlign: 'center' }}>
                   <div style={{ width: 40, height: 40, borderRadius: 6, background: 'rgba(21,44,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
                     <Ship size={18} style={{ color: '#152CFF' }} />
                   </div>
@@ -464,8 +470,7 @@ export default function TripsPage() {
             jobIndex={panelJobIdx}
             onUploadProof={(f) => onUpload(panelTrip.id, panelJob.id, f)}
             onRemoveProof={(d) => onRemoveProof(panelTrip.id, panelJob.id, d)}
-            onValidate={() => { validateJob(panelTrip.id, panelJob.id); toast.success('Proof validated — ready for payment'); }}
-            onDispute={(reason) => { disputeJob(panelTrip.id, panelJob.id, reason); toast.error('Proof disputed — vendor must re-upload'); }}
+            onVerify={() => { verifyJob(panelTrip.id, panelJob.id); toast.success('Job verified — ready for payment'); }}
             onUpdateFeeQty={(feeId, qty) => updateFeeQty(panelTrip.id, panelJob.id, feeId, qty)}
             onToggleFee={(feeId) => toggleFee(panelTrip.id, panelJob.id, feeId)}
             onUpdateJobQty={(qtys) => updateJobQty(panelTrip.id, panelJob.id, qtys)}

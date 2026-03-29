@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HMW-48: Job View — Final Design</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.page { max-width: 1400px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 44px 0 6px; color: #152CFF; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 24px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+/* ── Shared mockup chrome ── */
+.nav { height: 40px; background: #111827; display: flex; align-items: center; padding: 0 16px; gap: 12px; }
+.nav .logo { display: flex; align-items: center; gap: 6px; color: #fff; font-size: 13px; font-weight: 700; }
+.nav .logo-icon { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; }
+.nav a { font-size: 12px; padding: 4px 10px; border-radius: 4px; color: #9ca3af; text-decoration: none; }
+.nav a.on { color: #fff; background: rgba(255,255,255,0.1); }
+
+.stats { display: flex; align-items: center; padding: 8px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 12px; }
+.stats .sep { width: 1px; height: 14px; background: #e5e7eb; margin: 0 12px; }
+
+.hdr { display: flex; align-items: flex-end; justify-content: space-between; padding: 16px 16px 0 16px; }
+.hdr h3 { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; color: #111827; }
+.hdr p { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+/* ── Filters ── */
+.filters { display: flex; align-items: center; gap: 8px; padding: 6px 16px; border-bottom: 1px solid #e5e7eb; flex-wrap: wrap; }
+.pill { padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 4px; }
+.pill.on { border-color: #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; }
+.pill .b { font-size: 9px; padding: 0 5px; border-radius: 99px; font-weight: 700; min-width: 16px; text-align: center; }
+.b-n { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+.pill.on .b-n { background: rgba(21,44,255,0.1); color: #152CFF; border-color: rgba(21,44,255,0.2); }
+.b-green { background: #f0fdf4; color: #059669; border: 1px solid #a7f3d0; }
+.fsep { width: 1px; height: 16px; background: #e5e7eb; }
+.fl { font-size: 10px; color: #9ca3af; }
+.fsel { font-size: 11px; border-radius: 4px; padding: 4px 8px; border: 1px solid #e5e7eb; font-family: inherit; }
+.fsel.hl { border-color: #152CFF; color: #152CFF; font-weight: 600; background: rgba(21,44,255,0.04); }
+
+/* ── Table ── */
+table.t { width: 100%; border-collapse: collapse; background: #fff; }
+table.t th { text-align: left; padding: 6px 12px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+table.t td { padding: 7px 12px; border-bottom: 1px solid #f3f4f6; font-size: 11px; vertical-align: middle; }
+table.t tr.r { cursor: pointer; transition: background 0.1s; }
+table.t tr.r:hover td { background: #f9fafb; }
+table.t tr.rj td { background: #fefafa; }
+
+/* ── Service pills ── */
+.sp { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 9px; font-weight: 600; letter-spacing: 0.04em; }
+.sp-fm { background: rgba(21,44,255,0.06); color: #152CFF; border: 1px solid rgba(21,44,255,0.15); }
+.sp-ec { background: #fefce8; color: #a16207; border: 1px solid #fde68a; }
+.sp-cs { background: #f0fdf4; color: #059669; border: 1px solid #a7f3d0; }
+.sp-cr { background: #fdf2f8; color: #be185d; border: 1px solid #fbcfe8; }
+.sp-oh { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+
+/* ── Status chips ── */
+.st { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+.st-pending { border: 1px solid #e5e7eb; background: #f9fafb; color: #9ca3af; }
+.st-progress { border: 1px solid rgba(21,44,255,0.15); background: rgba(21,44,255,0.04); color: #152CFF; }
+.st-completed { border: 1px solid #fde68a; background: #fefce8; color: #a16207; }
+.st-verified { border: 1px solid #a7f3d0; background: #f0fdf4; color: #059669; }
+.st-rejected { border: 1px solid #fecaca; background: #fef2f2; color: #dc2626; }
+
+.dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+
+/* ── DO link ── */
+.dl { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 10px; color: #152CFF; background: rgba(21,44,255,0.04); padding: 1px 5px; border-radius: 3px; border: 1px solid rgba(21,44,255,0.1); text-decoration: none; cursor: pointer; }
+
+/* ── Buttons ── */
+.btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; border: none; }
+.btn-s { background: #fff; color: #374151; border: 1px solid #e5e7eb; }
+
+/* ── Group headers ── */
+.gh { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; cursor: pointer; transition: background 0.1s; }
+.gh:hover { background: #f3f4f6; }
+.gh .ch { color: #152CFF; font-size: 11px; font-weight: 700; width: 16px; flex-shrink: 0; }
+.gh h4 { font-size: 12px; font-weight: 700; color: #111827; white-space: nowrap; }
+.gb { font-size: 9px; padding: 2px 7px; border-radius: 99px; font-weight: 600; white-space: nowrap; }
+.gb-p { background: #f9fafb; color: #9ca3af; border: 1px solid #e5e7eb; }
+.gb-i { background: rgba(21,44,255,0.04); color: #152CFF; border: 1px solid rgba(21,44,255,0.12); }
+.gb-r { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.gs { font-size: 10px; color: #9ca3af; margin-left: auto; font-family: 'SF Mono', 'Fira Code', monospace; white-space: nowrap; }
+
+/* ── Callout ── */
+.co { background: #fff; border: 2px solid #152CFF; border-radius: 8px; padding: 10px 14px; margin: 12px 16px; font-size: 11px; color: #374151; line-height: 1.6; }
+.co strong { color: #152CFF; }
+
+/* ── Pagination ── */
+.pg { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-top: 1px solid #e5e7eb; background: #fff; }
+.pg .info { font-size: 10px; color: #9ca3af; font-family: 'SF Mono', 'Fira Code', monospace; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-48: Job View — Final Design</h1>
+<div class="hmw">"Definitive mockup for the Jobs page incorporating unified status lifecycle (Pending → In Progress → Completed → Verified) at 30-vendor scale."</div>
+
+<div class="context">
+<strong>Consolidates decisions from HMW-44 through HMW-47:</strong><br>
+• Flat power table as default (not vendor grouping) — scales to 30+ vendors<br>
+• Unified job status: Pending → In Progress → Completed (proof uploaded) → Verified (admin sign-off)<br>
+• Status pills as primary workflow navigation, not proof-status pills<br>
+• Group by toggle (None/Vendor/Service/Date) — vendor grouping as secondary lens<br>
+• Rejected jobs surface via red rows within Active view, not as separate pill<br>
+• No document rejection feature — proof lifecycle is one-way
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  VIEW 1: ACTIVE (DEFAULT)                              -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>View 1: Active (Default)</h2>
+<span class="label" style="background: rgba(21,44,255,0.08); color: #152CFF;">Default on page load</span>
+
+<div class="rationale">
+<strong>All jobs that need attention.</strong> Active = Pending + In Progress + Rejected. Sorted by pickup date (soonest first). Rejected rows are highlighted red and bubble to top. The Status column shows each job's state with color-coded chips. The 4 pills at top tell you where to focus: Active (the work), Completed (needs verification), Verified (done), All (everything).
+</div>
+
+<div class="screen">
+<div class="nav">
+<div class="logo"><div class="logo-icon"></div> Teleport OS</div>
+<a href="#">Delivery Orders</a>
+<a class="on" href="#">Jobs</a>
+<a href="#">Rates</a>
+<a href="#">Master Data</a>
+</div>
+
+<!-- Stats bar — status-based counts -->
+<div class="stats">
+<span style="color: #111827; font-weight: 600;">82 jobs</span>
+<span class="sep"></span>
+<span style="color: #9ca3af; font-weight: 600;">15 pending</span>
+<span class="sep"></span>
+<span style="color: #152CFF; font-weight: 600;">18 in progress</span>
+<span class="sep"></span>
+<span style="color: #a16207; font-weight: 600;">9 completed</span>
+<span class="sep"></span>
+<span style="color: #059669; font-weight: 600;">37 verified</span>
+<span class="sep"></span>
+<span style="color: #dc2626; font-weight: 600;">2 rejected</span>
+</div>
+
+<div class="hdr">
+<div>
+<h3>Jobs</h3>
+<p>All vendor assignments across delivery orders</p>
+</div>
+<div style="display: flex; gap: 6px;">
+<button class="btn btn-s">↓ Export</button>
+</div>
+</div>
+
+<!-- Filter bar -->
+<div class="filters">
+<!-- Status pills — primary nav -->
+<button class="pill on">Active <span class="b b-n">35</span></button>
+<button class="pill">Completed <span class="b b-n">9</span></button>
+<button class="pill">Verified <span class="b b-green">37</span></button>
+<button class="pill">All <span class="b b-n">82</span></button>
+
+<span class="fsep"></span>
+
+<!-- Service pills -->
+<span class="fl">Service</span>
+<button class="pill" style="padding: 2px 6px;">FM</button>
+<button class="pill" style="padding: 2px 6px;">EC</button>
+<button class="pill" style="padding: 2px 6px;">CS</button>
+<button class="pill" style="padding: 2px 6px;">CR</button>
+<button class="pill" style="padding: 2px 6px;">OH</button>
+
+<span class="fsep"></span>
+
+<span class="fl">Vendor</span>
+<select class="fsel"><option>All (30)</option></select>
+
+<span class="fl" style="margin-left: 4px;">Date</span>
+<select class="fsel"><option>This week</option></select>
+
+<span class="fsep"></span>
+
+<span class="fl">Group by</span>
+<select class="fsel"><option>None</option></select>
+
+<span style="margin-left: auto; font-family: 'SF Mono', monospace; font-size: 11px; color: #9ca3af;">35 active · 15 vendors</span>
+</div>
+
+<!-- Table -->
+<div style="padding: 0 16px 16px;">
+<table class="t" style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+<thead>
+<tr>
+<th style="width: 105px;">Order · Customer</th>
+<th style="width: 95px;">Vendor</th>
+<th style="width: 50px;">Service</th>
+<th>Route</th>
+<th style="width: 65px;">Pickup</th>
+<th style="width: 90px;">Status</th>
+<th style="width: 85px; text-align: right;">Cost</th>
+</tr>
+</thead>
+<tbody>
+<!-- Rejected rows bubble to top -->
+<tr class="r rj">
+<td><span class="dl">DO-014</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">TikTok</div></td>
+<td style="font-weight: 600; color: #111827;">HaleSun</td>
+<td><span class="sp sp-fm">FM</span></td>
+<td style="font-size: 10px; color: #374151;">Qianhai WH → Huanggang</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>29 Mar</div><div style="color: #9ca3af;">06:00</div></td>
+<td><span class="st st-rejected"><span class="dot" style="background: #dc2626;"></span> Rejected</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; color: #9ca3af;">—</td>
+</tr>
+<tr class="r rj">
+<td><span class="dl">DO-019</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">Shein</div></td>
+<td style="font-weight: 600; color: #111827;">Gonda</td>
+<td><span class="sp sp-ec">EC</span></td>
+<td style="font-size: 10px; color: #374151;">Futian Checkpoint</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>28 Mar</div><div style="color: #9ca3af;">14:00</div></td>
+<td><span class="st st-rejected"><span class="dot" style="background: #dc2626;"></span> Rejected</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; color: #9ca3af;">—</td>
+</tr>
+
+<!-- In Progress rows -->
+<tr class="r">
+<td><span class="dl">DO-012</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">Shopee</div></td>
+<td style="font-weight: 600; color: #111827;">HaleSun</td>
+<td><span class="sp sp-fm">FM</span></td>
+<td style="font-size: 10px; color: #374151;">Yantian Port → Shekou</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>28 Mar</div><div style="color: #9ca3af;">09:00</div></td>
+<td><span class="st st-progress"><span class="dot" style="background: #152CFF;"></span> In Progress</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">MYR 520</td>
+</tr>
+<tr class="r">
+<td><span class="dl">DO-011</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">TikTok</div></td>
+<td style="font-weight: 600; color: #111827;">Gonda</td>
+<td><span class="sp sp-ec">EC</span></td>
+<td style="font-size: 10px; color: #374151;">Shekou Terminal</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>28 Mar</div><div style="color: #9ca3af;">10:30</div></td>
+<td><span class="st st-progress"><span class="dot" style="background: #152CFF;"></span> In Progress</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">CNY 280</td>
+</tr>
+<tr class="r">
+<td><span class="dl">DO-015</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">Temu</div></td>
+<td style="font-weight: 600; color: #111827;">WanDa Logistics</td>
+<td><span class="sp sp-cs">CS</span></td>
+<td style="font-size: 10px; color: #374151;">SZX Cargo Terminal</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>28 Mar</div><div style="color: #9ca3af;">14:00</div></td>
+<td><span class="st st-progress"><span class="dot" style="background: #152CFF;"></span> In Progress</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">MYR 340</td>
+</tr>
+<tr class="r">
+<td><span class="dl">DO-017</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">Shopee</div></td>
+<td style="font-weight: 600; color: #111827;">ThaiKee</td>
+<td><span class="sp sp-fm">FM</span></td>
+<td style="font-size: 10px; color: #374151;">Baoan WH → Futian</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>29 Mar</div><div style="color: #9ca3af;">08:00</div></td>
+<td><span class="st st-progress"><span class="dot" style="background: #152CFF;"></span> In Progress</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">CNY 780</td>
+</tr>
+
+<!-- Pending rows -->
+<tr class="r">
+<td><span class="dl">DO-016</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">AliExpress</div></td>
+<td style="font-weight: 600; color: #111827;">JinTong Express</td>
+<td><span class="sp sp-fm">FM</span></td>
+<td style="font-size: 10px; color: #374151;">Dongguan WH → Nanshan</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>29 Mar</div><div style="color: #9ca3af;">07:00</div></td>
+<td><span class="st st-pending"><span class="dot" style="background: #9ca3af;"></span> Pending</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">CNY 1,200</td>
+</tr>
+<tr class="r">
+<td><span class="dl">DO-018</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">Shein</div></td>
+<td style="font-weight: 600; color: #111827;">SevenSeas</td>
+<td><span class="sp sp-oh">OH</span></td>
+<td style="font-size: 10px; color: #374151;">SZX Cargo Terminal</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>29 Mar</div><div style="color: #9ca3af;">15:00</div></td>
+<td><span class="st st-pending"><span class="dot" style="background: #9ca3af;"></span> Pending</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">CNY 1,200</td>
+</tr>
+<tr class="r">
+<td><span class="dl">DO-020</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">Temu</div></td>
+<td style="font-weight: 600; color: #111827;">ShenZhou Trans</td>
+<td><span class="sp sp-cr">CR</span></td>
+<td style="font-size: 10px; color: #374151;">Yantian Port</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>29 Mar</div><div style="color: #9ca3af;">06:30</div></td>
+<td><span class="st st-pending"><span class="dot" style="background: #9ca3af;"></span> Pending</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">CNY 1,440</td>
+</tr>
+<tr class="r">
+<td><span class="dl">DO-021</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">TikTok</div></td>
+<td style="font-weight: 600; color: #111827;">The Lorry</td>
+<td><span class="sp sp-fm">FM</span></td>
+<td style="font-size: 10px; color: #374151;">SZX Airport → Lantau</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>30 Mar</div><div style="color: #9ca3af;">08:00</div></td>
+<td><span class="st st-pending"><span class="dot" style="background: #9ca3af;"></span> Pending</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">CNY 2,800</td>
+</tr>
+<tr class="r">
+<td><span class="dl">DO-022</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">AliExpress</div></td>
+<td style="font-weight: 600; color: #111827;">DaFa Logistics</td>
+<td><span class="sp sp-fm">FM</span></td>
+<td style="font-size: 10px; color: #374151;">Guangzhou WH → Nansha</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>30 Mar</div><div style="color: #9ca3af;">07:00</div></td>
+<td><span class="st st-pending"><span class="dot" style="background: #9ca3af;"></span> Pending</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">CNY 950</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="co">
+<strong>Status sort order within Active:</strong> Rejected (red, top) → In Progress (blue) → Pending (gray). This puts fires first, then work-in-motion, then not-yet-started. Ops handles rejections, monitors progress, then follows up on pending jobs — all in one scroll.
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  VIEW 2: COMPLETED (NEEDS VERIFICATION)                -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>View 2: Completed (Needs Verification)</h2>
+<span class="label" style="background: #fefce8; color: #a16207;">Admin action queue</span>
+
+<div class="rationale">
+<strong>Jobs where proof has been uploaded and an admin needs to review + verify.</strong> This is the billing gate — clicking "Verify" on a job marks it as verified and ready for payment. Always a small, actionable list. The "Completed" status chip uses amber to distinguish from both "In Progress" (blue, still working) and "Verified" (green, fully done).
+</div>
+
+<div class="screen">
+<div class="nav">
+<div class="logo"><div class="logo-icon"></div> Teleport OS</div>
+<a href="#">Delivery Orders</a>
+<a class="on" href="#">Jobs</a>
+<a href="#">Rates</a>
+<a href="#">Master Data</a>
+</div>
+
+<div class="stats">
+<span style="color: #111827; font-weight: 600;">82 jobs</span>
+<span class="sep"></span>
+<span style="color: #9ca3af; font-weight: 600;">15 pending</span>
+<span class="sep"></span>
+<span style="color: #152CFF; font-weight: 600;">18 in progress</span>
+<span class="sep"></span>
+<span style="color: #a16207; font-weight: 600;">9 completed</span>
+<span class="sep"></span>
+<span style="color: #059669; font-weight: 600;">37 verified</span>
+<span class="sep"></span>
+<span style="color: #dc2626; font-weight: 600;">2 rejected</span>
+</div>
+
+<div class="hdr">
+<div>
+<h3>Jobs</h3>
+<p>All vendor assignments across delivery orders</p>
+</div>
+</div>
+
+<div class="filters">
+<button class="pill">Active <span class="b b-n">35</span></button>
+<button class="pill on" style="border-color: #a16207; background: #fefce8; color: #a16207;">Completed <span class="b" style="background: #fefce8; color: #a16207; border: 1px solid #fde68a;">9</span></button>
+<button class="pill">Verified <span class="b b-green">37</span></button>
+<button class="pill">All <span class="b b-n">82</span></button>
+
+<span class="fsep"></span>
+
+<span class="fl">Service</span>
+<button class="pill" style="padding: 2px 6px;">FM</button>
+<button class="pill" style="padding: 2px 6px;">EC</button>
+<button class="pill" style="padding: 2px 6px;">CS</button>
+<button class="pill" style="padding: 2px 6px;">CR</button>
+<button class="pill" style="padding: 2px 6px;">OH</button>
+
+<span class="fsep"></span>
+
+<span class="fl">Vendor</span>
+<select class="fsel"><option>All (30)</option></select>
+
+<span class="fl" style="margin-left: 4px;">Date</span>
+<select class="fsel"><option>This week</option></select>
+
+<span class="fsep"></span>
+
+<span class="fl">Group by</span>
+<select class="fsel"><option>None</option></select>
+
+<span style="margin-left: auto; font-family: 'SF Mono', monospace; font-size: 11px; color: #a16207; font-weight: 600;">9 completed · needs verification</span>
+</div>
+
+<div style="padding: 0 16px 16px;">
+<table class="t" style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+<thead>
+<tr>
+<th style="width: 105px;">Order · Customer</th>
+<th style="width: 95px;">Vendor</th>
+<th style="width: 50px;">Service</th>
+<th>Route</th>
+<th style="width: 65px;">Pickup</th>
+<th style="width: 90px;">Status</th>
+<th style="width: 85px; text-align: right;">Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr class="r">
+<td><span class="dl">DO-008</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">TikTok</div></td>
+<td style="font-weight: 600; color: #111827;">HaleSun</td>
+<td><span class="sp sp-fm">FM</span></td>
+<td style="font-size: 10px; color: #374151;">TikTok WH → SZ Bay</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>27 Mar</div><div style="color: #9ca3af;">09:00</div></td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">MYR 525</td>
+</tr>
+<tr class="r">
+<td><span class="dl">DO-008</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">TikTok</div></td>
+<td style="font-weight: 600; color: #111827;">Gonda</td>
+<td><span class="sp sp-ec">EC</span></td>
+<td style="font-size: 10px; color: #374151;">SZ Bay → SZX Terminal</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>27 Mar</div><div style="color: #9ca3af;">10:30</div></td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">MYR 190</td>
+</tr>
+<tr class="r">
+<td><span class="dl">DO-009</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">Shopee</div></td>
+<td style="font-weight: 600; color: #111827;">SevenSeas</td>
+<td><span class="sp sp-cr">CR</span></td>
+<td style="font-size: 10px; color: #374151;">Yantian Port</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>27 Mar</div><div style="color: #9ca3af;">07:00</div></td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">CNY 400</td>
+</tr>
+<tr class="r">
+<td><span class="dl">DO-010</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">Shein</div></td>
+<td style="font-weight: 600; color: #111827;">ThaiKee</td>
+<td><span class="sp sp-fm">FM</span></td>
+<td style="font-size: 10px; color: #374151;">Longhua WH → Futian</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>26 Mar</div><div style="color: #9ca3af;">08:00</div></td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">CNY 680</td>
+</tr>
+<tr class="r">
+<td><span class="dl">DO-010</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">Shein</div></td>
+<td style="font-weight: 600; color: #111827;">Gonda</td>
+<td><span class="sp sp-ec">EC</span></td>
+<td style="font-size: 10px; color: #374151;">Futian Checkpoint</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>26 Mar</div><div style="color: #9ca3af;">12:00</div></td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">CNY 320</td>
+</tr>
+<tr class="r">
+<td><span class="dl">DO-013</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">Temu</div></td>
+<td style="font-weight: 600; color: #111827;">WanDa Logistics</td>
+<td><span class="sp sp-oh">OH</span></td>
+<td style="font-size: 10px; color: #374151;">SZX Cargo Terminal</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>26 Mar</div><div style="color: #9ca3af;">16:00</div></td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">CNY 1,200</td>
+</tr>
+<tr class="r">
+<td><span class="dl">DO-007</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">AliExpress</div></td>
+<td style="font-weight: 600; color: #111827;">HaleSun</td>
+<td><span class="sp sp-fm">FM</span></td>
+<td style="font-size: 10px; color: #374151;">Dongguan WH → Shekou</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>25 Mar</div><div style="color: #9ca3af;">07:30</div></td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">CNY 850</td>
+</tr>
+<tr class="r">
+<td><span class="dl">DO-007</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">AliExpress</div></td>
+<td style="font-weight: 600; color: #111827;">LongShun Trans</td>
+<td><span class="sp sp-cs">CS</span></td>
+<td style="font-size: 10px; color: #374151;">Shekou Terminal</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>25 Mar</div><div style="color: #9ca3af;">14:00</div></td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">MYR 340</td>
+</tr>
+<tr class="r">
+<td><span class="dl">DO-006</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">Shopee</div></td>
+<td style="font-weight: 600; color: #111827;">HuaYun Cargo</td>
+<td><span class="sp sp-oh">OH</span></td>
+<td style="font-size: 10px; color: #374151;">SZX Cargo Terminal</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>25 Mar</div><div style="color: #9ca3af;">15:00</div></td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">CNY 960</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="co">
+<strong>The admin's action queue.</strong> Click any row → slide-out opens with proof documents, fee breakdown, and activity log. Review the proof, then click "Verify" to mark the job ready for billing. 9 jobs here means 9 decisions. This list is always small and actionable.
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  VIEW 3: ACTIVE + GROUP BY VENDOR                      -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>View 3: Active + Group by Vendor (Chasing)</h2>
+<span class="label" style="background: #f3f4f6; color: #6b7280;">Secondary lens</span>
+
+<div class="rationale">
+<strong>The vendor coordination view.</strong> When you need to follow up with vendors about pending or in-progress jobs, toggle "Group by: Vendor." Headers collapse by default and are sorted by most outstanding jobs. The status column now shows the mix of Pending vs In Progress per vendor — so you know whether to ask "have you started?" or "where's the proof?"
+</div>
+
+<div class="screen">
+<div class="nav">
+<div class="logo"><div class="logo-icon"></div> Teleport OS</div>
+<a href="#">Delivery Orders</a>
+<a class="on" href="#">Jobs</a>
+<a href="#">Rates</a>
+<a href="#">Master Data</a>
+</div>
+
+<div class="stats">
+<span style="color: #111827; font-weight: 600;">82 jobs</span>
+<span class="sep"></span>
+<span style="color: #9ca3af; font-weight: 600;">15 pending</span>
+<span class="sep"></span>
+<span style="color: #152CFF; font-weight: 600;">18 in progress</span>
+<span class="sep"></span>
+<span style="color: #a16207; font-weight: 600;">9 completed</span>
+<span class="sep"></span>
+<span style="color: #059669; font-weight: 600;">37 verified</span>
+<span class="sep"></span>
+<span style="color: #dc2626; font-weight: 600;">2 rejected</span>
+</div>
+
+<div class="hdr">
+<div>
+<h3>Jobs</h3>
+<p>All vendor assignments across delivery orders</p>
+</div>
+</div>
+
+<div class="filters">
+<button class="pill on">Active <span class="b b-n">35</span></button>
+<button class="pill">Completed <span class="b b-n">9</span></button>
+<button class="pill">Verified <span class="b b-green">37</span></button>
+<button class="pill">All <span class="b b-n">82</span></button>
+
+<span class="fsep"></span>
+
+<span class="fl">Service</span>
+<button class="pill" style="padding: 2px 6px;">FM</button>
+<button class="pill" style="padding: 2px 6px;">EC</button>
+<button class="pill" style="padding: 2px 6px;">CS</button>
+<button class="pill" style="padding: 2px 6px;">CR</button>
+<button class="pill" style="padding: 2px 6px;">OH</button>
+
+<span class="fsep"></span>
+
+<span class="fl">Vendor</span>
+<select class="fsel"><option>All (15)</option></select>
+
+<span class="fl" style="margin-left: 4px;">Date</span>
+<select class="fsel"><option>This week</option></select>
+
+<span class="fsep"></span>
+
+<span class="fl">Group by</span>
+<select class="fsel hl"><option>Vendor ↓</option></select>
+
+<span style="margin-left: auto; font-family: 'SF Mono', monospace; font-size: 11px; color: #9ca3af;">35 active · 15 vendors</span>
+</div>
+
+<!-- Grouped by vendor, sorted by most jobs -->
+<div style="padding: 0 16px 16px;">
+<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; background: #fff;">
+
+<!-- Gonda: expanded -->
+<div class="gh">
+<span class="ch">▾</span>
+<h4>Gonda</h4>
+<span class="gb gb-r">1 rejected</span>
+<span class="gb gb-i">2 in progress</span>
+<span class="gb gb-p">3 pending</span>
+<span class="gs">6 active · CNY 1,975 · MYR 190</span>
+</div>
+<table class="t">
+<thead>
+<tr>
+<th style="width: 105px;">Order · Customer</th>
+<th style="width: 50px;">Service</th>
+<th>Route</th>
+<th style="width: 65px;">Pickup</th>
+<th style="width: 90px;">Status</th>
+<th style="width: 85px; text-align: right;">Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr class="r rj">
+<td><span class="dl">DO-019</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">Shein</div></td>
+<td><span class="sp sp-ec">EC</span></td>
+<td style="font-size: 10px; color: #374151;">Futian Checkpoint</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>28 Mar</div><div style="color: #9ca3af;">14:00</div></td>
+<td><span class="st st-rejected"><span class="dot" style="background: #dc2626;"></span> Rejected</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; color: #9ca3af;">—</td>
+</tr>
+<tr class="r">
+<td><span class="dl">DO-011</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">TikTok</div></td>
+<td><span class="sp sp-ec">EC</span></td>
+<td style="font-size: 10px; color: #374151;">Shekou Terminal</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>28 Mar</div><div style="color: #9ca3af;">10:30</div></td>
+<td><span class="st st-progress"><span class="dot" style="background: #152CFF;"></span> In Progress</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">CNY 280</td>
+</tr>
+<tr class="r">
+<td><span class="dl">DO-016</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">AliExpress</div></td>
+<td><span class="sp sp-ec">EC</span></td>
+<td style="font-size: 10px; color: #374151;">Nanshan Checkpoint</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>29 Mar</div><div style="color: #9ca3af;">11:00</div></td>
+<td><span class="st st-progress"><span class="dot" style="background: #152CFF;"></span> In Progress</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">CNY 320</td>
+</tr>
+<tr class="r">
+<td><span class="dl">DO-018</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">Shein</div></td>
+<td><span class="sp sp-cs">CS</span></td>
+<td style="font-size: 10px; color: #374151;">SZX Cargo Terminal</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>29 Mar</div><div style="color: #9ca3af;">15:00</div></td>
+<td><span class="st st-pending"><span class="dot" style="background: #9ca3af;"></span> Pending</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">MYR 95</td>
+</tr>
+<tr class="r">
+<td><span class="dl">DO-021</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">Temu</div></td>
+<td><span class="sp sp-ec">EC</span></td>
+<td style="font-size: 10px; color: #374151;">Lantau Terminal</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>30 Mar</div><div style="color: #9ca3af;">12:00</div></td>
+<td><span class="st st-pending"><span class="dot" style="background: #9ca3af;"></span> Pending</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">CNY 680</td>
+</tr>
+<tr class="r">
+<td><span class="dl">DO-021</span><div style="font-size: 10px; color: #6b7280; margin-top: 1px;">Temu</div></td>
+<td><span class="sp sp-cs">CS</span></td>
+<td style="font-size: 10px; color: #374151;">Lantau Terminal</td>
+<td style="font-family: 'SF Mono', monospace; font-size: 10px;"><div>30 Mar</div><div style="color: #9ca3af;">14:00</div></td>
+<td><span class="st st-pending"><span class="dot" style="background: #9ca3af;"></span> Pending</span></td>
+<td style="text-align: right; font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600;">MYR 95</td>
+</tr>
+</tbody>
+</table>
+
+<!-- Remaining collapsed -->
+<div class="gh" style="border-top: 1px solid #e5e7eb;">
+<span class="ch">▸</span>
+<h4>HaleSun</h4>
+<span class="gb gb-r">1 rejected</span>
+<span class="gb gb-i">2 in progress</span>
+<span class="gb gb-p">1 pending</span>
+<span class="gs">4 active · CNY 850 · MYR 1,045</span>
+</div>
+<div class="gh" style="border-top: 1px solid #f3f4f6;">
+<span class="ch">▸</span>
+<h4>SevenSeas</h4>
+<span class="gb gb-i">2 in progress</span>
+<span class="gb gb-p">2 pending</span>
+<span class="gs">4 active · CNY 3,220</span>
+</div>
+<div class="gh" style="border-top: 1px solid #f3f4f6;">
+<span class="ch">▸</span>
+<h4>ThaiKee</h4>
+<span class="gb gb-i">1 in progress</span>
+<span class="gb gb-p">2 pending</span>
+<span class="gs">3 active · CNY 2,140</span>
+</div>
+<div class="gh" style="border-top: 1px solid #f3f4f6;">
+<span class="ch">▸</span>
+<h4>JinTong Express</h4>
+<span class="gb gb-p">3 pending</span>
+<span class="gs">3 active · CNY 3,600</span>
+</div>
+<div class="gh" style="border-top: 1px solid #f3f4f6;">
+<span class="ch">▸</span>
+<h4>The Lorry</h4>
+<span class="gb gb-i">1 in progress</span>
+<span class="gb gb-p">2 pending</span>
+<span class="gs">3 active · CNY 8,400</span>
+</div>
+<div class="gh" style="border-top: 1px solid #f3f4f6;">
+<span class="ch">▸</span>
+<h4>WanDa Logistics</h4>
+<span class="gb gb-i">1 in progress</span>
+<span class="gb gb-p">1 pending</span>
+<span class="gs">2 active · CNY 1,320</span>
+</div>
+<div class="gh" style="border-top: 1px solid #f3f4f6;">
+<span class="ch">▸</span>
+<h4>ShenZhou Trans</h4>
+<span class="gb gb-p">2 pending</span>
+<span class="gs">2 active · CNY 2,880</span>
+</div>
+<div class="gh" style="border-top: 1px solid #f3f4f6;">
+<span class="ch">▸</span>
+<h4>DaFa Logistics</h4>
+<span class="gb gb-p">2 pending</span>
+<span class="gs">2 active · CNY 1,900</span>
+</div>
+<div class="gh" style="border-top: 1px solid #f3f4f6;">
+<span class="ch">▸</span>
+<h4>HuaYun Cargo</h4>
+<span class="gb gb-i">1 in progress</span>
+<span class="gs">1 active · CNY 960</span>
+</div>
+<div class="gh" style="border-top: 1px solid #f3f4f6;">
+<span class="ch">▸</span>
+<h4>YiDa Express</h4>
+<span class="gb gb-p">2 pending</span>
+<span class="gs">2 active · CNY 1,240</span>
+</div>
+<div class="gh" style="border-top: 1px solid #f3f4f6;">
+<span class="ch">▸</span>
+<h4>LongShun Trans</h4>
+<span class="gb gb-p">1 pending</span>
+<span class="gs">1 active · CNY 680</span>
+</div>
+<div class="gh" style="border-top: 1px solid #f3f4f6;">
+<span class="ch">▸</span>
+<h4>XinHua Freight</h4>
+<span class="gb gb-p">1 pending</span>
+<span class="gs">1 active · MYR 420</span>
+</div>
+<div class="gh" style="border-top: 1px solid #f3f4f6;">
+<span class="ch">▸</span>
+<h4>ZhongTong</h4>
+<span class="gb gb-p">1 pending</span>
+<span class="gs">1 active · CNY 540</span>
+</div>
+<div class="gh" style="border-top: 1px solid #f3f4f6;">
+<span class="ch">▸</span>
+<h4>KuaiJie Cargo</h4>
+<span class="gb gb-p">1 pending</span>
+<span class="gs">1 active · CNY 380</span>
+</div>
+
+</div>
+</div>
+
+<div class="co">
+<strong>Vendor headers tell you what to ask.</strong> "Gonda: 1 rejected, 2 in progress, 3 pending" → call about the rejection, ask for progress updates on the 2 in-progress jobs, and confirm start dates on the 3 pending. The status badges in the header give you the conversation agenda before you even expand. Sorted by most outstanding (rejected vendors first, then most jobs).
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  VERDICT                                                -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="verdict">
+<h3>Final Design: Locked In</h3>
+<p style="font-size: 12px; line-height: 1.7; color: #374151;">
+<strong>Status lifecycle:</strong> Pending → In Progress → Completed (proof uploaded) → Verified (admin sign-off). Rejected + Cancelled as terminal states. Replaces the old dual status/proofStatus model with one unified field.
+</p>
+<p style="font-size: 12px; line-height: 1.7; color: #374151; margin-top: 8px;">
+<strong>4 status colors:</strong><br>
+• Gray (Pending) — not started<br>
+• Blue (In Progress) — work underway, matches Future Blue accent<br>
+• Amber (Completed) — proof uploaded, needs verification. Amber = "action needed" without being alarming<br>
+• Green (Verified) — done, ready for billing<br>
+• Red (Rejected) — vendor can't fulfill, needs reassignment
+</p>
+<p style="font-size: 12px; line-height: 1.7; color: #374151; margin-top: 8px;">
+<strong>Nav pills:</strong> Active (Pending + In Progress + Rejected) | Completed | Verified | All. These are the task queues — Active is the work, Completed is the verification queue, Verified is the archive.
+</p>
+<p style="font-size: 12px; line-height: 1.7; color: #374151; margin-top: 8px;">
+<strong>Daily workflow:</strong><br>
+1. Open Jobs → Active view. Rejected jobs at top (red rows). Handle fires.<br>
+2. Monitor In Progress jobs (blue). Check vendors are on track.<br>
+3. Click Completed → 9 jobs with proof. Review + Verify each one.<br>
+4. Toggle Group by: Vendor → chase vendors about Pending/In Progress jobs.<br>
+5. Filter FM + today → morning dispatch view.
+</p>
+<p style="font-size: 12px; line-height: 1.7; color: #374151; margin-top: 8px;">
+<strong>Key interactions (unchanged):</strong> Click job row → slide-out panel. Click DO link → Delivery Orders view. Group headers collapsible. Vendor column hidden when grouped by vendor. Vendor dropdown with search for 30+ vendors.
+</p>
+</div>
+
+</div>
+</body>
+</html>

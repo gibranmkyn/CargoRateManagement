@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HMW-49: Slide-Out Panel for Unified Status Lifecycle</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.page { max-width: 1400px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 44px 0 6px; color: #152CFF; }
+h3.state { font-size: 13px; font-weight: 700; margin: 24px 0 6px; color: #374151; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 24px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+/* Panel mockup container */
+.panels { display: flex; gap: 16px; flex-wrap: wrap; margin: 10px 0 24px; }
+.panel-wrap { flex: 0 0 auto; }
+.panel-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; padding: 3px 8px; border-radius: 3px; display: inline-block; }
+
+/* Slide-out panel */
+.panel { width: 360px; background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; box-shadow: -4px 0 24px rgba(0,0,0,0.08); }
+.panel-header { padding: 12px 16px; border-bottom: 1px solid #e5e7eb; }
+.panel-body { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+
+/* Status action bar */
+.status-bar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 6px; }
+.status-bar .chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+.status-bar .action { margin-left: auto; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 4px; }
+.status-bar .hint { font-size: 10px; margin-left: auto; }
+
+/* Section */
+.sec-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px; }
+
+/* Proof docs */
+.proof-doc { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 6px; background: #f9fafb; border: 1px solid #e5e7eb; }
+.proof-doc .icon { width: 24px; height: 24px; border-radius: 6px; background: rgba(21,44,255,0.07); display: flex; align-items: center; justify-content: center; font-size: 11px; color: #152CFF; }
+.proof-doc .meta { flex: 1; }
+.proof-doc .name { font-size: 11px; font-weight: 500; color: #111827; }
+.proof-doc .date { font-size: 9px; color: #9ca3af; }
+
+/* Upload area */
+.upload-btn { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 8px 10px; font-size: 11px; font-weight: 600; color: #152CFF; background: rgba(21,44,255,0.04); border-radius: 6px; cursor: pointer; border: 1px solid rgba(21,44,255,0.12); }
+.upload-empty { padding: 16px; text-align: center; font-size: 10px; color: #d1d5db; font-style: italic; border: 1px dashed #e5e7eb; border-radius: 6px; }
+
+/* Fee row */
+.fee-table { width: 100%; border-collapse: collapse; }
+.fee-table th { text-align: left; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; }
+.fee-table td { padding: 4px 8px; font-size: 10px; border-bottom: 1px solid #f3f4f6; }
+.fee-total { padding: 6px 8px; background: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+
+/* Activity log */
+.log-entry { display: flex; gap: 8px; position: relative; }
+.log-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.log-line { position: absolute; left: 3.5px; top: 14px; bottom: -8px; width: 1px; background: #e5e7eb; }
+.log-text { font-size: 11px; font-weight: 500; color: #111827; }
+.log-detail { font-size: 10px; color: #9ca3af; }
+.log-meta { font-size: 9px; color: #d1d5db; margin-top: 1px; font-family: 'SF Mono', monospace; }
+
+/* Quantity inputs */
+.qty-bar { display: flex; gap: 8px; padding: 8px 10px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; }
+.qty-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 2px; }
+.qty-val { font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-49: Slide-Out Panel — Status Lifecycle</h1>
+<div class="hmw">"How should the slide-out panel adapt to the unified status lifecycle (Pending → In Progress → Completed → Verified) so ops always knows what action to take next?"</div>
+
+<div class="context">
+<strong>Current state:</strong> The slide-out shows a proof status chip (Awaiting/Uploaded/Validated) at top, proof upload area in the middle, and a "Validate Proof" button when proof exists. Status and proof are treated as separate concepts.<br><br>
+<strong>New model:</strong> Single unified status. Proof upload triggers Completed. Verification is admin sign-off. The panel needs to tell ops: "here's the current state, here's what to do next" at every stage. Fees/quantities editable until Verified (billing gate).
+</strong>
+</div>
+
+
+<!-- ═══════════════════ OPTION A ═══════════════════ -->
+<h2>Option A: Status Action Bar</h2>
+<span class="label" style="background: rgba(21,44,255,0.08); color: #152CFF;">Recommended</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Add a colored status bar at the top of the panel that shows current status + the primary action for that stage. The bar is the "what do I do?" answer. Below it, the panel sections (route, proof, fees, log) are the same — but edit-ability changes per status. Minimal change from current design, maximum clarity.
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• One bar tells you state + action — zero ambiguity<br>
+• Minimal redesign — same sections, just add the bar<br>
+• Action button moves with status (Start → Upload → Verify → done)<br>
+• Color-coded to match the 5-state system from HMW-48
+</div>
+<div class="cons"><strong>Cons</strong><br>
+• Bar takes ~44px of vertical space at top<br>
+• "Start Job" button for Pending may feel unnecessary if ops just assigns and expects vendor to start<br>
+• Upload is both a section AND a bar action — might be redundant
+</div>
+</div>
+</div>
+
+<!-- 5 panels side by side -->
+<div class="panels">
+
+<!-- ── PENDING ── -->
+<div class="panel-wrap">
+<div class="panel-label" style="background: #f9fafb; color: #9ca3af;">Pending</div>
+<div class="panel">
+<div class="panel-header">
+<div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+<span style="font-family: 'SF Mono', monospace; font-size: 10px; padding: 1px 5px; border-radius: 4px; background: #f3f4f6; border: 1px solid #e5e7eb; color: #9ca3af;">J01/3</span>
+</div>
+<div style="font-size: 14px; font-weight: 700; color: #111827;">HaleSun · Trucking</div>
+<div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">TikTok · <span style="font-family: 'SF Mono', monospace; font-size: 10px;">160-12345678</span></div>
+</div>
+<div class="panel-body">
+
+<!-- STATUS ACTION BAR -->
+<div class="status-bar" style="background: #f9fafb; border: 1px solid #e5e7eb;">
+<span class="chip" style="background: #f9fafb; border: 1px solid #e5e7eb; color: #9ca3af;">
+<span style="width: 5px; height: 5px; border-radius: 50%; background: #9ca3af;"></span> Pending
+</span>
+<button class="action" style="background: #152CFF; color: #fff;">Start Job →</button>
+</div>
+
+<!-- Route -->
+<div>
+<div class="sec-title">Route</div>
+<div style="font-size: 11px; color: #111827;">📍 Qianhai WH → Huanggang</div>
+<div style="font-family: 'SF Mono', monospace; font-size: 10px; color: #9ca3af; margin: 2px 0 4px 17px;">29 Mar · 06:00</div>
+<span style="display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(21,44,255,0.06); color: #152CFF; border: 1px solid rgba(21,44,255,0.15);">FM</span>
+</div>
+
+<!-- Proof — empty -->
+<div>
+<div class="sec-title">Proof of Service</div>
+<div class="upload-empty">No proof yet — upload when work is done</div>
+</div>
+
+<!-- Fees preview -->
+<div>
+<div style="display: flex; justify-content: space-between;" class="sec-title">
+<span>Fees</span><span style="font-weight: 400; text-transform: none; letter-spacing: 0; color: #152CFF; font-size: 8px;">3 of 3 active</span>
+</div>
+<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+<table class="fee-table">
+<thead><tr><th style="width: 20px;"></th><th>Fee</th><th style="width: 40px; text-align: center;">Qty</th><th style="width: 65px; text-align: right;">Amount</th></tr></thead>
+<tbody>
+<tr><td style="text-align: center; color: #152CFF;">✓</td><td>FTL运费 1.5T<div style="font-size: 8px; color: #9ca3af;">MYR 310 /trip</div></td><td style="text-align: center;"><input style="width: 36px; font-size: 10px; padding: 2px 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center; font-family: 'SF Mono', monospace;" value="1" /></td><td style="text-align: right; font-family: 'SF Mono', monospace; font-weight: 600;">MYR 310</td></tr>
+<tr><td style="text-align: center; color: #152CFF;">✓</td><td>前置仓操作费<div style="font-size: 8px; color: #9ca3af;">MYR 80 /trip</div></td><td style="text-align: center;"><input style="width: 36px; font-size: 10px; padding: 2px 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center; font-family: 'SF Mono', monospace;" value="1" /></td><td style="text-align: right; font-family: 'SF Mono', monospace; font-weight: 600;">MYR 80</td></tr>
+<tr><td style="text-align: center; color: #152CFF;">✓</td><td>提货费<div style="font-size: 8px; color: #9ca3af;">MYR 135 /trip</div></td><td style="text-align: center;"><input style="width: 36px; font-size: 10px; padding: 2px 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center; font-family: 'SF Mono', monospace;" value="1" /></td><td style="text-align: right; font-family: 'SF Mono', monospace; font-weight: 600;">MYR 135</td></tr>
+</tbody>
+</table>
+<div class="fee-total"><span style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Total</span><span style="font-family: 'SF Mono', monospace; font-size: 11px; font-weight: 700; color: #152CFF;">MYR 525</span></div>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+
+<!-- ── IN PROGRESS ── -->
+<div class="panel-wrap">
+<div class="panel-label" style="background: rgba(21,44,255,0.06); color: #152CFF;">In Progress</div>
+<div class="panel">
+<div class="panel-header">
+<div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+<span style="font-family: 'SF Mono', monospace; font-size: 10px; padding: 1px 5px; border-radius: 4px; background: #f3f4f6; border: 1px solid #e5e7eb; color: #9ca3af;">J01/3</span>
+</div>
+<div style="font-size: 14px; font-weight: 700; color: #111827;">HaleSun · Trucking</div>
+<div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">TikTok · <span style="font-family: 'SF Mono', monospace; font-size: 10px;">160-12345678</span></div>
+</div>
+<div class="panel-body">
+
+<!-- STATUS ACTION BAR -->
+<div class="status-bar" style="background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.12);">
+<span class="chip" style="background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.15); color: #152CFF;">
+<span style="width: 5px; height: 5px; border-radius: 50%; background: #152CFF;"></span> In Progress
+</span>
+<span class="hint" style="color: #9ca3af;">Upload proof to complete →</span>
+</div>
+
+<!-- Route -->
+<div>
+<div class="sec-title">Route</div>
+<div style="font-size: 11px; color: #111827;">📍 Qianhai WH → Huanggang</div>
+<div style="font-family: 'SF Mono', monospace; font-size: 10px; color: #9ca3af; margin: 2px 0 4px 17px;">29 Mar · 06:00</div>
+<span style="display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(21,44,255,0.06); color: #152CFF; border: 1px solid rgba(21,44,255,0.15);">FM</span>
+</div>
+
+<!-- Proof — upload prominent -->
+<div>
+<div class="sec-title">Proof of Service</div>
+<div class="upload-empty" style="margin-bottom: 8px;">No proof yet — upload when work is done</div>
+<label class="upload-btn">↑ Upload proof document</label>
+</div>
+
+<!-- Fees (same as pending, editable) -->
+<div>
+<div style="display: flex; justify-content: space-between;" class="sec-title">
+<span>Fees</span><span style="font-weight: 400; text-transform: none; letter-spacing: 0; color: #152CFF; font-size: 8px;">3 of 3 active</span>
+</div>
+<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+<table class="fee-table">
+<thead><tr><th style="width: 20px;"></th><th>Fee</th><th style="width: 40px; text-align: center;">Qty</th><th style="width: 65px; text-align: right;">Amount</th></tr></thead>
+<tbody>
+<tr><td style="text-align: center; color: #152CFF;">✓</td><td>FTL运费 1.5T<div style="font-size: 8px; color: #9ca3af;">MYR 310 /trip</div></td><td style="text-align: center;"><input style="width: 36px; font-size: 10px; padding: 2px 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center; font-family: 'SF Mono', monospace;" value="1" /></td><td style="text-align: right; font-family: 'SF Mono', monospace; font-weight: 600;">MYR 310</td></tr>
+<tr><td style="text-align: center; color: #152CFF;">✓</td><td>前置仓操作费<div style="font-size: 8px; color: #9ca3af;">MYR 80 /trip</div></td><td style="text-align: center;"><input style="width: 36px; font-size: 10px; padding: 2px 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center; font-family: 'SF Mono', monospace;" value="1" /></td><td style="text-align: right; font-family: 'SF Mono', monospace; font-weight: 600;">MYR 80</td></tr>
+<tr><td style="text-align: center; color: #152CFF;">✓</td><td>提货费<div style="font-size: 8px; color: #9ca3af;">MYR 135 /trip</div></td><td style="text-align: center;"><input style="width: 36px; font-size: 10px; padding: 2px 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center; font-family: 'SF Mono', monospace;" value="1" /></td><td style="text-align: right; font-family: 'SF Mono', monospace; font-weight: 600;">MYR 135</td></tr>
+</tbody>
+</table>
+<div class="fee-total"><span style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Total</span><span style="font-family: 'SF Mono', monospace; font-size: 11px; font-weight: 700; color: #152CFF;">MYR 525</span></div>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+
+<!-- ── COMPLETED ── -->
+<div class="panel-wrap">
+<div class="panel-label" style="background: #fefce8; color: #a16207;">Completed</div>
+<div class="panel">
+<div class="panel-header">
+<div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+<span style="font-family: 'SF Mono', monospace; font-size: 10px; padding: 1px 5px; border-radius: 4px; background: #f3f4f6; border: 1px solid #e5e7eb; color: #9ca3af;">J01/3</span>
+</div>
+<div style="font-size: 14px; font-weight: 700; color: #111827;">HaleSun · Trucking</div>
+<div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">TikTok · <span style="font-family: 'SF Mono', monospace; font-size: 10px;">160-12345678</span></div>
+</div>
+<div class="panel-body">
+
+<!-- STATUS ACTION BAR — verify is the primary action -->
+<div class="status-bar" style="background: #fefce8; border: 1px solid #fde68a;">
+<span class="chip" style="background: #fefce8; border: 1px solid #fde68a; color: #a16207;">
+<span style="width: 5px; height: 5px; border-radius: 50%; background: #a16207;"></span> Completed
+</span>
+<button class="action" style="background: #059669; color: #fff;">✓ Verify</button>
+</div>
+
+<!-- Route -->
+<div>
+<div class="sec-title">Route</div>
+<div style="font-size: 11px; color: #111827;">📍 Qianhai WH → Huanggang</div>
+<div style="font-family: 'SF Mono', monospace; font-size: 10px; color: #9ca3af; margin: 2px 0 4px 17px;">29 Mar · 06:00</div>
+<span style="display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(21,44,255,0.06); color: #152CFF; border: 1px solid rgba(21,44,255,0.15);">FM</span>
+</div>
+
+<!-- Proof — has documents, can add more -->
+<div>
+<div class="sec-title">Proof of Service</div>
+<div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px;">
+<div class="proof-doc">
+<div class="icon">📄</div>
+<div class="meta"><div class="name">POD-HaleSun-20260329.pdf</div><div class="date">29 Mar · 12:30</div></div>
+</div>
+<div class="proof-doc">
+<div class="icon">🖼</div>
+<div class="meta"><div class="name">delivery-photo.jpg</div><div class="date">29 Mar · 12:32</div></div>
+<button style="padding: 2px; color: #d1d5db; background: none; border: none; cursor: pointer; font-size: 10px;">✕</button>
+</div>
+</div>
+<label class="upload-btn">↑ Add more documents</label>
+</div>
+
+<!-- Fees — still editable (admin may adjust before verifying) -->
+<div>
+<div style="display: flex; justify-content: space-between;" class="sec-title">
+<span>Fees</span>
+<span style="font-weight: 400; text-transform: none; letter-spacing: 0; color: #b45309; font-size: 8px;">editable until verified</span>
+</div>
+<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+<table class="fee-table">
+<thead><tr><th style="width: 20px;"></th><th>Fee</th><th style="width: 40px; text-align: center;">Qty</th><th style="width: 65px; text-align: right;">Amount</th></tr></thead>
+<tbody>
+<tr><td style="text-align: center; color: #152CFF;">✓</td><td>FTL运费 1.5T<div style="font-size: 8px; color: #9ca3af;">MYR 310 /trip</div></td><td style="text-align: center;"><input style="width: 36px; font-size: 10px; padding: 2px 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center; font-family: 'SF Mono', monospace;" value="1" /></td><td style="text-align: right; font-family: 'SF Mono', monospace; font-weight: 600;">MYR 310</td></tr>
+<tr><td style="text-align: center; color: #152CFF;">✓</td><td>前置仓操作费<div style="font-size: 8px; color: #9ca3af;">MYR 80 /trip</div></td><td style="text-align: center;"><input style="width: 36px; font-size: 10px; padding: 2px 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center; font-family: 'SF Mono', monospace;" value="1" /></td><td style="text-align: right; font-family: 'SF Mono', monospace; font-weight: 600;">MYR 80</td></tr>
+<tr><td style="text-align: center; color: #152CFF;">✓</td><td>提货费<div style="font-size: 8px; color: #9ca3af;">MYR 135 /trip</div></td><td style="text-align: center;"><input style="width: 36px; font-size: 10px; padding: 2px 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center; font-family: 'SF Mono', monospace;" value="1" /></td><td style="text-align: right; font-family: 'SF Mono', monospace; font-weight: 600;">MYR 135</td></tr>
+</tbody>
+</table>
+<div class="fee-total"><span style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Total</span><span style="font-family: 'SF Mono', monospace; font-size: 11px; font-weight: 700; color: #152CFF;">MYR 525</span></div>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+
+<!-- ── VERIFIED ── -->
+<div class="panel-wrap">
+<div class="panel-label" style="background: #f0fdf4; color: #059669;">Verified</div>
+<div class="panel">
+<div class="panel-header">
+<div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+<span style="font-family: 'SF Mono', monospace; font-size: 10px; padding: 1px 5px; border-radius: 4px; background: #f3f4f6; border: 1px solid #e5e7eb; color: #9ca3af;">J01/3</span>
+</div>
+<div style="font-size: 14px; font-weight: 700; color: #111827;">HaleSun · Trucking</div>
+<div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">TikTok · <span style="font-family: 'SF Mono', monospace; font-size: 10px;">160-12345678</span></div>
+</div>
+<div class="panel-body">
+
+<!-- STATUS BAR — done, no action -->
+<div class="status-bar" style="background: #f0fdf4; border: 1px solid #a7f3d0;">
+<span class="chip" style="background: #f0fdf4; border: 1px solid #a7f3d0; color: #059669;">
+<span style="width: 5px; height: 5px; border-radius: 50%; background: #059669;"></span> Verified
+</span>
+<span class="hint" style="color: #059669;">Ready for billing</span>
+</div>
+
+<!-- Route -->
+<div>
+<div class="sec-title">Route</div>
+<div style="font-size: 11px; color: #111827;">📍 Qianhai WH → Huanggang</div>
+<div style="font-family: 'SF Mono', monospace; font-size: 10px; color: #9ca3af; margin: 2px 0 4px 17px;">29 Mar · 06:00</div>
+<span style="display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(21,44,255,0.06); color: #152CFF; border: 1px solid rgba(21,44,255,0.15);">FM</span>
+</div>
+
+<!-- Proof — read-only -->
+<div>
+<div class="sec-title">Proof of Service</div>
+<div style="display: flex; flex-direction: column; gap: 4px;">
+<div class="proof-doc">
+<div class="icon">📄</div>
+<div class="meta"><div class="name">POD-HaleSun-20260329.pdf</div><div class="date">29 Mar · 12:30</div></div>
+</div>
+<div class="proof-doc">
+<div class="icon">🖼</div>
+<div class="meta"><div class="name">delivery-photo.jpg</div><div class="date">29 Mar · 12:32</div></div>
+</div>
+</div>
+</div>
+
+<!-- Fees — locked -->
+<div>
+<div style="display: flex; justify-content: space-between;" class="sec-title">
+<span>Fees</span><span style="font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 8px; color: #059669;">🔒 locked</span>
+</div>
+<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+<table class="fee-table">
+<thead><tr><th></th><th>Fee</th><th style="width: 40px; text-align: center;">Qty</th><th style="width: 65px; text-align: right;">Amount</th></tr></thead>
+<tbody>
+<tr><td></td><td>FTL运费 1.5T</td><td style="text-align: center; font-family: 'SF Mono', monospace;">1</td><td style="text-align: right; font-family: 'SF Mono', monospace; font-weight: 600;">MYR 310</td></tr>
+<tr><td></td><td>前置仓操作费</td><td style="text-align: center; font-family: 'SF Mono', monospace;">1</td><td style="text-align: right; font-family: 'SF Mono', monospace; font-weight: 600;">MYR 80</td></tr>
+<tr><td></td><td>提货费</td><td style="text-align: center; font-family: 'SF Mono', monospace;">1</td><td style="text-align: right; font-family: 'SF Mono', monospace; font-weight: 600;">MYR 135</td></tr>
+</tbody>
+</table>
+<div class="fee-total"><span style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Total</span><span style="font-family: 'SF Mono', monospace; font-size: 11px; font-weight: 700; color: #059669;">MYR 525</span></div>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+
+<!-- ── REJECTED ── -->
+<div class="panel-wrap">
+<div class="panel-label" style="background: #fef2f2; color: #dc2626;">Rejected</div>
+<div class="panel">
+<div class="panel-header">
+<div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+<span style="font-family: 'SF Mono', monospace; font-size: 10px; padding: 1px 5px; border-radius: 4px; background: #f3f4f6; border: 1px solid #e5e7eb; color: #9ca3af;">J01/3</span>
+</div>
+<div style="font-size: 14px; font-weight: 700; color: #111827;">HaleSun · Trucking</div>
+<div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">TikTok · <span style="font-family: 'SF Mono', monospace; font-size: 10px;">160-12345678</span></div>
+</div>
+<div class="panel-body">
+
+<!-- STATUS BAR — rejection with reason -->
+<div class="status-bar" style="background: #fef2f2; border: 1px solid #fecaca; flex-direction: column; align-items: stretch; gap: 6px;">
+<div style="display: flex; align-items: center; gap: 8px;">
+<span class="chip" style="background: #fef2f2; border: 1px solid #fecaca; color: #dc2626;">
+<span style="width: 5px; height: 5px; border-radius: 50%; background: #dc2626;"></span> Rejected
+</span>
+</div>
+<div style="font-size: 10px; color: #dc2626; padding: 6px 8px; background: #fff; border-radius: 4px; border: 1px solid #fecaca;">
+Vehicle breakdown — no truck available for this route today
+</div>
+</div>
+
+<!-- Reassign -->
+<div>
+<div class="sec-title">Reassign Vendor</div>
+<div style="display: flex; gap: 6px;">
+<select style="flex: 1; font-size: 11px; padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 4px; font-family: inherit;">
+<option>Select new vendor...</option>
+<option>SevenSeas</option>
+<option>ThaiKee</option>
+<option>The Lorry</option>
+</select>
+<button style="padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 700; background: #152CFF; color: #fff; border: none; cursor: pointer; font-family: inherit;">Reassign</button>
+</div>
+<div style="font-size: 9px; color: #9ca3af; margin-top: 4px;">Status will reset to Pending with new vendor</div>
+</div>
+
+<!-- Route (same) -->
+<div>
+<div class="sec-title">Route</div>
+<div style="font-size: 11px; color: #111827;">📍 Qianhai WH → Huanggang</div>
+<div style="font-family: 'SF Mono', monospace; font-size: 10px; color: #9ca3af; margin: 2px 0 4px 17px;">29 Mar · 06:00</div>
+<span style="display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(21,44,255,0.06); color: #152CFF; border: 1px solid rgba(21,44,255,0.15);">FM</span>
+</div>
+
+<!-- Activity log showing rejection -->
+<div>
+<div class="sec-title">Activity Log</div>
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<div class="log-entry">
+<div class="log-dot" style="background: #dc2626; border: 2px solid #dc2626;"></div>
+<div><div class="log-text">Status → Rejected</div><div class="log-detail">Vehicle breakdown — no truck available</div><div class="log-meta">HaleSun · 29 Mar 05:45</div></div>
+</div>
+<div class="log-entry">
+<div class="log-dot" style="background: #fff; border: 2px solid #d1d5db;"></div>
+<div><div class="log-text">Status → In Progress</div><div class="log-meta">Ops Admin · 28 Mar 17:00</div></div>
+</div>
+<div class="log-entry">
+<div class="log-dot" style="background: #fff; border: 2px solid #d1d5db;"></div>
+<div><div class="log-text">Job created</div><div class="log-meta">Ops Admin · 28 Mar 16:30</div></div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+
+</div><!-- end panels -->
+
+
+<!-- ═══════════════════ VERDICT ═══════════════════ -->
+<div class="verdict">
+<h3>Decision: Status Action Bar (Option A)</h3>
+<p style="font-size: 12px; line-height: 1.7; color: #374151;">
+The status action bar sits at the top of the slide-out panel and adapts to each lifecycle stage. It's a single colored bar that answers "what state is this job in?" and "what should I do next?" One component, five states:
+</p>
+<p style="font-size: 12px; line-height: 1.7; color: #374151; margin-top: 8px;">
+<strong>What changes per status:</strong><br>
+• <strong>Pending:</strong> Gray bar + [Start Job →] button. Fees/quantities editable. Upload available but no proof yet.<br>
+• <strong>In Progress:</strong> Blue bar + hint "Upload proof to complete →". Upload button prominent in proof section. Fees/quantities editable.<br>
+• <strong>Completed:</strong> Amber bar + [✓ Verify] button (green). Proof docs shown. Upload "Add more" available. Fees/quantities still editable (admin may adjust).<br>
+• <strong>Verified:</strong> Green bar + "Ready for billing" text. Everything read-only. No upload, no edit, no toggles. Fees locked (no ✓/+ toggles, no input fields).<br>
+• <strong>Rejected:</strong> Red bar with rejection reason. Reassign vendor dropdown + button below. Activity log shows rejection event.
+</p>
+<p style="font-size: 12px; line-height: 1.7; color: #374151; margin-top: 8px;">
+<strong>Editability rules:</strong><br>
+• Fees: toggleable + quantities editable from Pending through Completed. Locked on Verified.<br>
+• Quantities (bags/weight/volume): editable from Pending through Completed. Locked on Verified.<br>
+• Proof upload: available from Pending through Completed. Hidden on Verified.<br>
+• Proof removal (✕): available from Pending through Completed. Hidden on Verified.
+</p>
+<p style="font-size: 12px; line-height: 1.7; color: #374151; margin-top: 8px;">
+<strong>Auto-transitions:</strong><br>
+• Uploading first proof document while In Progress → auto-transitions to Completed (with toast: "Proof uploaded — job marked as Completed")<br>
+• Uploading proof while Pending → auto-transitions to Completed (skips In Progress — vendor already did the work)<br>
+• Clicking "Verify" → transitions to Verified, locks everything, toast: "Verified — ready for billing"<br>
+• Clicking "Reassign" on rejected job → transitions to Pending with new vendor
+</p>
+</div>
+
+</div>
+</body>
+</html>

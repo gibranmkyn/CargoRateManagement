@@ -8,7 +8,7 @@ Logistics operations tool for managing cross-border cargo delivery orders. React
 
 Key principles:
 - **Dense data design** — ops planners come from Excel. Every pixel shows data, not decoration.
-- **3-color status system** — green (completed), red (rejected), gray (everything else). No rainbow.
+- **5-color status system** — gray (pending), blue (in progress), amber (completed), green (verified), red (rejected).
 - **Tables, not cards** — expanded jobs render as sub-table rows, not card grids.
 - **Inline styles** — all components use inline styles matching the mockup CSS exactly. No Tailwind for visual properties.
 - **Sharp radius** — 4-6px for containers, 4px for inputs/chips. No bubbly SaaS radius.
@@ -29,13 +29,29 @@ Each HMW question has an HTML mockup — these are the source of truth for desig
 - Each **Job** = 1 vendor + 1 service + origin/destination (1-service-per-job model)
 - Same vendor can appear multiple times if handling multiple services
 - Jobs are PARALLEL, not sequential
-- Each Job has: `activityLog[]` + `proofDocuments[]`
+- Each Job has: `status` (unified lifecycle) + `activityLog[]` + `proofDocuments[]`
+- **Unified job status:** `Pending → In Progress → Completed (proof uploaded) → Verified (admin sign-off)`
+- Terminal states: `Rejected` (vendor can't fulfill) + `Cancelled`
+- Replaces old dual `status` + `proofStatus` fields — single `status` field now
 - localStorage auto-migrates old multi-service format to seed data
 
+## Pages
+- **Delivery Orders** (`/trips`) — demand-side view grouped by client request. Expandable sub-table with jobs.
+- **Jobs** (`/jobs`) — supply-side view. Flat power table with status pills (Active/Completed/Verified/All), service filters, vendor dropdown with search, Group by toggle (None/Vendor/Service/Date). See HMW-48 mockup.
+- **Rates** (`/rates`) — vendor rate card management (FTL + service fees)
+- **Master Data** (`/master-data`) — Facilities, Regions, Vendors, Customers, Services
+
 ## Key Interaction Patterns
-- **Status changes:** Slide-out panel (click job chip or job row)
-- **Proof upload:** In slide-out panel or job detail page
-- **Rejections:** Alert banner + red row + reassignment in slide-out
+- **Slide-out panel:** Status Action Bar at top adapts per stage (HMW-49). See `design-hypotheses/49-hmw-slideout-status-lifecycle.html`
+  - Pending: `[Start Job →]` button
+  - In Progress: hint "Upload proof to complete →"
+  - Completed: `[✓ Verify]` button
+  - Verified: read-only, everything locked
+  - Rejected: rejection reason + reassign vendor dropdown
+- **Proof upload:** In slide-out → auto-transitions to Completed (even from Pending, skipping In Progress)
+- **Verification:** Admin clicks Verify → Completed → Verified, locks fees/quantities/proof
+- **Rejections:** Red row + reassignment in slide-out → resets to Pending
+- **Editability:** Fees/quantities editable from Pending through Completed. Locked on Verified.
 - **Feedback:** Toast notifications (green/red/gray)
 
 ## PRD

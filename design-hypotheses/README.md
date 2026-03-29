@@ -152,6 +152,32 @@ Every design decision starts with a **"How Might We"** question. We generate 2-3
 **Decision:** Vendor's own fee names per service+location. All fees auto-populate on job creation. Ops removes exceptions (subtractive). L2 Cost IDs become optional tags.
 **File:** `43-hmw-vendor-fee-schedule.html`
 
+### HMW-44: How might we give ops planners a job-level view for vendor coordination, proof chasing, and exception handling?
+**Options:** A) Power Table (flat + filter bar), B) Smart Views (preset tabs: Dispatch/Chasing/Exceptions), C) Vendor Workboard (sidebar + table)
+**Decision:** Power Table with Group By toggle — captures C's UX wins without its vendor-only limitation
+**File:** `44-hmw-job-level-view.html`
+
+### HMW-45: Refined Job View — Power Table with Group By toggle
+**Options:** Group by Vendor (default), Group by None (flat), Group by Service, Group by Date
+**Decision:** Superseded by HMW-46 — at 30 vendors, flat table with proof-first pills is better default than vendor grouping
+**File:** `45-hmw-job-view-refined.html`
+
+### HMW-46: Job View at 30-vendor scale — proof-first navigation
+**Decision:** Superseded by HMW-48 — updated with unified status lifecycle
+**File:** `46-hmw-job-view-at-scale.html`
+
+### HMW-47: Unified job status lifecycle
+**Decision:** Pending → In Progress → Completed (proof uploaded) → Verified (admin sign-off). Plus Rejected + Cancelled. "In Progress" not "In Transit". "Verified" not "Validated".
+**File:** (conceptual — no mockup needed)
+
+### HMW-48: Job View — Final Design (definitive)
+**Decision:** Flat table + unified status pills (Active/Completed/Verified/All). Group by: Vendor as secondary lens. 5 status colors: gray (Pending), blue (In Progress), amber (Completed), green (Verified), red (Rejected). This is the implementation reference.
+**File:** `48-hmw-job-view-final.html`
+
+### HMW-49: Slide-out panel for unified status lifecycle
+**Decision:** Status Action Bar at top of panel — colored bar showing current status + primary action. Adapts per stage: [Start Job] / hint "upload to complete" / [✓ Verify] / "ready for billing" / rejection reason + reassign. Fees/quantities editable until Verified. Proof upload auto-transitions to Completed.
+**File:** `49-hmw-slideout-status-lifecycle.html`
+
 ## Open (backlog)
 
 ### HMW-03: How might we make the "assign vendors to services" step feel natural instead of like filling a form?

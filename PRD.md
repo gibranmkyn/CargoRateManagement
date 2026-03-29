@@ -43,16 +43,27 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 - **US-003:** As an ops planner, I want to see all trips in a list with search/filter by MAWB, customer, and date, so I can quickly find any trip.
 - **US-004:** As an ops planner, I want to expand an order to see all its jobs in a sub-table, so I can see vendor, service, status, and proof count at a glance.
 
-### Job Lifecycle
-- **US-005:** As an ops planner, I want to update a job's status (Pending → In Progress → Completed), so the trip progress is tracked in real-time.
+### Job Lifecycle (Unified Status: Pending → In Progress → Completed → Verified)
+- **US-005:** As an ops planner, I want to click "Start Job" in the slide-out panel to transition a job from Pending → In Progress, so vendor execution progress is tracked.
+- **US-005b:** As an ops planner, I want uploading a proof document to automatically transition a job to Completed (even from Pending, skipping In Progress), so completion is evidence-based.
+- **US-005c:** As an ops admin, I want to click "Verify" in the slide-out panel to transition a Completed job → Verified, locking all fees/quantities/proof, so there's a billing gate before vendor payment.
+- **US-005d:** As an ops planner, I want the slide-out panel to show a Status Action Bar at the top that adapts per stage (Start Job / Upload hint / Verify / Ready for billing / Rejected + reassign), so I always know what action to take next. (HMW-49)
 - **US-006:** As an ops planner, I want to deep-dive into a job detail page to see full route info, vendor details, and all associated documents.
 - **US-007:** As an ops planner, I want every status change to be automatically logged with timestamp and user, so there's an audit trail for billing.
-- **US-008:** As an ops planner, I want to upload proof-of-service documents (photos, PDFs) per job, so Teleport can verify the vendor completed the work before paying them.
+- **US-008:** As an ops planner, I want to upload proof-of-service documents (photos, PDFs) per job, which triggers the job to Completed status.
 - **US-009:** As an ops planner, I want to view the activity log for each job showing all status changes and uploads, so I have a complete history for billing validation.
 
 ### Billing Validation
 - **US-010:** As an ops admin, I want each job to track which services were performed (with L1/L2 cost IDs), so billing can be calculated per service.
-- **US-011:** As an ops admin, I want proof documents attached to jobs, so I can validate completion before approving vendor payment.
+- **US-011:** As an ops admin, I want to verify jobs (Completed → Verified) after reviewing proof documents, gating vendor payment on admin sign-off.
+
+### Jobs Page (supply-side view — HMW-48)
+- **US-040:** As an ops planner, I want a Jobs page showing all vendor assignments across delivery orders in a flat table, so I can focus on vendor execution without navigating individual DOs.
+- **US-041:** As an ops planner, I want status filter pills (Active/Completed/Verified/All) on the Jobs page, so I can quickly focus on work that needs attention.
+- **US-042:** As an ops planner, I want to filter jobs by service type (FM/EC/CS/CR/OH), vendor, and date, so I can answer specific operational questions.
+- **US-043:** As an ops planner, I want a "Group by" toggle (None/Vendor/Service/Date) so I can batch vendor calls by grouping jobs under vendor headers.
+- **US-044:** As an ops planner, I want vendor group headers to show status breakdown badges (e.g., "2 in progress · 3 pending") so I know the conversation agenda before expanding.
+- **US-045:** As an ops planner, I want rejected jobs to appear at the top of the Active view with red highlighting, so I handle fires first.
 
 ### Dashboard
 - **US-012:** As an ops planner, I want to see summary cards (total trips, active jobs, completed jobs, pending jobs) at the top of the trip list, so I get an instant health check of operations.
@@ -85,12 +96,15 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 
 ## Key Design Decisions
 1. **1 job = 1 service:** Each job has exactly 1 vendor + 1 service code + origin/destination. Same vendor can appear multiple times. Each job is a billable line item.
-2. **Dense data design:** 40px nav, stats bar (no dashboard cards), 8px table cells, 4-6px radius, 3-color status system (green/red/gray).
-3. **Sub-table for expanded jobs:** Not cards. Expanded orders show a nested table with Job/Vendor/Service/Route/Status/Proofs columns.
-4. **Slide-out panel for actions:** Status change + proof upload + activity log in one panel without navigating away.
-5. **Activity log per job:** Every status change and document upload is auto-logged for billing audit trail.
-6. **Proof of service:** Document upload per job enables billing validation without HU-level scan data.
-7. **localStorage for Phase 1:** Browser-only persistence. Auto-migrates stale data formats.
+2. **Dense data design:** 40px nav, stats bar (no dashboard cards), 8px table cells, 4-6px radius.
+3. **5-color status system:** Gray (pending), blue (in progress), amber (completed/needs verification), green (verified), red (rejected).
+4. **Unified job status lifecycle:** Pending → In Progress → Completed (proof uploaded) → Verified (admin sign-off). Replaces old dual status + proofStatus fields. Researched Flexport, project44, Uber Freight, TAI TMS. (HMW-47)
+5. **Two complementary views:** Delivery Orders (demand-side, grouped by client request) + Jobs (supply-side, flat table with vendor/service/status focus). (HMW-44→48)
+6. **Sub-table for expanded jobs:** Not cards. Expanded orders show a nested table.
+7. **Slide-out panel for actions:** Proof upload + verification + fee management + activity log in one panel.
+8. **Activity log per job:** Every status change and document upload is auto-logged for billing audit trail.
+9. **Proof upload = Completed:** Document upload triggers status transition to Completed. No separate proof status field.
+10. **localStorage for Phase 1:** Browser-only persistence. Auto-migrates stale data formats.
 
 ## Design Process Principles
 - **Never anchor to current solution.** Every screen can be redesigned if it produces better UX.
@@ -157,10 +171,7 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 - [x] Removed pickup date urgency coloring
 
 ### Iteration 8 — Proof-Centric + Brand (completed)
-- [x] Proof-centric job lifecycle replacing manual status (HMW-30):
-  - Awaiting proof → Proof uploaded (auto) → Validated → Disputed
-  - Only 2 manual actions: Validate and Dispute
-  - No more Pending/In Progress/Completed/Rejected status picker
+- [x] Proof-centric job lifecycle (HMW-30) — later replaced by unified status in Iteration 10
 - [x] Rate-locked fees: removed free-text "+ Add fee", all fees from rate cards (HMW-30)
 - [x] Smart default filter: Active/All/Completed with Active as default (HMW-28)
 - [x] Date period picker for All/Completed: Today/This week/This month/Last month (HMW-29)
@@ -183,6 +194,26 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 - [x] CSV download for current rates
 - [x] Activity log for rate changes (CSV uploads tracked with timestamp/user/filename)
 - [x] Master Data tabs: Facilities | Regions | Vendors | Customers | Services
+
+### Iteration 10 — Jobs Page + Unified Status Lifecycle (planned)
+- [ ] Unified job status: replace dual `status` + `proofStatus` with single `status` field (HMW-47)
+  - `Pending | In Progress | Completed | Verified | Rejected | Cancelled`
+  - Proof upload triggers Pending/In Progress → Completed
+  - Admin verify action triggers Completed → Verified (billing gate)
+  - Vendor rejection → Rejected (reassignment resets to Pending)
+- [ ] 5-color status system: gray/blue/amber/green/red replacing old 3-color (HMW-48)
+- [ ] Jobs page: flat power table at `/jobs` route (HMW-48)
+  - Status pills: Active | Completed | Verified | All
+  - Service pills: FM | EC | CS | CR | OH
+  - Vendor dropdown with search (30+ vendors)
+  - Group by toggle: None (default) | Vendor | Service | Date
+  - Group by: Vendor — collapsed headers sorted by most outstanding, status badges
+  - Default sort within Active: Rejected → In Progress → Pending
+  - Click job row → slide-out panel. Click DO link → Delivery Orders view.
+- [ ] Nav update: Delivery Orders | **Jobs** | Rates | Master Data
+- [ ] Update Delivery Orders sub-table to use new status chips
+- [ ] Update slide-out panel: proof upload triggers Completed, Verify button triggers Verified
+- [ ] Update seed data with unified status values
 
 ### Known Scaling Limitations (address in Phase 3)
 - **Vendor selector pills** — works for 5-8 vendors but breaks at 30+. Needs to become a searchable dropdown or sidebar list.

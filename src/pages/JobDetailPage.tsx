@@ -2,7 +2,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useRef } from 'react';
 import { ArrowLeft, ArrowRight, Upload, FileText, Image, X, Clock, MapPin, User, Briefcase, ChevronRight } from 'lucide-react';
 import { useTrips } from '../context/TripContext';
-import type { ProofDocument } from '../data/mockData';
+import type { ProofDocument, JobStatus } from '../data/mockData';
 import { formatCurrency } from '../data/mockData';
 import ServiceTag from '../components/trips/ServiceTag';
 
@@ -26,7 +26,7 @@ function fmtDateShort(dt: string) {
 export default function JobDetailPage() {
   const { tripId, jobId } = useParams<{ tripId: string; jobId: string }>();
   const navigate = useNavigate();
-  const { trips, addProofDocument, removeProofDocument, addActivityLog, validateJob, disputeJob } = useTrips();
+  const { trips, addProofDocument, removeProofDocument, addActivityLog, verifyJob } = useTrips();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const trip = trips.find((t) => t.id === tripId);
@@ -83,11 +83,13 @@ export default function JobDetailPage() {
     );
   }
 
-  const PROOF_LABELS: Record<string, { label: string; color: string; bg: string; border: string; icon: string }> = {
-    awaiting: { label: 'Awaiting proof', color: '#9ca3af', bg: '#f3f4f6', border: '#e5e7eb', icon: '○' },
-    uploaded: { label: 'Proof uploaded', color: '#152CFF', bg: 'rgba(21,44,255,0.04)', border: 'rgba(21,44,255,0.15)', icon: '📄' },
-    validated: { label: 'Validated', color: '#059669', bg: '#f0fdf4', border: '#a7f3d0', icon: '✓' },
-    disputed: { label: 'Disputed', color: '#dc2626', bg: '#fef2f2', border: '#fecaca', icon: '✕' },
+  const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; border: string; icon: string }> = {
+    Pending: { label: 'Pending', color: '#9ca3af', bg: '#f3f4f6', border: '#e5e7eb', icon: '○' },
+    'In Progress': { label: 'In Progress', color: '#2563eb', bg: 'rgba(37,99,235,0.04)', border: 'rgba(37,99,235,0.15)', icon: '◉' },
+    Completed: { label: 'Completed', color: '#b45309', bg: 'rgba(180,83,9,0.04)', border: 'rgba(180,83,9,0.15)', icon: '📄' },
+    Verified: { label: 'Verified', color: '#059669', bg: '#f0fdf4', border: '#a7f3d0', icon: '✓' },
+    Rejected: { label: 'Rejected', color: '#dc2626', bg: '#fef2f2', border: '#fecaca', icon: '✕' },
+    Cancelled: { label: 'Cancelled', color: '#9ca3af', bg: '#f3f4f6', border: '#e5e7eb', icon: '—' },
   };
 
   function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -194,7 +196,7 @@ export default function JobDetailPage() {
             >
               {job.vendor.name}
             </h1>
-            {(() => { const ps = PROOF_LABELS[job.proofStatus] ?? PROOF_LABELS.awaiting; return <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600, background: ps.bg, border: `1px solid ${ps.border}`, color: ps.color }}>{ps.icon} {ps.label}</span>; })()}
+            {(() => { const ps = STATUS_LABELS[job.status] ?? STATUS_LABELS.Pending; return <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600, background: ps.bg, border: `1px solid ${ps.border}`, color: ps.color }}>{ps.icon} {ps.label}</span>; })()}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#9ca3af' }}>
             <span
@@ -548,18 +550,15 @@ export default function JobDetailPage() {
         <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 16 }}>
           {/* Proof Actions + Fee Breakdown */}
           <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: 16 }}>
-            {/* Validate / Dispute */}
-            {job.proofStatus === 'uploaded' && (
+            {/* Verify / Dispute */}
+            {job.status === 'Completed' && (
               <div style={{ marginBottom: 16 }}>
-                <h3 style={sectionTitle}>Validate Proof</h3>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button onClick={() => { validateJob(trip.id, job.id); addActivityLog(trip.id, job.id, { id: `l${Date.now()}`, timestamp: new Date().toISOString().replace('T',' ').slice(0,16), action: 'Proof validated', user: 'Ops Admin' }); }} style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: 'none', background: '#059669', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>✓ Validate</button>
-                  <button onClick={() => { disputeJob(trip.id, job.id, 'Proof insufficient'); addActivityLog(trip.id, job.id, { id: `l${Date.now()}`, timestamp: new Date().toISOString().replace('T',' ').slice(0,16), action: 'Proof disputed', user: 'Ops Admin' }); }} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>Dispute</button>
-                </div>
+                <h3 style={sectionTitle}>Verify Job</h3>
+                <button onClick={() => { verifyJob(trip.id, job.id); addActivityLog(trip.id, job.id, { id: `l${Date.now()}`, timestamp: new Date().toISOString().replace('T',' ').slice(0,16), action: 'Job verified', user: 'Ops Admin' }); }} style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: 'none', background: '#059669', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>✓ Verify</button>
               </div>
             )}
-            {job.proofStatus === 'validated' && (
-              <div style={{ padding: '8px 12px', background: '#f0fdf4', border: '1px solid #a7f3d0', borderRadius: 6, fontSize: 11, fontWeight: 600, color: '#059669', textAlign: 'center' as const, marginBottom: 16 }}>✓ Validated — ready for payment</div>
+            {job.status === 'Verified' && (
+              <div style={{ padding: '8px 12px', background: '#f0fdf4', border: '1px solid #a7f3d0', borderRadius: 6, fontSize: 11, fontWeight: 600, color: '#059669', textAlign: 'center' as const, marginBottom: 16 }}>✓ Verified — ready for payment</div>
             )}
 
             {/* Fee Breakdown */}

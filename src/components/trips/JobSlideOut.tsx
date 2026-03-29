@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { ArrowRight, MapPin, Upload, FileText, Image, X, Clock, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Job, Trip, ProofDocument } from '../../data/mockData';
+// ProofStatus removed — unified status lifecycle (TODO-020)
 import { formatCurrency } from '../../data/mockData';
 import ServiceTag from './ServiceTag';
 
@@ -21,19 +22,21 @@ function fmtDateShort(dt: string) {
 
 const sectionTitle: React.CSSProperties = { fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 10 };
 
-const PROOF_LABELS = {
-  awaiting: { label: 'Awaiting proof', color: '#9ca3af', bg: '#f3f4f6', border: '#e5e7eb', icon: '○' },
-  uploaded: { label: 'Proof uploaded', color: '#152CFF', bg: 'rgba(21,44,255,0.04)', border: 'rgba(21,44,255,0.15)', icon: '📄' },
-  validated: { label: 'Validated', color: '#059669', bg: '#f0fdf4', border: '#a7f3d0', icon: '✓' },
-  disputed: { label: 'Disputed', color: '#dc2626', bg: '#fef2f2', border: '#fecaca', icon: '✕' },
+// Status-based labels (unified lifecycle — TODO-020)
+const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; border: string; icon: string }> = {
+  Pending: { label: 'Pending', color: '#9ca3af', bg: '#f3f4f6', border: '#e5e7eb', icon: '○' },
+  'In Progress': { label: 'In Progress', color: '#2563eb', bg: 'rgba(37,99,235,0.04)', border: 'rgba(37,99,235,0.15)', icon: '◉' },
+  Completed: { label: 'Completed', color: '#b45309', bg: 'rgba(180,83,9,0.04)', border: 'rgba(180,83,9,0.15)', icon: '📄' },
+  Verified: { label: 'Verified', color: '#059669', bg: '#f0fdf4', border: '#a7f3d0', icon: '✓' },
+  Rejected: { label: 'Rejected', color: '#dc2626', bg: '#fef2f2', border: '#fecaca', icon: '✕' },
+  Cancelled: { label: 'Cancelled', color: '#9ca3af', bg: '#f3f4f6', border: '#e5e7eb', icon: '—' },
 };
 
 interface Props {
   job: Job; trip: Trip; jobIndex: number;
   onUploadProof: (file: File) => void;
   onRemoveProof: (docId: string) => void;
-  onValidate?: () => void;
-  onDispute?: (reason: string) => void;
+  onVerify?: () => void;
   onUpdateFeeQty?: (feeId: string, quantity: number) => void;
   onToggleFee?: (feeId: string) => void;
   onUpdateJobQty?: (qtys: { jobBags?: number; jobWeight?: number; jobVolume?: number }) => void;
@@ -43,15 +46,14 @@ function docIcon(doc: ProofDocument) {
   return doc.type.startsWith('image/') ? <Image size={12} style={{ color: '#152CFF' }} /> : <FileText size={12} style={{ color: '#152CFF' }} />;
 }
 
-export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemoveProof, onValidate, onDispute, onUpdateFeeQty, onToggleFee, onUpdateJobQty }: Props) {
+export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemoveProof, onVerify, onUpdateFeeQty, onToggleFee, onUpdateJobQty }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const log = job.activityLog ?? [];
   const proofs = job.proofDocuments ?? [];
   const fees = job.fees ?? [];
-  const isValidated = job.proofStatus === 'validated';
-  const isDisputed = job.proofStatus === 'disputed';
+  const isVerified = job.status === 'Verified';
   const hasProofs = proofs.length > 0;
-  const ps = PROOF_LABELS[job.proofStatus] ?? PROOF_LABELS.awaiting;
+  const ps = STATUS_LABELS[job.status] ?? STATUS_LABELS.Pending;
 
   function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -86,14 +88,6 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
         </div>
       </div>
 
-      {/* Dispute reason */}
-      {isDisputed && job.disputeReason && (
-        <div style={{ padding: 10, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6 }}>
-          <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#dc2626', marginBottom: 3 }}>Dispute Reason</div>
-          <div style={{ fontSize: 11, fontWeight: 600, color: '#dc2626' }}>{job.disputeReason}</div>
-        </div>
-      )}
-
       {/* Route */}
       <div>
         <div style={sectionTitle}>Route</div>
@@ -123,7 +117,7 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
                   <div style={{ fontSize: 11, fontWeight: 500, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.name}</div>
                   <div style={{ fontSize: 9, color: '#9ca3af' }}>{fmtDateTime(doc.uploadedAt)}</div>
                 </div>
-                {!isValidated && (
+                {!isVerified && (
                   <button onClick={() => onRemoveProof(doc.id)} style={{ padding: 2, color: '#d1d5db', background: 'none', border: 'none', cursor: 'pointer' }}>
                     <X size={10} />
                   </button>
@@ -138,7 +132,7 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
         )}
 
         {/* Upload button */}
-        {!isValidated && (
+        {!isVerified && (
           <label style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '8px 10px',
             fontSize: 11, fontWeight: 600, color: '#152CFF', background: 'rgba(21,44,255,0.04)',
@@ -151,48 +145,45 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
         )}
 
         {/* === VALIDATE / DISPUTE — only when proof is uploaded === */}
-        {hasProofs && !isValidated && (
+        {job.status === 'Completed' && hasProofs && (
           <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={() => onValidate?.()} style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: 'none', background: '#059669', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-              ✓ Validate Proof
-            </button>
-            <button onClick={() => onDispute?.('Proof insufficient')} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-              Dispute
+            <button onClick={() => onVerify?.()} style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: 'none', background: '#059669', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+              ✓ Verify
             </button>
           </div>
         )}
 
-        {isValidated && (
+        {isVerified && (
           <div style={{ padding: '8px 12px', background: '#f0fdf4', border: '1px solid #a7f3d0', borderRadius: 6, fontSize: 11, fontWeight: 600, color: '#059669', textAlign: 'center' }}>
-            ✓ Proof validated — ready for payment
+            ✓ Verified — ready for payment
           </div>
         )}
       </div>
 
-      {/* Quantities (editable until validated) */}
+      {/* Quantities (editable until verified) */}
       <div>
         <div style={sectionTitle}>
           Quantities
-          {!isValidated && <span style={{ fontSize: 8, fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: '#b45309', marginLeft: 4 }}>(editable until validated)</span>}
+          {!isVerified && <span style={{ fontSize: 8, fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: '#b45309', marginLeft: 4 }}>(editable until verified)</span>}
         </div>
         <div style={{ display: 'flex', gap: 8, padding: '8px 10px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 6 }}>
           <div>
             <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Bags</div>
-            {isValidated
+            {isVerified
               ? <div style={{ ...inputStyle, border: 'none', padding: 0, background: 'none' }}>{job.jobBags ?? trip.bags}</div>
               : <input type="number" value={job.jobBags ?? trip.bags} onChange={(e) => onUpdateJobQty?.({ jobBags: Number(e.target.value) || 0 })} style={{ ...inputStyle, width: 50 }} />
             }
           </div>
           <div>
             <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Weight (kg)</div>
-            {isValidated
+            {isVerified
               ? <div style={{ ...inputStyle, border: 'none', padding: 0, background: 'none' }}>{job.jobWeight ?? trip.weight}</div>
               : <input type="number" value={job.jobWeight ?? trip.weight} onChange={(e) => onUpdateJobQty?.({ jobWeight: Number(e.target.value) || 0 })} style={{ ...inputStyle, width: 70 }} />
             }
           </div>
           <div>
             <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Volume (CBM)</div>
-            {isValidated
+            {isVerified
               ? <div style={{ ...inputStyle, border: 'none', padding: 0, background: 'none' }}>{job.jobVolume ?? 0}</div>
               : <input type="number" step="0.1" value={job.jobVolume ?? 0} onChange={(e) => onUpdateJobQty?.({ jobVolume: Number(e.target.value) || 0 })} style={{ ...inputStyle, width: 60 }} />
             }
@@ -225,7 +216,7 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
                   return (
                     <tr key={fee.id} style={{ opacity: isActive ? 1 : 0.4 }}>
                       <td style={{ padding: '4px 4px', textAlign: 'center', borderBottom: '1px solid #f3f4f6' }}>
-                        {!isValidated && (
+                        {!isVerified && (
                           <button onClick={() => onToggleFee?.(fee.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, fontSize: 12, color: isActive ? '#152CFF' : '#d1d5db' }}>
                             {isActive ? '✓' : '+'}
                           </button>
@@ -239,7 +230,7 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
                       </td>
                       <td style={{ padding: '4px 8px', textAlign: 'center', borderBottom: '1px solid #f3f4f6' }}>
                         {isActive ? (
-                          isValidated
+                          isVerified
                             ? <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10 }}>{fee.quantity}</span>
                             : <input type="number" value={fee.quantity} onChange={(e) => onUpdateFeeQty?.(fee.id, Number(e.target.value) || 0)} style={{ ...inputStyle, width: 40, textAlign: 'center' }} />
                         ) : <span style={{ color: '#d1d5db' }}>—</span>}
