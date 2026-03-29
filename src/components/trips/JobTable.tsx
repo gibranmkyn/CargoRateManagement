@@ -4,7 +4,7 @@ import type { Job, JobStatus } from '../../data/mockData';
 import StatusBadge from './StatusBadge';
 import ServiceTag from './ServiceTag';
 
-const allStatuses: JobStatus[] = ['Pending', 'In Progress', 'Completed', 'Verified', 'Rejected', 'Cancelled'];
+const allStatuses: JobStatus[] = ['Pending', 'In Progress', 'Completed', 'Verified', 'Cancelled', 'Cancelled'];
 
 function fmt(dt: string) {
   const d = new Date(dt.replace(' ', 'T'));
@@ -79,7 +79,7 @@ export default function JobTable({ jobs, tripId, onStatusChange }: JobTableProps
                 ${job.status === 'Verified' ? 'bg-emerald-100 text-emerald-700'
                 : job.status === 'Completed' ? 'bg-amber-100 text-amber-700'
                 : job.status === 'In Progress' ? 'bg-blue-100 text-blue-700'
-                : job.status === 'Rejected' ? 'bg-red-100 text-red-600'
+                : job.status === 'Cancelled' ? 'bg-red-100 text-red-600'
                 : 'bg-gray-100 text-gray-400 border border-gray-200'}`}>
                 {i + 1}
               </span>

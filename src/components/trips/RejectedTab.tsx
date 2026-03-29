@@ -24,7 +24,7 @@ export default function RejectedTab() {
   const rejected: RejectedJob[] = [];
   trips.forEach((trip) => {
     trip.jobs.forEach((job) => {
-      if (job.status === 'Rejected') {
+      if (job.status === 'Cancelled') {
         rejected.push({
           ...job,
           tripId: trip.id,
@@ -44,7 +44,7 @@ export default function RejectedTab() {
     updateJob(job.tripId, job.id, {
       vendor: { code: vendor.code, name: vendor.name },
       status: 'Pending',
-      rejectionReason: undefined,
+      cancelReason: undefined,
     });
   }
 
@@ -92,7 +92,7 @@ export default function RejectedTab() {
               </div>
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-[var(--color-ink-faint)] mb-1">Reason</div>
-                <div className="font-medium text-red-600">{job.rejectionReason || '—'}</div>
+                <div className="font-medium text-red-600">{job.cancelReason || '—'}</div>
               </div>
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-[var(--color-ink-faint)] mb-1">Services</div>

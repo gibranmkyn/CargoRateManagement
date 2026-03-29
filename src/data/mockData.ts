@@ -1,4 +1,4 @@
-export type JobStatus = 'Pending' | 'In Progress' | 'Completed' | 'Verified' | 'Rejected' | 'Cancelled';
+export type JobStatus = 'Pending' | 'In Progress' | 'Completed' | 'Verified' | 'Cancelled';
 /** @deprecated Use JobStatus instead — unified status lifecycle (TODO-020) */
 export type ProofStatus = 'awaiting' | 'uploaded' | 'validated';
 
@@ -72,7 +72,7 @@ export interface Job {
   status: JobStatus;
   duration: string | null;
   execution: string | null;
-  rejectionReason?: string;
+  cancelReason?: string;
   activityLog: ActivityLogEntry[];
   proofDocuments: ProofDocument[];
   // Phase 2: Rate & billing
@@ -351,7 +351,7 @@ export const seedTrips: Trip[] = [
     createdAt: '10 Mar 2026, 07:00', deliveryDate: '2026-03-10',
     priority: true,
     jobs: [
-      { id: 'DO-20260310-003-J01', vendor: { code: 'V-001', name: 'HaleSun' }, origin: { location: 'Qianhai Free Trade Zone', date: '2026-03-10 08:00' }, destination: { location: 'Huanggang Port', date: '2026-03-10 12:00' }, service: { code: 'FM', label: 'Trucking' }, status: 'Rejected', duration: null, execution: '2026-03-10 08:10', rejectionReason: 'Vehicle breakdown', activityLog: [log('l1','2026-03-10 07:00','Job created'), log('l2','2026-03-10 09:30','Status → Rejected','Ops Admin','Vehicle breakdown')], proofDocuments: [], fees: [], jobBags: 36, jobWeight: 1500 },
+      { id: 'DO-20260310-003-J01', vendor: { code: 'V-001', name: 'HaleSun' }, origin: { location: 'Qianhai Free Trade Zone', date: '2026-03-10 08:00' }, destination: { location: 'Huanggang Port', date: '2026-03-10 12:00' }, service: { code: 'FM', label: 'Trucking' }, status: 'Cancelled', duration: null, execution: '2026-03-10 08:10', cancelReason: 'Vehicle breakdown', activityLog: [log('l1','2026-03-10 07:00','Job created'), log('l2','2026-03-10 09:30','Status → Rejected','Ops Admin','Vehicle breakdown')], proofDocuments: [], fees: [], jobBags: 36, jobWeight: 1500 },
       { id: 'DO-20260310-003-J02', vendor: { code: 'V-003', name: 'Gonda' }, origin: { location: 'Huanggang Port', date: '2026-03-10 13:00' }, destination: { location: 'Huanggang Port', date: '2026-03-10 16:00' }, service: { code: 'EC', label: 'Export Custom Clearance' }, status: 'Pending', duration: null, execution: null, activityLog: [log('l3','2026-03-10 07:00','Job created')], proofDocuments: [], fees: [], jobBags: 36, jobWeight: 1500 },
     ],
   },
@@ -438,7 +438,7 @@ export const seedTrips: Trip[] = [
     createdAt: '13 Mar 2026, 06:30', deliveryDate: '2026-03-14',
     priority: true,
     jobs: [
-      { id: 'DO-20260313-009-J01', vendor: { code: 'V-004', name: 'ThaiKee' }, origin: { location: 'Dongguan Factory', date: '2026-03-13 08:00' }, destination: { location: 'Shenzhen Bay Hub', date: '2026-03-13 12:00' }, service: { code: 'FM', label: 'Trucking' }, status: 'Rejected', duration: null, execution: '2026-03-13 08:10', rejectionReason: 'Capacity full', activityLog: [log('l1','2026-03-13 06:30','Job created'), log('l2','2026-03-13 10:00','Status → Rejected','Ops Admin','Capacity full')], proofDocuments: [], fees: [], jobBags: 20, jobWeight: 1100 },
+      { id: 'DO-20260313-009-J01', vendor: { code: 'V-004', name: 'ThaiKee' }, origin: { location: 'Dongguan Factory', date: '2026-03-13 08:00' }, destination: { location: 'Shenzhen Bay Hub', date: '2026-03-13 12:00' }, service: { code: 'FM', label: 'Trucking' }, status: 'Cancelled', duration: null, execution: '2026-03-13 08:10', cancelReason: 'Capacity full', activityLog: [log('l1','2026-03-13 06:30','Job created'), log('l2','2026-03-13 10:00','Status → Rejected','Ops Admin','Capacity full')], proofDocuments: [], fees: [], jobBags: 20, jobWeight: 1100 },
       { id: 'DO-20260313-009-J02', vendor: { code: 'V-002', name: 'SevenSeas' }, origin: { location: 'Shenzhen Bay Hub', date: '2026-03-13 13:00' }, destination: { location: 'SZX Airport', date: '2026-03-13 16:00' }, service: { code: 'EC', label: 'Export Custom Clearance' }, status: 'Pending', duration: null, execution: null, activityLog: [log('l3','2026-03-13 06:30','Job created')], proofDocuments: [], fees: [], jobBags: 20, jobWeight: 1100 },
       { id: 'DO-20260313-009-J03', vendor: { code: 'V-002', name: 'SevenSeas' }, origin: { location: 'SZX Airport', date: '2026-03-13 17:00' }, destination: { location: 'SZX Airport', date: '2026-03-13 19:00' }, service: { code: 'CS', label: 'Cargo Submission' }, status: 'Pending', duration: null, execution: null, activityLog: [log('l4','2026-03-13 06:30','Job created')], proofDocuments: [], fees: [], jobBags: 20, jobWeight: 1100 },
     ],

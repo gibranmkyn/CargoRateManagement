@@ -28,7 +28,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; 
   'In Progress': { label: 'In Progress', color: '#2563eb', bg: 'rgba(37,99,235,0.04)', border: 'rgba(37,99,235,0.15)', icon: '◉' },
   Completed: { label: 'Completed', color: '#b45309', bg: 'rgba(180,83,9,0.04)', border: 'rgba(180,83,9,0.15)', icon: '📄' },
   Verified: { label: 'Verified', color: '#059669', bg: '#f0fdf4', border: '#a7f3d0', icon: '✓' },
-  Rejected: { label: 'Rejected', color: '#dc2626', bg: '#fef2f2', border: '#fecaca', icon: '✕' },
+  Cancelled: { label: 'Cancelled', color: '#dc2626', bg: '#fef2f2', border: '#fecaca', icon: '✕' },
   Cancelled: { label: 'Cancelled', color: '#9ca3af', bg: '#f3f4f6', border: '#e5e7eb', icon: '—' },
 };
 
@@ -87,23 +87,23 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
       </div>
 
       {/* Status Action Bar */}
-      {job.status === 'Rejected' && (
+      {job.status === 'Cancelled' && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 6, padding: '10px 12px', borderRadius: 6, background: '#fef2f2', border: '1px solid #fecaca' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 4, fontSize: 10, fontWeight: 700, background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626' }}>
-              <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#dc2626', display: 'inline-block' }} /> Rejected
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#dc2626', display: 'inline-block' }} /> Cancelled
             </span>
           </div>
-          {job.rejectionReason && (
+          {job.cancelReason && (
             <div style={{ fontSize: 10, color: '#dc2626', padding: '6px 8px', background: '#fff', borderRadius: 4, border: '1px solid #fecaca' }}>
-              {job.rejectionReason}
+              {job.cancelReason}
             </div>
           )}
         </div>
       )}
 
       {/* Reassign Vendor — only for rejected jobs */}
-      {job.status === 'Rejected' && onReassign && (
+      {job.status === 'Cancelled' && onReassign && (
         <div>
           <div style={sectionTitle}>Reassign Vendor</div>
           <div style={{ display: 'flex', gap: 6 }}>
@@ -119,7 +119,7 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
         </div>
       )}
 
-      {job.status !== 'Rejected' && (
+      {job.status !== 'Cancelled' && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 6,
           ...(job.status === 'Pending' ? { background: '#f9fafb', border: '1px solid #e5e7eb' } :

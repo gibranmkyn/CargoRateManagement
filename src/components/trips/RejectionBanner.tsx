@@ -8,17 +8,17 @@ interface RejectionBannerProps {
 export default function RejectionBanner({ onViewRejected }: RejectionBannerProps) {
   const { trips } = useTrips();
 
-  const rejected: { customerName: string; vendorName: string; reason: string }[] = [];
+  const cancelled: { customerName: string; vendorName: string; reason: string }[] = [];
   trips.forEach((t) => {
     t.jobs.forEach((j) => {
-      if (j.status === 'Rejected') {
-        rejected.push({ customerName: t.customer.name, vendorName: j.vendor.name, reason: j.rejectionReason || 'No reason' });
+      if (j.status === 'Cancelled') {
+        cancelled.push({ customerName: t.customer.name, vendorName: j.vendor.name, reason: j.rejectionReason || 'No reason' });
       }
     });
   });
 
-  if (rejected.length === 0) return null;
-  const first = rejected[0];
+  if (cancelled.length === 0) return null;
+  const first = cancelled[0];
 
   return (
     <div style={{
@@ -34,11 +34,11 @@ export default function RejectionBanner({ onViewRejected }: RejectionBannerProps
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: '#dc2626' }}>
-          {rejected.length} rejected assignment{rejected.length !== 1 ? 's' : ''} need{rejected.length === 1 ? 's' : ''} reassignment
+          {cancelled.length} cancelled assignment{cancelled.length !== 1 ? 's' : ''} need{cancelled.length === 1 ? 's' : ''} reassignment
         </div>
         <div style={{ fontSize: 11, color: '#92400e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {first.customerName} — {first.vendorName} ({first.reason})
-          {rejected.length > 1 && ` + ${rejected.length - 1} more`}
+          {cancelled.length > 1 && ` + ${cancelled.length - 1} more`}
         </div>
       </div>
       <button

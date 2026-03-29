@@ -22,7 +22,7 @@ function getStatusColors(status: JobStatus): { border: string; bg: string; text:
     case 'In Progress': return { border: 'rgba(21,44,255,0.15)', bg: 'rgba(21,44,255,0.04)', text: '#152CFF', dot: '#152CFF' };
     case 'Completed':   return { border: '#fde68a', bg: '#fefce8', text: '#a16207', dot: '#a16207' };
     case 'Verified':    return { border: '#a7f3d0', bg: '#f0fdf4', text: '#059669', dot: '#059669' };
-    case 'Rejected':    return { border: '#fecaca', bg: '#fef2f2', text: '#dc2626', dot: '#dc2626' };
+    case 'Cancelled':    return { border: '#fecaca', bg: '#fef2f2', text: '#dc2626', dot: '#dc2626' };
     case 'Cancelled':
     case 'Pending':
     default:            return { border: '#e5e7eb', bg: '#f9fafb', text: '#9ca3af', dot: '#9ca3af' };
@@ -125,7 +125,7 @@ export default function TripsPage() {
   const onReassign = useCallback((tripId: string, jobId: string, vendorCode: string) => {
     const v = vendors.find((x) => x.code === vendorCode);
     if (!v) return;
-    updateJob(tripId, jobId, { vendor: { code: v.code, name: v.name }, status: 'Pending', rejectionReason: undefined });
+    updateJob(tripId, jobId, { vendor: { code: v.code, name: v.name }, status: 'Pending', cancelReason: undefined });
     addActivityLog(tripId, jobId, { id: `l${Date.now()}`, timestamp: new Date().toISOString().replace('T',' ').slice(0,16), action: `Reassigned \u2192 ${v.name}`, user: 'Ops Admin' });
     toast.success(`Reassigned to ${v.name}`);
     setPanelIds(null);
@@ -139,7 +139,7 @@ export default function TripsPage() {
     inProgress: allJobs.filter((j) => j.status === 'In Progress').length,
     completed: allJobs.filter((j) => j.status === 'Completed').length,
     verified: allJobs.filter((j) => j.status === 'Verified').length,
-    rejected: allJobs.filter((j) => j.status === 'Rejected').length,
+    cancelled: allJobs.filter((j) => j.status === 'Cancelled').length,
   };
 
   // -- Table header style --
@@ -159,9 +159,9 @@ export default function TripsPage() {
         <span style={{ color: '#a16207', fontWeight: 600 }}>{stats.completed} completed</span>
         <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
         <span style={{ color: '#059669', fontWeight: 600 }}>{stats.verified} verified</span>
-        {stats.rejected > 0 && (<>
+        {stats.cancelled > 0 && (<>
           <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-          <span style={{ color: '#dc2626', fontWeight: 600 }}>{stats.rejected} rejected</span>
+          <span style={{ color: '#dc2626', fontWeight: 600 }}>{stats.cancelled} cancelled</span>
         </>)}
       </div>
 
@@ -256,7 +256,7 @@ export default function TripsPage() {
           <tbody>
             {paginatedFiltered.length > 0 ? paginatedFiltered.flatMap((trip) => {
               const isExpanded = expandedId === trip.id;
-              const hasRejected = trip.jobs.some((j) => j.status === 'Rejected');
+              const hasRejected = trip.jobs.some((j) => j.status === 'Cancelled');
               const route = buildRoute(trip);
 
               const rows = [

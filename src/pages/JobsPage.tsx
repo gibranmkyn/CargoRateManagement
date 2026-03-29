@@ -36,7 +36,7 @@ function getStatusChipStyle(status: JobStatus): { bg: string; border: string; te
     case 'In Progress': return { bg: 'rgba(21,44,255,0.04)', border: 'rgba(21,44,255,0.15)', text: '#152CFF', dot: '#152CFF' };
     case 'Completed': return { bg: '#fefce8', border: '#fde68a', text: '#a16207', dot: '#a16207' };
     case 'Verified': return { bg: '#f0fdf4', border: '#a7f3d0', text: '#059669', dot: '#059669' };
-    case 'Rejected': return { bg: '#fef2f2', border: '#fecaca', text: '#dc2626', dot: '#dc2626' };
+    case 'Cancelled': return { bg: '#fef2f2', border: '#fecaca', text: '#dc2626', dot: '#dc2626' };
     default: return { bg: '#f9fafb', border: '#e5e7eb', text: '#9ca3af', dot: '#9ca3af' };
   }
 }
@@ -129,7 +129,7 @@ export default function JobsPage() {
     inProgress: allJobs.filter((j) => j.status === 'In Progress').length,
     completed: allJobs.filter((j) => j.status === 'Completed').length,
     verified: allJobs.filter((j) => j.status === 'Verified').length,
-    rejected: allJobs.filter((j) => j.status === 'Rejected').length,
+    cancelled: allJobs.filter((j) => j.status === 'Cancelled').length,
   }), [allJobs]);
 
   // Filter jobs
@@ -139,7 +139,7 @@ export default function JobsPage() {
     // Status filter
     switch (statusFilter) {
       case 'active':
-        jobs = jobs.filter((j) => j.status === 'Pending' || j.status === 'In Progress' || j.status === 'Rejected');
+        jobs = jobs.filter((j) => j.status === 'Pending' || j.status === 'In Progress' || j.status === 'Cancelled');
         break;
       case 'completed':
         jobs = jobs.filter((j) => j.status === 'Completed');
@@ -183,7 +183,7 @@ export default function JobsPage() {
     if (vendorFilter) jobs = jobs.filter((j) => j.vendor.code === vendorFilter);
     if (datePeriod !== 'all-time') jobs = jobs.filter((j) => isInDateRange(j, datePeriod));
     return {
-      active: jobs.filter((j) => j.status === 'Pending' || j.status === 'In Progress' || j.status === 'Rejected').length,
+      active: jobs.filter((j) => j.status === 'Pending' || j.status === 'In Progress' || j.status === 'Cancelled').length,
       completed: jobs.filter((j) => j.status === 'Completed').length,
       verified: jobs.filter((j) => j.status === 'Verified').length,
       all: jobs.length,
@@ -232,7 +232,7 @@ export default function JobsPage() {
   const onReassign = useCallback((tripId: string, jobId: string, vendorCode: string) => {
     const v = vendors.find((x) => x.code === vendorCode);
     if (!v) return;
-    updateJob(tripId, jobId, { vendor: { code: v.code, name: v.name }, status: 'Pending', rejectionReason: undefined });
+    updateJob(tripId, jobId, { vendor: { code: v.code, name: v.name }, status: 'Pending', cancelReason: undefined });
     addActivityLog(tripId, jobId, { id: `l${Date.now()}`, timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16), action: `Reassigned → ${v.name}`, user: 'Ops Admin' });
     toast.success(`Reassigned to ${v.name}`);
     setPanelIds(null);
@@ -300,8 +300,8 @@ export default function JobsPage() {
     if (groupBy === 'vendor') {
       // Rejected vendors first, then by most active jobs
       sorted.sort(([, a], [, b]) => {
-        const aRej = a.jobs.some((j) => j.status === 'Rejected') ? 0 : 1;
-        const bRej = b.jobs.some((j) => j.status === 'Rejected') ? 0 : 1;
+        const aRej = a.jobs.some((j) => j.status === 'Cancelled') ? 0 : 1;
+        const bRej = b.jobs.some((j) => j.status === 'Cancelled') ? 0 : 1;
         if (aRej !== bRej) return aRej - bRej;
         return b.jobs.length - a.jobs.length;
       });
@@ -365,7 +365,7 @@ export default function JobsPage() {
   }
 
   function renderJobRow(job: FlatJob, hideColumn?: 'vendor' | 'service' | 'pickup') {
-    const isRejected = job.status === 'Rejected';
+    const isRejected = job.status === 'Cancelled';
     return (
       <tr
         key={`${job.trip.id}-${job.id}`}
@@ -437,13 +437,13 @@ export default function JobsPage() {
 
   function renderGroupStatusBadges(jobs: FlatJob[]) {
     const counts: { label: string; count: number; style: React.CSSProperties }[] = [];
-    const rejected = jobs.filter((j) => j.status === 'Rejected').length;
+    const cancelled = jobs.filter((j) => j.status === 'Cancelled').length;
     const inProgress = jobs.filter((j) => j.status === 'In Progress').length;
     const pending = jobs.filter((j) => j.status === 'Pending').length;
     const completed = jobs.filter((j) => j.status === 'Completed').length;
     const verified = jobs.filter((j) => j.status === 'Verified').length;
 
-    if (rejected > 0) counts.push({ label: `${rejected} rejected`, count: rejected, style: { background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' } });
+    if (cancelled > 0) counts.push({ label: `${cancelled} cancelled`, count: cancelled, style: { background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' } });
     if (inProgress > 0) counts.push({ label: `${inProgress} in progress`, count: inProgress, style: { background: 'rgba(21,44,255,0.04)', color: '#152CFF', border: '1px solid rgba(21,44,255,0.12)' } });
     if (pending > 0) counts.push({ label: `${pending} pending`, count: pending, style: { background: '#f9fafb', color: '#9ca3af', border: '1px solid #e5e7eb' } });
     if (completed > 0) counts.push({ label: `${completed} completed`, count: completed, style: { background: '#fefce8', color: '#a16207', border: '1px solid #fde68a' } });
@@ -511,10 +511,10 @@ export default function JobsPage() {
         <span style={{ color: '#a16207', fontWeight: 600 }}>{stats.completed} completed</span>
         <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
         <span style={{ color: '#059669', fontWeight: 600 }}>{stats.verified} verified</span>
-        {stats.rejected > 0 && (
+        {stats.cancelled > 0 && (
           <>
             <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-            <span style={{ color: '#dc2626', fontWeight: 600 }}>{stats.rejected} rejected</span>
+            <span style={{ color: '#dc2626', fontWeight: 600 }}>{stats.cancelled} cancelled</span>
           </>
         )}
       </div>

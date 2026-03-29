@@ -8,7 +8,7 @@ function getStatusColors(status: JobStatus): { bg: string; border: string; text:
       return { bg: '#fefce8', border: '#fde68a', text: '#a16207', dot: '#a16207' };
     case 'Verified':
       return { bg: '#f0fdf4', border: '#a7f3d0', text: '#059669', dot: '#059669' };
-    case 'Rejected':
+    case 'Cancelled':
       return { bg: '#fef2f2', border: '#fecaca', text: '#dc2626', dot: '#dc2626' };
     case 'Cancelled':
     case 'Pending':

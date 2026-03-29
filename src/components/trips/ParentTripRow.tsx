@@ -23,10 +23,10 @@ const pillColors: Record<JobStatus, { bg: string; text: string; border: string }
   'In Progress': { bg: 'rgba(21,44,255,0.04)', text: '#152CFF', border: 'rgba(21,44,255,0.15)' },
   Completed:     { bg: '#fefce8', text: '#a16207', border: '#fde68a' },
   Verified:      { bg: '#f0fdf4', text: '#059669', border: '#a7f3d0' },
-  Rejected:      { bg: '#fef2f2', text: '#dc2626', border: '#fecaca' },
+  Cancelled:      { bg: '#fef2f2', text: '#dc2626', border: '#fecaca' },
   Cancelled:     { bg: '#f9fafb', text: '#9ca3af', border: '#e5e7eb' },
 };
-const pillOrder: JobStatus[] = ['Verified', 'Completed', 'In Progress', 'Pending', 'Rejected', 'Cancelled'];
+const pillOrder: JobStatus[] = ['Verified', 'Completed', 'In Progress', 'Pending', 'Cancelled', 'Cancelled'];
 
 interface Props {
   trip: Trip;

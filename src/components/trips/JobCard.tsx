@@ -8,7 +8,7 @@ function getStatusColors(status: JobStatus): { border: string; text: string; dot
     case 'In Progress': return { border: 'rgba(21,44,255,0.15)', text: '#152CFF', dot: '#152CFF' };
     case 'Completed':   return { border: '#fde68a', text: '#a16207', dot: '#a16207' };
     case 'Verified':    return { border: '#a7f3d0', text: '#059669', dot: '#059669' };
-    case 'Rejected':    return { border: '#fecaca', text: '#dc2626', dot: '#dc2626' };
+    case 'Cancelled':    return { border: '#fecaca', text: '#dc2626', dot: '#dc2626' };
     case 'Cancelled':
     case 'Pending':
     default:            return { border: '#e5e7eb', text: '#9ca3af', dot: '#9ca3af' };
