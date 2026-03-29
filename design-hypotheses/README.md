@@ -178,6 +178,11 @@ Every design decision starts with a **"How Might We"** question. We generate 2-3
 **Decision:** Status Action Bar at top of panel — colored bar showing current status + primary action. Adapts per stage: [Start Job] / hint "upload to complete" / [✓ Verify] / "ready for billing" / rejection reason + reassign. Fees/quantities editable until Verified. Proof upload auto-transitions to Completed.
 **File:** `49-hmw-slideout-status-lifecycle.html`
 
+### HMW-50: How might we minimize clicks when creating a shipment (80% same vendor)?
+**Options:** A) Default Vendor dropdown + "All" button, B) Vendor + Multi-Select Services, C) Auto-fill from last vendor
+**Decision:** Option A + "All" button — "Assign to" vendor dropdown above pills + "All" button to add all services at once. 3 clicks for 80% case (down from 12). Override per-job for mixed vendors.
+**File:** `50-hmw-create-shipment-vendor-efficiency.html`
+
 ## Open (backlog)
 
 ### HMW-03: How might we make the "assign vendors to services" step feel natural instead of like filling a form?

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HMW-50: Create Shipment — Minimize Vendor Clicks</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 40px 0 6px; color: #152CFF; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 24px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; padding: 20px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+/* Form mockup styles */
+.form-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; max-width: 850px; margin: 0 auto; }
+.step-badge { width: 22px; height: 22px; border-radius: 5px; background: #152CFF; color: #fff; font-size: 10px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+.step-title { font-size: 13px; font-weight: 700; color: #111827; }
+.step-hint { font-size: 10px; color: #9ca3af; margin-left: 30px; margin-bottom: 12px; }
+.fl { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 4px; }
+.svc-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1.5px solid #e5e7eb; background: #fff; color: #374151; font-family: inherit; }
+.svc-pill .code { font-family: 'SF Mono', monospace; font-size: 10px; }
+.svc-pill .plus { font-size: 14px; }
+.svc-pill .count { font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 99px; color: #fff; margin-left: 2px; }
+.vendor-dd { font-size: 11px; padding: 6px 10px; border: 1px solid #e5e7eb; border-radius: 4px; font-family: inherit; }
+.vendor-dd.highlight { border-color: #152CFF; background: rgba(21,44,255,0.04); font-weight: 600; color: #152CFF; }
+.job-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; margin-bottom: 8px; }
+.job-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.job-label { font-size: 11px; font-weight: 700; }
+.job-svc { padding: 1px 6px; border-radius: 99px; font-size: 9px; font-weight: 700; }
+.job-vendor-auto { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(21,44,255,0.15); background: rgba(21,44,255,0.04); font-size: 11px; font-weight: 600; color: #152CFF; }
+.job-vendor-auto .tag { font-size: 8px; padding: 1px 4px; border-radius: 3px; background: rgba(21,44,255,0.1); color: #152CFF; font-weight: 700; }
+.click-count { display: inline-block; padding: 4px 10px; border-radius: 99px; font-size: 10px; font-weight: 700; background: #f0fdf4; border: 1px solid #a7f3d0; color: #059669; margin-top: 12px; }
+
+/* Option B specific */
+.svc-check { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1.5px solid; font-family: inherit; }
+.svc-check.on { border-color: #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; }
+.svc-check.off { border-color: #e5e7eb; background: #fff; color: #9ca3af; }
+.svc-check .check { font-size: 12px; }
+.add-jobs-btn { padding: 8px 20px; border-radius: 6px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; font-family: inherit; background: #152CFF; color: #fff; display: inline-flex; align-items: center; gap: 6px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-50: Create Shipment — Minimize Vendor Clicks</h1>
+<div class="hmw">"How might we minimize clicks when creating a shipment, given that 80% of shipments assign all jobs to the same vendor?"</div>
+
+<div class="context">
+<strong>The problem:</strong> Currently, adding 4 jobs to a shipment requires selecting the vendor 4 separate times from a dropdown — even when all 4 go to the same vendor (which happens 80% of the time). For ops creating 10-50 shipments/day, this adds up to hundreds of redundant clicks.<br><br>
+<strong>Current flow (4 jobs, same vendor):</strong> Click +FM → select HaleSun. Click +EC → select HaleSun. Click +CS → select HaleSun. Click +OH → select HaleSun. = 12 interactions (4 pill clicks + 4 dropdown opens + 4 option selects).<br><br>
+<strong>Constraint:</strong> The 20% of shipments that need different vendors per service must still be easy. Don't break the minority case to optimize the majority.
+</div>
+
+
+<!-- ═══════════ OPTION A ═══════════ -->
+<h2>Option A: Default Vendor</h2>
+<span class="label" style="background: rgba(21,44,255,0.08); color: #152CFF;">Recommended</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Add a "Assign to" vendor dropdown above the service pills. When you click a service pill, the new job is created with that vendor pre-filled. For mixed-vendor shipments, override the vendor in the individual job card. One new element, zero new concepts.
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Minimal change — adds one dropdown, keeps existing service pills<br>
+• 80% case: pick vendor once → click services → done (6 clicks vs 12)<br>
+• 20% case: override per-job dropdown works exactly like before<br>
+• Zero learning curve — dropdown + pills are familiar patterns
+</div>
+<div class="cons"><strong>Cons</strong><br>
+• Still requires 4 individual pill clicks for 4 services<br>
+• The per-job vendor dropdown is still there (for overrides) — could feel redundant<br>
+• Default vendor state might confuse: "why is HaleSun selected already?"
+</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="form-card">
+<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+<span class="step-badge">2</span>
+<span class="step-title">Add Services</span>
+</div>
+
+<!-- NEW: Default vendor selector -->
+<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px; margin-left: 30px; padding: 8px 12px; background: rgba(21,44,255,0.03); border: 1px solid rgba(21,44,255,0.1); border-radius: 6px;">
+<span style="font-size: 10px; color: #9ca3af; font-weight: 600;">Assign to</span>
+<select class="vendor-dd highlight" style="min-width: 140px;">
+<option>HaleSun</option>
+</select>
+<span style="font-size: 9px; color: #9ca3af;">New jobs will be assigned to this vendor</span>
+</div>
+
+<!-- Service pills (same as current) -->
+<div style="display: flex; gap: 6px; margin-bottom: 14px; margin-left: 30px;">
+<button class="svc-pill"><span class="plus" style="color: #152CFF;">+</span> <span class="code" style="color: #152CFF;">FM</span> Trucking <span class="count" style="background: #152CFF;">1</span></button>
+<button class="svc-pill"><span class="plus" style="color: #7c3aed;">+</span> <span class="code" style="color: #7c3aed;">EC</span> Export Customs <span class="count" style="background: #7c3aed;">1</span></button>
+<button class="svc-pill"><span class="plus" style="color: #b45309;">+</span> <span class="code" style="color: #b45309;">CS</span> Cargo Submission <span class="count" style="background: #b45309;">1</span></button>
+<button class="svc-pill"><span class="plus" style="color: #6b7280;">+</span> <span class="code" style="color: #6b7280;">OH</span> Origin Handling</button>
+</div>
+
+<!-- Jobs — vendor pre-filled from default -->
+<div style="margin-left: 30px;">
+<div class="job-card">
+<div class="job-header">
+<div style="display: flex; align-items: center; gap: 8px;">
+<span class="job-label" style="color: #152CFF;">J01</span>
+<span class="job-svc" style="background: rgba(21,44,255,0.08); border: 1px solid rgba(21,44,255,0.15); color: #152CFF;">FM Trucking</span>
+</div>
+<span style="font-size: 10px; color: #d1d5db; cursor: pointer;">✕</span>
+</div>
+<div style="display: flex; gap: 8px; align-items: center;">
+<span class="job-vendor-auto">HaleSun <span class="tag">AUTO</span></span>
+<span style="font-size: 9px; color: #9ca3af;">← from default · <span style="color: #152CFF; cursor: pointer;">change</span></span>
+</div>
+</div>
+
+<div class="job-card">
+<div class="job-header">
+<div style="display: flex; align-items: center; gap: 8px;">
+<span class="job-label" style="color: #7c3aed;">J02</span>
+<span class="job-svc" style="background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.15); color: #7c3aed;">EC Export Customs</span>
+</div>
+<span style="font-size: 10px; color: #d1d5db; cursor: pointer;">✕</span>
+</div>
+<div style="display: flex; gap: 8px; align-items: center;">
+<span class="job-vendor-auto">HaleSun <span class="tag">AUTO</span></span>
+<span style="font-size: 9px; color: #9ca3af;">← from default · <span style="color: #152CFF; cursor: pointer;">change</span></span>
+</div>
+</div>
+
+<div class="job-card">
+<div class="job-header">
+<div style="display: flex; align-items: center; gap: 8px;">
+<span class="job-label" style="color: #b45309;">J03</span>
+<span class="job-svc" style="background: rgba(180,83,9,0.08); border: 1px solid rgba(180,83,9,0.15); color: #b45309;">CS Cargo Submission</span>
+</div>
+<span style="font-size: 10px; color: #d1d5db; cursor: pointer;">✕</span>
+</div>
+<div style="display: flex; gap: 8px; align-items: center;">
+<span class="job-vendor-auto">HaleSun <span class="tag">AUTO</span></span>
+<span style="font-size: 9px; color: #9ca3af;">← from default · <span style="color: #152CFF; cursor: pointer;">change</span></span>
+</div>
+</div>
+</div>
+
+<div style="margin-left: 30px;">
+<span class="click-count">80% case: 2 clicks (vendor) + 3 clicks (services) = 5 total</span>
+</div>
+</div>
+</div>
+
+
+<!-- ═══════════ OPTION B ═══════════ -->
+<h2>Option B: Vendor + Multi-Select Services</h2>
+<span class="label" style="background: #fffbeb; color: #92400e;">Fewest clicks</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Replace the current "click pills one-by-one" with a combined interface: select a vendor, then toggle which services they'll handle using checkboxes. An "All" button toggles everything on. Click "Add Jobs" once to create all jobs at once. For mixed vendors: add jobs for vendor A, change vendor, add jobs for vendor B.
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Fewest clicks: vendor (2) + "All" (1) + "Add Jobs" (1) = 4 clicks for 4+ jobs<br>
+• Natural mental model: "HaleSun handles FM, EC, CS, OH" = one thought, one action<br>
+• "All" button makes the 80% case a single click after vendor selection<br>
+• Mixed vendors: just change vendor and add more services
+</div>
+<div class="cons"><strong>Cons</strong><br>
+• Bigger redesign of Step 2 — new interaction pattern<br>
+• "Add Jobs" button is a batch action (less immediate than current pills)<br>
+• Need to handle edge case: what if you add FM for HaleSun then try to add FM for Gonda?
+</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="form-card">
+<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+<span class="step-badge">2</span>
+<span class="step-title">Assign Services</span>
+</div>
+
+<!-- Combined vendor + service selection -->
+<div style="margin-left: 30px; padding: 12px; background: rgba(21,44,255,0.02); border: 1px solid rgba(21,44,255,0.08); border-radius: 6px; margin-bottom: 14px;">
+<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+<span class="fl" style="margin: 0;">Vendor</span>
+<select class="vendor-dd highlight" style="min-width: 150px;">
+<option>HaleSun</option>
+</select>
+<span style="font-size: 9px; color: #9ca3af;">Select vendor, then pick services below</span>
+</div>
+
+<!-- Service toggles -->
+<div style="display: flex; gap: 6px; margin-bottom: 10px;">
+<button class="svc-check on" style="border-color: #152CFF;"><span class="check">✓</span> FM Trucking</button>
+<button class="svc-check on" style="border-color: #152CFF;"><span class="check">✓</span> EC Export Customs</button>
+<button class="svc-check on" style="border-color: #152CFF;"><span class="check">✓</span> CS Cargo Submission</button>
+<button class="svc-check off"><span class="check">☐</span> CR Cargo Retrieval</button>
+<button class="svc-check on" style="border-color: #152CFF;"><span class="check">✓</span> OH Origin Handling</button>
+</div>
+
+<div style="display: flex; align-items: center; gap: 10px;">
+<button class="add-jobs-btn">Add 4 Jobs →</button>
+<button style="padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer; font-family: inherit;">Select All</button>
+<button style="padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer; font-family: inherit;">Clear</button>
+</div>
+</div>
+
+<!-- Result: 4 jobs created -->
+<div style="margin-left: 0;">
+<div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px;">4 Jobs Assigned</div>
+<div style="display: flex; gap: 6px; flex-wrap: wrap;">
+<span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.15); color: #152CFF;">HaleSun · FM</span>
+<span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; background: rgba(124,58,237,0.06); border: 1px solid rgba(124,58,237,0.15); color: #7c3aed;">HaleSun · EC</span>
+<span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; background: rgba(180,83,9,0.06); border: 1px solid rgba(180,83,9,0.15); color: #b45309;">HaleSun · CS</span>
+<span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; background: rgba(107,114,128,0.06); border: 1px solid rgba(107,114,128,0.15); color: #6b7280;">HaleSun · OH</span>
+</div>
+</div>
+</div>
+
+<div style="margin-left: 30px;">
+<span class="click-count">80% case: 2 clicks (vendor) + 1 click (All) + 1 click (Add Jobs) = 4 total</span>
+</div>
+</div>
+</div>
+
+
+<!-- ═══════════ OPTION C ═══════════ -->
+<h2>Option C: Auto-Fill from Last Vendor</h2>
+<span class="label" style="background: #f3f4f6; color: #6b7280;">Zero new UI</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> No new UI elements. When you select a vendor for one job, all subsequently added jobs auto-fill with that same vendor. The first job requires manual vendor selection; jobs 2-4 inherit it. You can always change per-job. The system learns from your behavior within the session.
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Zero new UI elements — uses the existing job cards and dropdowns<br>
+• Works naturally: select vendor once, add more services, they inherit<br>
+• No new interaction patterns to learn<br>
+• Degrades gracefully: if you change vendors, the next job inherits the latest
+</div>
+<div class="cons"><strong>Cons</strong><br>
+• Not visible — user doesn't know auto-fill will happen until it does<br>
+• "Magic" behavior can surprise: "why is HaleSun already selected?"<br>
+• Doesn't reduce clicks as much: still 4 pill clicks + 1 vendor selection = 6 clicks<br>
+• For the first shipment of the day, there's no "last vendor" to auto-fill
+</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="form-card">
+<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+<span class="step-badge">2</span>
+<span class="step-title">Add Services</span>
+</div>
+<div class="step-hint">Click a service to add a job. Vendor auto-fills from your last selection.</div>
+
+<!-- Service pills (unchanged) -->
+<div style="display: flex; gap: 6px; margin-bottom: 14px; margin-left: 30px;">
+<button class="svc-pill"><span class="plus" style="color: #152CFF;">+</span> <span class="code" style="color: #152CFF;">FM</span> Trucking <span class="count" style="background: #152CFF;">1</span></button>
+<button class="svc-pill"><span class="plus" style="color: #7c3aed;">+</span> <span class="code" style="color: #7c3aed;">EC</span> Export Customs <span class="count" style="background: #7c3aed;">1</span></button>
+<button class="svc-pill"><span class="plus" style="color: #b45309;">+</span> <span class="code" style="color: #b45309;">CS</span> Cargo Submission <span class="count" style="background: #b45309;">1</span></button>
+<button class="svc-pill"><span class="plus" style="color: #6b7280;">+</span> <span class="code" style="color: #6b7280;">OH</span> Origin Handling</button>
+</div>
+
+<!-- Jobs — first one manually selected, others auto-filled -->
+<div style="margin-left: 30px;">
+<div class="job-card">
+<div class="job-header">
+<div style="display: flex; align-items: center; gap: 8px;">
+<span class="job-label" style="color: #152CFF;">J01</span>
+<span class="job-svc" style="background: rgba(21,44,255,0.08); border: 1px solid rgba(21,44,255,0.15); color: #152CFF;">FM Trucking</span>
+</div>
+<span style="font-size: 10px; color: #d1d5db; cursor: pointer;">✕</span>
+</div>
+<div style="display: flex; gap: 8px; align-items: center;">
+<select class="vendor-dd" style="width: 140px;"><option>HaleSun</option></select>
+<span style="font-size: 9px; color: #9ca3af;">← you selected this manually</span>
+</div>
+</div>
+
+<div class="job-card">
+<div class="job-header">
+<div style="display: flex; align-items: center; gap: 8px;">
+<span class="job-label" style="color: #7c3aed;">J02</span>
+<span class="job-svc" style="background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.15); color: #7c3aed;">EC Export Customs</span>
+</div>
+<span style="font-size: 10px; color: #d1d5db; cursor: pointer;">✕</span>
+</div>
+<div style="display: flex; gap: 8px; align-items: center;">
+<select class="vendor-dd" style="width: 140px; border-color: rgba(21,44,255,0.3); background: rgba(21,44,255,0.02);"><option>HaleSun</option></select>
+<span style="font-size: 9px; color: #152CFF;">← auto-filled from J01</span>
+</div>
+</div>
+
+<div class="job-card">
+<div class="job-header">
+<div style="display: flex; align-items: center; gap: 8px;">
+<span class="job-label" style="color: #b45309;">J03</span>
+<span class="job-svc" style="background: rgba(180,83,9,0.08); border: 1px solid rgba(180,83,9,0.15); color: #b45309;">CS Cargo Submission</span>
+</div>
+<span style="font-size: 10px; color: #d1d5db; cursor: pointer;">✕</span>
+</div>
+<div style="display: flex; gap: 8px; align-items: center;">
+<select class="vendor-dd" style="width: 140px; border-color: rgba(21,44,255,0.3); background: rgba(21,44,255,0.02);"><option>HaleSun</option></select>
+<span style="font-size: 9px; color: #152CFF;">← auto-filled from J01</span>
+</div>
+</div>
+</div>
+
+<div style="margin-left: 30px;">
+<span class="click-count">80% case: 4 clicks (services) + 2 clicks (vendor on J01 only) = 6 total</span>
+</div>
+</div>
+</div>
+
+
+<!-- ═══════════ VERDICT ═══════════ -->
+<div class="verdict">
+<h3>Recommendation: Option A (Default Vendor) with cherry-pick from B</h3>
+<p style="font-size: 12px; line-height: 1.7; color: #374151;">
+<strong>Option A</strong> is the right base — add a "Assign to" vendor dropdown above the service pills. It's minimal change, zero new concepts, and cuts the 80% case from 12 interactions to 5-6. The existing service pills stay (they're proven good for service-first thinking).
+</p>
+<p style="font-size: 12px; line-height: 1.7; color: #374151; margin-top: 8px;">
+<strong>Cherry-pick from B:</strong> Add a <strong>"+ All"</strong> button after the service pills. One click creates all 5 services at once with the default vendor. This brings the 80% case down to: vendor (2 clicks) + "All" (1 click) = <strong>3 clicks total</strong> to create a 5-job shipment. For selective, ops clicks individual service pills as before.
+</p>
+<p style="font-size: 12px; line-height: 1.7; color: #374151; margin-top: 8px;">
+<strong>Skip Option C</strong> — invisible auto-fill is magic behavior that surprises users. The "Assign to" dropdown in Option A is explicit and discoverable.
+</p>
+<p style="font-size: 12px; line-height: 1.7; color: #374151; margin-top: 8px;">
+<strong>The 20% case (mixed vendors):</strong> Set default to vendor A → add their services → change default to vendor B → add their services. Or override per-job with the "change" link. Both work naturally.
+</p>
+<p style="font-size: 12px; line-height: 1.7; color: #374151; margin-top: 8px;">
+<strong>Click count comparison:</strong><br>
+• Current: 12 interactions (4 pill clicks + 4 dropdown opens + 4 option selects)<br>
+• Option A: 5 interactions (1 vendor + 4 pills)<br>
+• Option A + "All": <strong>3 interactions</strong> (1 vendor + 1 "All")<br>
+• Option B: 4 interactions (1 vendor + "All" + "Add Jobs") — similar but bigger redesign<br>
+• Option C: 6 interactions (1 vendor + 4 pills, but auto-fill is invisible)
+</p>
+</div>
+
+</div>
+</body>
+</html>

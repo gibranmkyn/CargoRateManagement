@@ -44,12 +44,13 @@ export default function CreateTripPage() {
   const [deliveryDate, setDeliveryDate] = useState('');
   const [jobs, setJobs] = useState<JobDraft[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
+  const [defaultVendor, setDefaultVendor] = useState('');
 
   function addJobForService(svc: ServiceType) {
     setJobs((prev) => [...prev, {
       key: crypto.randomUUID(),
       serviceCode: svc.code,
-      vendorCode: '',
+      vendorCode: defaultVendor,
       originDistrictCode: '',
       destDistrictCode: '',
       truckType: '',
@@ -57,6 +58,21 @@ export default function CreateTripPage() {
       originDate: '',
       destinationDate: '',
     }]);
+  }
+
+  function addAllServices() {
+    const newJobs: JobDraft[] = serviceTypes.map((svc) => ({
+      key: crypto.randomUUID(),
+      serviceCode: svc.code,
+      vendorCode: defaultVendor,
+      originDistrictCode: '',
+      destDistrictCode: '',
+      truckType: '' as TruckType | '',
+      locationId: '',
+      originDate: '',
+      destinationDate: '',
+    }));
+    setJobs((prev) => [...prev, ...newJobs]);
   }
 
   function updateJob(key: string, updates: Partial<JobDraft>) {
@@ -312,9 +328,17 @@ export default function CreateTripPage() {
             <span style={{ width: 22, height: 22, borderRadius: 5, background: '#152CFF', color: '#fff', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>2</span>
             <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Add Services</span>
           </div>
-          <p style={{ fontSize: 10, color: '#9ca3af', marginBottom: 12, marginLeft: 30 }}>Click a service to add a job.</p>
+          {/* Default vendor selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, marginLeft: 30, padding: '8px 12px', background: defaultVendor ? 'rgba(21,44,255,0.03)' : '#f9fafb', border: `1px solid ${defaultVendor ? 'rgba(21,44,255,0.1)' : '#e5e7eb'}`, borderRadius: 6 }}>
+            <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600, whiteSpace: 'nowrap' }}>Assign to</span>
+            <select value={defaultVendor} onChange={(e) => setDefaultVendor(e.target.value)} style={{ fontSize: 11, padding: '5px 8px', border: `1px solid ${defaultVendor ? '#152CFF' : '#e5e7eb'}`, borderRadius: 4, fontFamily: 'inherit', fontWeight: defaultVendor ? 600 : 400, color: defaultVendor ? '#152CFF' : '#6b7280', background: defaultVendor ? 'rgba(21,44,255,0.04)' : '#fff', minWidth: 140 }}>
+              <option value="">Select vendor...</option>
+              {vendors.map((v) => <option key={v.code} value={v.code}>{v.name}</option>)}
+            </select>
+            <span style={{ fontSize: 9, color: '#9ca3af' }}>New jobs will be assigned to this vendor</span>
+          </div>
 
-          <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 14, marginLeft: 30 }}>
             {serviceTypes.map((svc) => {
               const count = svcCounts[svc.code] || 0;
               return (
@@ -326,11 +350,14 @@ export default function CreateTripPage() {
                 </button>
               );
             })}
+            <button type="button" onClick={addAllServices} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: '1.5px solid #152CFF', background: 'rgba(21,44,255,0.04)', color: '#152CFF', fontFamily: 'inherit' }}>
+              + All
+            </button>
           </div>
 
           {jobs.length === 0 ? (
-            <div style={{ padding: 24, textAlign: 'center', border: '1px dashed #e5e7eb', borderRadius: 6, background: '#f9fafb' }}>
-              <p style={{ fontSize: 11, color: '#9ca3af' }}>Click a service above to add jobs</p>
+            <div style={{ padding: 24, textAlign: 'center', border: '1px dashed #e5e7eb', borderRadius: 6, background: '#f9fafb', marginLeft: 30 }}>
+              <p style={{ fontSize: 11, color: '#9ca3af' }}>Select a vendor above, then click services or "+ All" to add jobs</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
