@@ -63,6 +63,7 @@ The vendor app reads from the same data model as the admin app. No new entities 
 - **Proof documents** — uploaded files with timestamps
 - **Activity log** — full history of status changes and uploads
 - **Cargo details** — bags, weight (kg), volume (CBM) at job level
+- **Associated bags** — bag package list from the shipment (bag number, weight, pickup date, origin/destination)
 
 ### What the vendor CANNOT see:
 - Jobs assigned to other vendors
@@ -106,7 +107,11 @@ Full detail for a single job. Read-heavy with limited actions.
 2. **Status Action Bar** — adapts per status (see F3)
 3. **Route** — origin and destination with addresses, dates
 4. **Cargo** — bags, weight, volume (read-only for vendor)
-5. **Fees** — full fee breakdown table
+5. **Associated Bags** — list of bag packages assigned to this job's shipment
+   - Columns: Bag Number | MAWB | Weight (kg) | Pickup Date | Origin | Destination
+   - Read-only — vendor sees what bags are in the shipment for verification
+   - Helps vendor confirm they have the right cargo at pickup/delivery
+6. **Fees** — full fee breakdown table
    - Columns: Fee Name | Unit | Rate | Qty | Amount | Status (active/removed)
    - Vendor sees all fees including removed ones (grayed out)
    - Totals per currency at bottom
@@ -198,6 +203,7 @@ Vendors can export their job data for reconciliation with their own systems.
 - **VUS-010:** As a vendor operator, I want to view full job details including route, dates, cargo, and fees, so I have all the information I need to execute the job.
 - **VUS-011:** As a vendor operator, I want to see the complete activity log for a job, so I know the full history of what happened.
 - **VUS-012:** As a vendor operator, I want to see all proof documents uploaded for a job (including ones uploaded by Teleport), so I have a complete record.
+- **VUS-013:** As a vendor operator, I want to see the list of bag packages associated with a job's shipment (bag number, weight, origin, destination), so I can verify I have the right cargo at pickup and confirm bag counts match.
 
 ### Status Updates
 - **VUS-020:** As a vendor operator, I want to click "Start Job" to move a Pending job to In Progress, so Teleport knows I've begun work.
