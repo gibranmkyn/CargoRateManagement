@@ -498,7 +498,7 @@ export default function JobsPage() {
   }, [statusFilter, filtered.length, activeVendorCount]);
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ maxWidth: 1400, margin: '0 auto' }}>
 
       {/* -- Stats bar -- */}
       <div style={{ display: 'flex', alignItems: 'center', padding: '8px 16px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontSize: 12, gap: 0 }}>
@@ -665,13 +665,13 @@ export default function JobsPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, overflow: 'hidden' }}>
             <thead>
               <tr>
-                <th style={{ ...th, width: 120 }}>Order &middot; Customer</th>
-                <th style={{ ...th, width: 120 }}>Vendor</th>
-                <th style={{ ...th, width: 60 }}>Service</th>
-                <th style={th}>Route</th>
-                <th style={{ ...th, width: 80 }}>Pickup</th>
-                <th style={{ ...th, width: 105 }}>Status</th>
-                <th style={{ ...th, width: 100, textAlign: 'right' }}>Cost</th>
+                <th style={{ ...th, width: '11%' }}>Order &middot; Customer</th>
+                <th style={{ ...th, width: '10%' }}>Vendor</th>
+                <th style={{ ...th, width: '6%' }}>Service</th>
+                <th style={{ ...th, width: '38%' }}>Route</th>
+                <th style={{ ...th, width: '8%' }}>Pickup</th>
+                <th style={{ ...th, width: '10%' }}>Status</th>
+                <th style={{ ...th, width: '9%', textAlign: 'right' }}>Cost</th>
               </tr>
             </thead>
             <tbody>
@@ -717,13 +717,13 @@ export default function JobsPage() {
                     <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
                       <thead>
                         <tr>
-                          <th style={{ ...th, width: 120 }}>Order &middot; Customer</th>
-                          {hideColumn !== 'vendor' && <th style={{ ...th, width: 120 }}>Vendor</th>}
-                          {hideColumn !== 'service' && <th style={{ ...th, width: 60 }}>Service</th>}
-                          <th style={th}>Route</th>
-                          {hideColumn !== 'pickup' && <th style={{ ...th, width: 80 }}>Pickup</th>}
-                          <th style={{ ...th, width: 105 }}>Status</th>
-                          <th style={{ ...th, width: 100, textAlign: 'right' }}>Cost</th>
+                          <th style={{ ...th, width: '11%' }}>Order &middot; Customer</th>
+                          {hideColumn !== 'vendor' && <th style={{ ...th, width: '10%' }}>Vendor</th>}
+                          {hideColumn !== 'service' && <th style={{ ...th, width: '6%' }}>Service</th>}
+                          <th style={{ ...th, width: '38%' }}>Route</th>
+                          {hideColumn !== 'pickup' && <th style={{ ...th, width: '8%' }}>Pickup</th>}
+                          <th style={{ ...th, width: '10%' }}>Status</th>
+                          <th style={{ ...th, width: '9%', textAlign: 'right' }}>Cost</th>
                         </tr>
                       </thead>
                       <tbody>
