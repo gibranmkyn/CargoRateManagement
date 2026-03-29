@@ -12,9 +12,8 @@ import ServiceTag from '../components/trips/ServiceTag';
 // -- Helpers --
 
 function buildRoute(trip: Trip): string {
-  const locs: string[] = [];
-  trip.jobs.forEach((j, i) => { if (i === 0) locs.push(j.origin.location); locs.push(j.destination.location); });
-  return locs.filter((l, i) => i === 0 || l !== locs[i - 1]).join(' \u2192 ');
+  if (trip.origin === trip.destination) return trip.origin;
+  return `${trip.origin} → ${trip.destination}`;
 }
 
 function getStatusColors(status: JobStatus): { border: string; bg: string; text: string; dot: string } {

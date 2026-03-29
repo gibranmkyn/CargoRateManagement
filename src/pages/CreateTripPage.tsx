@@ -36,6 +36,8 @@ export default function CreateTripPage() {
 
   const [customerCode, setCustomerCode] = useState('');
   const [mawb, setMawb] = useState('');
+  const [tripOrigin, setTripOrigin] = useState('');
+  const [tripDestination, setTripDestination] = useState('');
   const [bags, setBags] = useState('');
   const [weight, setWeight] = useState('');
   const [remarks, setRemarks] = useState('');
@@ -238,6 +240,8 @@ export default function CreateTripPage() {
       id: tripId,
       customer: { name: customer.name, code: customer.code },
       mawb,
+      origin: tripOrigin,
+      destination: tripDestination,
       bags: Number(bags) || 0,
       weight: Number(weight) || 0,
       remarks,
