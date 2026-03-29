@@ -1,4 +1,36 @@
-# TODOS — Teleport OS
+# TODOS — Teleport OS Platform
+
+## AI Slop Cleanup (from design audit 2026-03-29)
+
+### TODO-038: Delete or replace DashboardCards component (admin)
+- **What:** `admin/src/components/trips/DashboardCards.tsx` uses `rounded-2xl` (16px), shadows, `scale-105` hover animation. DESIGN.md says "No big dashboard cards." Either delete the component entirely (if unused) or replace with the stats bar pattern that TripsPage/JobsPage already use.
+- **Files:** `admin/src/components/trips/DashboardCards.tsx`, check if imported anywhere
+
+### TODO-039: Rewrite VendorViewTab — cards → table section headers (admin)
+- **What:** `admin/src/components/trips/VendorViewTab.tsx` uses `rounded-xl` and layered shadows for vendor group cards. Replace with collapsible table section headers (dense, border-only). Same pattern as JobsPage Group By: Vendor.
+- **Files:** `admin/src/components/trips/VendorViewTab.tsx`
+
+### TODO-040: De-cardify vendor JobDetailPage
+- **What:** Route section uses two separate bordered cards + arrow. Cargo uses 3 mini-cards in grid. Proof docs use individual card boxes. For a dense data tool:
+  - Route → compact inline row: `Origin → Destination · date range`
+  - Cargo → single inline row: `24 bags · 1,280 kg · 8.4 CBM`
+  - Proofs → simple file list rows, not individual boxes
+- **Files:** `vendor/src/pages/JobDetailPage.tsx`
+
+### TODO-041: Remove shadow creep from admin interactive elements
+- **What:** Remove hover shadows from:
+  - `admin/src/components/trips/JobCard.tsx` — hover boxShadow on cards (use bg color change instead)
+  - `admin/src/components/trips/JobTable.tsx` — `shadow-lg` on status popover (use border)
+  - `admin/src/components/trips/ServiceMultiSelect.tsx` — shadows on dropdown/button (use border)
+- **Principle:** "Borders are sufficient" (DESIGN.md)
+
+### TODO-042: Replace emoji status icons in JobSlideOut (admin)
+- **What:** `admin/src/components/trips/JobSlideOut.tsx` lines 27-32 use emoji (`📄`, `✓`, `✕`, `—`) as status indicators. Replace with consistent colored dot indicator (same as status chips) or lucide-react icons.
+- **Files:** `admin/src/components/trips/JobSlideOut.tsx`
+
+### TODO-043: Tighten vendor padding (minor)
+- **What:** Login form padding 32px → 20px. Upload zone padding 20px → 12px. Normalize fee table header fontSize 8 → 9 (match jobs table).
+- **Files:** `vendor/src/pages/LoginPage.tsx`, `vendor/src/pages/JobDetailPage.tsx`
 
 ## Completed
 
