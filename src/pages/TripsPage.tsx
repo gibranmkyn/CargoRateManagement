@@ -149,7 +149,7 @@ export default function TripsPage() {
 
       {/* -- Stats bar -- */}
       <div style={{ display: 'flex', alignItems: 'center', padding: '8px 16px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontSize: 12, gap: 0 }}>
-        <span style={{ color: '#111827', fontWeight: 600 }}>{filtered.length} orders</span>
+        <span style={{ color: '#111827', fontWeight: 600 }}>{filtered.length} shipments</span>
         <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
         <span style={{ color: '#9ca3af', fontWeight: 600 }}>{stats.pending} pending</span>
         <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
@@ -167,8 +167,8 @@ export default function TripsPage() {
       {/* -- Page header -- */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: '16px 16px 0 16px' }}>
         <div>
-          <h1 style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.3px', color: '#111827', margin: 0 }}>Delivery Orders</h1>
-          <p style={{ fontSize: 11, color: '#9ca3af', margin: '2px 0 0 0' }}>Monitor and manage delivery orders across vendors</p>
+          <h1 style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.3px', color: '#111827', margin: 0 }}>Shipments</h1>
+          <p style={{ fontSize: 11, color: '#9ca3af', margin: '2px 0 0 0' }}>Monitor and manage shipments across vendors</p>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <button style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#fff', color: '#374151', border: '1px solid #e5e7eb', cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -178,7 +178,7 @@ export default function TripsPage() {
             onClick={() => navigate('/create-trip')}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#152CFF', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
           >
-            <Plus size={12} /> New Order
+            <Plus size={12} /> New Shipment
           </button>
         </div>
       </div>
@@ -232,7 +232,7 @@ export default function TripsPage() {
           </select>
         </label>
         <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 11, color: '#9ca3af' }}>
-          {filtered.length} orders
+          {filtered.length} shipments
         </span>
       </div>
 
@@ -419,18 +419,18 @@ export default function TripsPage() {
                     <Ship size={18} style={{ color: '#152CFF' }} />
                   </div>
                   <p style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>
-                    {trips.length === 0 ? 'No delivery orders yet' : 'No orders match your filters'}
+                    {trips.length === 0 ? 'No shipments yet' : 'No shipments match your filters'}
                   </p>
                   <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4, marginBottom: 16 }}>
                     {trips.length === 0
-                      ? 'Create your first order to start managing vendor deliveries.'
+                      ? 'Create your first shipment to start managing vendor assignments.'
                       : 'Try adjusting your search or filters above.'}
                   </p>
                   <button
                     onClick={() => navigate('/create-trip')}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#152CFF', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
                   >
-                    <Plus size={12} /> New Order
+                    <Plus size={12} /> New Shipment
                   </button>
                 </td>
               </tr>
@@ -442,7 +442,7 @@ export default function TripsPage() {
       {/* -- Pagination (only for All/Completed) -- */}
       {showDatePicker && totalPages > 1 && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderTop: '1px solid #e5e7eb' }}>
-          <span style={{ fontSize: 10, color: '#9ca3af' }}>Page {page} of {totalPages} · {totalFiltered} orders</span>
+          <span style={{ fontSize: 10, color: '#9ca3af' }}>Page {page} of {totalPages} · {totalFiltered} shipments</span>
           <div style={{ display: 'flex', gap: 4 }}>
             <button disabled={page <= 1} onClick={() => setPage(page - 1)} style={{ padding: '3px 8px', borderRadius: 4, border: '1px solid #e5e7eb', background: '#fff', color: page <= 1 ? '#d1d5db' : '#6b7280', fontSize: 10, cursor: page <= 1 ? 'default' : 'pointer', fontFamily: 'inherit' }}>← Prev</button>
             {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((p) => (

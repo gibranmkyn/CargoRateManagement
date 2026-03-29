@@ -77,7 +77,7 @@ export default function JobDetailPage() {
           }}
         >
           <ArrowLeft size={12} />
-          Back to orders
+          Back to shipments
         </Link>
       </div>
     );
@@ -159,7 +159,7 @@ export default function JobDetailPage() {
           }}
         >
           <ArrowLeft size={11} />
-          Orders
+          Shipments
         </button>
         <ChevronRight size={10} style={{ color: '#d1d5db' }} />
         <span

@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { Ship } from 'lucide-react';
 
 const navItems = [
-  { to: '/trips', label: 'Delivery Orders' },
+  { to: '/trips', label: 'Shipments' },
   { to: '/jobs', label: 'Jobs' },
   { to: '/rates', label: 'Rates' },
   { to: '/master-data', label: 'Master Data' },

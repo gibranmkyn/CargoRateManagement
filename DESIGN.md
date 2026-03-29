@@ -1,11 +1,11 @@
-# Design System — Teleport OS (Delivery Order Management)
+# Design System — Teleport OS (Shipment Management)
 
 > Source of truth: `design-hypotheses/08-hmw-data-density.html` + `09-hmw-expanded-jobs.html`
 > Aesthetic: **Smart spreadsheet with personality** — dense enough for Excel users, clear enough to prevent mistakes.
 
 ## Product Context
-- **What:** Logistics operations platform for managing cross-border cargo delivery orders
-- **Who:** Ops planners managing 10-50 orders/day, coming from Excel/spreadsheets
+- **What:** Logistics operations platform for managing cross-border cargo shipments
+- **Who:** Ops planners managing 10-50 shipments/day, coming from Excel/spreadsheets
 - **Space:** Internal B2B operations tool
 - **Type:** Data-dense workspace — think "better Excel" not "modern SaaS dashboard"
 
@@ -85,7 +85,7 @@
 
 ### Stats Bar (replaces dashboard cards)
 - Single line, #f9fafb bg, 1px border-bottom
-- **Delivery Orders page:** `5 orders | 6 in progress | 2 completed | 1 rejected`
+- **Shipments page:** `5 shipments | 6 in progress | 2 completed | 1 rejected`
 - **Jobs page:** `82 jobs | 15 pending | 18 in progress | 9 completed | 37 verified | 2 rejected`
 - Each status count uses its status color (gray/blue/amber/green/red)
 
@@ -99,20 +99,20 @@
 - Labels: 11px #9ca3af inline with inputs
 - Inputs: 4px 8px padding, 4px radius, 11px font
 
-### Delivery Order Table
+### Shipment Table
 - Actual `<table>` element, border-collapse: collapse
 - Columns: (chevron) | Customer | MAWB | **Pickup Date** | Route | Cargo | Jobs
 - Headers: 9-10px/600 uppercase, #9ca3af, #f9fafb bg
 - Rows: 8px 12px padding, hover #f9fafb, rejected rows #fefafa
-- Customer: 13px/600 + order ID chip (mono 10px) below
+- Customer: 13px/600 + shipment ID chip (mono 10px) below
 - **Pickup Date: mono 11px, date on line 1, time on line 2 in #9ca3af** — earliest job origin date
 - Job chips: 1px 7px padding, 4px radius, 10px/600, 1px border, 5px dot
 
 ### Priority Tag
-- Shown next to customer name for orders with priority remarks
+- Shown next to customer name for shipments with priority remarks
 - Style: padding 1px 6px, radius 3px, font 9px/700
 - Color: #b45309 text, #fefce8 bg, #fde68a border
-- Non-priority orders show nothing
+- Non-priority shipments show nothing
 
 ### Pickup Date Column (urgency-colored)
 - Shows earliest job origin date
@@ -122,13 +122,13 @@
 - Table default-sorted by soonest pickup
 
 ### Vendor Filter
-- Dropdown in filter bar: "Vendor" → filters orders that have jobs with selected vendor
+- Dropdown in filter bar: "Vendor" → filters shipments that have jobs with selected vendor
 - Same style as Customer dropdown
 
 ### Duplicate Button
 - Copy icon appears on row hover, rightmost cell
 - Click → navigates to create form pre-filled with same customer, jobs, routes, vendors
-- MAWB and dates left blank for the new order
+- MAWB and dates left blank for the new shipment
 
 ### Status Chips (sub-table & Jobs page)
 - Chip format: colored dot + status label, 2px 8px padding, 4px radius
@@ -136,7 +136,7 @@
 - Replaces old proof status icons (✓/○)
 
 ### Expanded View — Sub-Table (NOT cards)
-- Expanding a delivery order shows a **nested table** (not cards)
+- Expanding a shipment shows a **nested table** (not cards)
 - Sub-table columns: Job, Vendor, Services, Route, Status, Total Cost
 - Sub-table headers: 9px/600 uppercase
 - Sub-table rows: 6px 10px padding, indented 40px from left
@@ -163,8 +163,8 @@
   - Clicking Verify → transitions to Verified, locks everything
   - Reassign rejected job → resets to Pending with new vendor
 
-### Create Delivery Order Form
-- 2-step flow: ① Order Details → ② Assign Vendors
+### Create Shipment Form
+- 2-step flow: ① Shipment Details → ② Assign Vendors
 - Cards: 6px radius, 16px padding, white bg, 1px border
 - Step badges: 22x22, radius 5, teal bg
 - Step titles: 13px/700
@@ -184,9 +184,9 @@
 ## Current Architecture
 
 ### Navigation
-`Delivery Orders | Jobs | Rates | Master Data`
+`Shipments | Jobs | Rates | Master Data`
 
-### Delivery Orders (demand-side — client requests)
+### Shipments (demand-side — client requests)
 - **Max-width:** 1400px (must match Jobs page for consistent navigation feel)
 - **Active/All/Completed** filter chips (default: Active)
 - **Date period picker** for All/Completed: Today / This week / This month / Last month / All time
@@ -197,16 +197,16 @@
 - **Lock on verify:** fees, quantities, proof uploads all read-only after job Verified (billing gate)
 
 ### Jobs (supply-side — vendor execution) (HMW-48)
-- **Max-width:** 1400px (same as DO page — must match for consistent feel)
+- **Max-width:** 1400px (same as Shipments page — must match for consistent feel)
 - **Status pills:** Active (Pending + In Progress + Cancelled) | Completed | Verified | All
 - **Service pills:** FM | EC | CS | CR | OH
 - **Vendor dropdown** with search (supports 30+ vendors)
 - **Group by toggle:** None (default) | Vendor | Service | Date
-- **Columns (percentage-based widths):** Order·Customer 11% | Vendor 10% | Service 6% | Route 38% | Pickup 8% | Status 10% | Cost 9%
+- **Columns (percentage-based widths):** Shipment·Customer 11% | Vendor 10% | Service 6% | Route 38% | Pickup 8% | Status 10% | Cost 9%
 - **Route cell:** `overflow: hidden; text-overflow: ellipsis; white-space: nowrap`
 - **Group by: Vendor** — collapsed headers sorted by most outstanding, status badges per vendor
 - **Default sort within Active:** Cancelled → In Progress → Pending (fires first)
-- Click job row → same slide-out panel. Click DO link → Delivery Orders view.
+- Click job row → same slide-out panel. Click shipment link → Shipments view.
 
 ### Unified Job Status Lifecycle
 Replaces old dual `status` + `proofStatus` model with single field:
@@ -269,7 +269,7 @@ Replaces old dual `status` + `proofStatus` model with single field:
 | 2026-03-24 | Service-first creation | Ops thinks "what needs to happen" before "who does it." |
 | 2026-03-25 | Hybrid table + expand | Table for scanning, expand for detail. |
 | 2026-03-25 | Slide-out panel | Fast status change + proof upload without navigation. |
-| 2026-03-25 | "Delivery Order" not "Trip" | Matches business language. |
+| 2026-03-25 | ~~"Delivery Order"~~ → "Shipment" in UI | "Shipment" in UI = Trip in code. Matches business language better than "Delivery Order". |
 | 2026-03-25 | Inline styles over Tailwind | Exact pixel matching, eliminates mockup-vs-live gap. |
 | 2026-03-25 | Dense design (40px nav, 8px cells) | Ops lives in Excel. UI must feel like a smart spreadsheet. |
 | 2026-03-25 | ~~3-color status system~~ → 5-color status system | Gray (pending), blue (in progress), amber (completed/needs verification), green (verified), red (rejected). (HMW-48) |
@@ -280,20 +280,20 @@ Replaces old dual `status` + `proofStatus` model with single field:
 | 2026-03-25 | 2-step create form | Removed service checklist step. Each job row has vendor + service dropdown. Simpler. |
 | 2026-03-25 | Auto-migrate localStorage | Old multi-service data auto-resets to seed. No manual clearing needed. |
 | 2026-03-25 | Pickup Date column | Added to main table — earliest job origin date. Critical for ops scheduling. |
-| 2026-03-25 | Realistic seed data | 10 orders with real vendors (HaleSun, SevenSeas, Gonda, ThaiKee, The Lorry) and real customers (TikTok, Shopee, Shein, AliExpress, Temu). |
+| 2026-03-25 | Realistic seed data | 10 shipments with real vendors (HaleSun, SevenSeas, Gonda, ThaiKee, The Lorry) and real customers (TikTok, Shopee, Shein, AliExpress, Temu). |
 | 2026-03-25 | ~~Priority tag~~ | Removed — overdesign. (HMW-27) |
 | 2026-03-25 | ~~Pickup urgency coloring~~ | Removed — visual noise without clear value. |
-| 2026-03-25 | Duplicate order button | Copy icon on row hover → pre-fills create form with same pattern. |
-| 2026-03-25 | Vendor filter dropdown | Added to filter bar alongside MAWB and Customer. Filters orders by vendor. |
+| 2026-03-25 | Duplicate shipment button | Copy icon on row hover → pre-fills create form with same pattern. |
+| 2026-03-25 | Vendor filter dropdown | Added to filter bar alongside MAWB and Customer. Filters shipments by vendor. |
 | 2026-03-25 | Proof status icon | Green ✓ = proof uploaded, gray ○ = missing. Replaces "N docs" text in sub-table. |
 | 2026-03-25 | Location master data | Dropdown + "Add new" replaces free-text locations. Prerequisite for rate lookups. |
 | 2026-03-25 | Rate + unit pricing | Each rate has a unit (flat/per-kg/per-bag/per-CBM). Cost = rate × quantity. |
-| 2026-03-25 | Vendor comparison popover | During order creation, compare vendors by rate + reliability before assigning. |
+| 2026-03-25 | Vendor comparison popover | During shipment creation, compare vendors by rate + reliability before assigning. |
 | 2026-03-25 | ~~Invoice variance detection~~ | Removed — billing module dropped. Proof-centric model replaces billing validation. |
 | 2026-03-25 | Quick-add service bar in create form | Horizontal [+FM] [+EC] [+CS] etc. bar. Click = add job with service pre-filled. Service-first thinking restored. |
-| 2026-03-25 | Empty state: inline CTA | Teal icon + message + [+ New Order] button in empty table body. No hand-holding. |
+| 2026-03-25 | Empty state: inline CTA | Teal icon + message + [+ New Shipment] button in empty table body. No hand-holding. |
 | 2026-03-25 | Reactive slide-out panel | Panel stores tripId+jobId, derives data from context. Always fresh after mutations. |
-| 2026-03-25 | ~~Persona-split navigation~~ → Simplified nav | Delivery Orders / Rates / Master Data. Billing dropped (redundant with proof-centric). |
+| 2026-03-25 | ~~Persona-split navigation~~ → Simplified nav | Shipments / Rates / Master Data. Billing dropped (redundant with proof-centric). |
 | 2026-03-25 | ~~Persona-specific sub-table columns~~ → Flat sub-table | Job/Vendor/Service/Route/Total Cost/Proof. Click row → slide-out for details. (HMW-27) |
 | 2026-03-25 | Service config: FM=route, rest=location | FM Trucking uses origin+destination. EC/CS/CR/OH use single location. Determines form layout per job. |
 | 2026-03-25 | Multi-currency (MYR/CNY/USD) | Currency is per-rate. Display: "CNY 3,200". Mixed totals show separate line per currency. |
@@ -307,13 +307,13 @@ Replaces old dual `status` + `proofStatus` model with single field:
 | 2026-03-25 | Desktop a11y + keyboard nav | Arrow keys for dropdowns, tab for popovers, focus trapping in slide-outs, Escape to close. Min viewport 1200px. |
 | 2026-03-25 | Multi-fee jobs (HMW-25) | Each job has N fee line items (L2). Fee = locked rate × editable quantity = calculated amount. Sub-table shows Total Cost (sum of fees). |
 | 2026-03-25 | ~~Inline quick status~~ → ~~Proof-centric~~ → Unified status | Originally proof-centric, now unified lifecycle: Pending → In Progress → Completed → Verified. (HMW-30 → HMW-47) |
-| 2026-03-25 | Per-job quantities (HMW-26) | Bags/weight/volume live at job level, default from order. Editable until validated. |
+| 2026-03-25 | Per-job quantities (HMW-26) | Bags/weight/volume live at job level, default from shipment. Editable until verified. |
 | 2026-03-25 | ~~Fee catalog (free-text)~~ → Rate-locked fees | All fees from rate cards only. No free-text entry. "Fees are configured in Rates →" link. (HMW-30) |
 | 2026-03-25 | Lock on validate | When job proofStatus = validated, all fees and quantities become read-only. |
 | 2026-03-25 | Flat sub-table (HMW-27) | No inline fee expansion. Fee details in slide-out only. Sub-table scans, slide-out acts. |
-| 2026-03-25 | Smart default filter (HMW-28) | Active/All/Completed chips. Active = any job NOT validated. Default on page load. |
+| 2026-03-25 | Smart default filter (HMW-28) | Active/All/Completed chips. Active = any job NOT verified. Default on page load. |
 | 2026-03-25 | Date period picker (HMW-29) | Today/This week/This month/Last month/All time. Only for All/Completed views. Active has no date constraint. |
-| 2026-03-25 | ~~Billing module~~ dropped | Redundant with proof-centric delivery orders. Validated = ready for payment. |
+| 2026-03-25 | ~~Billing module~~ dropped | Redundant with proof-centric shipments. Verified = ready for payment. |
 | 2026-03-25 | Teleport Future Blue `#152CFF` | Brand color from teleport.it. Dark nav `#111827`. |
 | 2026-03-25 | L1/L2 service hierarchy | 5 L1 services → 20 L2 sub-services with Cost IDs from CR Trip Management reference. |
 | 2026-03-25 | Unit type fixed per Cost ID (HMW-35) | /trip, /kg, /bag defined once in master data. All rates for that Cost ID use the same unit. |
@@ -326,7 +326,7 @@ Replaces old dual `status` + `proofStatus` model with single field:
 | 2026-03-25 | Unified vendor selector on Rates page | Single dropdown at top, shared across all service tabs. Not separate pills per tab. |
 | 2026-03-25 | Service-based rate tabs | FM Trucking / Export Customs / Cargo Submission / Cargo Retrieval / Origin Handling. Each service has its own rate structure. |
 | 2026-03-25 | Services rates: vertical by location | Each location as a card with fees listed vertically underneath. Scrolls down, not right. |
-| 2026-03-29 | Jobs page (HMW-44→48) | Separate Jobs nav item for vendor/execution-focused view. Flat power table with status pills + Group by toggle. Complementary to DO view (demand-side vs supply-side). |
+| 2026-03-29 | Jobs page (HMW-44→48) | Separate Jobs nav item for vendor/execution-focused view. Flat power table with status pills + Group by toggle. Complementary to Shipments view (demand-side vs supply-side). |
 | 2026-03-29 | ~~Proof-centric lifecycle~~ → Unified status (HMW-47) | Replace dual status+proofStatus with single field: Pending → In Progress → Completed (proof uploaded) → Verified (admin sign-off). Researched Flexport, project44, Uber Freight, TAI TMS. |
 | 2026-03-29 | "In Progress" not "In Transit" | Works for all 5 service types — customs clearance is "in progress" not "in transit". |
 | 2026-03-29 | "Verified" not "Validated" | Distinct billing gate. Implies proof review without implying payment authorization. |
@@ -339,5 +339,7 @@ Replaces old dual `status` + `proofStatus` model with single field:
 | 2026-03-29 | Editable until Verified | Fees toggleable, quantities editable, proof uploadable from Pending through Completed. Everything locks on Verified (billing gate). |
 | 2026-03-29 | ~~Lock on validate~~ → Lock on verify | Renamed from "validate" to "verify" per unified status terminology. Same behavior: all fields read-only after verification. |
 | 2026-03-29 | ~~Rejected~~ → Cancelled | 3PL vendors can't reject (no vendor portal). Only admin can cancel jobs. Renamed throughout codebase. `cancelReason` replaces `rejectionReason`. |
-| 2026-03-29 | Jobs page column widths (percentage-based) | Order 11%, Vendor 10%, Service 6%, Route 38%, Pickup 8%, Status 10%, Cost 9%. Route truncates with ellipsis. Prevents Route from dominating. |
-| 2026-03-29 | Consistent 1400px max-width across pages | Both DO and Jobs pages use maxWidth: 1400px. Different widths caused a jarring shift when navigating between pages. |
+| 2026-03-29 | Jobs page column widths (percentage-based) | Shipment 11%, Vendor 10%, Service 6%, Route 38%, Pickup 8%, Status 10%, Cost 9%. Route truncates with ellipsis. Prevents Route from dominating. |
+| 2026-03-29 | Consistent 1400px max-width across pages | Both Shipments and Jobs pages use maxWidth: 1400px. Different widths caused a jarring shift when navigating between pages. |
+| 2026-03-29 | ~~Delivery Order~~ → Shipment | "Delivery Order" means cargo release document in freight — actively misleading. "Shipment" is industry standard (Flexport, project44, CargoWise, IATA). 1 Shipment = 1 MAWB. See PRD.md for full alternatives analysis. |
+| 2026-03-29 | 1 origin + 1 destination per shipment | Trip interface gets `origin` and `destination` fields. Jobs are parallel services at these locations, not sequential legs forming a chain. FM trucking moves goods origin→dest; other services operate at the destination. |

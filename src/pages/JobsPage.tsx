@@ -374,7 +374,7 @@ export default function JobsPage() {
         onMouseEnter={(e) => { if (!isRejected) e.currentTarget.style.background = '#f9fafb'; }}
         onMouseLeave={(e) => { if (!isRejected) e.currentTarget.style.background = ''; }}
       >
-        {/* Order / Customer */}
+        {/* Shipment / Customer */}
         <td style={{ padding: '7px 12px', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' }}>
           <Link
             to="/trips"
@@ -523,7 +523,7 @@ export default function JobsPage() {
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: '16px 16px 0 16px' }}>
         <div>
           <h1 style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.3px', color: '#111827', margin: 0 }}>Jobs</h1>
-          <p style={{ fontSize: 11, color: '#9ca3af', margin: '2px 0 0 0' }}>All vendor assignments across delivery orders</p>
+          <p style={{ fontSize: 11, color: '#9ca3af', margin: '2px 0 0 0' }}>All vendor assignments across shipments</p>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <button style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#fff', color: '#374151', border: '1px solid #e5e7eb', cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -665,7 +665,7 @@ export default function JobsPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, overflow: 'hidden' }}>
             <thead>
               <tr>
-                <th style={{ ...th, width: '11%' }}>Order &middot; Customer</th>
+                <th style={{ ...th, width: '11%' }}>Shipment &middot; Customer</th>
                 <th style={{ ...th, width: '10%' }}>Vendor</th>
                 <th style={{ ...th, width: '6%' }}>Service</th>
                 <th style={{ ...th, width: '38%' }}>Route</th>
@@ -717,7 +717,7 @@ export default function JobsPage() {
                     <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
                       <thead>
                         <tr>
-                          <th style={{ ...th, width: '11%' }}>Order &middot; Customer</th>
+                          <th style={{ ...th, width: '11%' }}>Shipment &middot; Customer</th>
                           {hideColumn !== 'vendor' && <th style={{ ...th, width: '10%' }}>Vendor</th>}
                           {hideColumn !== 'service' && <th style={{ ...th, width: '6%' }}>Service</th>}
                           <th style={{ ...th, width: '38%' }}>Route</th>

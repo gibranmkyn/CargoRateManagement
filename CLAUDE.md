@@ -1,7 +1,7 @@
-# Teleport OS — Delivery Order Management
+# Teleport OS — Shipment Management
 
 ## Project
-Logistics operations tool for managing cross-border cargo delivery orders. React + TypeScript + Vite + Tailwind CSS v4.
+Logistics operations tool for managing cross-border cargo shipments. React + TypeScript + Vite + Tailwind CSS v4.
 
 ## Design System
 **Always read `DESIGN.md` before making any visual or UI decisions.**
@@ -22,7 +22,7 @@ Each HMW question has an HTML mockup — these are the source of truth for desig
 - **Persistence:** localStorage. Key: `tripmanager_state`. Seeded from `src/data/mockData.ts`
 - **Routing:** React Router v7. Routes in `src/App.tsx`
 - **Fonts:** Instrument Sans (Google Fonts) for everything, JetBrains Mono (@fontsource) for data
-- **Terminology:** "Delivery Order" in UI = `Trip` in code. "Job" = vendor assignment within an order.
+- **Terminology:** "Shipment" in UI = `Trip` in code. "Job" = vendor assignment within a shipment.
 
 ## Data Model
 - **Trip** → has many **Jobs**
@@ -36,7 +36,7 @@ Each HMW question has an HTML mockup — these are the source of truth for desig
 - localStorage auto-migrates old multi-service format to seed data
 
 ## Pages
-- **Delivery Orders** (`/trips`) — demand-side view grouped by client request. Expandable sub-table with jobs.
+- **Shipments** (`/trips`) — demand-side view grouped by client request. Expandable sub-table with jobs.
 - **Jobs** (`/jobs`) — supply-side view. Flat power table with status pills (Active/Completed/Verified/All), service filters, vendor dropdown with search, Group by toggle (None/Vendor/Service/Date). See HMW-48 mockup.
 - **Rates** (`/rates`) — vendor rate card management (FTL + service fees)
 - **Master Data** (`/master-data`) — Facilities, Regions, Vendors, Customers, Services

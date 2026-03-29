@@ -251,7 +251,7 @@ export default function CreateTripPage() {
     };
 
     addTrip(trip);
-    toast.success(`Order created — ${tripId}`);
+    toast.success(`Shipment created — ${tripId}`);
     navigate('/trips');
   }
 
@@ -267,9 +267,9 @@ export default function CreateTripPage() {
         <button onClick={() => navigate('/trips')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 6, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}>
           <ArrowLeft size={16} />
         </button>
-        <h1 style={{ fontSize: 16, fontWeight: 800, color: '#111827', letterSpacing: '-0.3px', margin: 0 }}>Create Delivery Order</h1>
+        <h1 style={{ fontSize: 16, fontWeight: 800, color: '#111827', letterSpacing: '-0.3px', margin: 0 }}>Create Shipment</h1>
       </div>
-      <p style={{ fontSize: 11, color: '#9ca3af', marginBottom: 20, marginLeft: 44 }}>Define what needs to happen and assign vendors.</p>
+      <p style={{ fontSize: 11, color: '#9ca3af', marginBottom: 20, marginLeft: 44 }}>Define what needs to happen and assign vendors to this shipment.</p>
 
       <form onSubmit={handleSubmit}>
         {errors.length > 0 && (
@@ -279,11 +279,11 @@ export default function CreateTripPage() {
           </div>
         )}
 
-        {/* Step 1: Order Details */}
+        {/* Step 1: Shipment Details */}
         <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: 16, marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
             <span style={{ width: 22, height: 22, borderRadius: 5, background: '#152CFF', color: '#fff', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>1</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Order Details</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Shipment Details</span>
           </div>
           <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
             <div style={{ flex: 1 }}>
@@ -462,10 +462,10 @@ export default function CreateTripPage() {
             </div>
           )}
 
-          {/* Order totals */}
+          {/* Shipment totals */}
           {jobs.length > 0 && totals.size > 0 && (
             <div style={{ marginTop: 12, padding: '8px 12px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' }}>Order Total</span>
+              <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' }}>Shipment Total</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 {Array.from(totals.entries()).map(([curr, total]) => (
                   <span key={curr} style={{ fontSize: 12, fontWeight: 700, color: '#111827', fontFamily: "'JetBrains Mono', monospace" }}>{formatCurrency(curr, total)}</span>
@@ -479,7 +479,7 @@ export default function CreateTripPage() {
         {/* Submit */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16, paddingTop: 16, borderTop: '1px solid #f3f4f6' }}>
           <button type="button" onClick={() => navigate('/trips')} style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#fff', color: '#374151', border: '1px solid #e5e7eb', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
-          <button type="submit" style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#152CFF', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Create Order</button>
+          <button type="submit" style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#152CFF', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Create Shipment</button>
         </div>
       </form>
     </div>

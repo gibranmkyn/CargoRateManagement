@@ -15,7 +15,7 @@ export default function DashboardCards() {
 
   const cards = [
     {
-      label: 'Delivery Orders',
+      label: 'Shipments',
       value: totalTrips,
       sub: `${totalJobs} jobs total`,
       icon: Ship,

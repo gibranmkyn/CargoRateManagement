@@ -1,6 +1,26 @@
-# Teleport OS — Delivery Order Management
+# Teleport OS — Shipment Management
 
-> **Terminology:** "Trip" in the codebase = "Delivery Order" in the UI. "Job" = a vendor assignment within an order.
+> **Terminology:** "Trip" in the codebase = "Shipment" in the UI. "Job" = a vendor assignment within a shipment.
+
+## Why "Shipment" (not "Delivery Order")
+
+**Decision date:** 2026-03-29. Researched Flexport, project44, CargoWise, Freightos, IATA ONE Record.
+
+**"Delivery Order" was actively misleading.** In freight/air cargo, a D/O is a specific document authorizing cargo release at destination — not a transport request. Anyone with freight forwarding or customs brokerage experience would expect it to mean a cargo release document, creating confusion and onboarding friction.
+
+**Alternatives considered:**
+
+| Term | Verdict | Why not |
+|------|---------|---------|
+| **Shipment** | **Chosen** | Industry standard (Flexport, project44, CargoWise, IATA). 1 Shipment = 1 MAWB = 1 origin → 1 destination. No ambiguity. |
+| Delivery Order | Rejected | Means "cargo release document" in freight — actively confusing |
+| Booking | Rejected | Too narrow — means airline capacity reservation, not the full door-to-airport scope |
+| Consignment | Rejected | Less common in modern SaaS; UK/Commonwealth bias; secondary meaning (goods held by agent) |
+| Transport Order | Rejected | SAP-only terminology; verbose; confused with commercial orders |
+| Load | Rejected | Trucking-specific; doesn't fit air cargo multi-service model |
+| Work Order | Rejected | Too generic; sounds internal/operational, not logistics-specific |
+
+**Hierarchy:** Shipment (1 origin, 1 destination, 1 MAWB) → Jobs (parallel vendor assignments). This matches CargoWise's dominant pattern and IATA ONE Record's `Shipment` → `LogisticsAction` structure.
 
 ## Overview
 TripManager is a logistics operations module for Teleport OS that enables ops planners to create, track, and validate cargo trips without requiring handling unit (HU) data upfront. It replaces the current spreadsheet-based workflow.
@@ -41,7 +61,7 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 - **US-001:** As an ops planner, I want to create a trip by specifying customer, MAWB, and required services, so I can book vendor capacity before HU data is available.
 - **US-002:** As an ops planner, I want to assign a vendor to each service (1 job = 1 vendor + 1 service), so billing and tracking are unambiguous.
 - **US-003:** As an ops planner, I want to see all trips in a list with search/filter by MAWB, customer, and date, so I can quickly find any trip.
-- **US-004:** As an ops planner, I want to expand an order to see all its jobs in a sub-table, so I can see vendor, service, status, and proof count at a glance.
+- **US-004:** As an ops planner, I want to expand a shipment to see all its jobs in a sub-table, so I can see vendor, service, status, and proof count at a glance.
 
 ### Job Lifecycle (Unified Status: Pending → In Progress → Completed → Verified)
 - **US-005:** As an ops planner, I want to click "Start Job" in the slide-out panel to transition a job from Pending → In Progress, so vendor execution progress is tracked.
@@ -58,7 +78,7 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 - **US-011:** As an ops admin, I want to verify jobs (Completed → Verified) after reviewing proof documents, gating vendor payment on admin sign-off.
 
 ### Jobs Page (supply-side view — HMW-48)
-- **US-040:** As an ops planner, I want a Jobs page showing all vendor assignments across delivery orders in a flat table, so I can focus on vendor execution without navigating individual DOs.
+- **US-040:** As an ops planner, I want a Jobs page showing all vendor assignments across shipments in a flat table, so I can focus on vendor execution without navigating individual shipments.
 - **US-041:** As an ops planner, I want status filter pills (Active/Completed/Verified/All) on the Jobs page, so I can quickly focus on work that needs attention.
 - **US-042:** As an ops planner, I want to filter jobs by service type (FM/EC/CS/CR/OH), vendor, and date, so I can answer specific operational questions.
 - **US-043:** As an ops planner, I want a "Group by" toggle (None/Vendor/Service/Date) so I can batch vendor calls by grouping jobs under vendor headers.
@@ -76,13 +96,13 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 - **US-024:** As a rates admin, I want each truck type column to show capacity specs (weight cap, volume cap, dimensions), so I know what each truck type means when setting rates.
 - **US-025:** As a rates admin, I want to see the currency per route (RMB for domestic, HKD for cross-border), so rates are quoted in the correct currency.
 - **US-026:** As an ops planner, when creating an FM Trucking job, I want to select a truck type in addition to vendor and route, so the system can look up the correct FTL rate.
-- **US-027:** As an ops planner, I want the FTL rate to auto-populate as a fee line item when I select vendor + origin district + destination district + truck type, so I see the cost before submitting the order.
+- **US-027:** As an ops planner, I want the FTL rate to auto-populate as a fee line item when I select vendor + origin district + destination district + truck type, so I see the cost before submitting the shipment.
 - **US-028:** As a rates admin, I want FM accessorial fees (FM001 Warehouse Transfer, FM002 Pickup, FM003 Cross-Border Handling) to be managed separately from the base FTL rate, so the base trucking rate and surcharges are distinct.
 - **US-029:** As a rates admin, I want origin and destination to be standardized China districts (GB/T 2260 codes) from the Regions master data, so rate lookup is unambiguous regardless of how the address is written.
 
 ### Service-Based Rate Management (EC, CS, CR, OH)
 - **US-030:** As a rates admin, I want to manage each vendor's fee schedule per service and location — using the vendor's own fee names, units, and rates — so rates match exactly what the vendor quotes us. (HMW-43)
-- **US-031:** As an ops planner, I want all fees from the vendor's schedule to auto-populate when a job is created, and I can remove the exceptions that don't apply to this specific shipment, so fee management is subtractive (remove what doesn't apply) not additive (search and select each fee). (HMW-43)
+- **US-031:** As an ops planner, I want all fees from the vendor's schedule to auto-populate when a job is created, and I can remove the exceptions that don't apply to this specific job, so fee management is subtractive (remove what doesn't apply) not additive (search and select each fee). (HMW-43)
 - **US-035:** As a rates admin, I want to upload vendor fee schedules via CSV (fee_name, unit, rate, min_charge, currency), so I can onboard a vendor's 15+ fees in one upload.
 
 ### Future (Phase 3+)
@@ -100,8 +120,8 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 3. **5-color status system:** Gray (pending), blue (in progress), amber (completed/needs verification), green (verified), red (cancelled).
 4. **Unified job status lifecycle:** Pending → In Progress → Completed (proof uploaded) → Verified (admin sign-off). Replaces old dual status + proofStatus fields. Researched Flexport, project44, Uber Freight, TAI TMS. (HMW-47)
    - **Cancelled**: Admin cancels a job — terminal state. 3PL vendors cannot reject (no vendor portal). Admin can reassign to a different vendor (resets to Pending) or cancel outright.
-5. **Two complementary views:** Delivery Orders (demand-side, grouped by client request) + Jobs (supply-side, flat table with vendor/service/status focus). (HMW-44→48)
-6. **Sub-table for expanded jobs:** Not cards. Expanded orders show a nested table.
+5. **Two complementary views:** Shipments (demand-side, grouped by client request) + Jobs (supply-side, flat table with vendor/service/status focus). (HMW-44→48)
+6. **Sub-table for expanded jobs:** Not cards. Expanded shipments show a nested table.
 7. **Slide-out panel for actions:** Proof upload + verification + fee management + activity log in one panel.
 8. **Activity log per job:** Every status change and document upload is auto-logged for billing audit trail.
 9. **Proof upload = Completed:** Document upload triggers status transition to Completed. No separate proof status field.
@@ -138,17 +158,17 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 - [x] All components use inline styles matching approved mockups exactly
 
 ### Iteration 4 — UX Refinements (completed)
-- [x] Priority tag on urgent orders (amber "PRIORITY" next to customer name)
+- [x] Priority tag on urgent shipments (amber "PRIORITY" next to customer name)
 - [x] Pickup urgency coloring (red <2h, default today, muted future) + sort by soonest
-- [x] Duplicate order button (copy icon on row hover)
+- [x] Duplicate shipment button (copy icon on row hover)
 - [x] Vendor filter dropdown in filter bar
 - [x] Proof status icons in sub-table (green ✓ / gray ○)
 
 ### Iteration 5 — Core UX Fixes (completed)
 - [x] Quick-add service bar in create form (HMW-21) — click [+FM] [+EC] etc. to add pre-filled jobs
-- [x] Smart empty state (HMW-22) — "No orders yet" vs "No orders match filters"
+- [x] Smart empty state (HMW-22) — "No shipments yet" vs "No shipments match filters"
 - [x] Reactive slide-out panel (HMW-23) — derives data from context by ID, always fresh
-- [x] Toast on order creation
+- [x] Toast on shipment creation
 
 ### Iteration 6 — Rate Management (completed)
 - [x] Location master data with CRUD, zone grouping, inline add (HMW-17)
@@ -159,8 +179,8 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 - [x] Location dropdown with zone grouping, search, inline "Add new" (HMW-17)
 - [x] Inline rate display in create form with cost breakdown
 - [x] Multi-currency support (MYR, CNY, USD)
-- [x] Rate + Cost columns in delivery orders sub-table
-- [x] Seed data: 23 locations, 21 rates, 10 orders with rate data
+- [x] Rate + Cost columns in shipments sub-table
+- [x] Seed data: 23 locations, 21 rates, 10 shipments with rate data
 
 ### Iteration 7 — Multi-Fee Model (completed)
 - [x] FeeLineItem model: each job has N fee line items (L2 cost IDs) (HMW-25)
@@ -177,9 +197,9 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 - [x] Smart default filter: Active/All/Completed with Active as default (HMW-28)
 - [x] Date period picker for All/Completed: Today/This week/This month/Last month (HMW-29)
 - [x] Pagination at 50/page for historical views
-- [x] Dropped billing module — redundant with proof-centric delivery orders
+- [x] Dropped billing module — redundant with proof-centric shipments
 - [x] Teleport.it brand: Future Blue #152CFF, dark nav, Instrument Sans
-- [x] Nav: Delivery Orders | Rates | Master Data
+- [x] Nav: Shipments | Rates | Master Data
 
 ### Iteration 9 — FTL Trucking Rates + L1/L2 Services + Regions (completed)
 - [x] L1/L2 service hierarchy: 5 L1 services → 20 L2 sub-services with Cost IDs (HMW-35/36)
@@ -210,9 +230,9 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
   - Group by toggle: None (default) | Vendor | Service | Date
   - Group by: Vendor — collapsed headers sorted by most outstanding, status badges
   - Default sort within Active: Cancelled → In Progress → Pending
-  - Click job row → slide-out panel. Click DO link → Delivery Orders view.
-- [ ] Nav update: Delivery Orders | **Jobs** | Rates | Master Data
-- [ ] Update Delivery Orders sub-table to use new status chips
+  - Click job row → slide-out panel. Click shipment link → Shipments view.
+- [ ] Nav update: Shipments | **Jobs** | Rates | Master Data
+- [ ] Update Shipments sub-table to use new status chips
 - [ ] Update slide-out panel: proof upload triggers Completed, Verify button triggers Verified
 - [ ] Update seed data with unified status values
 
@@ -234,9 +254,9 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 - [ ] Rate suggestion engine (HMW-16 Option C)
 - [ ] Excel import (in addition to CSV) for vendor rate card onboarding
 - [ ] Inline cell editing for quick single-rate fixes
-- [ ] Vendor comparison popover during order creation (HMW-19)
+- [ ] Vendor comparison popover during shipment creation (HMW-19)
 - [ ] Job detail page update for proof/fee model
-- [ ] Inline edit mode for orders (HMW-11)
+- [ ] Inline edit mode for shipments (HMW-11)
 - [ ] Trip templates
 - [ ] Vendor portal (US-014)
 - [ ] Responsive design

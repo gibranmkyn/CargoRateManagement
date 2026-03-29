@@ -47,9 +47,9 @@ Implemented: gray (Pending), blue (In Progress), amber (Completed), green (Verif
 Implemented: `/jobs` route with flat power table, status pills, service filters, vendor dropdown, Group by toggle (None/Vendor/Service/Date). Percentage-based column widths (Route 38%).
 
 ### ~~TODO-023: Nav update~~ ✅
-Implemented: Delivery Orders | Jobs | Rates | Master Data.
+Implemented: Shipments | Jobs | Rates | Master Data.
 
-### ~~TODO-024: Update Delivery Orders for new status model~~ ✅
+### ~~TODO-024: Update Shipments page for new status model~~ ✅
 Implemented: Stats bar, sub-table, and filter logic updated. Active = any job not Verified/Cancelled.
 
 ### ~~TODO-025: Slide-out panel — Status Action Bar~~ ✅
