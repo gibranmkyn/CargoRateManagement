@@ -329,37 +329,54 @@ Both Admin and Vendor apps should display:
 - **Partial completions:** Normal Completed status + completion remark visible, link to follow-up job if one exists
 - **Replacement jobs:** "Replaces J02" link on the new job, so context is clear
 
-#### Interaction Patterns (conceptual — design in HMW mockups)
+#### Interaction Design (HMW-51 — Option A: Inline Cancel & Replace)
 
-**Slide-out Status Action Bar — Cancelled state:**
-- Remove: vendor reassignment dropdown
-- Add: "Cancel & Replace" button (opens inline vendor selector → creates new job)
-- Show: cancel reason (read-only), link to replacement if exists
+**Design decision:** Everything happens in the slide-out panel — no modal. Consistent with HMW-49's "one panel, every action" pattern. See `design-hypotheses/51-hmw-cancellation-reassignment-flow.html` for full mockup.
 
-**Slide-out — new actions for active jobs:**
-- "Cancel Job" action available on Pending / In Progress jobs (opens cancel reason form)
-- "Complete with Remark" variant for the partial completion case
-- "Create Follow-up" action on Completed jobs (for retry scenarios)
+**Slide-out — Cancel Job (Pending / In Progress):**
+- Red outline "Cancel Job" button at bottom of slide-out (secondary, not in status bar)
+- Clicking expands inline cancel form: mandatory reason textarea + "Create replacement job" checkbox
+- If checkbox checked: vendor picker appears inline. "Cancel & Replace" (red) creates both atomically.
+- If unchecked: "Cancel Only" button. Job → Cancelled, no replacement.
+- Cancel form warns: "This action is permanent. The vendor will see the cancellation reason."
+
+**Slide-out — Cancelled state (immutable):**
+- Red status bar with "Cancelled" chip (read-only)
+- Cancel reason in white box with red border, timestamp + author
+- "Replaced By" card with navigable link to replacement job (if exists)
+- No vendor reassignment dropdown — removed entirely
+- Activity log shows full cancellation + replacement history
+
+**Slide-out — Completed state (with remark):**
+- Amber "Completion Remark" box below status bar (only if remark exists)
+- "Create Follow-up Job" blue outline button at bottom
+- Follow-up link card (same pattern as replacement, labeled "Follow-up" / "Follows")
+
+**Slide-out — Replacement/Follow-up job (Pending):**
+- "Replaces J02" or "Follows J01" link card below status bar
+- Navigable — click to open the original job in the slide-out
 
 **Jobs page / Shipments sub-table:**
-- Replacement chain indicator: small link icon or "→ J04" next to cancelled jobs
-- Follow-up indicator: "← J02" on replacement jobs
+- Replacement chain indicator: "→ J05" link next to cancelled jobs
+- Follow-up indicator: "← J01" link on follow-up jobs
 
 #### Implementation Checklist
+- [ ] Add `completionRemark`, `replacedByJobId`, `replacesJobId` fields to Job interface
 - [ ] Make `cancelReason` mandatory for Cancelled status (model + UI validation)
 - [ ] Remove vendor reassignment on cancelled jobs (slide-out + RejectedTab)
-- [ ] Add `completionRemark` field to Job
-- [ ] Add `replacedByJobId` / `replacesJobId` fields to Job
-- [ ] "Cancel Job" action on slide-out for Pending/In Progress jobs (reason form)
-- [ ] "Cancel & Replace" flow: cancel + create new job atomically with linkage
-- [ ] "Complete with Remark" option on slide-out
-- [ ] "Create Follow-up Job" action on Completed jobs
-- [ ] Display cancel reason + replacement links in admin slide-out
+- [ ] "Cancel Job" button on slide-out for Pending/In Progress (red outline, bottom)
+- [ ] Inline cancel form: reason textarea + "Create replacement" checkbox + vendor picker
+- [ ] "Cancel & Replace" atomic action: cancel original + create new job + link both
+- [ ] "Cancel Only" action: cancel with reason, no replacement
+- [ ] Cancelled state in slide-out: immutable reason display + replacement link
+- [ ] "Complete with Remark" option on slide-out (completion remark textarea)
+- [ ] "Create Follow-up Job" button on Completed jobs
+- [ ] Replacement/follow-up link cards (navigable) in slide-out
 - [ ] Display cancel reason + replacement links in vendor job detail
 - [ ] Update vendor My Jobs to show completion remarks
-- [ ] Activity log entries for all cancellation/replacement events
+- [ ] Activity log entries for all cancellation/replacement/follow-up events
 
-
+### Known Scaling Limitations (address in Phase 3)
 - **Vendor selector pills** — works for 5-8 vendors but breaks at 30+. Needs to become a searchable dropdown or sidebar list.
 - **No cross-vendor comparison** — can't compare rates for the same route across vendors. Needs a route-first view (pick a route, see all vendors' rates) in addition to the current vendor-first view.
 - **Activity log is flat** — at 30+ vendors uploading CSVs regularly, the log becomes a firehose. Needs per-vendor filtering or a separate audit page.

@@ -38,7 +38,7 @@ export default function ServiceMultiSelect({ selected, onChange }: ServiceMultiS
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-2 border border-[var(--color-border)] rounded-lg px-2.5 py-[7px] bg-white text-left shadow-[0_1px_2px_rgba(0,0,0,0.03)] min-h-[36px]"
+        className="w-full flex items-center gap-2 border border-[var(--color-border)] rounded-lg px-2.5 py-[7px] bg-white text-left min-h-[36px]"
       >
         {selected.length > 0 ? (
           <div className="flex flex-wrap gap-1 flex-1">
@@ -51,7 +51,9 @@ export default function ServiceMultiSelect({ selected, onChange }: ServiceMultiS
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); remove(svc.code); }}
-                  className="hover:text-red-500"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = '#dc2626'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = ''; }}
                 >
                   <X size={10} />
                 </button>
@@ -65,7 +67,7 @@ export default function ServiceMultiSelect({ selected, onChange }: ServiceMultiS
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 right-0 mt-1 z-20 bg-white border border-[var(--color-border)] rounded-lg shadow-lg py-1">
+        <div className="absolute top-full left-0 right-0 mt-1 z-20 bg-white border border-[var(--color-border)] rounded-lg py-1" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
           {serviceTypes.map((svc) => {
             const isSelected = selected.some((s) => s.code === svc.code);
             return (

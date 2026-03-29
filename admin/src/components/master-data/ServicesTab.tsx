@@ -18,9 +18,9 @@ const td: React.CSSProperties = {
 
 const UNIT_BADGE_STYLES: Record<RateUnit, { color: string; bg: string; border: string }> = {
   'flat':    { color: '#6b7280', bg: '#f3f4f6', border: '#e5e7eb' },
-  'per-kg':  { color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
-  'per-bag': { color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
-  'per-cbm': { color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
+  'per-kg':  { color: '#152CFF', bg: 'rgba(21,44,255,0.04)', border: 'rgba(21,44,255,0.15)' },
+  'per-bag': { color: '#152CFF', bg: 'rgba(21,44,255,0.04)', border: 'rgba(21,44,255,0.15)' },
+  'per-cbm': { color: '#152CFF', bg: 'rgba(21,44,255,0.04)', border: 'rgba(21,44,255,0.15)' },
   'per-km':  { color: '#6b7280', bg: '#f3f4f6', border: '#e5e7eb' },
 };
 

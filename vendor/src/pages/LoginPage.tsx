@@ -209,7 +209,7 @@ export default function LoginPage() {
           <p
             style={{
               fontSize: 10,
-              color: '#ef4444',
+              color: '#dc2626',
               marginBottom: 10,
               fontFamily: font,
             }}

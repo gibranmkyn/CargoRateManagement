@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HMW-51: Cancellation, Reassignment & Partial Completion</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.page { max-width: 1400px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 44px 0 6px; color: #152CFF; }
+h3.state { font-size: 13px; font-weight: 700; margin: 24px 0 6px; color: #374151; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 24px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+/* Panel mockup */
+.panels { display: flex; gap: 16px; flex-wrap: wrap; margin: 10px 0 24px; }
+.panel-wrap { flex: 0 0 auto; }
+.panel-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; padding: 3px 8px; border-radius: 3px; display: inline-block; }
+.panel { width: 370px; background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; box-shadow: -4px 0 24px rgba(0,0,0,0.08); }
+.panel-header { padding: 12px 16px; border-bottom: 1px solid #e5e7eb; }
+.panel-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.status-bar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 6px; }
+.status-bar .chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+.status-bar .action { margin-left: auto; padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 4px; }
+.status-bar .hint { font-size: 10px; margin-left: auto; }
+.sec-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px; }
+
+/* Cancel form */
+.cancel-form { padding: 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; }
+.cancel-form textarea { width: 100%; border: 1px solid #fecaca; border-radius: 4px; font-family: inherit; font-size: 11px; padding: 6px 8px; resize: vertical; min-height: 48px; }
+.cancel-form textarea:focus { outline: none; border-color: #dc2626; }
+
+/* Replacement card */
+.replace-card { padding: 10px; background: rgba(21,44,255,0.02); border: 1px solid rgba(21,44,255,0.1); border-radius: 6px; }
+.replace-link { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px; background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.12); font-size: 10px; font-weight: 600; color: #152CFF; cursor: pointer; }
+
+/* Activity log */
+.log-entry { display: flex; gap: 8px; position: relative; }
+.log-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.log-line { position: absolute; left: 3.5px; top: 14px; bottom: -8px; width: 1px; background: #e5e7eb; }
+.log-text { font-size: 11px; font-weight: 500; color: #111827; }
+.log-detail { font-size: 10px; color: #9ca3af; }
+.log-meta { font-size: 9px; color: #d1d5db; margin-top: 1px; font-family: 'SF Mono', monospace; }
+
+/* Fee table */
+.fee-table { width: 100%; border-collapse: collapse; }
+.fee-table th { text-align: left; padding: 4px 8px; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; }
+.fee-table td { padding: 4px 8px; font-size: 10px; border-bottom: 1px solid #f3f4f6; }
+.fee-total { padding: 6px 8px; background: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+
+/* Btn styles */
+.btn { padding: 6px 14px; border-radius: 6px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 4px; }
+.btn-red { background: #dc2626; color: #fff; }
+.btn-red-outline { background: #fff; color: #dc2626; border: 1px solid #fecaca; }
+.btn-blue { background: #152CFF; color: #fff; }
+.btn-blue-outline { background: #fff; color: #152CFF; border: 1px solid rgba(21,44,255,0.2); }
+.btn-ghost { background: none; color: #9ca3af; border: 1px solid #e5e7eb; font-weight: 600; }
+
+/* Scenario */
+.scenario-box { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 16px; }
+.scenario-box h4 { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+.scenario-box p { font-size: 11px; color: #374151; line-height: 1.6; }
+.scenario-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 3px; display: inline-block; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-51: Cancellation, Reassignment & Partial Completion</h1>
+<div class="hmw">"How might we design the cancel/replace flow so that admins can efficiently reassign work while keeping a full, immutable audit trail visible to both admin and vendor?"</div>
+
+<div class="context">
+<strong>Three real scenarios drive this design:</strong><br><br>
+<strong>A) Standard Cancel:</strong> Admin cancels HaleSun's CS job because customer changed plans. No replacement. Vendor sees "Cancelled" + reason.<br><br>
+<strong>B) Cancel & Replace (reassignment):</strong> Admin cancels Gonda's EC job (wrong customs license) and creates a new one for HaleSun. Current system overwrites Gonda's record — wrong. New model: cancel Gonda (with reason) + create new job for HaleSun (linked). Both vendors see their respective records.<br><br>
+<strong>C) Partial Completion (pickup not ready):</strong> FM truck arrives but goods aren't ready. Driver waited, fuel burned — vendor deserves partial payment. Mark as Completed with remark + adjusted fees. Then create follow-up job for retry. Two billable events, not one cancelled job.<br><br>
+<strong>Current flaw:</strong> Reassignment clears cancelReason and overwrites vendor on the same job. Vendor A loses their record. No linkage between old and new.
+</div>
+
+
+<!-- ═══════════════════ OPTION A ═══════════════════ -->
+<h2>Option A: Cancel Action Menu + Inline Replacement</h2>
+<span class="label" style="background: rgba(21,44,255,0.08); color: #152CFF;">Recommended</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Add a "Cancel Job" button (red, secondary) to the slide-out Status Action Bar for Pending/In Progress jobs. Clicking it reveals an inline cancellation form: mandatory reason textarea + two actions: "Cancel Only" and "Cancel & Replace." Cancel & Replace expands a vendor picker inline — one flow, one panel, no modal. Cancelled jobs become immutable and show a link to the replacement job if one exists.
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+&bull; Everything happens in the slide-out — no navigation, no modal<br>
+&bull; "Cancel & Replace" is one smooth flow: reason → vendor → done<br>
+&bull; Cancelled state is immutable — full audit trail<br>
+&bull; Replacement link creates a navigable paper trail<br>
+&bull; Same pattern works for "Create Follow-up" on partial completions
+</div>
+<div class="cons"><strong>Cons</strong><br>
+&bull; Slide-out gets taller when cancel form is expanded<br>
+&bull; Two buttons (Cancel Only / Cancel & Replace) add decision weight<br>
+&bull; Replacement job inherits service + location but admin can't customize fees until it's created
+</div>
+</div>
+</div>
+
+<!-- Scenario A: Pending job with Cancel button -->
+<h3 class="state">Step 1: Admin opens In Progress job — "Cancel Job" available</h3>
+<div class="panels">
+<div class="panel-wrap">
+<div class="panel-label" style="background: rgba(21,44,255,0.06); color: #152CFF;">In Progress — before cancel</div>
+<div class="panel">
+<div class="panel-header">
+<div style="font-size: 14px; font-weight: 700; color: #111827;">Gonda · Export Customs</div>
+<div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">TikTok · <span style="font-family: 'SF Mono', monospace; font-size: 10px;">DO-001 · J02</span></div>
+</div>
+<div class="panel-body">
+<div class="status-bar" style="background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.12);">
+<span class="chip" style="background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.15); color: #152CFF;">
+<span style="width: 5px; height: 5px; border-radius: 50%; background: #152CFF; display: inline-block;"></span> In Progress
+</span>
+<span class="hint" style="color: #9ca3af;">Upload proof to complete &rarr;</span>
+</div>
+
+<div style="font-size: 11px; color: #111827;">
+<div class="sec-title">Route</div>
+<span style="font-size: 10px;">SZX Airport Cargo Terminal</span>
+<div style="margin-top: 4px;"><span style="display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(124,58,237,0.06); color: #7c3aed; border: 1px solid rgba(124,58,237,0.15);">EC</span></div>
+</div>
+
+<!-- Cancel button at bottom of actions -->
+<div style="border-top: 1px solid #f3f4f6; padding-top: 12px;">
+<button class="btn btn-red-outline" style="width: 100%;">Cancel Job</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Step 2: Cancel form expanded -->
+<h3 class="state">Step 2: Cancel form expanded — reason required, choose action</h3>
+<div class="panels">
+<div class="panel-wrap">
+<div class="panel-label" style="background: #fef2f2; color: #dc2626;">Cancelling — form expanded</div>
+<div class="panel">
+<div class="panel-header">
+<div style="font-size: 14px; font-weight: 700; color: #111827;">Gonda · Export Customs</div>
+<div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">TikTok · <span style="font-family: 'SF Mono', monospace; font-size: 10px;">DO-001 · J02</span></div>
+</div>
+<div class="panel-body">
+<!-- Status bar faded -->
+<div class="status-bar" style="background: #f9fafb; border: 1px solid #e5e7eb; opacity: 0.5;">
+<span class="chip" style="background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.15); color: #152CFF;">
+<span style="width: 5px; height: 5px; border-radius: 50%; background: #152CFF; display: inline-block;"></span> In Progress
+</span>
+</div>
+
+<!-- Cancel form -->
+<div class="cancel-form">
+<div style="font-size: 10px; font-weight: 700; color: #dc2626; margin-bottom: 6px;">CANCEL JOB</div>
+<div style="font-size: 10px; color: #92400e; margin-bottom: 8px;">This action is permanent. The vendor will see the cancellation reason.</div>
+<textarea placeholder="Reason for cancellation (required)...">Gonda doesn't have customs license for Category B electronics. Reassigning to HaleSun.</textarea>
+
+<!-- Replace vendor picker -->
+<div style="margin-top: 10px; padding: 8px; background: #fff; border: 1px solid #e5e7eb; border-radius: 4px;">
+<div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+<input type="checkbox" checked style="accent-color: #152CFF;" />
+<span style="font-size: 10px; font-weight: 600; color: #374151;">Create replacement job</span>
+</div>
+<div style="display: flex; gap: 8px; align-items: center;">
+<span style="font-size: 9px; color: #9ca3af; white-space: nowrap;">New vendor:</span>
+<select style="flex: 1; font-size: 11px; padding: 4px 8px; border: 1px solid #152CFF; border-radius: 4px; color: #152CFF; font-weight: 600; font-family: inherit; background: rgba(21,44,255,0.03);">
+<option>HaleSun</option>
+</select>
+</div>
+<div style="font-size: 9px; color: #9ca3af; margin-top: 4px;">New job will inherit: EC Export Customs &middot; SZX Airport Cargo Terminal</div>
+</div>
+
+<div style="display: flex; gap: 6px; margin-top: 10px;">
+<button class="btn btn-red" style="flex: 1;">Cancel & Replace</button>
+<button class="btn btn-ghost">Cancel Only</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Step 3: After cancellation — immutable cancelled state -->
+<h3 class="state">Step 3: After — cancelled job is immutable, shows replacement link</h3>
+<div class="panels">
+<!-- Cancelled job (Gonda) -->
+<div class="panel-wrap">
+<div class="panel-label" style="background: #fef2f2; color: #dc2626;">Cancelled — Gonda's record</div>
+<div class="panel">
+<div class="panel-header">
+<div style="font-size: 14px; font-weight: 700; color: #111827; text-decoration: line-through; color: #9ca3af;">Gonda · Export Customs</div>
+<div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">TikTok · <span style="font-family: 'SF Mono', monospace; font-size: 10px;">DO-001 · J02</span></div>
+</div>
+<div class="panel-body">
+<!-- Cancelled status bar -->
+<div class="status-bar" style="background: #fef2f2; border: 1px solid #fecaca;">
+<span class="chip" style="background: #fef2f2; border: 1px solid #fecaca; color: #dc2626;">
+<span style="width: 5px; height: 5px; border-radius: 50%; background: #dc2626; display: inline-block;"></span> Cancelled
+</span>
+</div>
+
+<!-- Cancel reason — read only, prominent -->
+<div style="padding: 8px 10px; background: #fff; border: 1px solid #fecaca; border-radius: 6px;">
+<div style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #dc2626; margin-bottom: 4px;">Cancellation Reason</div>
+<div style="font-size: 11px; color: #374151; line-height: 1.5;">Gonda doesn't have customs license for Category B electronics. Reassigning to HaleSun.</div>
+<div style="font-size: 9px; color: #9ca3af; margin-top: 4px; font-family: 'SF Mono', monospace;">29 Mar 2026, 14:30 &middot; Ops Admin</div>
+</div>
+
+<!-- Replacement link -->
+<div class="replace-card">
+<div style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #152CFF; margin-bottom: 6px;">Replaced By</div>
+<div class="replace-link">
+<span style="font-family: 'SF Mono', monospace; font-size: 10px;">J05</span>
+<span>&middot;</span>
+<span>HaleSun &middot; EC Export Customs</span>
+<span style="margin-left: auto;">&rarr;</span>
+</div>
+</div>
+
+<!-- Activity log -->
+<div>
+<div class="sec-title">Activity Log</div>
+<div style="display: flex; flex-direction: column; gap: 10px;">
+<div class="log-entry">
+<div class="log-dot" style="background: #dc2626;"></div><div class="log-line"></div>
+<div><div class="log-text">Cancelled &mdash; replaced by J05 (HaleSun)</div><div class="log-meta">29 Mar, 14:30 &middot; Ops Admin</div></div>
+</div>
+<div class="log-entry">
+<div class="log-dot" style="background: #152CFF;"></div><div class="log-line"></div>
+<div><div class="log-text">Status &rarr; In Progress</div><div class="log-meta">29 Mar, 09:15 &middot; Ops Admin</div></div>
+</div>
+<div class="log-entry">
+<div class="log-dot" style="background: #9ca3af;"></div>
+<div><div class="log-text">Job created &mdash; assigned to Gonda</div><div class="log-meta">28 Mar, 16:00 &middot; Ops Admin</div></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Replacement job (HaleSun) -->
+<div class="panel-wrap">
+<div class="panel-label" style="background: #f9fafb; color: #9ca3af;">Pending — HaleSun replacement</div>
+<div class="panel">
+<div class="panel-header">
+<div style="font-size: 14px; font-weight: 700; color: #111827;">HaleSun · Export Customs</div>
+<div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">TikTok · <span style="font-family: 'SF Mono', monospace; font-size: 10px;">DO-001 · J05</span></div>
+</div>
+<div class="panel-body">
+<div class="status-bar" style="background: #f9fafb; border: 1px solid #e5e7eb;">
+<span class="chip" style="background: #f9fafb; border: 1px solid #e5e7eb; color: #9ca3af;">
+<span style="width: 5px; height: 5px; border-radius: 50%; background: #9ca3af; display: inline-block;"></span> Pending
+</span>
+<button class="action" style="background: #152CFF; color: #fff;">Start Job &rarr;</button>
+</div>
+
+<!-- Replaces link -->
+<div style="padding: 6px 8px; background: rgba(21,44,255,0.02); border: 1px solid rgba(21,44,255,0.08); border-radius: 4px; display: flex; align-items: center; gap: 6px;">
+<span style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Replaces</span>
+<span class="replace-link" style="padding: 2px 6px; font-size: 9px;">
+<span style="font-family: 'SF Mono', monospace;">J02</span> &middot; Gonda (cancelled) &rarr;
+</span>
+</div>
+
+<div style="font-size: 11px; color: #111827;">
+<div class="sec-title">Route</div>
+<span style="font-size: 10px;">SZX Airport Cargo Terminal</span>
+<div style="margin-top: 4px;"><span style="display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(124,58,237,0.06); color: #7c3aed; border: 1px solid rgba(124,58,237,0.15);">EC</span></div>
+</div>
+
+<div>
+<div class="sec-title">Activity Log</div>
+<div class="log-entry">
+<div class="log-dot" style="background: #9ca3af;"></div>
+<div><div class="log-text">Job created &mdash; replaces J02 (Gonda, cancelled)</div><div class="log-meta">29 Mar, 14:30 &middot; Ops Admin</div></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+<!-- ═══════ SCENARIO C: Partial Completion ═══════ -->
+<h3 class="state">Partial Completion: "Complete with Remark" + Follow-up Job</h3>
+<div class="panels">
+
+<!-- Completed with remark (partial) -->
+<div class="panel-wrap">
+<div class="panel-label" style="background: #fefce8; color: #a16207;">Completed — partial (dry run)</div>
+<div class="panel">
+<div class="panel-header">
+<div style="font-size: 14px; font-weight: 700; color: #111827;">HaleSun · Trucking</div>
+<div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">TikTok · <span style="font-family: 'SF Mono', monospace; font-size: 10px;">DO-001 · J01</span></div>
+</div>
+<div class="panel-body">
+<!-- Completed status bar with Verify button -->
+<div class="status-bar" style="background: #fefce8; border: 1px solid #fde68a;">
+<span class="chip" style="background: #fefce8; border: 1px solid #fde68a; color: #a16207;">
+<span style="width: 5px; height: 5px; border-radius: 50%; background: #a16207; display: inline-block;"></span> Completed
+</span>
+<button class="action" style="background: #059669; color: #fff;">&check; Verify</button>
+</div>
+
+<!-- Completion remark — amber note -->
+<div style="padding: 8px 10px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px;">
+<div style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #a16207; margin-bottom: 4px;">Completion Remark</div>
+<div style="font-size: 11px; color: #374151; line-height: 1.5;">Pickup not ready &mdash; driver arrived at TikTok WH but goods delayed by customer. Waited 45 min, returned empty. Dry-run fee applies.</div>
+<div style="font-size: 9px; color: #9ca3af; margin-top: 4px; font-family: 'SF Mono', monospace;">29 Mar 2026, 08:45 &middot; Ops Admin</div>
+</div>
+
+<!-- Fees — adjusted to partial -->
+<div>
+<div style="display: flex; justify-content: space-between;" class="sec-title">
+<span>Fees</span>
+<span style="font-weight: 400; text-transform: none; letter-spacing: 0; color: #b45309; font-size: 8px;">adjusted &mdash; partial</span>
+</div>
+<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+<table class="fee-table">
+<thead><tr><th style="width: 20px;"></th><th>Fee</th><th style="width: 40px; text-align: center;">Qty</th><th style="width: 65px; text-align: right;">Amount</th></tr></thead>
+<tbody>
+<tr><td style="text-align: center; color: #d1d5db;">+</td><td style="text-decoration: line-through; color: #9ca3af;">FTL 5T &mdash; full delivery<div style="font-size: 8px; color: #d1d5db;">CNY 1,200 /trip</div></td><td style="text-align: center; color: #d1d5db;">1</td><td style="text-align: right; font-family: 'SF Mono', monospace; color: #d1d5db; text-decoration: line-through;">CNY 1,200</td></tr>
+<tr><td style="text-align: center; color: #a16207;">&check;</td><td style="font-weight: 600; color: #a16207;">Dry-run fee<div style="font-size: 8px; color: #9ca3af;">CNY 200 /trip</div></td><td style="text-align: center;">1</td><td style="text-align: right; font-family: 'SF Mono', monospace; font-weight: 600;">CNY 200</td></tr>
+</tbody>
+</table>
+<div class="fee-total"><span style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Total</span><span style="font-family: 'SF Mono', monospace; font-size: 11px; font-weight: 700; color: #a16207;">CNY 200</span></div>
+</div>
+</div>
+
+<!-- Follow-up link -->
+<div class="replace-card">
+<div style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #152CFF; margin-bottom: 6px;">Follow-up Job</div>
+<div class="replace-link">
+<span style="font-family: 'SF Mono', monospace; font-size: 10px;">J06</span>
+<span>&middot;</span>
+<span>HaleSun &middot; FM Trucking (attempt 2)</span>
+<span style="margin-left: auto;">&rarr;</span>
+</div>
+</div>
+
+<!-- Create Follow-up button -->
+<div style="border-top: 1px solid #f3f4f6; padding-top: 10px;">
+<button class="btn btn-blue-outline" style="width: 100;">+ Create Follow-up Job</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Follow-up job (attempt 2) -->
+<div class="panel-wrap">
+<div class="panel-label" style="background: #f9fafb; color: #9ca3af;">Pending — retry (attempt 2)</div>
+<div class="panel">
+<div class="panel-header">
+<div style="font-size: 14px; font-weight: 700; color: #111827;">HaleSun · Trucking</div>
+<div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">TikTok · <span style="font-family: 'SF Mono', monospace; font-size: 10px;">DO-001 · J06</span></div>
+</div>
+<div class="panel-body">
+<div class="status-bar" style="background: #f9fafb; border: 1px solid #e5e7eb;">
+<span class="chip" style="background: #f9fafb; border: 1px solid #e5e7eb; color: #9ca3af;">
+<span style="width: 5px; height: 5px; border-radius: 50%; background: #9ca3af; display: inline-block;"></span> Pending
+</span>
+<button class="action" style="background: #152CFF; color: #fff;">Start Job &rarr;</button>
+</div>
+
+<!-- Replaces link -->
+<div style="padding: 6px 8px; background: rgba(21,44,255,0.02); border: 1px solid rgba(21,44,255,0.08); border-radius: 4px; display: flex; align-items: center; gap: 6px;">
+<span style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Follows</span>
+<span class="replace-link" style="padding: 2px 6px; font-size: 9px;">
+<span style="font-family: 'SF Mono', monospace;">J01</span> &middot; HaleSun (partial, pickup not ready) &rarr;
+</span>
+</div>
+
+<div style="font-size: 11px; color: #111827;">
+<div class="sec-title">Route</div>
+<span style="font-size: 10px;">TikTok WH, Shenzhen &rarr; SZX Airport Cargo Terminal</span>
+<div style="margin-top: 4px;"><span style="display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(21,44,255,0.06); color: #152CFF; border: 1px solid rgba(21,44,255,0.15);">FM</span></div>
+</div>
+
+<!-- Full rate on follow-up -->
+<div>
+<div class="sec-title">Fees</div>
+<div style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+<table class="fee-table">
+<thead><tr><th style="width: 20px;"></th><th>Fee</th><th style="width: 40px; text-align: center;">Qty</th><th style="width: 65px; text-align: right;">Amount</th></tr></thead>
+<tbody>
+<tr><td style="text-align: center; color: #152CFF;">&check;</td><td>FTL 5T<div style="font-size: 8px; color: #9ca3af;">CNY 1,200 /trip</div></td><td style="text-align: center;">1</td><td style="text-align: right; font-family: 'SF Mono', monospace; font-weight: 600;">CNY 1,200</td></tr>
+</tbody>
+</table>
+<div class="fee-total"><span style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af;">Total</span><span style="font-family: 'SF Mono', monospace; font-size: 11px; font-weight: 700; color: #152CFF;">CNY 1,200</span></div>
+</div>
+</div>
+
+<div>
+<div class="sec-title">Activity Log</div>
+<div class="log-entry">
+<div class="log-dot" style="background: #9ca3af;"></div>
+<div><div class="log-text">Job created &mdash; follows J01 (pickup not ready)</div><div class="log-meta">29 Mar, 09:00 &middot; Ops Admin</div></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+<!-- ═══════════════════ OPTION B ═══════════════════ -->
+<h2>Option B: Dedicated Cancel Modal</h2>
+<span class="label" style="background: #f3f4f6; color: #6b7280;">Explicit but heavier</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Cancellation opens a focused modal/dialog (not inline in slide-out). The modal has three clear steps: 1) Enter reason, 2) Choose whether to replace, 3) Confirm. This separates the "destructive action" from the normal slide-out workflow.
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+&bull; Cancellation feels appropriately weighty &mdash; modal signals "this is serious"<br>
+&bull; Clean separation: slide-out = work, modal = destructive action<br>
+&bull; More room for cancel reason + replacement details<br>
+&bull; Easy to add confirmation step ("Are you sure?")
+</div>
+<div class="cons"><strong>Cons</strong><br>
+&bull; More UI surface &mdash; modal on top of slide-out on top of table<br>
+&bull; Breaks the "everything in the slide-out" pattern from HMW-49<br>
+&bull; Requires closing modal to see the result &mdash; more clicks<br>
+&bull; For ops doing 50 cancellations, modal fatigue is real
+</div>
+</div>
+</div>
+
+<div class="panels">
+<div class="panel-wrap">
+<div class="panel-label" style="background: #fef2f2; color: #dc2626;">Cancel modal</div>
+<div class="panel" style="width: 420px;">
+<div style="padding: 14px 16px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+<div style="font-size: 14px; font-weight: 700; color: #dc2626;">Cancel Job J02</div>
+<span style="color: #9ca3af; cursor: pointer;">&#10005;</span>
+</div>
+<div style="padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+<div>
+<div style="font-size: 11px; color: #374151; padding: 8px; background: #f9fafb; border-radius: 4px; border: 1px solid #e5e7eb;">
+<strong>Gonda &middot; EC Export Customs</strong><br>
+<span style="color: #9ca3af;">SZX Airport Cargo Terminal &middot; TikTok &middot; DO-001</span>
+</div>
+</div>
+<div>
+<div style="font-size: 10px; font-weight: 600; color: #dc2626; margin-bottom: 4px;">Cancellation Reason *</div>
+<textarea style="width: 100%; border: 1px solid #e5e7eb; border-radius: 4px; font-family: inherit; font-size: 11px; padding: 6px 8px; resize: vertical; min-height: 60px;" placeholder="Why is this job being cancelled?"></textarea>
+</div>
+<div style="padding: 10px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
+<label style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #374151; cursor: pointer;">
+<input type="checkbox" style="accent-color: #152CFF;" /> Create replacement job
+</label>
+<div style="margin-top: 8px; display: flex; gap: 8px; align-items: center; margin-left: 22px;">
+<span style="font-size: 9px; color: #9ca3af;">Vendor:</span>
+<select style="flex: 1; font-size: 11px; padding: 4px 8px; border: 1px solid #e5e7eb; border-radius: 4px; font-family: inherit;">
+<option>Select vendor...</option>
+<option>HaleSun</option>
+<option>SevenSeas</option>
+</select>
+</div>
+</div>
+<div style="display: flex; gap: 8px; justify-content: flex-end; border-top: 1px solid #f3f4f6; padding-top: 12px;">
+<button class="btn btn-ghost">Back</button>
+<button class="btn btn-red">Cancel Job</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+<!-- ═══════════════════ OPTION C ═══════════════════ -->
+<h2>Option C: Two-Step Workflow (Cancel, then manually Create)</h2>
+<span class="label" style="background: #f3f4f6; color: #6b7280;">Simplest to build</span>
+
+<div class="rationale">
+<strong>Thesis:</strong> Don't combine cancel and replace into one action. Cancel is just cancel (with mandatory reason). If admin wants to replace, they manually add a new job to the shipment using the existing "Add Services" flow. The system links them via a "replaces" field if admin picks the same service type.
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+&bull; Simplest implementation &mdash; cancel is one action, add job is the existing flow<br>
+&bull; No new UI patterns beyond the cancel reason field<br>
+&bull; Admin has full control over the replacement job (vendor, fees, everything)<br>
+&bull; Reuses existing "Add Job" on the shipment detail
+</div>
+<div class="cons"><strong>Cons</strong><br>
+&bull; Two separate actions &mdash; cancel + navigate + add job = friction<br>
+&bull; No automatic linkage between cancelled and replacement job<br>
+&bull; Easy to forget to create the replacement<br>
+&bull; For the 80% case (cancel & replace), this is slow
+</div>
+</div>
+</div>
+
+<div class="panels">
+<div class="panel-wrap">
+<div class="panel-label" style="background: #fef2f2; color: #dc2626;">Cancel only</div>
+<div class="panel" style="width: 370px;">
+<div class="panel-header">
+<div style="font-size: 14px; font-weight: 700; color: #111827;">Gonda &middot; Export Customs</div>
+<div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">DO-001 &middot; J02</div>
+</div>
+<div class="panel-body">
+<div class="cancel-form">
+<div style="font-size: 10px; font-weight: 700; color: #dc2626; margin-bottom: 6px;">CANCEL JOB</div>
+<textarea placeholder="Reason (required)...">Gonda doesn't have customs license for Category B electronics.</textarea>
+<div style="display: flex; gap: 6px; margin-top: 8px;">
+<button class="btn btn-red" style="flex: 1;">Confirm Cancel</button>
+<button class="btn btn-ghost">Back</button>
+</div>
+</div>
+
+<div style="padding: 8px 10px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; font-size: 10px; color: #92400e;">
+<strong>Need a replacement?</strong> Close this panel, then use "+ Add Service" on the shipment to create a new EC job.
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+<!-- ═══════════════════ VERDICT ═══════════════════ -->
+<div class="verdict">
+<h3>Recommendation: Option A (Inline Cancel & Replace)</h3>
+<p style="font-size: 12px; line-height: 1.7; color: #374151;">
+<strong>Option A</strong> keeps everything in the slide-out &mdash; consistent with HMW-49's "one panel, every action" pattern. The cancel form expands inline with the mandatory reason + optional "Create replacement" checkbox. For the 80% case (cancel & replace), it's one flow: reason &rarr; pick vendor &rarr; done. For simple cancellation, uncheck the box and confirm.
+</p>
+<p style="font-size: 12px; line-height: 1.7; color: #374151; margin-top: 8px;">
+<strong>Skip Option B</strong> &mdash; modal-on-slide-out is heavy and breaks the HMW-49 pattern. For ops doing many cancellations, modal fatigue matters.
+</p>
+<p style="font-size: 12px; line-height: 1.7; color: #374151; margin-top: 8px;">
+<strong>Skip Option C</strong> &mdash; too disconnected. Cancel + manually add replacement = friction and no automatic linkage. The "cancel & replace" case is too common (~80%) to require two separate workflows.
+</p>
+<p style="font-size: 12px; line-height: 1.7; color: #374151; margin-top: 12px;">
+<strong>Partial completion:</strong> Uses the same "Create Follow-up Job" button on Completed jobs. Admin completes with a remark, adjusts fees (existing capability), then creates a follow-up for the retry. Same linkage pattern (replacedBy/replaces) but labeled "Follows/Follow-up" instead of "Replaces/Replaced by" for clarity.
+</p>
+<p style="font-size: 12px; line-height: 1.7; color: #374151; margin-top: 12px;">
+<strong>Key design rules:</strong><br>
+&bull; Cancelled jobs are <strong>immutable</strong> &mdash; no vendor swap, no reason edit, no status change<br>
+&bull; Cancel reason is <strong>mandatory</strong> &mdash; button stays disabled until textarea has content<br>
+&bull; "Cancel Job" button shows as <strong>secondary red outline</strong> at bottom of slide-out (not in status bar) &mdash; available on Pending and In Progress<br>
+&bull; <strong>Replacement link</strong> is navigable &mdash; click to open the linked job in the slide-out<br>
+&bull; <strong>Vendor sees</strong>: cancelled status + reason + "Cancelled by Teleport" label (no replacement details)<br>
+&bull; <strong>Completion remark</strong> is a separate concept from cancel reason &mdash; amber box, not red
+</p>
+</div>
+
+</div>
+</body>
+</html>

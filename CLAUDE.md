@@ -27,7 +27,7 @@ CargoRateManagement/
 ├── vendor/                  # Teleport OS Vendor (port 5174)
 │   ├── PRD.md               # Vendor user stories, iterations
 │   ├── DESIGN.md            # Vendor design adaptations (inherits from admin/DESIGN.md)
-│   ├── design-hypotheses/   # Vendor HMW mockups
+│   ├── design-hypotheses/   # Vendor HMW mockups (HMW-V01 responsive, HMW-V02 section order)
 │   ├── design-preview.html  # Visual mockups of vendor screens
 │   ├── src/                 # Vendor app source code
 │   ├── package.json         # Vendor dependencies & scripts (npm run dev)
@@ -37,6 +37,23 @@ CargoRateManagement/
 │   ├── current-teleport-os/ # Screenshots of existing Teleport OS
 │   └── lovable-prototype/   # Early Lovable prototype screenshots
 ```
+
+## Key Artifacts
+| Artifact | Path | Purpose |
+|----------|------|---------|
+| Platform guide | `CLAUDE.md` | This file. Entry point for every session. |
+| Admin PRD | `admin/PRD.md` | User stories, use cases, iteration status |
+| Admin design system | `admin/DESIGN.md` | Source of truth for all visual tokens (colors, type, spacing) |
+| Admin TODOs | `admin/TODOS.md` | Implementation backlog |
+| Admin HMW mockups | `admin/design-hypotheses/` | 50 resolved design decisions with HTML mockups |
+| Vendor PRD | `vendor/PRD.md` | Vendor user stories, features, iteration plan |
+| Vendor design | `vendor/DESIGN.md` | Vendor-specific adaptations (inherits from admin/DESIGN.md) |
+| Vendor HMW mockups | `vendor/design-hypotheses/` | HMW-V01 (responsive table), HMW-V02 (fees-first layout) |
+| Vendor design preview | `vendor/design-preview.html` | Visual mockups of all vendor screens |
+| Shared types | `shared/types.ts` | All TypeScript types, interfaces, constants |
+| Shared data | `shared/mockData.ts` | Seed data, vendor/customer lists, helpers |
+| Shared state | `shared/TripContext.tsx` | React Context + useReducer, localStorage persistence |
+| Reference docs | `reference/client/` | Contracts, pitches, rate sheets from client |
 
 ## Running Both Apps
 ```bash
@@ -53,19 +70,24 @@ Both read/write the same localStorage key (`tripmanager_state`). Changes in one 
 
 Key principles:
 - **Dense data design** — ops planners come from Excel. Every pixel shows data, not decoration.
-- **5-color status system** — gray (pending), blue (in progress), amber (completed), green (verified), red (cancelled).
-- **Tables, not cards** — expanded jobs render as sub-table rows, not card grids.
+- **5-color status system** — gray (pending), blue (in progress), amber (completed), green (verified), red (cancelled). Colors carry meaning, not decoration.
+- **Tables, not cards** — expanded jobs render as sub-table rows, not card grids. Avoid card-ifying data that belongs in rows.
 - **Inline styles** — all components use inline styles matching the mockup CSS exactly. No Tailwind for visual properties.
 - **Sharp radius** — 4-6px for containers, 4px for inputs/chips. No bubbly SaaS radius.
+- **Color discipline** — Only status colors (5), accent (#152CFF), ink hierarchy (5 grays), and surfaces. No per-service colors, no decorative colors, no Tailwind color classes. Every color must carry semantic meaning.
+- **No shadows** — borders are sufficient. Only Toast and slide-out panel have shadows.
+- **No AI slop** — no purple gradients, no 3-column icon grids, no bubbly cards, no scale animations, no generic marketing copy in an ops tool.
 
 ## Design Hypotheses
-Read `admin/design-hypotheses/README.md` for all resolved and open design decisions.
-Each HMW question has an HTML mockup — these are the source of truth for design intent.
+- **Admin:** `admin/design-hypotheses/README.md` — 50 resolved HMW decisions
+- **Vendor:** `vendor/design-hypotheses/README.md` — HMW-V01 (responsive table at 768px), HMW-V02 (fees-first section ordering)
 
-## Architecture (Admin App)
-- **State:** React Context + useReducer in `admin/src/context/TripContext.tsx`
-- **Persistence:** localStorage. Key: `tripmanager_state`. Seeded from `admin/src/data/mockData.ts`
-- **Routing:** React Router v7. Routes in `admin/src/App.tsx`
+## Architecture
+- **State:** React Context + useReducer in `shared/TripContext.tsx`
+- **Persistence:** localStorage. Key: `tripmanager_state`. Seeded from `shared/mockData.ts`
+- **Admin routing:** React Router v7. Routes in `admin/src/App.tsx`
+- **Vendor routing:** React Router v7. Routes in `vendor/src/App.tsx`
+- **Vendor auth:** `vendor/src/context/VendorAuthContext.tsx` — vendor code stored in localStorage key `vendor_auth`
 - **Fonts:** Instrument Sans (Google Fonts) for everything, JetBrains Mono (@fontsource) for data
 - **Terminology:** "Shipment" in UI = `Trip` in code. "Job" = vendor assignment within a shipment.
 
@@ -76,8 +98,7 @@ Each HMW question has an HTML mockup — these are the source of truth for desig
 - Jobs are PARALLEL, not sequential
 - Each Job has: `status` (unified lifecycle) + `activityLog[]` + `proofDocuments[]`
 - **Unified job status:** `Pending → In Progress → Completed (proof uploaded) → Verified (admin sign-off)`
-- Terminal state: `Cancelled` (admin cancels — 3PL can't reject, no vendor portal yet)
-- Replaces old dual `status` + `proofStatus` fields — single `status` field now
+- Terminal state: `Cancelled` (admin cancels — 3PL can't reject)
 - localStorage auto-migrates old multi-service format to seed data
 
 ## Admin Pages
@@ -86,28 +107,26 @@ Each HMW question has an HTML mockup — these are the source of truth for desig
 - **Rates** (`/rates`) — vendor rate card management (FTL + service fees)
 - **Master Data** (`/master-data`) — Facilities, Regions, Vendors, Customers, Services
 
+## Vendor Pages
+- **Login** (`/`) — vendor code selector + access code (prototype: any code works)
+- **My Jobs** (`/jobs`) — flat table filtered by vendor. Status pills, service pills, CSV export.
+- **Job Detail** (`/jobs/:tripId/:jobId`) — full-page detail. Fees-first layout (HMW-V02). Status Action Bar with Start Job + Upload Proof.
+
 ## Admin Key Interaction Patterns
-- **Slide-out panel:** Status Action Bar at top adapts per stage (HMW-49). See `admin/design-hypotheses/49-hmw-slideout-status-lifecycle.html`
-  - Pending: `[Start Job →]` button
-  - In Progress: hint "Upload proof to complete →"
-  - Completed: `[✓ Verify]` button
-  - Verified: read-only, everything locked
-  - Cancelled: cancel reason + reassign vendor dropdown
+- **Slide-out panel:** Status Action Bar at top adapts per stage (HMW-49)
 - **Proof upload:** In slide-out → auto-transitions to Completed (even from Pending, skipping In Progress)
 - **Verification:** Admin clicks Verify → Completed → Verified, locks fees/quantities/proof
 - **Cancellation:** Red row + reassignment in slide-out → resets to Pending (admin action only)
 - **Editability:** Fees/quantities editable from Pending through Completed. Locked on Verified.
 - **Feedback:** Toast notifications (green/red/gray)
 
-## Teleport OS Vendor
-Vendor-facing counterpart. Read-heavy, action-light. Key differences from Admin:
-- **1 page:** My Jobs (flat table, vendor-scoped)
+## Vendor Key Interaction Patterns
 - **Full-page job detail** (not slide-out — more room for fee reconciliation)
-- **Responsive from day 1** (768px+ — vendors are on-site at warehouses/terminals)
+- **Fees-first layout:** Status Action Bar → Fee Breakdown → Route + Cargo → Proofs → Activity Log
 - **Read-only fees/quantities** — vendor views for reconciliation, cannot edit
 - **Vendor actions:** Start Job, Upload Proof only. No Verify, no Cancel, no fee toggles.
-- **Nav:** "Teleport OS Vendor" label + vendor company name on right side
-- See `vendor/PRD.md` and `vendor/DESIGN.md` for full specs.
+- **Responsive at 768px+** — condensed table (drop Route, stack Customer+Shipment) per HMW-V01
+- **Activity log actor:** Vendor actions logged with vendor company name, admin actions with "Ops Admin"
 
 ## PRDs
 - **Admin:** `admin/PRD.md` — user stories, use cases, iteration status

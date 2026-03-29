@@ -22,9 +22,7 @@ interface JobDraft {
   locationId: string;
 }
 
-const svcColors: Record<string, string> = {
-  FM: '#152CFF', CR: '#2563eb', EC: '#7c3aed', CS: '#b45309', OH: '#6b7280',
-};
+const SVC_COLOR = '#152CFF';
 
 export default function CreateTripPage() {
   const navigate = useNavigate();
@@ -435,10 +433,10 @@ export default function CreateTripPage() {
               const count = svcCounts[svc.code] || 0;
               return (
                 <button key={svc.code} type="button" onClick={() => addJobForService(svc)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', fontFamily: 'inherit' }}>
-                  <span style={{ fontSize: 14, color: svcColors[svc.code] || '#152CFF' }}>+</span>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: svcColors[svc.code] || '#9ca3af' }}>{svc.code}</span>
+                  <span style={{ fontSize: 14, color: SVC_COLOR }}>+</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: SVC_COLOR }}>{svc.code}</span>
                   {svc.label}
-                  {count > 0 && <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 99, background: svcColors[svc.code] || '#152CFF', color: '#fff', marginLeft: 2 }}>{count}</span>}
+                  {count > 0 && <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 99, background: SVC_COLOR, color: '#fff', marginLeft: 2 }}>{count}</span>}
                 </button>
               );
             })}
@@ -455,7 +453,7 @@ export default function CreateTripPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {jobs.map((job, i) => {
                 const svc = serviceTypes.find((s) => s.code === job.serviceCode);
-                const color = svcColors[job.serviceCode] || '#152CFF';
+                const color = SVC_COLOR;
                 const isFM = job.serviceCode === 'FM';
                 const hasVendor = !!job.vendorCode;
 

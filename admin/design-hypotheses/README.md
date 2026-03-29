@@ -183,6 +183,11 @@ Every design decision starts with a **"How Might We"** question. We generate 2-3
 **Decision:** Option A + "All" button — "Assign to" vendor dropdown above pills + "All" button to add all services at once. 3 clicks for 80% case (down from 12). Override per-job for mixed vendors.
 **File:** `50-hmw-create-shipment-vendor-efficiency.html`
 
+### HMW-51: How might we design the cancel/replace flow so admins can efficiently reassign work while keeping full audit trail for both admin and vendor?
+**Options:** A) Inline Cancel & Replace in slide-out, B) Dedicated Cancel Modal, C) Two-step (cancel then manually create)
+**Decision:** Option A — inline cancel form in slide-out with mandatory reason + optional "Create replacement" checkbox + vendor picker. Same pattern for "Create Follow-up" on partial completions. Cancelled jobs are immutable.
+**File:** `51-hmw-cancellation-reassignment-flow.html`
+
 ## Open (backlog)
 
 ### HMW-03: How might we make the "assign vendors to services" step feel natural instead of like filling a form?

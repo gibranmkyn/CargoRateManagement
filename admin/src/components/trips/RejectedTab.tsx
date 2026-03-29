@@ -50,71 +50,86 @@ export default function RejectedTab() {
 
   if (rejected.length === 0) {
     return (
-      <div className="py-20 text-center">
-        <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto mb-3">
-          <span className="text-emerald-500 text-[16px]">✓</span>
+      <div style={{ padding: '80px 0', textAlign: 'center' }}>
+        <div
+          style={{
+            width: 40, height: 40, borderRadius: '50%', background: '#f0fdf4',
+            border: '1px solid #a7f3d0', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', margin: '0 auto 12px',
+          }}
+        >
+          <span style={{ color: '#059669', fontSize: 16 }}>✓</span>
         </div>
-        <p className="text-[13px] text-[var(--color-ink-muted)]">No rejected jobs</p>
-        <p className="text-[12px] text-[var(--color-ink-faint)] mt-0.5">All vendors are delivering as expected</p>
+        <p style={{ fontSize: 13, color: 'var(--color-ink-muted)', margin: 0 }}>No cancelled jobs</p>
+        <p style={{ fontSize: 12, color: 'var(--color-ink-faint)', marginTop: 2 }}>All vendors are delivering as expected</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {rejected.map((job) => (
-        <div key={job.id} className="border border-red-200 rounded-xl bg-white overflow-hidden">
+        <div key={job.id} style={{ border: '1px solid #fecaca', borderRadius: 6, background: '#fff', overflow: 'hidden' }}>
           {/* Header */}
-          <div className="px-6 py-4">
-            <div className="flex items-start justify-between mb-3">
+          <div style={{ padding: '16px 24px' }}>
+            <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', marginBottom: 12 }}>
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[13px] font-semibold text-[var(--color-ink)]">{job.tripId}</span>
-                  <span className="text-[var(--color-ink-faint)]">·</span>
-                  <span className="text-[13px] font-medium text-[var(--color-ink-secondary)]">Job {job.id.split('-').pop()}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: 'var(--color-ink)' }}>{job.tripId}</span>
+                  <span style={{ color: 'var(--color-ink-faint)' }}>·</span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-ink-secondary)' }}>Job {job.id.split('-').pop()}</span>
                 </div>
-                <div className="text-[12px] text-[var(--color-ink-muted)] mt-1">
+                <div style={{ fontSize: 12, color: 'var(--color-ink-muted)', marginTop: 4 }}>
                   {job.customerName} · {job.mawb}
-                  {job.tripRemarks && <> · <em className="text-[var(--color-ink-faint)]">{job.tripRemarks}</em></>}
+                  {job.tripRemarks && <> · <em style={{ color: 'var(--color-ink-faint)' }}>{job.tripRemarks}</em></>}
                 </div>
               </div>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium bg-red-50 text-red-600">
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px',
+                borderRadius: 4, fontSize: 12, fontWeight: 500, background: '#fef2f2', color: '#dc2626',
+              }}>
                 <AlertTriangle size={12} />
-                Rejected
+                Cancelled
               </span>
             </div>
 
             {/* Details grid */}
-            <div className="flex gap-8 text-[12px]">
+            <div style={{ display: 'flex', gap: 32, fontSize: 12 }}>
               <div>
-                <div className="text-[10px] uppercase tracking-wider text-[var(--color-ink-faint)] mb-1">Previous Vendor</div>
-                <div className="font-medium text-[var(--color-ink-muted)] line-through">{job.vendor.name}</div>
+                <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-ink-faint)', marginBottom: 4 }}>Previous Vendor</div>
+                <div style={{ fontWeight: 500, color: 'var(--color-ink-muted)', textDecoration: 'line-through' }}>{job.vendor.name}</div>
               </div>
               <div>
-                <div className="text-[10px] uppercase tracking-wider text-[var(--color-ink-faint)] mb-1">Reason</div>
-                <div className="font-medium text-red-600">{job.cancelReason || '—'}</div>
+                <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-ink-faint)', marginBottom: 4 }}>Reason</div>
+                <div style={{ fontWeight: 500, color: '#dc2626' }}>{job.cancelReason || '\u2014'}</div>
               </div>
               <div>
-                <div className="text-[10px] uppercase tracking-wider text-[var(--color-ink-faint)] mb-1">Services</div>
+                <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-ink-faint)', marginBottom: 4 }}>Services</div>
                 <ServiceTag service={job.service} />
               </div>
               <div>
-                <div className="text-[10px] uppercase tracking-wider text-[var(--color-ink-faint)] mb-1">Route</div>
-                <div className="text-[var(--color-ink-secondary)]">
+                <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-ink-faint)', marginBottom: 4 }}>Route</div>
+                <div style={{ color: 'var(--color-ink-secondary)' }}>
                   {job.origin.location} → {job.destination.location}
-                  {job.origin.date && <span className="text-[var(--color-ink-faint)]"> · {fmtDate(job.origin.date)}</span>}
+                  {job.origin.date && <span style={{ color: 'var(--color-ink-faint)' }}> · {fmtDate(job.origin.date)}</span>}
                 </div>
               </div>
             </div>
           </div>
 
           {/* Reassignment bar */}
-          <div className="flex items-center gap-3 px-6 py-3 bg-red-50/50 border-t border-red-100">
-            <span className="text-[12px] font-medium text-[var(--color-ink-secondary)]">Reassign to:</span>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '12px 24px',
+            background: 'rgba(254,242,242,0.5)', borderTop: '1px solid #fecaca',
+          }}>
+            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-ink-secondary)' }}>Reassign to:</span>
             <select
               value={selectedVendors[job.id] || ''}
               onChange={(e) => setSelectedVendors((prev) => ({ ...prev, [job.id]: e.target.value }))}
-              className="text-[13px] border border-[var(--color-border)] rounded-lg px-2.5 py-[5px] bg-white text-[var(--color-ink-secondary)] shadow-[0_1px_2px_rgba(0,0,0,0.03)] w-[200px]"
+              style={{
+                fontSize: 13, border: '1px solid var(--color-border)', borderRadius: 4,
+                padding: '5px 10px', background: '#fff', color: 'var(--color-ink-secondary)', width: 200,
+              }}
             >
               <option value="">Select vendor...</option>
               {vendors
@@ -126,7 +141,12 @@ export default function RejectedTab() {
             <button
               onClick={() => handleReassign(job)}
               disabled={!selectedVendors[job.id]}
-              className="inline-flex items-center gap-1.5 px-3 py-[5px] bg-[var(--color-accent)] text-white text-[13px] font-medium rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors shadow-[0_1px_2px_rgba(0,0,0,0.1)] disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px',
+                background: 'var(--color-accent)', color: '#fff', fontSize: 13, fontWeight: 500,
+                borderRadius: 4, border: 'none', cursor: selectedVendors[job.id] ? 'pointer' : 'not-allowed',
+                opacity: selectedVendors[job.id] ? 1 : 0.4,
+              }}
             >
               <RefreshCw size={13} />
               Reassign

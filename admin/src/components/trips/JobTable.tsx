@@ -4,7 +4,7 @@ import type { Job, JobStatus } from '@shared/mockData';
 import StatusBadge from './StatusBadge';
 import ServiceTag from './ServiceTag';
 
-const allStatuses: JobStatus[] = ['Pending', 'In Progress', 'Completed', 'Verified', 'Cancelled', 'Cancelled'];
+const allStatuses: JobStatus[] = ['Pending', 'In Progress', 'Completed', 'Verified', 'Cancelled'];
 
 function fmt(dt: string) {
   const d = new Date(dt.replace(' ', 'T'));
@@ -39,7 +39,7 @@ export default function JobTable({ jobs, tripId, onStatusChange }: JobTableProps
     // Out-of-sequence check
     const jobIndex = jobs.findIndex((j) => j.id === job.id);
     const statusRank: Record<JobStatus, number> = {
-      Pending: 0, 'In Progress': 1, Completed: 2, Verified: 3, Rejected: -1, Cancelled: -1,
+      Pending: 0, 'In Progress': 1, Completed: 2, Verified: 3, Cancelled: -1,
     };
 
     if (statusRank[newStatus] >= 1 && jobIndex > 0) {
@@ -75,12 +75,16 @@ export default function JobTable({ jobs, tripId, onStatusChange }: JobTableProps
           >
             {/* Job indicator */}
             <div className="w-6 text-center">
-              <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-mono font-medium
-                ${job.status === 'Verified' ? 'bg-emerald-100 text-emerald-700'
-                : job.status === 'Completed' ? 'bg-amber-100 text-amber-700'
-                : job.status === 'In Progress' ? 'bg-blue-100 text-blue-700'
-                : job.status === 'Cancelled' ? 'bg-red-100 text-red-600'
-                : 'bg-gray-100 text-gray-400 border border-gray-200'}`}>
+              <span
+                className="inline-flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-mono font-medium"
+                style={
+                  job.status === 'Verified' ? { background: '#f0fdf4', color: '#059669' }
+                  : job.status === 'Completed' ? { background: '#fefce8', color: '#a16207' }
+                  : job.status === 'In Progress' ? { background: 'rgba(21,44,255,0.04)', color: '#152CFF' }
+                  : job.status === 'Cancelled' ? { background: '#fef2f2', color: '#dc2626' }
+                  : { background: '#f9fafb', color: '#9ca3af', border: '1px solid #e5e7eb' }
+                }
+              >
                 {i + 1}
               </span>
             </div>
@@ -117,7 +121,7 @@ export default function JobTable({ jobs, tripId, onStatusChange }: JobTableProps
                 <StatusBadge status={job.status} />
               </button>
               {openStatusId === job.id && (
-                <div ref={popoverRef} className="absolute top-full right-0 mt-1 z-20 bg-white border border-[var(--color-border)] rounded-lg shadow-lg py-1 min-w-[140px]">
+                <div ref={popoverRef} className="absolute top-full right-0 mt-1 z-20 bg-white border border-[var(--color-border)] rounded-lg py-1 min-w-[140px]" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
                   {allStatuses.map((s) => (
                     <button
                       key={s}
@@ -148,7 +152,11 @@ export default function JobTable({ jobs, tripId, onStatusChange }: JobTableProps
                 <button className="p-1.5 rounded text-[var(--color-ink-faint)] hover:text-[var(--color-accent)] hover:bg-[var(--color-accent-soft)] transition-colors">
                   <Pencil size={14} />
                 </button>
-                <button className="p-1.5 rounded text-[var(--color-ink-faint)] hover:text-red-500 hover:bg-red-50 transition-colors">
+                <button
+                  className="p-1.5 rounded text-[var(--color-ink-faint)] transition-colors"
+                  onMouseEnter={(e) => { e.currentTarget.style.color = '#dc2626'; e.currentTarget.style.background = '#fef2f2'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = ''; e.currentTarget.style.background = ''; }}
+                >
                   <Trash2 size={14} />
                 </button>
               </div>

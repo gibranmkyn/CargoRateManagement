@@ -229,14 +229,14 @@ export interface L1Service {
 
 export const SERVICE_HIERARCHY: L1Service[] = [
   {
-    code: 'CR', label: 'Cargo Retrieval', color: '#2563eb', rateType: 'location',
+    code: 'CR', label: 'Cargo Retrieval', color: '#152CFF', rateType: 'location',
     l2Services: [
       { costId: 'CR001', name: 'Registration Fee', unit: 'flat', l1Code: 'CR' },
       { costId: 'CR002', name: 'Cargo Retrieval Pick Up Fee', unit: 'per-bag', l1Code: 'CR' },
     ],
   },
   {
-    code: 'CS', label: 'Cargo Submission', color: '#b45309', rateType: 'location',
+    code: 'CS', label: 'Cargo Submission', color: '#152CFF', rateType: 'location',
     l2Services: [
       { costId: 'CS001', name: 'Express Center Ground Handling Fee', unit: 'flat', l1Code: 'CS' },
       { costId: 'CS002', name: 'International Cargo Terminal Transit Fee', unit: 'flat', l1Code: 'CS' },
@@ -247,7 +247,7 @@ export const SERVICE_HIERARCHY: L1Service[] = [
     ],
   },
   {
-    code: 'EC', label: 'Export Custom Clearance', color: '#7c3aed', rateType: 'location',
+    code: 'EC', label: 'Export Custom Clearance', color: '#152CFF', rateType: 'location',
     l2Services: [
       { costId: 'EC001', name: 'Customs Declaration Fee', unit: 'flat', l1Code: 'EC' },
       { costId: 'EC002', name: 'Customs Inspection Fee', unit: 'flat', l1Code: 'EC' },
@@ -263,7 +263,7 @@ export const SERVICE_HIERARCHY: L1Service[] = [
     ],
   },
   {
-    code: 'OH', label: 'Origin Handling', color: '#6b7280', rateType: 'location',
+    code: 'OH', label: 'Origin Handling', color: '#152CFF', rateType: 'location',
     l2Services: [
       { costId: 'OH001', name: 'MAWB Fee', unit: 'flat', l1Code: 'OH' },
       { costId: 'OH002', name: 'Loading and Unloading Fee', unit: 'per-kg', l1Code: 'OH' },
