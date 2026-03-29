@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useRates, generateRateId } from '../../context/RateContext';
-import { useToast } from '../Toast';
-import { vendors, serviceTypes, SERVICE_CONFIG, formatCurrency } from '../../data/mockData';
-import type { VendorRate, Currency, RateUnit } from '../../data/mockData';
+import { useToast } from '@shared/Toast';
+import { vendors, serviceTypes, SERVICE_CONFIG, formatCurrency } from '@shared/mockData';
+import type { VendorRate, Currency, RateUnit } from '@shared/mockData';
 import LocationDropdown from '../shared/LocationDropdown';
 
 const CURRENCIES: Currency[] = ['MYR', 'CNY', 'USD'];

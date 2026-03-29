@@ -1,4 +1,4 @@
-import type { JobStatus } from '../../data/mockData';
+import type { JobStatus } from '@shared/mockData';
 
 function getStatusColors(status: JobStatus): { bg: string; border: string; text: string; dot: string } {
   switch (status) {

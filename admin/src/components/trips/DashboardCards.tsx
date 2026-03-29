@@ -1,5 +1,5 @@
 import { Ship, TrendingUp, CheckCircle2, Clock, ShieldCheck } from 'lucide-react';
-import { useTrips } from '../../context/TripContext';
+import { useTrips } from '@shared/TripContext';
 
 export default function DashboardCards() {
   const { trips } = useTrips();

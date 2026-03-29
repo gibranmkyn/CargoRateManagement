@@ -1,5 +1,5 @@
-import { useTrips } from '../../context/TripContext';
-import type { Job } from '../../data/mockData';
+import { useTrips } from '@shared/TripContext';
+import type { Job } from '@shared/mockData';
 import JobTable from './JobTable';
 
 export default function VendorViewTab() {

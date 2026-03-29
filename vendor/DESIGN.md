@@ -55,10 +55,11 @@ The admin uses a 380px slide-out panel because ops planners rapidly scan a table
 **Layout:**
 - **Header:** Back link ("← My Jobs") + Job ID badge + service name + service tag + DO ref + customer + MAWB
 - **Status Action Bar:** Full-width colored bar below header. Same 5-color treatment as admin slide-out bar.
-- **Body:** 2-column grid (on desktop), stacking to single column on tablet
-  - Left: Route card (origin/destination with dates) + Cargo grid (bags/weight/volume)
-  - Right: Proof of Service (file list + upload zone) + Activity Log
-  - Full width: Fee Breakdown table
+- **Body:** Sections ordered by priority, not by convention (HMW-V02):
+  1. **Fee Breakdown** — full-width, immediately after action bar. Lead with reconciliation data.
+  2. **Route + Cargo** — side-by-side on desktop (Route left, Cargo right). Stacks on tablet.
+  3. **Proof of Service** — file list + upload zone
+  4. **Activity Log** — reverse chronological
 
 **Status Action Bar (vendor-adapted):**
 
@@ -92,10 +93,10 @@ The admin uses a 380px slide-out panel because ops planners rapidly scan a table
 ### Responsive Breakpoints
 Unlike the admin app (desktop-only, min 1200px), the vendor app targets 768px+.
 
-| Breakpoint | Layout |
-|------------|--------|
-| ≥1024px | Full layout: 2-column detail grid, full table columns |
-| 768-1023px | Detail grid stacks to single column. Table: hide Route column, truncate others |
+| Breakpoint | Job List | Job Detail |
+|------------|----------|------------|
+| ≥1024px | Full 7-column table (Shipment, Customer, Service, Route, Pickup, Status, Cost) | Fees full-width, Route + Cargo side-by-side, Proofs + Log below |
+| 768-1023px | Condensed 5-column table: drop Route, stack Customer+Shipment into one cell (HMW-V01) | All sections stack to single column. Fees still first. |
 | <768px | Out of scope for v1. Future: card-based job list on mobile |
 
 ### Authentication Screen
@@ -117,6 +118,8 @@ Unlike the admin app (desktop-only, min 1200px), the vendor app targets 768px+.
 | 2026-03-29 | Vendor identity in nav | Company name + avatar initials on right side. Makes it clear whose data this is. |
 | 2026-03-29 | "Teleport OS Vendor" label | Subtle label next to logo text. Same pattern as "Teleport OS Admin" on the admin side. |
 | 2026-03-29 | Same design tokens, different layout | Coherent platform feel. Vendor and admin discussing the same job see the same visual language. |
+| 2026-03-29 | Condensed table at 768px (HMW-V01) | Drop Route column, stack Customer+Shipment into one cell. Status and Cost always visible. Route available in detail page. |
+| 2026-03-29 | Fees-first section ordering (HMW-V02) | App exists for reconciliation — lead with the money. Vendor already knows the route. Order: Fees → Route + Cargo → Proofs → Activity Log. |
 
 ## Preview
 Open `vendor/design-preview.html` in a browser to see the proposed screens:

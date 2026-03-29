@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
 import { ChevronRight, ChevronDown, Layers } from 'lucide-react';
 import { useRates } from '../../context/RateContext';
-import { SERVICE_HIERARCHY } from '../../data/mockData';
-import type { RateUnit } from '../../data/mockData';
+import { SERVICE_HIERARCHY } from '@shared/mockData';
+import type { RateUnit } from '@shared/mockData';
 
 // --- Style helpers (matches LocationsTab pattern) ---
 

@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-V02: Job Detail Section Ordering</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', 'SF Mono', monospace; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+/* Shared mock styles */
+.detail-mock { max-width: 960px; margin: 0 auto; }
+.mock-header { padding: 10px 16px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; font-size: 11px; }
+.mock-back { color: #9ca3af; }
+.mock-job-id { font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 1px 4px; border-radius: 3px; background: #f3f4f6; border: 1px solid #e5e7eb; color: #9ca3af; }
+.mock-title { font-size: 13px; font-weight: 700; color: #111827; }
+.mock-meta { color: #9ca3af; font-family: 'JetBrains Mono', monospace; font-size: 9px; margin-left: auto; }
+
+.action-bar { padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; background: rgba(21,44,255,0.04); border-bottom: 1px solid rgba(21,44,255,0.15); }
+.action-bar .chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); color: #152CFF; }
+.action-bar .chip .dot { width: 4px; height: 4px; border-radius: 50%; background: #152CFF; }
+.action-bar .hint { font-size: 10px; color: #6b7280; }
+.action-bar .btn { font-size: 10px; font-weight: 600; padding: 4px 12px; border-radius: 5px; background: #152CFF; color: #fff; border: none; }
+
+.section-block { padding: 14px 16px; }
+.section-block + .section-block { border-top: 1px solid #f3f4f6; }
+.section-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px; }
+
+/* Order visualization */
+.order-viz { display: flex; flex-direction: column; gap: 0; }
+.order-item { padding: 10px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f3f4f6; }
+.order-num { width: 22px; height: 22px; border-radius: 4px; background: #f3f4f6; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #9ca3af; flex-shrink: 0; }
+.order-name { font-size: 12px; font-weight: 600; color: #111827; }
+.order-desc { font-size: 10px; color: #6b7280; }
+.order-item.highlight { background: #eff6ff; }
+.order-item.highlight .order-num { background: #152CFF; color: #fff; }
+
+/* Wireframe sections */
+.wire-section { margin: 6px 16px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; background: #f9fafb; }
+.wire-section.fees { background: #eff6ff; border-color: #bfdbfe; }
+.wire-section.route { background: #f9fafb; }
+.wire-section.proof { background: #fefce8; border-color: #fde68a; }
+.wire-section.log { background: #f3f4f6; }
+.wire-section.cargo { background: #f0fdf4; border-color: #a7f3d0; }
+.wire-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+.wire-body { font-size: 10px; color: #6b7280; line-height: 1.5; }
+
+/* Fee table mini */
+.fee-mini { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 6px; }
+.fee-mini th { font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; padding: 3px 6px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+.fee-mini td { padding: 4px 6px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+.fee-mini td:last-child { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600; }
+.fee-mini .inactive { opacity: 0.35; text-decoration: line-through; }
+.fee-mini tfoot td { border-top: 2px solid #e5e7eb; font-weight: 700; font-size: 11px; }
+
+/* Route mini */
+.route-mini { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+.route-point { flex: 1; padding: 6px 8px; border-radius: 4px; background: #fff; border: 1px solid #e5e7eb; }
+.route-point .rp-label { font-size: 8px; font-weight: 600; text-transform: uppercase; color: #9ca3af; }
+.route-point .rp-value { font-size: 10px; font-weight: 500; color: #111827; }
+.route-point .rp-date { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; }
+.route-arrow { color: #d1d5db; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-V02: Job Detail Section Ordering</h1>
+<div class="hmw">How might we order the sections on the vendor's job detail page so the most important information for their workflow (fee reconciliation vs operational context) appears first?</div>
+
+<div class="context">
+<strong>Context:</strong> The vendor job detail page has 5 sections below the Status Action Bar: Route, Cargo, Fees, Proof of Service, Activity Log. The current design preview puts Route + Cargo first (top-left), Proofs + Activity (top-right), Fees full-width below. But the vendor app's primary purpose is <strong>fee reconciliation</strong>. The question: should fees be front-and-center, or should operational context (route, cargo) come first because the vendor needs to understand the job before reviewing fees?
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION A: Operations First -->
+<!-- ============================================ -->
+<h2>Option A: Operations First (Route → Cargo → Fees → Proofs → Log)</h2>
+<span class="label" style="background: #dbeafe; color: #1e40af;">Chronological</span>
+
+<div class="rationale">
+Follow the natural workflow: vendor sees what the job IS (route, cargo), then what it COSTS (fees), then what's been DONE (proofs, log). This mirrors how the admin slide-out works — route context first, then fees below. The vendor reads top-to-bottom like reading a job sheet.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Natural reading order — understand the job before reviewing numbers<br>
+• Matches admin slide-out layout (platform consistency)<br>
+• Route/cargo context helps vendor spot fee errors ("wait, this was only 12 bags, not 24")</div>
+<div class="cons"><strong>Cons</strong><br>
+• Fees are below the fold — vendor has to scroll to reach the primary purpose of the app<br>
+• Route/cargo rarely changes — vendor already knows where the job is (they did it)<br>
+• Prioritizes information the vendor already has over information they need to check</div>
+</div>
+</div>
+
+<div class="screen detail-mock">
+<div class="mock-header">
+<span class="mock-back">← My Jobs</span>
+<span class="mock-job-id">J01</span>
+<span class="mock-title">Export Customs Clearance</span>
+<span class="mock-meta">DO-2603-001 · TikTok Global · MAWB 160-12345678</span>
+</div>
+<div class="action-bar">
+<div style="display: flex; align-items: center; gap: 6px;">
+<span class="chip"><span class="dot"></span>In Progress</span>
+<span class="hint">Upload proof of service to mark complete</span>
+</div>
+<button class="btn">↑ Upload Proof</button>
+</div>
+
+<!-- Section order visualization -->
+<div style="padding: 12px 16px 4px;">
+<div style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px;">Section order (top → bottom)</div>
+</div>
+
+<div class="wire-section route">
+<div class="wire-label" style="color: #6b7280;">① Route</div>
+<div class="route-mini">
+<div class="route-point"><div class="rp-label">Origin</div><div class="rp-value">Baoan WH, Shenzhen</div><div class="rp-date">29 Mar · 08:00</div></div>
+<div class="route-arrow">→</div>
+<div class="route-point"><div class="rp-label">Destination</div><div class="rp-value">SZX Cargo Terminal</div><div class="rp-date">29 Mar · 16:00</div></div>
+</div>
+</div>
+
+<div class="wire-section cargo">
+<div class="wire-label" style="color: #059669;">② Cargo</div>
+<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 4px;">
+<div style="padding: 6px; background: #fff; border-radius: 4px; border: 1px solid #e5e7eb;">
+<div style="font-size: 8px; font-weight: 600; text-transform: uppercase; color: #9ca3af;">Bags</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;">24</div>
+</div>
+<div style="padding: 6px; background: #fff; border-radius: 4px; border: 1px solid #e5e7eb;">
+<div style="font-size: 8px; font-weight: 600; text-transform: uppercase; color: #9ca3af;">Weight</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;">1,280 kg</div>
+</div>
+<div style="padding: 6px; background: #fff; border-radius: 4px; border: 1px solid #e5e7eb;">
+<div style="font-size: 8px; font-weight: 600; text-transform: uppercase; color: #9ca3af;">Volume</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;">8.4 CBM</div>
+</div>
+</div>
+</div>
+
+<div class="wire-section fees" style="opacity: 0.6;">
+<div class="wire-label" style="color: #1e40af;">③ Fee Breakdown ↓ (below the fold)</div>
+<div class="wire-body">Vendor must scroll down to see fees — the primary reconciliation data</div>
+</div>
+
+<div class="wire-section proof" style="opacity: 0.4;">
+<div class="wire-label" style="color: #92400e;">④ Proof of Service</div>
+</div>
+<div class="wire-section log" style="opacity: 0.3;">
+<div class="wire-label" style="color: #6b7280;">⑤ Activity Log</div>
+</div>
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION B: Fees First -->
+<!-- ============================================ -->
+<h2>Option B: Fees First (Fees → Route + Cargo → Proofs → Log)</h2>
+<span class="label" style="background: #f0fdf4; color: #059669;">Recommended</span>
+
+<div class="rationale">
+Lead with the money. The vendor opens a job detail for one of two reasons: (1) take action (handled by Status Action Bar at the top), or (2) check the fees. Put the fee breakdown immediately after the action bar. Route and cargo are reference info — the vendor already knows the route because they executed it. Fees are the thing they need to <strong>verify</strong>.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Primary purpose (reconciliation) is above the fold<br>
+• Vendor sees fees without scrolling — faster workflow<br>
+• Cargo quantities sit right below fees, easy to cross-reference ("24 bags × CNY 15 = 360, correct")<br>
+• Signals that this app is about reconciliation, not just job tracking</div>
+<div class="cons"><strong>Cons</strong><br>
+• Breaks from admin slide-out ordering (route first there)<br>
+• New vendor on first login might not understand the job context without seeing route first<br>
+• Fee table is the densest section — leading with density could feel intimidating</div>
+</div>
+</div>
+
+<div class="screen detail-mock">
+<div class="mock-header">
+<span class="mock-back">← My Jobs</span>
+<span class="mock-job-id">J01</span>
+<span class="mock-title">Export Customs Clearance</span>
+<span class="mock-meta">DO-2603-001 · TikTok Global · MAWB 160-12345678</span>
+</div>
+<div class="action-bar">
+<div style="display: flex; align-items: center; gap: 6px;">
+<span class="chip"><span class="dot"></span>In Progress</span>
+<span class="hint">Upload proof of service to mark complete</span>
+</div>
+<button class="btn">↑ Upload Proof</button>
+</div>
+
+<div style="padding: 12px 16px 4px;">
+<div style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px;">Section order (top → bottom)</div>
+</div>
+
+<div class="wire-section fees">
+<div class="wire-label" style="color: #1e40af;">① Fee Breakdown (immediately visible)</div>
+<table class="fee-mini">
+<thead><tr><th>Fee</th><th>Unit</th><th>Rate</th><th>Qty</th><th>Amount</th></tr></thead>
+<tbody>
+<tr><td style="font-weight: 500;">Export Declaration Fee</td><td>per shipment</td><td>CNY 800</td><td>1</td><td>CNY 800</td></tr>
+<tr><td style="font-weight: 500;">Inspection & Quarantine</td><td>per shipment</td><td>CNY 450</td><td>1</td><td>CNY 450</td></tr>
+<tr><td style="font-weight: 500;">Document Handling</td><td>per shipment</td><td>CNY 200</td><td>1</td><td>CNY 200</td></tr>
+<tr><td style="font-weight: 500;">X-Ray Screening</td><td>per bag</td><td>CNY 15</td><td>24</td><td>CNY 360</td></tr>
+<tr><td style="font-weight: 500;">Overtime Surcharge</td><td>per shipment</td><td>CNY 300</td><td>1</td><td>CNY 300</td></tr>
+<tr class="inactive"><td>Hazmat Handling</td><td>per shipment</td><td>CNY 500</td><td>1</td><td>CNY 500</td></tr>
+</tbody>
+<tfoot><tr><td colspan="4">Total (active fees)</td><td>CNY 2,110</td></tr></tfoot>
+</table>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0;">
+<div class="wire-section route" style="margin-right: 0; border-radius: 6px 0 0 6px;">
+<div class="wire-label" style="color: #6b7280;">② Route</div>
+<div class="route-mini">
+<div class="route-point"><div class="rp-label">Origin</div><div class="rp-value">Baoan WH, Shenzhen</div><div class="rp-date">29 Mar · 08:00</div></div>
+<div class="route-arrow">→</div>
+<div class="route-point"><div class="rp-label">Dest</div><div class="rp-value">SZX Cargo Terminal</div><div class="rp-date">29 Mar · 16:00</div></div>
+</div>
+</div>
+<div class="wire-section cargo" style="margin-left: 0; border-radius: 0 6px 6px 0;">
+<div class="wire-label" style="color: #059669;">③ Cargo</div>
+<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; margin-top: 4px;">
+<div style="padding: 4px 6px; background: #fff; border-radius: 3px; border: 1px solid #e5e7eb;">
+<div style="font-size: 7px; font-weight: 600; text-transform: uppercase; color: #9ca3af;">Bags</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;">24</div>
+</div>
+<div style="padding: 4px 6px; background: #fff; border-radius: 3px; border: 1px solid #e5e7eb;">
+<div style="font-size: 7px; font-weight: 600; text-transform: uppercase; color: #9ca3af;">Weight</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;">1,280 kg</div>
+</div>
+<div style="padding: 4px 6px; background: #fff; border-radius: 3px; border: 1px solid #e5e7eb;">
+<div style="font-size: 7px; font-weight: 600; text-transform: uppercase; color: #9ca3af;">Volume</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;">8.4 CBM</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="wire-section proof">
+<div class="wire-label" style="color: #92400e;">④ Proof of Service</div>
+<div class="wire-body">2 documents uploaded · Upload zone below</div>
+</div>
+<div class="wire-section log">
+<div class="wire-label" style="color: #6b7280;">⑤ Activity Log</div>
+<div class="wire-body">4 entries · Reverse chronological</div>
+</div>
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION C: Split Priority -->
+<!-- ============================================ -->
+<h2>Option C: Split View (Fees Left, Context Right)</h2>
+<span class="label" style="background: #fef3c7; color: #92400e;">Balanced</span>
+
+<div class="rationale">
+Side-by-side layout on desktop: Fees as a persistent left column, Route + Cargo + Proofs + Log scrollable on the right. Both priorities visible simultaneously without scrolling. At 768px, stacks to fees-first (same as Option B).
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Both fees and route visible at the same time on desktop<br>
+• Vendor can cross-reference fees against cargo quantities without scrolling<br>
+• Feels like a reconciliation workspace, not just a detail page</div>
+<div class="cons"><strong>Cons</strong><br>
+• Fee table is constrained to ~50% width — tight for 5 columns<br>
+• More complex layout to build and maintain<br>
+• Collapses to single-column at 768px anyway, so the benefit is desktop-only<br>
+• Different layout pattern from the rest of the app</div>
+</div>
+</div>
+
+<div class="screen detail-mock">
+<div class="mock-header">
+<span class="mock-back">← My Jobs</span>
+<span class="mock-job-id">J01</span>
+<span class="mock-title">Export Customs Clearance</span>
+<span class="mock-meta">DO-2603-001 · TikTok Global · MAWB 160-12345678</span>
+</div>
+<div class="action-bar">
+<div style="display: flex; align-items: center; gap: 6px;">
+<span class="chip"><span class="dot"></span>In Progress</span>
+<span class="hint">Upload proof of service to mark complete</span>
+</div>
+<button class="btn">↑ Upload Proof</button>
+</div>
+
+<div style="display: grid; grid-template-columns: 55% 45%; min-height: 300px;">
+<!-- Left: Fees -->
+<div style="border-right: 1px solid #e5e7eb; padding: 12px;">
+<div class="wire-label" style="color: #1e40af;">Fee Breakdown (persistent left column)</div>
+<table class="fee-mini">
+<thead><tr><th>Fee</th><th>Unit</th><th>Rate</th><th>Qty</th><th>Amt</th></tr></thead>
+<tbody>
+<tr><td style="font-weight: 500;">Export Declaration</td><td>per ship.</td><td>800</td><td>1</td><td>CNY 800</td></tr>
+<tr><td style="font-weight: 500;">Insp. & Quarantine</td><td>per ship.</td><td>450</td><td>1</td><td>CNY 450</td></tr>
+<tr><td style="font-weight: 500;">Doc Handling</td><td>per ship.</td><td>200</td><td>1</td><td>CNY 200</td></tr>
+<tr><td style="font-weight: 500;">X-Ray Screening</td><td>per bag</td><td>15</td><td>24</td><td>CNY 360</td></tr>
+<tr><td style="font-weight: 500;">Overtime</td><td>per ship.</td><td>300</td><td>1</td><td>CNY 300</td></tr>
+<tr class="inactive"><td>Hazmat</td><td>per ship.</td><td>500</td><td>1</td><td>CNY 500</td></tr>
+</tbody>
+<tfoot><tr><td colspan="4">Total</td><td>CNY 2,110</td></tr></tfoot>
+</table>
+</div>
+<!-- Right: Everything else -->
+<div style="padding: 12px; overflow-y: auto;">
+<div class="wire-label" style="color: #6b7280;">Route</div>
+<div style="padding: 6px; background: #f9fafb; border-radius: 4px; border: 1px solid #e5e7eb; margin-bottom: 10px; font-size: 10px;">
+<div style="font-weight: 500;">Baoan WH, Shenzhen → SZX Cargo Terminal</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af;">29 Mar 08:00 → 29 Mar 16:00</div>
+</div>
+
+<div class="wire-label" style="color: #059669;">Cargo</div>
+<div style="display: flex; gap: 6px; margin-bottom: 10px;">
+<div style="flex: 1; padding: 4px 6px; background: #f9fafb; border-radius: 3px; border: 1px solid #e5e7eb; font-size: 10px;"><span style="font-size: 8px; font-weight: 600; text-transform: uppercase; color: #9ca3af;">Bags</span><br><span style="font-weight: 600;">24</span></div>
+<div style="flex: 1; padding: 4px 6px; background: #f9fafb; border-radius: 3px; border: 1px solid #e5e7eb; font-size: 10px;"><span style="font-size: 8px; font-weight: 600; text-transform: uppercase; color: #9ca3af;">Weight</span><br><span style="font-weight: 600;">1,280 kg</span></div>
+<div style="flex: 1; padding: 4px 6px; background: #f9fafb; border-radius: 3px; border: 1px solid #e5e7eb; font-size: 10px;"><span style="font-size: 8px; font-weight: 600; text-transform: uppercase; color: #9ca3af;">Vol</span><br><span style="font-weight: 600;">8.4 CBM</span></div>
+</div>
+
+<div class="wire-label" style="color: #92400e;">Proof of Service</div>
+<div style="font-size: 10px; color: #6b7280; margin-bottom: 10px;">2 documents · Upload zone</div>
+
+<div class="wire-label" style="color: #6b7280;">Activity Log</div>
+<div style="font-size: 10px; color: #6b7280;">4 entries</div>
+</div>
+</div>
+</div>
+
+<!-- ============================================ -->
+<!-- VERDICT -->
+<!-- ============================================ -->
+<div class="verdict">
+<h3>Recommendation: Option B — Fees First</h3>
+<p style="font-size: 12px; line-height: 1.6; color: #374151;">
+The vendor app exists for reconciliation. Lead with the money. The vendor already knows the route (they executed the job). What they need to verify is: are the fees correct, are the quantities right, which fees did Teleport remove? Put that at the top.
+<br><br>
+Option A is the "safe" admin-consistent ordering, but it optimizes for understanding a job you haven't seen before — that's the ops planner's workflow, not the vendor's. Option C is elegant on desktop but adds layout complexity for a benefit that disappears at 768px (where it collapses to fees-first anyway).
+<br><br>
+Option B is simple, opinionated, and directly aligned with the app's primary purpose. Status Action Bar → Fees → Route + Cargo (side by side) → Proofs → Activity Log.
+</p>
+</div>
+
+</div>
+</body>
+</html>

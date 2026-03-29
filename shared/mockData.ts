@@ -1,298 +1,68 @@
-export type JobStatus = 'Pending' | 'In Progress' | 'Completed' | 'Verified' | 'Cancelled';
-/** @deprecated Use JobStatus instead — unified status lifecycle (TODO-020) */
-export type ProofStatus = 'awaiting' | 'uploaded' | 'validated';
+import type {
+  JobStatus,
+  ServiceType,
+  ActivityLogEntry,
+  ProofDocument,
+  Job,
+  FeeLineItem,
+  VendorRate,
+  VendorFee,
+  VendorFeeLog,
+  Trip,
+  TripTemplate,
+  BagPackage,
+  Location,
+  FtlRate,
+  FtlRateLog,
+  Currency,
+  RateUnit,
+} from './types';
 
-// --- FTL Trucking Rate Model ---
+// Re-export types so consumers can import from mockData as before
+export type {
+  JobStatus,
+  ServiceType,
+  ActivityLogEntry,
+  ProofDocument,
+  Job,
+  FeeLineItem,
+  VendorRate,
+  VendorFee,
+  VendorFeeLog,
+  Trip,
+  TripTemplate,
+  Location,
+  FtlRate,
+  FtlRateLog,
+  Currency,
+  RateUnit,
+};
 
-export type TruckType = '1.5T' | '3T' | '5T' | '8T' | '10T' | '12T' | '40HQ' | '45HQ';
+// Re-export everything from types so admin can keep importing from mockData
+export {
+  TRUCK_TYPES,
+  SERVICE_CONFIG,
+  SERVICE_HIERARCHY,
+  ALL_L2_SERVICES,
+  getL2ByCostId,
+  getL1ByCode,
+  CURRENCY_SYMBOLS,
+  formatCurrency,
+  calcFeeAmount,
+  calcJobTotal,
+} from './types';
 
-export const TRUCK_TYPES: { type: TruckType; maxKg: number; maxCbm: number }[] = [
-  { type: '1.5T', maxKg: 1500, maxCbm: 15 },
-  { type: '3T', maxKg: 2500, maxCbm: 18 },
-  { type: '5T', maxKg: 4500, maxCbm: 30 },
-  { type: '8T', maxKg: 7500, maxCbm: 43 },
-  { type: '10T', maxKg: 10000, maxCbm: 50 },
-  { type: '12T', maxKg: 12000, maxCbm: 60 },
-  { type: '40HQ', maxKg: 20000, maxCbm: 96 },
-  { type: '45HQ', maxKg: 20000, maxCbm: 120 },
-];
+export type {
+  ProofStatus,
+  TruckType,
+  LocationType,
+  RateType,
+  L2SubService,
+  L1Service,
+} from './types';
 
-export interface FtlRate {
-  id: string;
-  vendorCode: string;
-  originCity: string;        // Chinese city name
-  originDistrict: string;    // Chinese district name
-  originCode: string;        // GB/T 2260 code
-  destCity: string;
-  destDistrict: string;
-  destCode: string;
-  currency: Currency;
-  rates: Partial<Record<TruckType, number>>;  // truck type → rate per trip
-  effectiveFrom: string;
-  isActive: boolean;
-}
-
-export interface FtlRateLog {
-  id: string;
-  timestamp: string;
-  action: string;      // "CSV uploaded", "Rate created", etc.
-  user: string;
-  details?: string;    // "92 routes, 87 updated, 5 new" or "福田 5T: 430→450"
-  filename?: string;   // CSV filename if upload
-}
-
-export interface ServiceType {
-  code: string;
-  label: string;
-}
-
-export interface ActivityLogEntry {
-  id: string;
-  timestamp: string;
-  action: string;
-  user: string;
-  details?: string;
-}
-
-export interface ProofDocument {
-  id: string;
-  name: string;
-  type: string;
-  uploadedAt: string;
-  uploadedBy: string;
-  url: string;
-}
-
-export interface Job {
-  id: string;
-  vendor: { code: string; name: string };
-  origin: { location: string; date: string };
-  destination: { location: string; date: string };
-  service: ServiceType;
-  status: JobStatus;
-  duration: string | null;
-  execution: string | null;
-  cancelReason?: string;
-  activityLog: ActivityLogEntry[];
-  proofDocuments: ProofDocument[];
-  // Phase 2: Rate & billing
-  rateId?: string;
-  agreedRate?: { currency: Currency; amount: number; unit: RateUnit };
-  agreedCost?: { currency: Currency; amount: number };
-  invoiceAmount?: { currency: Currency; amount: number };
-  // Phase 2.5: Multi-fee model + per-job quantities
-  fees: FeeLineItem[];
-  jobBags?: number;      // defaults from order, editable per job
-  jobWeight?: number;    // defaults from order, editable per job
-  jobVolume?: number;    // CBM, editable per job
-}
-
-export interface FeeLineItem {
-  id: string;
-  name: string;           // vendor's own fee name (e.g., "前置仓操作费")
-  feeId?: string;         // linked to VendorFee if auto-populated
-  currency: Currency;
-  rate: number;           // locked from vendor fee schedule — not editable
-  unit: RateUnit;
-  quantity: number;       // editable per fee until verified
-  amount: number;         // = rate × quantity (calculated)
-  minCharge?: number;     // minimum charge from vendor schedule
-  active: boolean;        // true = included, false = removed by ops (subtractive model)
-}
-
-// --- Legacy VendorRate stub (removed in TODO-017, kept for RateContext compat) ---
-/** @deprecated Use VendorFee instead */
-export interface VendorRate { id: string; [key: string]: unknown; }
 /** @deprecated Removed — no legacy rates */
 export const seedRates: VendorRate[] = [];
-
-// --- Vendor Fee Schedule ---
-// Each vendor has their own fee names per service+location. Not forced into L2 codes.
-
-export interface VendorFee {
-  id: string;
-  vendorCode: string;
-  serviceCode: string;       // L1 service: EC, CS, CR, OH
-  locationId: string;        // facility where this fee applies
-  name: string;              // vendor's own fee name (e.g., "前置仓操作费", "装板服务")
-  nameEn?: string;           // English name (optional)
-  currency: Currency;
-  rate: number;
-  unit: RateUnit;
-  minCharge?: number;        // minimum charge per shipment
-  isActive: boolean;
-  costId?: string;           // optional L2 tag for reporting (e.g., "OH001")
-}
-
-export interface VendorFeeLog {
-  id: string;
-  timestamp: string;
-  action: string;
-  user: string;
-  details?: string;
-  filename?: string;
-}
-
-export function calcFeeAmount(rate: number, _unit: RateUnit, quantity: number): number {
-  return rate * quantity;
-}
-
-export function calcJobTotal(fees: FeeLineItem[]): Map<Currency, number> {
-  const totals = new Map<Currency, number>();
-  for (const fee of fees) {
-    totals.set(fee.currency, (totals.get(fee.currency) ?? 0) + fee.amount);
-  }
-  return totals;
-}
-
-export interface Trip {
-  id: string;
-  customer: { name: string; code: string };
-  mawb: string;
-  origin: string;         // single origin for the DO (e.g. "TikTok WH, Shenzhen")
-  destination: string;    // single destination for the DO (e.g. "SZX Airport")
-  bags: number;
-  weight: number;
-  remarks: string;
-  createdAt: string;
-  pickupDate?: string;    // target pickup date (e.g. "2026-03-08")
-  deliveryDate?: string;  // target delivery date (e.g. "2026-03-08")
-  priority?: boolean;
-  bagPackageIds?: string[];  // associated bag packages from external system
-  jobs: Job[];
-}
-
-// --- Bag Package Model (external system data) ---
-
-export interface BagPackage {
-  id: string;
-  mawb: string;
-  bagNumber: string;
-  latestLocation: string;
-  pickupDate: string;        // ISO date string
-  origin: string;
-  destination: string;
-  weightKg: number;
-  assignedTripId?: string;   // null = available for assignment
-}
-
-export interface TripTemplate {
-  id: string;
-  name: string;
-  customerCode?: string;
-  jobs: {
-    vendor: { code: string; name: string };
-    origin: { location: string };
-    destination: { location: string };
-    service: ServiceType;
-  }[];
-  createdAt: string;
-}
-
-// --- Phase 2: Rate Management & Billing ---
-
-export type LocationType = 'warehouse' | 'airport' | 'port' | 'checkpoint' | 'hub';
-export type Currency = 'MYR' | 'CNY' | 'USD';
-export type RateUnit = 'flat' | 'per-kg' | 'per-bag' | 'per-cbm' | 'per-km';
-export type RateType = 'route' | 'location';
-
-export interface Location {
-  id: string;
-  name: string;
-  code: string;
-  zone: string;
-  type: LocationType;
-  districtCode?: string;  // GB/T 2260 code for auto-resolution to district
-}
-
-export const SERVICE_CONFIG: Record<string, { rateType: RateType; label: string }> = {
-  FM: { rateType: 'route', label: 'FM Trucking' },
-  EC: { rateType: 'location', label: 'Export Customs' },
-  CS: { rateType: 'location', label: 'Cargo Submission' },
-  CR: { rateType: 'location', label: 'Cargo Reception' },
-  OH: { rateType: 'location', label: 'Origin Handling' },
-};
-
-// --- L1/L2 Service Hierarchy (from CR Trip Management) ---
-
-export interface L2SubService {
-  costId: string;       // e.g., "FM001"
-  name: string;         // e.g., "Warehouse Transfer Fee"
-  unit: RateUnit;       // fixed per Cost ID (HMW-35)
-  l1Code: string;       // parent L1 service code
-}
-
-export interface L1Service {
-  code: string;
-  label: string;
-  color: string;        // badge color
-  rateType: RateType;
-  l2Services: L2SubService[];
-}
-
-export const SERVICE_HIERARCHY: L1Service[] = [
-  {
-    code: 'CR', label: 'Cargo Retrieval', color: '#2563eb', rateType: 'location',
-    l2Services: [
-      { costId: 'CR001', name: 'Registration Fee', unit: 'flat', l1Code: 'CR' },
-      { costId: 'CR002', name: 'Cargo Retrieval Pick Up Fee', unit: 'per-bag', l1Code: 'CR' },
-    ],
-  },
-  {
-    code: 'CS', label: 'Cargo Submission', color: '#b45309', rateType: 'location',
-    l2Services: [
-      { costId: 'CS001', name: 'Express Center Ground Handling Fee', unit: 'flat', l1Code: 'CS' },
-      { costId: 'CS002', name: 'International Cargo Terminal Transit Fee', unit: 'flat', l1Code: 'CS' },
-      { costId: 'CS003', name: 'RA Agent Fee', unit: 'flat', l1Code: 'CS' },
-      { costId: 'CS004', name: 'Security X-Ray Screening Fee', unit: 'flat', l1Code: 'CS' },
-      { costId: 'CS005', name: 'Terminal Handling Charges', unit: 'per-kg', l1Code: 'CS' },
-      { costId: 'CS006', name: 'Ground Handling Fee', unit: 'flat', l1Code: 'CS' },
-    ],
-  },
-  {
-    code: 'EC', label: 'Export Custom Clearance', color: '#7c3aed', rateType: 'location',
-    l2Services: [
-      { costId: 'EC001', name: 'Customs Declaration Fee', unit: 'flat', l1Code: 'EC' },
-      { costId: 'EC002', name: 'Customs Inspection Fee', unit: 'flat', l1Code: 'EC' },
-      { costId: 'EC003', name: 'Customs Service Fee', unit: 'flat', l1Code: 'EC' },
-    ],
-  },
-  {
-    code: 'FM', label: 'Trucking', color: '#152CFF', rateType: 'route',
-    l2Services: [
-      { costId: 'FM001', name: 'Warehouse Transfer Fee', unit: 'flat', l1Code: 'FM' },
-      { costId: 'FM002', name: 'Pickup Fee', unit: 'flat', l1Code: 'FM' },
-      { costId: 'FM003', name: 'Cross-Border Handling Fee', unit: 'flat', l1Code: 'FM' },
-    ],
-  },
-  {
-    code: 'OH', label: 'Origin Handling', color: '#6b7280', rateType: 'location',
-    l2Services: [
-      { costId: 'OH001', name: 'MAWB Fee', unit: 'flat', l1Code: 'OH' },
-      { costId: 'OH002', name: 'Loading and Unloading Fee', unit: 'per-kg', l1Code: 'OH' },
-      { costId: 'OH003', name: 'Handling Fee', unit: 'per-kg', l1Code: 'OH' },
-      { costId: 'OH004', name: 'Sorting Fee', unit: 'per-bag', l1Code: 'OH' },
-      { costId: 'OH005', name: 'Palletization / Build-Up Fee', unit: 'flat', l1Code: 'OH' },
-    ],
-  },
-];
-
-// Flat lookup helpers
-export const ALL_L2_SERVICES: L2SubService[] = SERVICE_HIERARCHY.flatMap((l1) => l1.l2Services);
-export function getL2ByCostId(costId: string): L2SubService | undefined {
-  return ALL_L2_SERVICES.find((l2) => l2.costId === costId);
-}
-export function getL1ByCode(code: string): L1Service | undefined {
-  return SERVICE_HIERARCHY.find((l1) => l1.code === code);
-}
-
-export const CURRENCY_SYMBOLS: Record<Currency, string> = {
-  MYR: 'RM', CNY: 'CNY', USD: 'USD',
-};
-
-export function formatCurrency(currency: Currency, amount: number): string {
-  return `${CURRENCY_SYMBOLS[currency]} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
 
 export const vendors = [
   { code: 'V-001', name: 'HaleSun' },
@@ -531,27 +301,22 @@ export const seedLocations: Location[] = [
   { id: 'LOC-023', name: 'Ningbo Port', code: 'NB-PT', zone: 'Ningbo', type: 'port', districtCode: '330206' },  // 北仑区
 ];
 
-// --- Bag Packages (simulated external system data) ---
-// Each MAWB has multiple bag packages. Bags can be associated with shipments during creation.
+// --- Bag Packages (external system data) ---
 
 export const seedBagPackages: BagPackage[] = [
-  // MAWB 160-84329871 — 5 bags (already used by DO-001 seed trip)
   { id: 'BAG-001', mawb: '160-84329871', bagNumber: 'LATD7YPXJN2GQPM0L9', latestLocation: 'SZTATOW', pickupDate: '2026-01-29', origin: 'SZTATOW', destination: 'Bao An District, Shenzhen', weightKg: 4.6, assignedTripId: 'DO-001' },
   { id: 'BAG-002', mawb: '160-84329871', bagNumber: 'LATD5HACGA4YZ35TXQ', latestLocation: 'SZTATOW', pickupDate: '2026-01-29', origin: 'SZTATOW', destination: 'Bao An District, Shenzhen', weightKg: 1.3, assignedTripId: 'DO-001' },
   { id: 'BAG-003', mawb: '160-84329871', bagNumber: 'BAU6TQF19WBB2ZQP6N', latestLocation: 'SZTATOW', pickupDate: '2026-01-30', origin: 'SZTATOW', destination: 'Bao An District, Shenzhen', weightKg: 3.9, assignedTripId: 'DO-001' },
   { id: 'BAG-004', mawb: '160-84329871', bagNumber: 'BAU4TDF4S4GSD6F16S2H', latestLocation: 'SZTATOW', pickupDate: '2026-01-30', origin: 'SZTATOW', destination: 'Bao An District, Shenzhen', weightKg: 1.6 },
   { id: 'BAG-005', mawb: '160-84329871', bagNumber: 'BAU6TQE8DTYH3A8KL3', latestLocation: 'SZTATOW', pickupDate: '2026-01-30', origin: 'SZTATOW', destination: 'Bao An District, Shenzhen', weightKg: 2.9 },
-  // MAWB 160-33121632 — 4 bags
   { id: 'BAG-006', mawb: '160-33121632', bagNumber: 'BAU6TDFPMG1L2S5GQ70', latestLocation: 'SZTATOW', pickupDate: '2026-02-04', origin: 'SZTATOW', destination: 'Bao An District, Shenzhen', weightKg: 5.1 },
   { id: 'BAG-007', mawb: '160-33121632', bagNumber: 'LATD5HA7P2Y1KNQ4RM', latestLocation: 'SZTATOW', pickupDate: '2026-02-04', origin: 'SZTATOW', destination: 'Bao An District, Shenzhen', weightKg: 3.2 },
   { id: 'BAG-008', mawb: '160-33121632', bagNumber: 'BAU4TDF9STC0Z5X2VN8', latestLocation: 'SZTATOW', pickupDate: '2026-02-05', origin: 'SZTATOW', destination: 'Bao An District, Shenzhen', weightKg: 7.4 },
   { id: 'BAG-009', mawb: '160-33121632', bagNumber: 'BAU6TQF4DKWN63JMHP', latestLocation: 'SZTATOW', pickupDate: '2026-02-05', origin: 'SZTATOW', destination: 'Bao An District, Shenzhen', weightKg: 2.8 },
-  // MAWB 160-98765421 — 4 bags
   { id: 'BAG-010', mawb: '160-98765421', bagNumber: 'BAU4TDP7V4HB0CZE1H6H', latestLocation: 'SZTATOW', pickupDate: '2026-03-18', origin: 'SZTATOW', destination: 'Bao An District, Shenzhen', weightKg: 5.0 },
   { id: 'BAG-011', mawb: '160-98765421', bagNumber: 'BAU6TDF5S3YC4KN8Q2', latestLocation: 'SZTATOW', pickupDate: '2026-03-18', origin: 'SZTATOW', destination: 'Bao An District, Shenzhen', weightKg: 6.1 },
   { id: 'BAG-012', mawb: '160-98765421', bagNumber: 'BAU4TDJQ6D0W7D6R3LMN', latestLocation: 'SZTATOW', pickupDate: '2026-03-18', origin: 'SZTATOW', destination: 'Bao An District, Shenzhen', weightKg: 4.6 },
   { id: 'BAG-013', mawb: '160-98765421', bagNumber: 'LATD5P3V4HR0BD5T4W', latestLocation: 'SZTATOW', pickupDate: '2026-03-19', origin: 'SZTATOW', destination: 'Bao An District, Shenzhen', weightKg: 3.8 },
-  // MAWB 160-55667788 — 5 bags (unassigned — available for new shipments)
   { id: 'BAG-014', mawb: '160-55667788', bagNumber: 'BAU6TQF9N4QA5Z2M8G3S', latestLocation: 'SZTATOW', pickupDate: '2026-03-25', origin: 'SZTATOW', destination: 'Bao An District, Shenzhen', weightKg: 4.3 },
   { id: 'BAG-015', mawb: '160-55667788', bagNumber: 'BAU4TDF3HXWP8KL1VR6T', latestLocation: 'SZTATOW', pickupDate: '2026-03-25', origin: 'SZTATOW', destination: 'Bao An District, Shenzhen', weightKg: 6.7 },
   { id: 'BAG-016', mawb: '160-55667788', bagNumber: 'LATD7YN2Q5FC9MD4BJ', latestLocation: 'SZTATOW', pickupDate: '2026-03-26', origin: 'SZTATOW', destination: 'Bao An District, Shenzhen', weightKg: 2.1 },

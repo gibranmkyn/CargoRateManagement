@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { TripProvider } from './context/TripContext';
+import { TripProvider } from '@shared/TripContext';
 import { RateProvider } from './context/RateContext';
-import { ToastProvider } from './components/Toast';
+import { ToastProvider } from '@shared/Toast';
 import Navbar from './components/layout/Navbar';
 import TripsPage from './pages/TripsPage';
 import CreateTripPage from './pages/CreateTripPage';

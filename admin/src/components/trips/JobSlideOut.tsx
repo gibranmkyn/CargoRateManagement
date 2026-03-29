@@ -1,9 +1,9 @@
 import { useRef } from 'react';
 import { ArrowRight, MapPin, Upload, FileText, Image, X, Clock, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import type { Job, Trip, ProofDocument } from '../../data/mockData';
+import type { Job, Trip, ProofDocument } from '@shared/mockData';
 // ProofStatus removed — unified status lifecycle (TODO-020)
-import { formatCurrency, vendors } from '../../data/mockData';
+import { formatCurrency, vendors } from '@shared/mockData';
 import ServiceTag from './ServiceTag';
 
 function fmtDateTime(dt: string) {

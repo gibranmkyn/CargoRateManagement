@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { useRates } from '../../context/RateContext';
-import { useTrips } from '../../context/TripContext';
-import { vendors, SERVICE_CONFIG } from '../../data/mockData';
+import { useTrips } from '@shared/TripContext';
+import { vendors, SERVICE_CONFIG } from '@shared/mockData';
 
 interface Props {
   serviceCode: string;

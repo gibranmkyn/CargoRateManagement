@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useTrips } from '../../context/TripContext';
-import type { Job } from '../../data/mockData';
-import { vendors } from '../../data/mockData';
+import { useTrips } from '@shared/TripContext';
+import type { Job } from '@shared/mockData';
+import { vendors } from '@shared/mockData';
 import ServiceTag from './ServiceTag';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
 

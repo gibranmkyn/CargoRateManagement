@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Plus, Pencil, Trash2, Check, X, MapPin } from 'lucide-react';
 import { useRates, generateLocationId } from '../../context/RateContext';
-import { useTrips } from '../../context/TripContext';
-import { useToast } from '../Toast';
-import type { Location, LocationType } from '../../data/mockData';
+import { useTrips } from '@shared/TripContext';
+import { useToast } from '@shared/Toast';
+import type { Location, LocationType } from '@shared/mockData';
 
 const LOCATION_TYPES: LocationType[] = ['warehouse', 'airport', 'port', 'checkpoint', 'hub'];
 const TYPE_LABEL: Record<LocationType, string> = { warehouse: 'Warehouse', airport: 'Airport', port: 'Port', checkpoint: 'Checkpoint', hub: 'Hub' };

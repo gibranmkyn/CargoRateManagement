@@ -119,7 +119,7 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 2. **Dense data design:** 40px nav, stats bar (no dashboard cards), 8px table cells, 4-6px radius.
 3. **5-color status system:** Gray (pending), blue (in progress), amber (completed/needs verification), green (verified), red (cancelled).
 4. **Unified job status lifecycle:** Pending → In Progress → Completed (proof uploaded) → Verified (admin sign-off). Replaces old dual status + proofStatus fields. Researched Flexport, project44, Uber Freight, TAI TMS. (HMW-47)
-   - **Cancelled**: Admin cancels a job — terminal state. 3PL vendors cannot reject (no vendor portal). Admin can reassign to a different vendor (resets to Pending) or cancel outright.
+   - **Cancelled**: Admin cancels a job (mandatory reason) — terminal, immutable. Reassignment = cancel original + create new job for new vendor (linked). Partial completion = Completed with remark + adjusted fees + follow-up job. See Iteration 11.
 5. **Two complementary views:** Shipments (demand-side, grouped by client request) + Jobs (supply-side, flat table with vendor/service/status focus). (HMW-44→48)
 6. **Sub-table for expanded jobs:** Not cards. Expanded shipments show a nested table.
 7. **Slide-out panel for actions:** Proof upload + verification + fee management + activity log in one panel.
@@ -216,14 +216,14 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 - [x] Activity log for rate changes (CSV uploads tracked with timestamp/user/filename)
 - [x] Master Data tabs: Facilities | Regions | Vendors | Customers | Services
 
-### Iteration 10 — Jobs Page + Unified Status Lifecycle (planned)
-- [ ] Unified job status: replace dual `status` + `proofStatus` with single `status` field (HMW-47)
+### Iteration 10 — Jobs Page + Unified Status Lifecycle (completed)
+- [x] Unified job status: replace dual `status` + `proofStatus` with single `status` field (HMW-47)
   - `Pending | In Progress | Completed | Verified | Cancelled`
   - Proof upload triggers Pending/In Progress → Completed
   - Admin verify action triggers Completed → Verified (billing gate)
   - Admin cancel → Cancelled (reassignment resets to Pending)
-- [ ] 5-color status system: gray/blue/amber/green/red replacing old 3-color (HMW-48)
-- [ ] Jobs page: flat power table at `/jobs` route (HMW-48)
+- [x] 5-color status system: gray/blue/amber/green/red replacing old 3-color (HMW-48)
+- [x] Jobs page: flat power table at `/jobs` route (HMW-48)
   - Status pills: Active | Completed | Verified | All
   - Service pills: FM | EC | CS | CR | OH
   - Vendor dropdown with search (30+ vendors)
@@ -231,12 +231,135 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
   - Group by: Vendor — collapsed headers sorted by most outstanding, status badges
   - Default sort within Active: Cancelled → In Progress → Pending
   - Click job row → slide-out panel. Click shipment link → Shipments view.
-- [ ] Nav update: Shipments | **Jobs** | Rates | Master Data
-- [ ] Update Shipments sub-table to use new status chips
-- [ ] Update slide-out panel: proof upload triggers Completed, Verify button triggers Verified
-- [ ] Update seed data with unified status values
+- [x] Nav update: Shipments | **Jobs** | Rates | Master Data
+- [x] Update Shipments sub-table to use new status chips
+- [x] Update slide-out panel: proof upload triggers Completed, Verify button triggers Verified
+- [x] Update seed data with unified status values
 
-### Known Scaling Limitations (address in Phase 3)
+### Iteration 11 — Cancellation, Reassignment & Partial Completion
+
+#### Problem Statement
+
+The current cancellation model has three flaws:
+
+1. **Reassignment erases history.** When admin reassigns a cancelled job to a new vendor, the old vendor's record is overwritten — vendor A's cancel reason is cleared, and from their perspective the job just disappears. This is wrong: vendor A had an assignment, it was taken away, and they should see why.
+
+2. **No audit trail across vendors.** There's no link between the cancelled job and its replacement. If a CS job gets cancelled on HaleSun and recreated on Gonda, there's no record connecting the two. Billing can't reconcile.
+
+3. **"Pickup not ready" isn't modeled.** In real operations, a vendor sometimes shows up for FM trucking pickup but the goods aren't ready. The vendor did real work (dispatched a truck, driver showed up, waited), so they're owed partial payment. The current system has no way to record this — it's either fully Completed or Cancelled, with nothing in between.
+
+#### Three Real-World Scenarios
+
+**Scenario A — Standard Cancellation**
+> Admin cancels HaleSun's CS job because the customer decided to bundle customs with a different forwarder. HaleSun never started work. The job is cancelled with a clear reason. No replacement needed.
+
+**Scenario B — Vendor Reassignment (Cancel + Replace)**
+> Admin cancels Gonda's EC job because Gonda doesn't have the customs license for this specific goods category. Admin needs to reassign to HaleSun. This should be modeled as: cancel Gonda's job (with reason) → create a new job for HaleSun (same service, same location). Gonda sees a cancelled job with reason. HaleSun sees a new Pending job. Both vendors have clean records.
+
+**Scenario C — Partial Completion (Pickup Not Ready)**
+> Vendor dispatches a 5T truck to pick up goods at TikTok WH Shenzhen. Driver arrives, but goods aren't ready — customer says "come back tomorrow." The vendor did real work: truck dispatched, driver time, fuel burned. Admin marks the job as Completed with a "Pickup not ready" remark and adjusts fees to a partial amount (e.g., ¥200 dry-run fee instead of ¥1,200 full FTL rate). Then admin creates a new FM job for the same vendor for the 2nd pickup attempt. Both jobs are billable — the first for the dry-run fee, the second for the actual delivery.
+
+#### User Stories — Cancellation
+
+- **US-060:** As an admin, I want cancelling a job to require a written reason, so there's always an audit trail for why work was taken away from a vendor.
+- **US-061:** As an admin, when cancelling a job, I want the option to immediately create a replacement job for a different (or same) vendor, so the "cancel + replace" flow feels like one action instead of two disconnected steps.
+- **US-062:** As an admin, I want cancelled jobs to be immutable — the vendor, cancel reason, and activity log are permanently recorded, never overwritten by reassignment.
+- **US-063:** As a vendor, I want to see all my cancelled jobs with the cancellation reason clearly displayed, so I know why work was taken away from me.
+
+#### User Stories — Partial Completion
+
+- **US-064:** As an admin, when a vendor shows up but can't complete work (e.g., pickup not ready), I want to mark the job as Completed with a completion remark and adjust fees to a partial amount, so the vendor is fairly compensated for work they actually did.
+- **US-065:** As an admin, after a partial completion, I want to quickly create a follow-up job for the same service (same or different vendor), so the retry is tracked as a separate billing event with its own fees and proof cycle.
+- **US-066:** As a vendor, I want to see the completion remark and adjusted fees on partially completed jobs, so I understand my compensation.
+
+#### User Stories — Job Linkage
+
+- **US-067:** As an admin, I want to see when a job was created as a replacement for a cancelled/partial job, so I can trace the full history of a service across vendor changes.
+- **US-068:** As an admin, I want the cancelled/partial job to show which job replaced it, so I can quickly navigate to the current active assignment.
+
+#### Data Model Changes
+
+```
+Job (additions):
+  cancelReason: string          // MANDATORY when status = Cancelled (was optional)
+  completionRemark?: string     // Free text for partial completion or any completion note
+  replacedByJobId?: string      // "This job was replaced by job X" (set on cancelled/partial job)
+  replacesJobId?: string        // "This job replaces job Y" (set on the new replacement job)
+```
+
+**Key rules:**
+- `cancelReason` becomes **required** for Cancelled status. UI must enforce this.
+- `completionRemark` is available on any Completed job, not just partial. It's just a note field.
+- Partial completion is NOT a new status. It's `status: 'Completed'` with adjusted fees + a `completionRemark`. The fee adjustment (¥1,200 → ¥200) is done through the existing fee editing on the slide-out.
+- `replacedByJobId` / `replacesJobId` form a bidirectional link. Both are set atomically when a replacement job is created.
+
+#### Cancellation Flow — What Changes
+
+**Current (broken):**
+1. Admin cancels job → status = Cancelled, cancelReason set (optional)
+2. Admin reassigns vendor → SAME job gets vendor overwritten, status reset to Pending, cancelReason cleared
+3. Result: vendor A's history is erased
+
+**New (correct):**
+1. Admin cancels job → status = Cancelled, cancelReason set (mandatory). Job is now **immutable**.
+2. If replacement needed: admin triggers "Cancel & Replace" which atomically:
+   a. Cancels the original job (with reason)
+   b. Creates a NEW job on the same shipment for the replacement vendor, same service + location
+   c. Links them: original.replacedByJobId = new.id, new.replacesJobId = original.id
+3. Result: vendor A sees cancelled job with reason. Vendor B sees new Pending job. Full audit trail.
+
+**Remove:** The current "Reassign Vendor" dropdown on cancelled jobs in the slide-out. Replace with "Create Replacement Job" action that opens a mini-form (select vendor → confirm).
+
+#### Partial Completion Flow
+
+1. Admin opens slide-out for an In Progress (or Pending) FM job
+2. Selects "Complete with Remark" (or uploads proof + adds remark)
+3. Enters remark: "Pickup not ready — goods delayed by customer"
+4. Job → Completed. Remark saved as `completionRemark`.
+5. Admin adjusts fees in the slide-out: changes FTL fee from ¥1,200 to ¥200 dry-run fee (existing fee editing capability).
+6. Admin clicks "Create Follow-up Job" → creates a new FM job for same vendor + same route, linked via `replacesJobId`.
+7. New job starts at Pending with full FTL rate.
+
+Note: The vendor still needs to upload proof for the original partial job (e.g., photo of closed warehouse gate) and the admin still verifies it. The lifecycle is the same — just with adjusted fees.
+
+#### Vendor Visibility
+
+Both Admin and Vendor apps should display:
+- **Cancelled jobs:** Red status, cancel reason prominently shown, link to replacement job if one exists ("Replaced by J04")
+- **Partial completions:** Normal Completed status + completion remark visible, link to follow-up job if one exists
+- **Replacement jobs:** "Replaces J02" link on the new job, so context is clear
+
+#### Interaction Patterns (conceptual — design in HMW mockups)
+
+**Slide-out Status Action Bar — Cancelled state:**
+- Remove: vendor reassignment dropdown
+- Add: "Cancel & Replace" button (opens inline vendor selector → creates new job)
+- Show: cancel reason (read-only), link to replacement if exists
+
+**Slide-out — new actions for active jobs:**
+- "Cancel Job" action available on Pending / In Progress jobs (opens cancel reason form)
+- "Complete with Remark" variant for the partial completion case
+- "Create Follow-up" action on Completed jobs (for retry scenarios)
+
+**Jobs page / Shipments sub-table:**
+- Replacement chain indicator: small link icon or "→ J04" next to cancelled jobs
+- Follow-up indicator: "← J02" on replacement jobs
+
+#### Implementation Checklist
+- [ ] Make `cancelReason` mandatory for Cancelled status (model + UI validation)
+- [ ] Remove vendor reassignment on cancelled jobs (slide-out + RejectedTab)
+- [ ] Add `completionRemark` field to Job
+- [ ] Add `replacedByJobId` / `replacesJobId` fields to Job
+- [ ] "Cancel Job" action on slide-out for Pending/In Progress jobs (reason form)
+- [ ] "Cancel & Replace" flow: cancel + create new job atomically with linkage
+- [ ] "Complete with Remark" option on slide-out
+- [ ] "Create Follow-up Job" action on Completed jobs
+- [ ] Display cancel reason + replacement links in admin slide-out
+- [ ] Display cancel reason + replacement links in vendor job detail
+- [ ] Update vendor My Jobs to show completion remarks
+- [ ] Activity log entries for all cancellation/replacement events
+
+
 - **Vendor selector pills** — works for 5-8 vendors but breaks at 30+. Needs to become a searchable dropdown or sidebar list.
 - **No cross-vendor comparison** — can't compare rates for the same route across vendors. Needs a route-first view (pick a route, see all vendors' rates) in addition to the current vendor-first view.
 - **Activity log is flat** — at 30+ vendors uploading CSVs regularly, the log becomes a firehose. Needs per-vendor filtering or a separate audit page.

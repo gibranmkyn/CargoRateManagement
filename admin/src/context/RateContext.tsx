@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer, useEffect, useCallback, type ReactNode } from 'react';
-import type { Location, VendorRate, FtlRate, FtlRateLog, VendorFee, VendorFeeLog } from '../data/mockData';
-import { seedLocations, seedRates, seedFtlRates, seedFtlLogs, seedVendorFees, seedVendorFeeLogs } from '../data/mockData';
+import type { Location, VendorRate, FtlRate, FtlRateLog, VendorFee, VendorFeeLog } from '@shared/mockData';
+import { seedLocations, seedRates, seedFtlRates, seedFtlLogs, seedVendorFees, seedVendorFeeLogs } from '@shared/mockData';
 
 // --- State ---
 

@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react';
 import { Search, Download, Plus, Ship, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { customers, vendors, formatCurrency } from '../data/mockData';
-import type { Trip, JobStatus } from '../data/mockData';
-import { useTrips } from '../context/TripContext';
-import { useToast } from '../components/Toast';
+import { customers, vendors, formatCurrency } from '@shared/mockData';
+import type { Trip, JobStatus } from '@shared/mockData';
+import { useTrips } from '@shared/TripContext';
+import { useToast } from '@shared/Toast';
 import SlideOutPanel from '../components/SlideOutPanel';
 import JobSlideOut from '../components/trips/JobSlideOut';
 import ServiceTag from '../components/trips/ServiceTag';

@@ -1,7 +1,7 @@
 import { createContext, useContext, useReducer, useEffect, useCallback, type ReactNode } from 'react';
-import type { Trip, Job, JobStatus, TripTemplate, ActivityLogEntry, ProofDocument, Currency, FeeLineItem } from '@shared/mockData';
+import type { Trip, Job, JobStatus, TripTemplate, ActivityLogEntry, ProofDocument, Currency, FeeLineItem } from './types';
 // ProofStatus import removed — unified status lifecycle (TODO-020)
-import { seedTrips, seedTemplates, calcFeeAmount } from '@shared/mockData';
+import { seedTrips, seedTemplates, calcFeeAmount } from './mockData';
 
 // --- State ---
 

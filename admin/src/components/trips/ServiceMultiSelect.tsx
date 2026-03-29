@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, X } from 'lucide-react';
-import type { ServiceType } from '../../data/mockData';
-import { serviceTypes } from '../../data/mockData';
+import type { ServiceType } from '@shared/mockData';
+import { serviceTypes } from '@shared/mockData';
 
 interface ServiceMultiSelectProps {
   selected: ServiceType[];

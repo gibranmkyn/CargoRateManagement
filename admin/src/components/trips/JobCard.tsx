@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
-import type { Job, JobStatus } from '../../data/mockData';
+import type { Job, JobStatus } from '@shared/mockData';
 import ServiceTag from './ServiceTag';
 
 function getStatusColors(status: JobStatus): { border: string; text: string; dot: string } {

@@ -1,4 +1,4 @@
-import type { ServiceType } from '../../data/mockData';
+import type { ServiceType } from '@shared/mockData';
 
 export default function ServiceTag({ service }: { service: ServiceType }) {
   return (

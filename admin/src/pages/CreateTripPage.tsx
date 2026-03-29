@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, ArrowRight, ArrowLeft } from 'lucide-react';
-import { customers, vendors, serviceTypes, formatCurrency, TRUCK_TYPES } from '../data/mockData';
-import type { Job, Trip, ServiceType, Currency, FeeLineItem, TruckType } from '../data/mockData';
-import { useTrips, generateTripId, generateJobId } from '../context/TripContext';
+import { X, ArrowRight, ArrowLeft, Package } from 'lucide-react';
+import { customers, vendors, serviceTypes, formatCurrency, TRUCK_TYPES, seedBagPackages } from '@shared/mockData';
+import type { Job, Trip, ServiceType, Currency, FeeLineItem, TruckType } from '@shared/mockData';
+import { useTrips, generateTripId, generateJobId } from '@shared/TripContext';
 import { useRates } from '../context/RateContext';
-import { useToast } from '../components/Toast';
+import { useToast } from '@shared/Toast';
 import LocationDropdown from '../components/shared/LocationDropdown';
+import SelectBagsModal from '../components/trips/SelectBagsModal';
 import { ALL_CITIES, ALL_DISTRICTS } from '../data/chinaRegions';
 
 interface JobDraft {
@@ -19,9 +20,6 @@ interface JobDraft {
   truckType: TruckType | '';
   // Other services: facility-based
   locationId: string;
-  // Dates
-  originDate: string;
-  destinationDate: string;
 }
 
 const svcColors: Record<string, string> = {
@@ -36,17 +34,64 @@ export default function CreateTripPage() {
 
   const [customerCode, setCustomerCode] = useState('');
   const [mawb, setMawb] = useState('');
-  const [tripOrigin, setTripOrigin] = useState('');
-  const [tripDestination, setTripDestination] = useState('');
+  const [originLocationId, setOriginLocationId] = useState('');
+  const [destinationLocationId, setDestinationLocationId] = useState('');
   const [bags, setBags] = useState('');
   const [weight, setWeight] = useState('');
   const [remarks, setRemarks] = useState('');
+  const [pickupDate, setPickupDate] = useState('');
   const [deliveryDate, setDeliveryDate] = useState('');
   const [jobs, setJobs] = useState<JobDraft[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [defaultVendor, setDefaultVendor] = useState('');
+  const [selectedBagIds, setSelectedBagIds] = useState<string[]>([]);
+  const [showBagModal, setShowBagModal] = useState(false);
+
+  const selectedBags = useMemo(() =>
+    seedBagPackages.filter((b) => selectedBagIds.includes(b.id)),
+    [selectedBagIds]
+  );
+
+  function handleBagsConfirm(bagIds: string[]) {
+    setSelectedBagIds(bagIds);
+    // Auto-fill bags count and weight from selected bags
+    if (bagIds.length > 0) {
+      const bags_ = seedBagPackages.filter((b) => bagIds.includes(b.id));
+      setBags(String(bags_.length));
+      setWeight(String(Number(bags_.reduce((sum, b) => sum + b.weightKg, 0).toFixed(1))));
+      // Auto-fill MAWB if all bags share the same one
+      const mawbs = [...new Set(bags_.map((b) => b.mawb))];
+      if (mawbs.length === 1 && !mawb) setMawb(mawbs[0]);
+    }
+  }
+
+  // Service → location defaulting: CR/OH use origin (pickup point), EC/CS use destination (delivery point)
+  const SERVICE_LOCATION_DEFAULT: Record<string, 'origin' | 'destination'> = {
+    CR: 'origin',
+    OH: 'origin',
+    EC: 'destination',
+    CS: 'destination',
+  };
+
+  function getJobDefaults(svcCode: string): Partial<JobDraft> {
+    if (svcCode === 'FM') {
+      // FM: auto-default district codes from origin/destination facility's districtCode
+      const originLoc = originLocationId ? getLocationById(originLocationId) : null;
+      const destLoc = destinationLocationId ? getLocationById(destinationLocationId) : null;
+      return {
+        originDistrictCode: originLoc?.districtCode ?? '',
+        destDistrictCode: destLoc?.districtCode ?? '',
+      };
+    }
+    // Non-FM: default locationId based on service type
+    const side = SERVICE_LOCATION_DEFAULT[svcCode];
+    if (side === 'origin') return { locationId: originLocationId };
+    if (side === 'destination') return { locationId: destinationLocationId };
+    return {};
+  }
 
   function addJobForService(svc: ServiceType) {
+    const defaults = getJobDefaults(svc.code);
     setJobs((prev) => [...prev, {
       key: crypto.randomUUID(),
       serviceCode: svc.code,
@@ -55,8 +100,7 @@ export default function CreateTripPage() {
       destDistrictCode: '',
       truckType: '',
       locationId: '',
-      originDate: '',
-      destinationDate: '',
+      ...defaults,
     }]);
   }
 
@@ -69,8 +113,7 @@ export default function CreateTripPage() {
       destDistrictCode: '',
       truckType: '' as TruckType | '',
       locationId: '',
-      originDate: '',
-      destinationDate: '',
+      ...getJobDefaults(svc.code),
     }));
     setJobs((prev) => [...prev, ...newJobs]);
   }
@@ -150,6 +193,8 @@ export default function CreateTripPage() {
   function validate(): string[] {
     const errs: string[] = [];
     if (!customerCode) errs.push('Customer is required');
+    if (!originLocationId) errs.push('Pickup location is required');
+    if (!destinationLocationId) errs.push('Delivery location is required');
     if (jobs.length === 0) errs.push('Add at least one job');
     jobs.forEach((job, i) => {
       const label = `J${String(i + 1).padStart(2, '0')}`;
@@ -237,8 +282,8 @@ export default function CreateTripPage() {
       return {
         id: generateJobId(tripId, jobs.slice(0, i).map((_, idx) => ({ id: `${tripId}-J${String(idx + 1).padStart(2, '0')}` }))),
         vendor: { code: vendor.code, name: vendor.name },
-        origin: { location: originName, date: draft.originDate || '' },
-        destination: { location: destName, date: draft.destinationDate || '' },
+        origin: { location: originName, date: '' },
+        destination: { location: destName, date: '' },
         service: svc,
         status: 'Pending' as const,
         duration: null,
@@ -252,17 +297,22 @@ export default function CreateTripPage() {
       };
     });
 
+    const originLoc = getLocationById(originLocationId);
+    const destLoc = getLocationById(destinationLocationId);
+
     const trip: Trip = {
       id: tripId,
       customer: { name: customer.name, code: customer.code },
       mawb,
-      origin: tripOrigin,
-      destination: tripDestination,
+      origin: originLoc?.name ?? '',
+      destination: destLoc?.name ?? '',
       bags: Number(bags) || 0,
       weight: Number(weight) || 0,
       remarks,
       createdAt,
+      pickupDate: pickupDate || undefined,
       deliveryDate: deliveryDate || undefined,
+      bagPackageIds: selectedBagIds.length > 0 ? selectedBagIds : undefined,
       jobs: tripJobs,
     };
 
@@ -314,12 +364,54 @@ export default function CreateTripPage() {
               <input type="text" value={mawb} onChange={(e) => setMawb(e.target.value)} placeholder="e.g. 160-84329871" style={{ width: '100%', fontFamily: 'var(--font-mono)' }} />
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <div style={{ width: 100 }}><label style={labelStyle}>Bags</label><input type="number" value={bags} onChange={(e) => setBags(e.target.value)} placeholder="0" style={{ width: '100%' }} /></div>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label style={labelStyle}>Pickup Location *</label>
+              <LocationDropdown value={originLocationId} onChange={setOriginLocationId} placeholder="Origin facility..." excludeId={destinationLocationId} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 4 }}><ArrowRight size={14} style={{ color: '#d1d5db' }} /></div>
+            <div style={{ flex: 1 }}>
+              <label style={labelStyle}>Delivery Location *</label>
+              <LocationDropdown value={destinationLocationId} onChange={setDestinationLocationId} placeholder="Destination facility..." excludeId={originLocationId} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+            <div style={{ width: 80 }}><label style={labelStyle}>Bags</label><input type="number" value={bags} onChange={(e) => setBags(e.target.value)} placeholder="0" style={{ width: '100%' }} /></div>
             <div style={{ width: 100 }}><label style={labelStyle}>Weight (kg)</label><input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="0" style={{ width: '100%' }} /></div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 1 }}>
+              <button type="button" onClick={() => setShowBagModal(true)} style={{
+                display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                border: selectedBagIds.length > 0 ? '1px solid #152CFF' : '1px solid #e5e7eb',
+                background: selectedBagIds.length > 0 ? 'rgba(21,44,255,0.04)' : '#fff',
+                color: selectedBagIds.length > 0 ? '#152CFF' : '#374151',
+              }}>
+                <Package size={12} />
+                {selectedBagIds.length > 0 ? `${selectedBagIds.length} bag${selectedBagIds.length !== 1 ? 's' : ''} linked` : '+ Add Bags'}
+              </button>
+            </div>
+            <div style={{ width: 140 }}><label style={labelStyle}>Pickup Date</label><input type="date" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} style={{ width: '100%', fontFamily: 'var(--font-mono)' }} /></div>
             <div style={{ width: 140 }}><label style={labelStyle}>Delivery Date</label><input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} style={{ width: '100%', fontFamily: 'var(--font-mono)' }} /></div>
             <div style={{ flex: 1 }}><label style={labelStyle}>Remarks</label><input type="text" value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Optional notes" style={{ width: '100%' }} /></div>
           </div>
+          {/* Selected bags summary */}
+          {selectedBags.length > 0 && (
+            <div style={{ padding: '8px 10px', background: 'rgba(21,44,255,0.02)', border: '1px solid rgba(21,44,255,0.08)', borderRadius: 4, marginBottom: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#152CFF' }}>
+                  {selectedBags.length} bag{selectedBags.length !== 1 ? 's' : ''} linked · {selectedBags.reduce((s, b) => s + b.weightKg, 0).toFixed(1)} kg
+                </span>
+                <button type="button" onClick={() => { setSelectedBagIds([]); setBags(''); setWeight(''); }} style={{ fontSize: 9, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Clear</button>
+              </div>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                {selectedBags.map((bag) => (
+                  <span key={bag.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 6px', borderRadius: 3, fontSize: 9, fontFamily: "'JetBrains Mono', monospace", background: '#fff', border: '1px solid #e5e7eb', color: '#374151' }}>
+                    {bag.bagNumber.slice(0, 12)}… <span style={{ color: '#9ca3af' }}>{bag.weightKg}kg</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Step 2: Add Services */}
@@ -448,12 +540,6 @@ export default function CreateTripPage() {
                       </div>
                     )}
 
-                    {/* Dates */}
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-                      <input type="datetime-local" value={job.originDate} onChange={(e) => updateJob(job.key, { originDate: e.target.value })} style={{ fontSize: 10, color: '#9ca3af' }} />
-                      {isFM && <input type="datetime-local" value={job.destinationDate} onChange={(e) => updateJob(job.key, { destinationDate: e.target.value })} style={{ fontSize: 10, color: '#9ca3af' }} />}
-                    </div>
-
                     {/* Rate/fee display */}
                     {hasVendor && (isFM ? (job.originDistrictCode && job.destDistrictCode && job.truckType) : job.locationId) && (
                       <div style={{ marginTop: 4 }}>
@@ -509,6 +595,14 @@ export default function CreateTripPage() {
           <button type="submit" style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#152CFF', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Create Shipment</button>
         </div>
       </form>
+
+      <SelectBagsModal
+        isOpen={showBagModal}
+        onClose={() => setShowBagModal(false)}
+        onConfirm={handleBagsConfirm}
+        initialSelected={selectedBagIds}
+        mawbHint={mawb}
+      />
     </div>
   );
 }

@@ -11,23 +11,42 @@ Both are React + TypeScript + Vite + Tailwind CSS v4. Same design tokens, differ
 ```
 CargoRateManagement/
 ├── CLAUDE.md                # You are here. Platform-level guide.
-├── admin/                   # Teleport OS Admin
+├── shared/                  # Shared code (both apps import from here)
+│   ├── types.ts             # All type definitions (Trip, Job, FeeLineItem, etc.)
+│   ├── mockData.ts          # Seed data, vendors, customers, helpers
+│   ├── TripContext.tsx       # State management (localStorage key: tripmanager_state)
+│   └── Toast.tsx            # Toast notification component
+├── admin/                   # Teleport OS Admin (port 5173)
 │   ├── PRD.md               # Admin user stories, iterations
 │   ├── DESIGN.md            # Admin design system (source of truth for shared tokens)
 │   ├── TODOS.md             # Admin implementation TODOs
 │   ├── design-hypotheses/   # 50 HMW mockups (HTML)
 │   ├── src/                 # Admin app source code
-│   ├── package.json         # Admin dependencies & scripts
+│   ├── package.json         # Admin dependencies & scripts (npm run dev)
 │   └── vite.config.ts, tsconfig, index.html, etc.
-├── vendor/                  # Teleport OS Vendor
+├── vendor/                  # Teleport OS Vendor (port 5174)
 │   ├── PRD.md               # Vendor user stories, iterations
 │   ├── DESIGN.md            # Vendor design adaptations (inherits from admin/DESIGN.md)
-│   └── design-preview.html  # Visual mockups of vendor screens
+│   ├── design-hypotheses/   # Vendor HMW mockups
+│   ├── design-preview.html  # Visual mockups of vendor screens
+│   ├── src/                 # Vendor app source code
+│   ├── package.json         # Vendor dependencies & scripts (npm run dev)
+│   └── vite.config.ts, tsconfig, index.html, etc.
 ├── reference/               # Business context & research (not app code)
 │   ├── client/              # Contracts, pitches, rate sheet data
 │   ├── current-teleport-os/ # Screenshots of existing Teleport OS
 │   └── lovable-prototype/   # Early Lovable prototype screenshots
 ```
+
+## Running Both Apps
+```bash
+# Terminal 1 — Admin
+cd admin && npm run dev      # → http://localhost:5173
+
+# Terminal 2 — Vendor
+cd vendor && npm run dev     # → http://localhost:5174
+```
+Both read/write the same localStorage key (`tripmanager_state`). Changes in one appear in the other on refresh.
 
 ## Design System
 **Always read `admin/DESIGN.md` before making any visual or UI decisions.**

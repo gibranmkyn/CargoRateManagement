@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo } from 'react';
 import { useRates } from '../context/RateContext';
-import { vendors, TRUCK_TYPES, SERVICE_HIERARCHY, formatCurrency } from '../data/mockData';
-import type { FtlRate, TruckType, Currency, VendorFee } from '../data/mockData';
+import { vendors, TRUCK_TYPES, SERVICE_HIERARCHY, formatCurrency } from '@shared/mockData';
+import type { FtlRate, TruckType, Currency, VendorFee } from '@shared/mockData';
 import { ALL_DISTRICTS } from '../data/chinaRegions';
 
 type RateTab = 'trucking' | 'EC' | 'CS' | 'CR' | 'OH';

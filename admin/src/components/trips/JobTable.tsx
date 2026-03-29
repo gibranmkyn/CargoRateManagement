@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Pencil, Trash2, ArrowRight } from 'lucide-react';
-import type { Job, JobStatus } from '../../data/mockData';
+import type { Job, JobStatus } from '@shared/mockData';
 import StatusBadge from './StatusBadge';
 import ServiceTag from './ServiceTag';
 

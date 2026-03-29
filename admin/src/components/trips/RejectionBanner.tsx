@@ -1,5 +1,5 @@
 import { AlertTriangle } from 'lucide-react';
-import { useTrips } from '../../context/TripContext';
+import { useTrips } from '@shared/TripContext';
 
 interface RejectionBannerProps {
   onViewRejected: () => void;

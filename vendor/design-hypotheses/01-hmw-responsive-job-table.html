@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-V01: Responsive Job Table at 768px</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', 'SF Mono', monospace; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+/* Shared mockup styles */
+.mock-nav { height: 40px; padding: 0 12px; background: #111827; display: flex; align-items: center; gap: 8px; }
+.mock-nav .logo { width: 18px; height: 18px; background: #152CFF; border-radius: 4px; }
+.mock-nav .logo-text { font-weight: 700; font-size: 12px; color: #fff; }
+.mock-nav .logo-label { font-size: 9px; color: rgba(255,255,255,0.35); }
+.mock-nav .nav-active { font-size: 11px; padding: 3px 8px; border-radius: 3px; color: #fff; background: rgba(255,255,255,0.1); font-weight: 600; }
+.mock-nav .vendor-id { margin-left: auto; font-size: 10px; color: rgba(255,255,255,0.6); font-weight: 600; }
+
+.mock-stats { padding: 6px 12px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 10px; color: #6b7280; display: flex; gap: 6px; flex-wrap: wrap; }
+.mock-stats .sn { font-weight: 700; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+
+.mock-filters { padding: 6px 12px; border-bottom: 1px solid #e5e7eb; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.mock-pill { font-size: 10px; padding: 2px 8px; border-radius: 3px; border: 1px solid #e5e7eb; color: #6b7280; font-weight: 500; }
+.mock-pill.active { background: #111827; color: #fff; border-color: #111827; font-weight: 600; }
+.mock-pill .ct { font-family: 'JetBrains Mono', monospace; font-size: 9px; opacity: 0.6; margin-left: 3px; }
+
+.mock-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.mock-table thead th { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #f9fafb; padding: 5px 10px; text-align: left; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+.mock-table tbody td { padding: 7px 10px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: middle; }
+.mock-table tbody tr:hover { background: #f9fafb; }
+
+.chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; white-space: nowrap; }
+.chip .dot { width: 4px; height: 4px; border-radius: 50%; }
+.chip-pending { background: #f9fafb; border: 1px solid #e5e7eb; color: #9ca3af; }
+.chip-pending .dot { background: #9ca3af; }
+.chip-progress { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); color: #152CFF; }
+.chip-progress .dot { background: #152CFF; }
+.chip-completed { background: #fefce8; border: 1px solid #fde68a; color: #a16207; }
+.chip-completed .dot { background: #a16207; }
+.chip-verified { background: #f0fdf4; border: 1px solid #a7f3d0; color: #059669; }
+.chip-verified .dot { background: #059669; }
+
+.svc { font-size: 8px; font-weight: 600; padding: 1px 4px; border-radius: 99px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF; font-family: 'JetBrains Mono', monospace; }
+.bold { font-weight: 600; color: #111827; }
+.faint { color: #9ca3af; }
+.mono-data { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; }
+.cost { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: #111827; text-align: right; }
+
+/* Card mockup styles */
+.card-list { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.job-card { padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; background: #fff; }
+.job-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.job-card-body { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 10px; color: #6b7280; }
+.job-card-label { font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; }
+.job-card-value { font-size: 10px; color: #374151; font-weight: 500; }
+.job-card-route { grid-column: 1 / -1; font-size: 10px; color: #374151; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Tablet frame */
+.tablet-frame { max-width: 768px; margin: 0 auto; border: 2px solid #d1d5db; border-radius: 8px; overflow: hidden; background: #fff; }
+.frame-label { text-align: center; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #9ca3af; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-V01: Responsive Job Table</h1>
+<div class="hmw">How might we adapt the vendor's job list table to work on 768px tablet screens without losing the scanability that makes the dense table design effective?</div>
+
+<div class="context">
+<strong>Context:</strong> Vendor operators are often on-site at warehouses and cargo terminals, using tablets or smaller laptops. The admin app requires 1200px minimum. The vendor app commits to 768px+ from day 1. At 768px, a 7-column table doesn't fit. We need a strategy that preserves the "smart spreadsheet" feel while actually being usable on narrower screens.
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION A: Scroll Table -->
+<!-- ============================================ -->
+<h2>Option A: Horizontal Scroll Table</h2>
+<span class="label" style="background: #dbeafe; color: #1e40af;">Simplest</span>
+
+<div class="rationale">
+Keep the exact same table at all widths. Wrap it in a horizontal scroll container. The table doesn't change — the viewport just shows a window into it. Users swipe right to see more columns.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Zero design work — same table everywhere<br>
+• Familiar pattern (spreadsheet users scroll constantly)<br>
+• No information loss, every column visible by scrolling</div>
+<div class="cons"><strong>Cons</strong><br>
+• Status and Cost hidden off-screen (the two most important columns for action/reconciliation)<br>
+• Can't see the full row at once — defeats scanability<br>
+• Feels unfinished, not designed for the screen</div>
+</div>
+</div>
+
+<div class="frame-label">768px tablet</div>
+<div class="screen" style="max-width: 768px; margin: 0 auto 24px;">
+<div class="mock-nav">
+<div class="logo"></div>
+<span class="logo-text">Teleport OS</span>
+<span class="logo-label">Vendor</span>
+<span class="mock-pill active" style="margin-left: 12px; font-size: 10px; border: none;">My Jobs</span>
+<span class="vendor-id">HaleSun</span>
+</div>
+<div class="mock-stats">
+<span class="sn" style="color: #111827;">18</span> jobs ·
+<span class="sn" style="color: #9ca3af;">4</span> pending ·
+<span class="sn" style="color: #152CFF;">6</span> in progress
+</div>
+<div class="mock-filters">
+<span class="mock-pill active">Active <span class="ct">10</span></span>
+<span class="mock-pill">Completed <span class="ct">3</span></span>
+<span class="mock-pill">Verified <span class="ct">5</span></span>
+</div>
+<div style="overflow-x: auto; position: relative;">
+<div style="position: absolute; right: 0; top: 0; bottom: 0; width: 40px; background: linear-gradient(to right, transparent, rgba(255,255,255,0.9)); pointer-events: none; z-index: 1;"></div>
+<table class="mock-table" style="min-width: 900px;">
+<thead><tr>
+<th style="width: 10%">Shipment</th>
+<th style="width: 13%">Customer</th>
+<th style="width: 7%">Service</th>
+<th style="width: 32%">Route</th>
+<th style="width: 10%">Pickup</th>
+<th style="width: 11%">Status</th>
+<th style="width: 10%; text-align: right;">Cost</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><span class="mono-data">DO-2603-001</span></td>
+<td class="bold">TikTok Global</td>
+<td><span class="svc">EC</span></td>
+<td>Baoan WH, Shenzhen → SZX Cargo Terminal</td>
+<td><span class="mono-data">29 Mar<br>08:00</span></td>
+<td><span class="chip chip-pending"><span class="dot"></span>Pending</span></td>
+<td class="cost">CNY 2,800</td>
+</tr>
+<tr>
+<td><span class="mono-data">DO-2603-003</span></td>
+<td class="bold">Shopee SG</td>
+<td><span class="svc">FM</span></td>
+<td>Nanshan Hub → Futian Checkpoint → HK Airport</td>
+<td><span class="mono-data">29 Mar<br>10:30</span></td>
+<td><span class="chip chip-progress"><span class="dot"></span>In Progress</span></td>
+<td class="cost">CNY 3,450</td>
+</tr>
+<tr>
+<td><span class="mono-data">DO-2603-005</span></td>
+<td class="bold">Shein CN</td>
+<td><span class="svc">EC</span></td>
+<td>Panyu WH, Guangzhou → CAN Airport Terminal</td>
+<td><span class="mono-data">28 Mar<br>14:00</span></td>
+<td><span class="chip chip-completed"><span class="dot"></span>Completed</span></td>
+<td class="cost">CNY 4,100</td>
+</tr>
+</tbody>
+</table>
+<div style="text-align: center; padding: 8px; font-size: 9px; color: #9ca3af;">← scroll to see Status and Cost →</div>
+</div>
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION B: Condensed Table -->
+<!-- ============================================ -->
+<h2>Option B: Condensed Table (Drop + Stack Columns)</h2>
+<span class="label" style="background: #f0fdf4; color: #059669;">Recommended</span>
+
+<div class="rationale">
+Redesign the table for narrow screens: merge Customer + Shipment into one stacked cell, drop Route entirely (it's in the detail page), and keep Status + Cost always visible. The key insight: at 768px, the vendor needs to <strong>decide which job to open</strong>, not read the full route. Customer, Service, Status, and Cost are the decision columns.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Status and Cost always visible — the two action/reconciliation columns<br>
+• No horizontal scroll needed<br>
+• Still feels like a table, not a mobile redesign<br>
+• Route available one tap away in detail page</div>
+<div class="cons"><strong>Cons</strong><br>
+• Route not visible in list (vendor can't scan "where do I need to go" from the list)<br>
+• Stacked cells look denser, slightly harder to scan vertically<br>
+• Two different table layouts to maintain (wide vs narrow)</div>
+</div>
+</div>
+
+<div class="frame-label">768px tablet — condensed columns</div>
+<div class="screen" style="max-width: 768px; margin: 0 auto 24px;">
+<div class="mock-nav">
+<div class="logo"></div>
+<span class="logo-text">Teleport OS</span>
+<span class="logo-label">Vendor</span>
+<span class="mock-pill active" style="margin-left: 12px; font-size: 10px; border: none;">My Jobs</span>
+<span class="vendor-id">HaleSun</span>
+</div>
+<div class="mock-stats">
+<span class="sn" style="color: #111827;">18</span> jobs ·
+<span class="sn" style="color: #9ca3af;">4</span> pending ·
+<span class="sn" style="color: #152CFF;">6</span> in progress ·
+<span class="sn" style="color: #a16207;">3</span> completed ·
+<span class="sn" style="color: #059669;">5</span> verified
+</div>
+<div class="mock-filters">
+<span class="mock-pill active">Active <span class="ct">10</span></span>
+<span class="mock-pill">Completed <span class="ct">3</span></span>
+<span class="mock-pill">Verified <span class="ct">5</span></span>
+<span class="mock-pill">Cancelled <span class="ct">1</span></span>
+<span class="mock-pill">All <span class="ct">19</span></span>
+<div style="flex: 1;"></div>
+<span class="svc" style="font-size: 9px;">FM</span>
+<span class="svc" style="font-size: 9px; background: rgba(21,44,255,0.15);">EC</span>
+<span class="svc" style="font-size: 9px;">CS</span>
+<span class="svc" style="font-size: 9px;">OH</span>
+</div>
+<table class="mock-table">
+<thead><tr>
+<th style="width: 35%">Shipment / Customer</th>
+<th style="width: 8%">Svc</th>
+<th style="width: 15%">Pickup</th>
+<th style="width: 18%">Status</th>
+<th style="width: 15%; text-align: right;">Cost</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+<div class="bold" style="font-size: 11px;">TikTok Global</div>
+<div class="mono-data">DO-2603-001</div>
+</td>
+<td><span class="svc">EC</span></td>
+<td><span class="mono-data">29 Mar</span><br><span class="mono-data">08:00</span></td>
+<td><span class="chip chip-pending"><span class="dot"></span>Pending</span></td>
+<td class="cost">CNY 2,800</td>
+</tr>
+<tr>
+<td>
+<div class="bold" style="font-size: 11px;">Shopee SG</div>
+<div class="mono-data">DO-2603-003</div>
+</td>
+<td><span class="svc">FM</span></td>
+<td><span class="mono-data">29 Mar</span><br><span class="mono-data">10:30</span></td>
+<td><span class="chip chip-progress"><span class="dot"></span>In Progress</span></td>
+<td class="cost">CNY 3,450</td>
+</tr>
+<tr>
+<td>
+<div class="bold" style="font-size: 11px;">Shein CN</div>
+<div class="mono-data">DO-2603-005</div>
+</td>
+<td><span class="svc">EC</span></td>
+<td><span class="mono-data">28 Mar</span><br><span class="mono-data">14:00</span></td>
+<td><span class="chip chip-completed"><span class="dot"></span>Completed</span></td>
+<td class="cost">CNY 4,100</td>
+</tr>
+<tr>
+<td>
+<div class="bold" style="font-size: 11px;">AliExpress</div>
+<div class="mono-data">DO-2603-002</div>
+</td>
+<td><span class="svc">EC</span></td>
+<td><span class="mono-data">28 Mar</span><br><span class="mono-data">09:00</span></td>
+<td><span class="chip chip-verified"><span class="dot"></span>Verified</span></td>
+<td class="cost">CNY 2,650</td>
+</tr>
+<tr>
+<td>
+<div class="bold" style="font-size: 11px;">Temu</div>
+<div class="mono-data">DO-2603-008</div>
+</td>
+<td><span class="svc">OH</span></td>
+<td><span class="mono-data">29 Mar</span><br><span class="mono-data">11:00</span></td>
+<td><span class="chip chip-pending"><span class="dot"></span>Pending</span></td>
+<td class="cost">CNY 1,900</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION C: Card List -->
+<!-- ============================================ -->
+<h2>Option C: Card List (Mobile Pattern)</h2>
+<span class="label" style="background: #fef3c7; color: #92400e;">Radical</span>
+
+<div class="rationale">
+Abandon the table entirely at 768px. Each job becomes a card with all key info stacked vertically. This is the standard responsive pattern — tables become cards on small screens.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Every field visible without scrolling or truncation<br>
+• Tap target is the whole card (easy on touch)<br>
+• Natural pattern for mobile/tablet — users expect it</div>
+<div class="cons"><strong>Cons</strong><br>
+• Breaks the "smart spreadsheet" design language — feels like a different app<br>
+• Much less data density — only ~4 jobs visible at a time vs ~8+ in a table<br>
+• Harder to scan and compare across jobs (eyes jump between cards)<br>
+• DESIGN.md explicitly says "tables, not cards"</div>
+</div>
+</div>
+
+<div class="frame-label">768px tablet — card list</div>
+<div class="screen" style="max-width: 768px; margin: 0 auto 24px;">
+<div class="mock-nav">
+<div class="logo"></div>
+<span class="logo-text">Teleport OS</span>
+<span class="logo-label">Vendor</span>
+<span class="mock-pill active" style="margin-left: 12px; font-size: 10px; border: none;">My Jobs</span>
+<span class="vendor-id">HaleSun</span>
+</div>
+<div class="mock-stats">
+<span class="sn" style="color: #111827;">18</span> jobs ·
+<span class="sn" style="color: #9ca3af;">4</span> pending ·
+<span class="sn" style="color: #152CFF;">6</span> in progress
+</div>
+<div class="mock-filters">
+<span class="mock-pill active">Active <span class="ct">10</span></span>
+<span class="mock-pill">Completed <span class="ct">3</span></span>
+<span class="mock-pill">Verified <span class="ct">5</span></span>
+</div>
+<div class="card-list">
+<div class="job-card">
+<div class="job-card-header">
+<div>
+<span class="bold" style="font-size: 12px;">TikTok Global</span>
+<span class="mono-data" style="margin-left: 6px;">DO-2603-001</span>
+</div>
+<span class="chip chip-pending"><span class="dot"></span>Pending</span>
+</div>
+<div class="job-card-route">Baoan WH, Shenzhen → SZX Cargo Terminal</div>
+<div class="job-card-body" style="margin-top: 6px;">
+<div><span class="job-card-label">Service</span><br><span class="svc">EC</span></div>
+<div><span class="job-card-label">Pickup</span><br><span class="job-card-value mono" style="font-family: 'JetBrains Mono', monospace; font-size: 10px;">29 Mar · 08:00</span></div>
+<div><span class="job-card-label">Cost</span><br><span class="job-card-value mono" style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;">CNY 2,800</span></div>
+</div>
+</div>
+
+<div class="job-card">
+<div class="job-card-header">
+<div>
+<span class="bold" style="font-size: 12px;">Shopee SG</span>
+<span class="mono-data" style="margin-left: 6px;">DO-2603-003</span>
+</div>
+<span class="chip chip-progress"><span class="dot"></span>In Progress</span>
+</div>
+<div class="job-card-route">Nanshan Hub → Futian Checkpoint → HK Airport</div>
+<div class="job-card-body" style="margin-top: 6px;">
+<div><span class="job-card-label">Service</span><br><span class="svc">FM</span></div>
+<div><span class="job-card-label">Pickup</span><br><span class="job-card-value mono" style="font-family: 'JetBrains Mono', monospace; font-size: 10px;">29 Mar · 10:30</span></div>
+<div><span class="job-card-label">Cost</span><br><span class="job-card-value mono" style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;">CNY 3,450</span></div>
+</div>
+</div>
+
+<div class="job-card">
+<div class="job-card-header">
+<div>
+<span class="bold" style="font-size: 12px;">Shein CN</span>
+<span class="mono-data" style="margin-left: 6px;">DO-2603-005</span>
+</div>
+<span class="chip chip-completed"><span class="dot"></span>Completed</span>
+</div>
+<div class="job-card-route">Panyu WH, Guangzhou → CAN Airport Terminal</div>
+<div class="job-card-body" style="margin-top: 6px;">
+<div><span class="job-card-label">Service</span><br><span class="svc">EC</span></div>
+<div><span class="job-card-label">Pickup</span><br><span class="job-card-value mono" style="font-family: 'JetBrains Mono', monospace; font-size: 10px;">28 Mar · 14:00</span></div>
+<div><span class="job-card-label">Cost</span><br><span class="job-card-value mono" style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;">CNY 4,100</span></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ============================================ -->
+<!-- VERDICT -->
+<!-- ============================================ -->
+<div class="verdict">
+<h3>Recommendation: Option B — Condensed Table</h3>
+<p style="font-size: 12px; line-height: 1.6; color: #374151;">
+Option B keeps the table as a table — maintaining the platform's design language — while making a smart trade: drop Route (available in detail), keep Status and Cost visible (the decision/reconciliation columns). The vendor uses the list to decide "which job do I open next?" and that decision is driven by Status + Cost + Customer, not Route. Stacking Customer/Shipment into one cell is a clean density trick that buys back the space.
+<br><br>
+Option A (scroll) is lazy — hiding Status and Cost off-screen defeats the purpose of the table. Option C (cards) breaks the design system and halves data density. Option B is the Goldilocks: still a table, still dense, but fits 768px without compromise.
+</p>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronRight, MapPin, Package, Scale } from 'lucide-react';
-import type { Trip, JobStatus } from '../../data/mockData';
+import type { Trip, JobStatus } from '@shared/mockData';
 import JobCard from './JobCard';
 
 function buildRoute(trip: Trip): string {

@@ -1,9 +1,9 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useRef } from 'react';
 import { ArrowLeft, ArrowRight, Upload, FileText, Image, X, Clock, MapPin, User, Briefcase, ChevronRight } from 'lucide-react';
-import { useTrips } from '../context/TripContext';
-import type { ProofDocument, JobStatus } from '../data/mockData';
-import { formatCurrency } from '../data/mockData';
+import { useTrips } from '@shared/TripContext';
+import type { ProofDocument, JobStatus } from '@shared/mockData';
+import { formatCurrency } from '@shared/mockData';
 import ServiceTag from '../components/trips/ServiceTag';
 
 function fmtDateTime(dt: string) {
