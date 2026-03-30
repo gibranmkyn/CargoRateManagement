@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 .gstack/
+
+# Confidential reference materials (contracts, rate sheets, screenshots)
+reference/
