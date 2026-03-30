@@ -92,13 +92,17 @@ Key principles:
 - **Terminology:** "Shipment" in UI = `Trip` in code. "Job" = vendor assignment within a shipment.
 
 ## Data Model
-- **Trip** → has many **Jobs**
+- **Shipment (Trip)** → has many **Jobs**
 - Each **Job** = 1 vendor + 1 service + origin/destination (1-service-per-job model)
 - Same vendor can appear multiple times if handling multiple services
-- Jobs are PARALLEL, not sequential
+- **FM Jobs have Legs:** Admin creates ONE FM job (e.g., "Shenzhen → HK Airport"). Vendor breaks it into legs (e.g., WH → Hub → Port → Airport). Each leg has its own driver, vehicle, and bag scanning.
+- **Hub ops scanning lives on legs:** When an FM leg delivers to a hub, hub ops scans inbound (ARR) → processing (PAL) → outbound (DEP) as stages of that leg. These are status checkpoints, not separate jobs.
+- **OH/EC/CS jobs are separate:** Admin-created jobs at specific facilities (airport terminal OH, customs EC) are standalone jobs with their own lifecycle.
+- **Jobs can be sequential:** FM leg 2 can't start until leg 1 + hub ops completes. EC can't start until FM delivers to the customs point.
 - Each Job has: `status` (unified lifecycle) + `activityLog[]` + `proofDocuments[]`
 - **Unified job status:** `Pending → In Progress → Completed (proof uploaded) → Verified (admin sign-off)`
 - Terminal state: `Cancelled` (admin cancels — 3PL can't reject)
+- **Who does what:** Admin creates shipment + assigns vendors to jobs. Vendor breaks FM jobs into legs + assigns drivers/vehicles. Driver/Hub Ops executes via WeChat. Status updates flow back up: WeChat → Vendor → Admin → Teleport → End Client (TikTok/Shopee).
 - localStorage auto-migrates old multi-service format to seed data
 
 ## Admin Pages
