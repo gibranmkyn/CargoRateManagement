@@ -33,3 +33,7 @@
 ### ~~HMW-V06: FM job detail full page layout~~ SUPERSEDED
 **Decision:** Leg-based timeline replaced by simple driver assignment section. FM job detail is now much simpler.
 **File:** `06-hmw-fm-job-detail-full-page.html` (historical)
+
+### HMW-V07: FM Job Detail page — simplified (no legs)
+**Decision:** Status Bar → Driver & Vehicle (dropdowns, confirmed state, reassign link) → Route (two points: Pickup → Delivery) → Cargo (one line) → Fees → Proofs → Activity Log. Same layout across all 4 states. No timeline.
+**File:** `07-hmw-fm-job-detail-simplified.html`

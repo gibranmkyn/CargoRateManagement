@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-V07: FM Job Detail — Simplified (No Legs)</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.page { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 40px 0 6px; color: #152CFF; }
+h3 { font-size: 14px; font-weight: 700; margin: 24px 0 6px; color: #374151; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; margin-top: 0; }
+
+/* Full page mock */
+.fp { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; max-width: 960px; margin-left: auto; margin-right: auto; }
+.mono { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; }
+.b { font-weight: 600; color: #111827; }
+.f { color: #9ca3af; }
+
+/* Header */
+.hd { padding: 10px 16px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hd-back { font-size: 11px; color: #9ca3af; }
+.hd-badge { font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 1px 5px; border-radius: 3px; background: #f3f4f6; border: 1px solid #e5e7eb; color: #9ca3af; }
+.hd-title { font-size: 14px; font-weight: 700; }
+.svc { font-size: 8px; font-weight: 600; padding: 1px 5px; border-radius: 99px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF; font-family: 'JetBrains Mono', monospace; }
+.hd-meta { margin-left: auto; font-size: 10px; color: #9ca3af; }
+
+/* Status bar */
+.sb { padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; }
+.sb-p { background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+.sb-ip { background: rgba(21,44,255,0.03); border-bottom: 1px solid rgba(21,44,255,0.12); }
+.sb-c { background: #fefce8; border-bottom: 1px solid #fde68a; }
+.chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; }
+.chip .dt { width: 4px; height: 4px; border-radius: 50%; }
+.chip-p { background: #f9fafb; border: 1px solid #e5e7eb; color: #9ca3af; }
+.chip-p .dt { background: #9ca3af; }
+.chip-ip { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); color: #152CFF; }
+.chip-ip .dt { background: #152CFF; }
+.chip-c { background: #fefce8; border: 1px solid #fde68a; color: #a16207; }
+.chip-c .dt { background: #a16207; }
+.hint { font-size: 10px; color: #6b7280; }
+.btn { font-family: 'Instrument Sans', sans-serif; font-size: 10px; font-weight: 600; padding: 4px 12px; border-radius: 5px; border: none; cursor: pointer; }
+.btn-b { background: #152CFF; color: #fff; }
+
+/* Sections */
+.sec { padding: 14px 16px; }
+.sec + .sec { border-top: 1px solid #f3f4f6; }
+.sec-t { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px; }
+
+/* Assignment */
+.assign { padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; background: #f9fafb; }
+.assign-row { display: flex; gap: 6px; align-items: center; }
+.assign-sel { font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 4px; background: #fff; color: #111827; min-width: 130px; font-family: 'Instrument Sans', sans-serif; }
+.assign-sel.empty { color: #d1d5db; }
+.assign-confirmed { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+.assign-name { color: #152CFF; font-weight: 600; }
+.assign-plate { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #374151; }
+.assign-phone { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; }
+.assign-change { font-size: 9px; color: #6b7280; cursor: pointer; margin-left: auto; text-decoration: underline; }
+
+/* Route inline */
+.route-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+.route-point { flex: 1; }
+.route-label { font-size: 8px; font-weight: 600; text-transform: uppercase; color: #9ca3af; }
+.route-loc { font-size: 11px; font-weight: 600; color: #111827; margin-top: 1px; }
+.route-date { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; margin-top: 1px; }
+.route-arrow { color: #d1d5db; font-size: 14px; padding: 0 4px; }
+
+/* Cargo */
+.cargo { display: flex; gap: 16px; padding: 4px 0; }
+.cargo-item { display: flex; align-items: baseline; gap: 3px; }
+.cargo-l { font-size: 8px; font-weight: 600; text-transform: uppercase; color: #9ca3af; }
+.cargo-v { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #111827; }
+
+/* Fee table */
+.ft { width: 100%; border-collapse: collapse; font-size: 10px; }
+.ft thead th { font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #9ca3af; padding: 4px 8px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+.ft thead th:last-child { text-align: right; }
+.ft tbody td { padding: 5px 8px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+.ft tbody td:last-child { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600; }
+.ft tfoot td { padding: 6px 8px; font-weight: 700; border-top: 2px solid #e5e7eb; font-size: 11px; }
+.ft tfoot td:last-child { font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+
+/* Proof */
+.proof { display: flex; align-items: center; gap: 6px; padding: 4px 0; font-size: 10px; }
+.proof-dot { width: 5px; height: 5px; border-radius: 50%; background: #152CFF; }
+.proof-name { font-weight: 500; color: #111827; }
+.proof-time { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: #9ca3af; }
+
+/* Log */
+.log { display: flex; gap: 8px; padding: 4px 0; border-bottom: 1px solid #f3f4f6; font-size: 10px; }
+.log-t { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: #9ca3af; min-width: 80px; }
+.log-a { color: #374151; }
+.log-u { color: #6b7280; font-weight: 500; }
+.log-d { font-size: 9px; color: #9ca3af; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-V07: FM Job Detail — Simplified</h1>
+<div class="hmw">With the simplified model (no legs, one pickup driver), what does the FM job detail page look like across its lifecycle?</div>
+
+<div class="context">
+<strong>The model is simple now.</strong> FM job = one vendor, one pickup driver, one delivery. The driver assigned in the vendor app is the driver who picks up from the origin. That's the Teleport → Vendor handoff. Everything after that (intermediate hubs, truck changes) is the vendor's internal ops. The page needs to serve: (1) Assignment — pick a driver. (2) Monitoring — did they pick up? did they deliver? (3) Reconciliation — do the fees match?
+</div>
+
+<!-- STATE 1: Pending, no driver -->
+<h2>State 1: Pending — No Driver Assigned</h2>
+
+<div class="fp">
+<div class="hd">
+<span class="hd-back">← My Jobs</span>
+<span class="hd-badge">J01</span>
+<span class="hd-title">FM Trucking</span>
+<span class="svc">FM</span>
+<span class="hd-meta"><span class="mono">DO-2603-001</span> · <span class="b" style="font-size:10px">TikTok</span> · <span class="mono">MAWB 160-84329871</span></span>
+</div>
+<div class="sb sb-p">
+<div style="display:flex;align-items:center;gap:6px;">
+<span class="chip chip-p"><span class="dt"></span>Pending</span>
+<span class="hint">Assign a driver to dispatch this job</span>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Driver & Vehicle</div>
+<div class="assign">
+<div class="assign-row">
+<select class="assign-sel empty"><option>Select driver...</option><option>Zhang Wei (+86 138****1234)</option><option>Li Ming (+86 139****5678)</option><option>Wang Jun (+86 137****9012)</option></select>
+<select class="assign-sel empty"><option>Select vehicle...</option><option>粤B·12345 (5T)</option><option>粤B·67890 (8T)</option><option>港C·11111 (5T)</option></select>
+<button class="btn btn-b" style="padding:3px 10px;font-size:9px;">Assign</button>
+</div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Route</div>
+<div class="route-row">
+<div class="route-point"><div class="route-label">Pickup</div><div class="route-loc">TikTok WH, Shenzhen</div><div class="route-date">30 Mar · 08:00</div></div>
+<div class="route-arrow">→</div>
+<div class="route-point"><div class="route-label">Delivery</div><div class="route-loc">HK Airport</div></div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Cargo</div>
+<div class="cargo">
+<div class="cargo-item"><span class="cargo-l">Bags</span> <span class="cargo-v">24</span></div>
+<div class="cargo-item"><span class="cargo-l">Weight</span> <span class="cargo-v">1,240 kg</span></div>
+<div class="cargo-item"><span class="cargo-l">Volume</span> <span class="cargo-v">8.4 CBM</span></div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Fee Breakdown</div>
+<table class="ft">
+<thead><tr><th>Fee</th><th>Unit</th><th>Rate</th><th>Qty</th><th>Amount</th></tr></thead>
+<tbody>
+<tr><td style="font-weight:500">FTL 5T</td><td>per trip</td><td>MYR 310</td><td>1</td><td>MYR 310</td></tr>
+<tr><td style="font-weight:500">Pickup Fee</td><td>flat</td><td>MYR 80</td><td>1</td><td>MYR 80</td></tr>
+</tbody>
+<tfoot><tr><td colspan="4">Total</td><td>MYR 390</td></tr></tfoot>
+</table>
+</div>
+
+<div class="sec">
+<div class="sec-t">Activity Log</div>
+<div class="log"><span class="log-t">29 Mar 16:00</span><div><span class="log-a">Job created</span> · <span class="log-u">Ops Admin</span><div class="log-d">Assigned to HaleSun</div></div></div>
+</div>
+</div>
+
+<!-- STATE 2: Pending, driver assigned -->
+<h2>State 2: Pending — Driver Assigned, Awaiting Pickup</h2>
+
+<div class="fp">
+<div class="hd">
+<span class="hd-back">← My Jobs</span>
+<span class="hd-badge">J01</span>
+<span class="hd-title">FM Trucking</span>
+<span class="svc">FM</span>
+<span class="hd-meta"><span class="mono">DO-2603-001</span> · <span class="b" style="font-size:10px">TikTok</span> · <span class="mono">MAWB 160-84329871</span></span>
+</div>
+<div class="sb sb-p">
+<div style="display:flex;align-items:center;gap:6px;">
+<span class="chip chip-p"><span class="dt"></span>Pending</span>
+<span class="hint">Driver assigned. Awaiting pickup.</span>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Driver & Vehicle</div>
+<div class="assign">
+<div class="assign-confirmed">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;color:#152CFF"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+<span class="assign-name">Zhang Wei</span>
+<span class="assign-plate">粤B·12345 · 5T</span>
+<span class="assign-phone">+86 138****1234</span>
+<span class="assign-change">Reassign</span>
+</div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Route</div>
+<div class="route-row">
+<div class="route-point"><div class="route-label">Pickup</div><div class="route-loc">TikTok WH, Shenzhen</div><div class="route-date">30 Mar · 08:00</div></div>
+<div class="route-arrow">→</div>
+<div class="route-point"><div class="route-label">Delivery</div><div class="route-loc">HK Airport</div></div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Cargo</div>
+<div class="cargo">
+<div class="cargo-item"><span class="cargo-l">Bags</span> <span class="cargo-v">24</span></div>
+<div class="cargo-item"><span class="cargo-l">Weight</span> <span class="cargo-v">1,240 kg</span></div>
+<div class="cargo-item"><span class="cargo-l">Volume</span> <span class="cargo-v">8.4 CBM</span></div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Fee Breakdown</div>
+<table class="ft">
+<thead><tr><th>Fee</th><th>Unit</th><th>Rate</th><th>Qty</th><th>Amount</th></tr></thead>
+<tbody>
+<tr><td style="font-weight:500">FTL 5T</td><td>per trip</td><td>MYR 310</td><td>1</td><td>MYR 310</td></tr>
+<tr><td style="font-weight:500">Pickup Fee</td><td>flat</td><td>MYR 80</td><td>1</td><td>MYR 80</td></tr>
+</tbody>
+<tfoot><tr><td colspan="4">Total</td><td>MYR 390</td></tr></tfoot>
+</table>
+</div>
+
+<div class="sec">
+<div class="sec-t">Activity Log</div>
+<div class="log"><span class="log-t">30 Mar 07:30</span><div><span class="log-a">Driver assigned</span> · <span class="log-u">HaleSun Dispatcher</span><div class="log-d">Zhang Wei + 粤B·12345</div></div></div>
+<div class="log"><span class="log-t">29 Mar 16:00</span><div><span class="log-a">Job created</span> · <span class="log-u">Ops Admin</span><div class="log-d">Assigned to HaleSun</div></div></div>
+</div>
+</div>
+
+<!-- STATE 3: In Progress — picked up -->
+<h2>State 3: In Progress — Picked Up</h2>
+
+<div class="fp">
+<div class="hd">
+<span class="hd-back">← My Jobs</span>
+<span class="hd-badge">J01</span>
+<span class="hd-title">FM Trucking</span>
+<span class="svc">FM</span>
+<span class="hd-meta"><span class="mono">DO-2603-001</span> · <span class="b" style="font-size:10px">TikTok</span> · <span class="mono">MAWB 160-84329871</span></span>
+</div>
+<div class="sb sb-ip">
+<div style="display:flex;align-items:center;gap:6px;">
+<span class="chip chip-ip"><span class="dt"></span>In Progress</span>
+<span class="hint">Picked up. 24/24 bags scanned. En route to delivery.</span>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Driver & Vehicle</div>
+<div class="assign">
+<div class="assign-confirmed">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;color:#152CFF"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+<span class="assign-name">Zhang Wei</span>
+<span class="assign-plate">粤B·12345 · 5T</span>
+<span class="assign-phone">+86 138****1234</span>
+</div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Route</div>
+<div class="route-row">
+<div class="route-point"><div class="route-label">Pickup</div><div class="route-loc" style="color:#059669;">TikTok WH, Shenzhen ✓</div><div class="route-date" style="color:#059669;">30 Mar · 08:15</div></div>
+<div class="route-arrow">→</div>
+<div class="route-point"><div class="route-label">Delivery</div><div class="route-loc">HK Airport</div></div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Cargo</div>
+<div class="cargo">
+<div class="cargo-item"><span class="cargo-l">Bags</span> <span class="cargo-v">24</span></div>
+<div class="cargo-item"><span class="cargo-l">Weight</span> <span class="cargo-v">1,240 kg</span></div>
+<div class="cargo-item"><span class="cargo-l">Volume</span> <span class="cargo-v">8.4 CBM</span></div>
+<div class="cargo-item"><span class="cargo-l">Scanned</span> <span class="cargo-v" style="color:#059669;">24/24</span></div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Fee Breakdown</div>
+<table class="ft">
+<thead><tr><th>Fee</th><th>Unit</th><th>Rate</th><th>Qty</th><th>Amount</th></tr></thead>
+<tbody>
+<tr><td style="font-weight:500">FTL 5T</td><td>per trip</td><td>MYR 310</td><td>1</td><td>MYR 310</td></tr>
+<tr><td style="font-weight:500">Pickup Fee</td><td>flat</td><td>MYR 80</td><td>1</td><td>MYR 80</td></tr>
+</tbody>
+<tfoot><tr><td colspan="4">Total</td><td>MYR 390</td></tr></tfoot>
+</table>
+</div>
+
+<div class="sec">
+<div class="sec-t">Proof of Service</div>
+<div class="proof"><span class="proof-dot"></span><span class="proof-name">pickup-tiktok-wh.jpg</span><span class="proof-time">30 Mar 08:18 · Zhang Wei</span></div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Activity Log</div>
+<div class="log"><span class="log-t">30 Mar 08:18</span><div><span class="log-a">Pickup complete</span> · <span class="log-u">Driver Zhang Wei</span><div class="log-d">24/24 bags scanned</div></div></div>
+<div class="log"><span class="log-t">30 Mar 08:05</span><div><span class="log-a">Start Pickup</span> · <span class="log-u">Driver Zhang Wei</span></div></div>
+<div class="log"><span class="log-t">30 Mar 07:30</span><div><span class="log-a">Driver assigned</span> · <span class="log-u">HaleSun Dispatcher</span><div class="log-d">Zhang Wei + 粤B·12345</div></div></div>
+<div class="log"><span class="log-t">29 Mar 16:00</span><div><span class="log-a">Job created</span> · <span class="log-u">Ops Admin</span></div></div>
+</div>
+</div>
+
+<!-- STATE 4: Completed — delivered -->
+<h2>State 4: Completed — Delivered, Awaiting Verification</h2>
+
+<div class="fp">
+<div class="hd">
+<span class="hd-back">← My Jobs</span>
+<span class="hd-badge">J01</span>
+<span class="hd-title">FM Trucking</span>
+<span class="svc">FM</span>
+<span class="hd-meta"><span class="mono">DO-2603-001</span> · <span class="b" style="font-size:10px">TikTok</span> · <span class="mono">MAWB 160-84329871</span></span>
+</div>
+<div class="sb sb-c">
+<div style="display:flex;align-items:center;gap:6px;">
+<span class="chip chip-c"><span class="dt"></span>Completed</span>
+<span class="hint">Waiting for Teleport verification</span>
+</div>
+<span class="mono" style="color:#a16207;">Delivered 30 Mar 16:30</span>
+</div>
+
+<div class="sec">
+<div class="sec-t">Driver & Vehicle</div>
+<div class="assign">
+<div class="assign-confirmed">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;color:#059669"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+<span class="assign-name" style="color:#059669;">Zhang Wei</span>
+<span class="assign-plate">粤B·12345 · 5T</span>
+</div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Route</div>
+<div class="route-row">
+<div class="route-point"><div class="route-label">Pickup</div><div class="route-loc" style="color:#059669;">TikTok WH, Shenzhen ✓</div><div class="route-date" style="color:#059669;">30 Mar · 08:15</div></div>
+<div class="route-arrow" style="color:#059669;">→</div>
+<div class="route-point"><div class="route-label">Delivery</div><div class="route-loc" style="color:#059669;">HK Airport ✓</div><div class="route-date" style="color:#059669;">30 Mar · 16:30</div></div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Cargo</div>
+<div class="cargo">
+<div class="cargo-item"><span class="cargo-l">Bags</span> <span class="cargo-v">24</span></div>
+<div class="cargo-item"><span class="cargo-l">Weight</span> <span class="cargo-v">1,240 kg</span></div>
+<div class="cargo-item"><span class="cargo-l">Volume</span> <span class="cargo-v">8.4 CBM</span></div>
+<div class="cargo-item"><span class="cargo-l">Scanned</span> <span class="cargo-v" style="color:#059669;">24/24</span></div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Fee Breakdown</div>
+<table class="ft">
+<thead><tr><th>Fee</th><th>Unit</th><th>Rate</th><th>Qty</th><th>Amount</th></tr></thead>
+<tbody>
+<tr><td style="font-weight:500">FTL 5T</td><td>per trip</td><td>MYR 310</td><td>1</td><td>MYR 310</td></tr>
+<tr><td style="font-weight:500">Pickup Fee</td><td>flat</td><td>MYR 80</td><td>1</td><td>MYR 80</td></tr>
+</tbody>
+<tfoot><tr><td colspan="4">Total</td><td>MYR 390</td></tr></tfoot>
+</table>
+</div>
+
+<div class="sec">
+<div class="sec-t">Proof of Service</div>
+<div class="proof"><span class="proof-dot"></span><span class="proof-name">pickup-tiktok-wh.jpg</span><span class="proof-time">30 Mar 08:18 · Zhang Wei</span></div>
+<div class="proof"><span class="proof-dot"></span><span class="proof-name">delivery-hk-airport.jpg</span><span class="proof-time">30 Mar 16:28 · Zhang Wei</span></div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Activity Log</div>
+<div class="log"><span class="log-t">30 Mar 16:30</span><div><span class="log-a">Delivered</span> · <span class="log-u">Driver Zhang Wei</span><div class="log-d">Proof: delivery-hk-airport.jpg</div></div></div>
+<div class="log"><span class="log-t">30 Mar 16:00</span><div><span class="log-a">Start Delivery</span> · <span class="log-u">Driver Zhang Wei</span></div></div>
+<div class="log"><span class="log-t">30 Mar 08:18</span><div><span class="log-a">Pickup complete</span> · <span class="log-u">Driver Zhang Wei</span><div class="log-d">24/24 bags scanned</div></div></div>
+<div class="log"><span class="log-t">30 Mar 08:05</span><div><span class="log-a">Start Pickup</span> · <span class="log-u">Driver Zhang Wei</span></div></div>
+<div class="log"><span class="log-t">30 Mar 07:30</span><div><span class="log-a">Driver assigned</span> · <span class="log-u">HaleSun Dispatcher</span><div class="log-d">Zhang Wei + 粤B·12345</div></div></div>
+<div class="log"><span class="log-t">29 Mar 16:00</span><div><span class="log-a">Job created</span> · <span class="log-u">Ops Admin</span></div></div>
+</div>
+</div>
+
+<div class="verdict">
+<h3>FM Job Detail: Simple and Clean</h3>
+<p style="font-size: 12px; line-height: 1.6; color: #374151;">
+Section order: <strong>Status Bar → Driver & Vehicle → Route → Cargo → Fees → Proofs → Activity Log</strong>
+<br><br>
+Driver assignment is two dropdowns + Assign button. After assignment, shows confirmed name + plate + phone + "Reassign" link. Locked after Completed.
+<br><br>
+Route is two points: Pickup and Delivery. Green checkmark + timestamp when completed. No timeline, no intermediate stops.
+<br><br>
+The page progresses naturally through 4 states: empty (assign driver) → assigned (awaiting pickup) → picked up (en route) → delivered (awaiting verification). Each state adds data (proofs, log entries, timestamps) without changing the layout.
+</p>
+</div>
+
+</div>
+</body>
+</html>
