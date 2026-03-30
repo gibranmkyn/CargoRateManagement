@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-V05: FM Route Planning & Leg Management Experience</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.page { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 40px 0 6px; color: #152CFF; }
+h3 { font-size: 14px; font-weight: 700; margin: 24px 0 6px; color: #374151; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; margin-top: 0; }
+
+/* Shared tokens */
+.font { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; }
+.mono { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; }
+.b { font-weight: 600; color: #111827; }
+.f { color: #9ca3af; }
+.blue { color: #152CFF; }
+
+/* Page header */
+.pg-header { padding: 10px 16px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; }
+.pg-back { font-size: 11px; color: #9ca3af; cursor: pointer; }
+.pg-badge { font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 1px 5px; border-radius: 3px; background: #f3f4f6; border: 1px solid #e5e7eb; color: #9ca3af; }
+.pg-title { font-size: 14px; font-weight: 700; color: #111827; }
+.pg-meta { margin-left: auto; font-size: 10px; color: #9ca3af; }
+.svc { font-size: 8px; font-weight: 600; padding: 1px 5px; border-radius: 99px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF; font-family: 'JetBrains Mono', monospace; }
+
+/* Status bar */
+.status-bar { padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; }
+.status-bar.pending { background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+.status-bar.progress { background: rgba(21,44,255,0.04); border-bottom: 1px solid rgba(21,44,255,0.15); }
+.chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; }
+.chip .dot { width: 4px; height: 4px; border-radius: 50%; }
+.chip-p { background: #f9fafb; border: 1px solid #e5e7eb; color: #9ca3af; }
+.chip-p .dot { background: #9ca3af; }
+.chip-ip { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); color: #152CFF; }
+.chip-ip .dot { background: #152CFF; }
+.chip-done { background: #f0fdf4; border: 1px solid #a7f3d0; color: #059669; }
+.chip-done .dot { background: #059669; }
+.chip-amber { background: #fefce8; border: 1px solid #fde68a; color: #a16207; }
+.chip-amber .dot { background: #a16207; }
+
+.hint { font-size: 10px; color: #6b7280; }
+.btn { font-family: 'Instrument Sans', sans-serif; font-size: 10px; font-weight: 600; padding: 4px 12px; border-radius: 5px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.btn-blue { background: #152CFF; color: #fff; }
+.btn-outline { background: #fff; color: #152CFF; border: 1px solid rgba(21,44,255,0.3); }
+.btn-ghost { background: transparent; color: #6b7280; border: 1px solid #e5e7eb; }
+
+/* Section */
+.section { padding: 16px; }
+.section + .section { border-top: 1px solid #f3f4f6; }
+.section-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 10px; }
+
+/* Route timeline */
+.route-timeline { position: relative; padding-left: 24px; }
+.rt-line { position: absolute; left: 7px; top: 14px; bottom: 14px; width: 2px; background: #e5e7eb; }
+.rt-line.active { background: #152CFF; }
+.rt-node { position: relative; padding: 8px 0; }
+.rt-dot { position: absolute; left: -24px; top: 12px; width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 2px solid #e5e7eb; z-index: 1; }
+.rt-dot.origin { background: #152CFF; border-color: #152CFF; }
+.rt-dot.hub { background: #fff; border-color: #152CFF; }
+.rt-dot.dest { background: #059669; border-color: #059669; }
+.rt-dot.pending { background: #fff; border-color: #d1d5db; }
+.rt-location { font-size: 12px; font-weight: 600; color: #111827; }
+.rt-date { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; margin-top: 1px; }
+.rt-type { font-size: 9px; color: #6b7280; font-weight: 500; margin-top: 1px; }
+
+/* Leg card */
+.leg-card { margin: 4px 0 4px 0; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 6px; background: #f9fafb; position: relative; }
+.leg-card.active { border-color: rgba(21,44,255,0.3); background: rgba(21,44,255,0.02); }
+.leg-label { font-size: 9px; font-weight: 700; color: #152CFF; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.leg-route { font-size: 11px; color: #374151; }
+.leg-driver { font-size: 9px; color: #152CFF; font-weight: 500; margin-top: 3px; }
+.leg-driver.empty { color: #d1d5db; }
+.leg-status { position: absolute; top: 8px; right: 10px; }
+
+/* Hub ops badge */
+.hub-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 8px; font-weight: 600; padding: 1px 5px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
+.hub-badge.arr { background: #dbeafe; color: #1e40af; }
+.hub-badge.pal { background: #fef3c7; color: #92400e; }
+.hub-badge.dep { background: #d1fae5; color: #065f46; }
+.hub-badge.waiting { background: #f3f4f6; color: #9ca3af; }
+
+/* Add leg inline */
+.add-leg { margin: 6px 0; padding: 8px 10px; border: 2px dashed #e5e7eb; border-radius: 6px; display: flex; align-items: center; gap: 6px; cursor: pointer; color: #9ca3af; font-size: 10px; }
+.add-leg:hover { border-color: rgba(21,44,255,0.3); color: #152CFF; }
+
+/* Leg table */
+.leg-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.leg-table thead th { font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #f9fafb; padding: 4px 8px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+.leg-table tbody td { padding: 6px 8px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+.leg-table tbody tr:hover { background: #f9fafb; }
+
+/* State label */
+.state-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 6px; text-align: center; padding: 6px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-V05: FM Route Planning & Leg Management</h1>
+<div class="hmw">How might we design the vendor's FM job detail page so the dispatcher can plan routes (create legs), assign drivers per leg, and monitor cargo progress through intermediate hubs, all in one cohesive experience?</div>
+
+<div class="context">
+<strong>The scenario:</strong> Admin creates an FM job: "Get TikTok cargo from Shenzhen to HK Airport. Assigned to HaleSun." HaleSun's dispatcher opens this job in the vendor app. They need to: (1) plan the route by adding intermediate hubs as legs, (2) assign a driver + vehicle to each leg, (3) later, monitor progress as drivers execute and hub ops scans at each stop. All of this lives on one page.
+<br><br>
+<strong>Design constraint:</strong> The page currently has Status Action Bar → Driver Assignment → Fee Breakdown → Route + Cargo → Proofs → Activity Log. We need to replace "Driver Assignment" and "Route" with a richer "Route Plan" section that handles legs. Fee reconciliation stays below (per HMW-V02 decision, fees-first is for reconciliation, but route planning comes first for FM because it's the primary action).
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION A: Timeline View -->
+<!-- ============================================ -->
+<h2>Option A: Vertical Timeline with Leg Cards</h2>
+<span class="label" style="background: #f0fdf4; color: #059669;">Recommended</span>
+
+<div class="rationale">
+Show the route as a vertical timeline. Each stop (origin, hub, hub, destination) is a node on the timeline. Between each pair of nodes is a "leg card" showing driver, vehicle, and status. Hub nodes show hub ops progress (ARR/PAL/DEP badges). Empty state has just origin + destination with an "Add Stop" button between them.
+<br><br>
+This reads top-to-bottom like the physical journey. The dispatcher scans the timeline and instantly sees: where the cargo is, which legs need drivers, which hubs are processing.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Visually maps to the physical journey (top = start, bottom = end)<br>
+• Hub ops progress visible inline (ARR/PAL/DEP badges on hub nodes)<br>
+• Easy to add stops: "Add Stop" between any two nodes<br>
+• Driver assignment inline on each leg card<br>
+• Scales naturally: 2 legs or 6 legs, same pattern</div>
+<div class="cons"><strong>Cons</strong><br>
+• Tall: 4 hubs = 3 legs = ~400px of vertical space<br>
+• Different from the table-based design language elsewhere in the app<br>
+• Not a traditional "dense data" table pattern</div>
+</div>
+</div>
+
+<!-- STATE 1: Empty (new FM job, no legs yet) -->
+<h3>State 1: New FM Job — No Legs Yet</h3>
+<div class="screen">
+<div class="pg-header">
+<span class="pg-back">← My Jobs</span>
+<span class="pg-badge">J01</span>
+<span class="pg-title">FM Trucking</span>
+<span class="svc">FM</span>
+<span class="pg-meta">DO-2603-001 · TikTok · MAWB 160-84329871</span>
+</div>
+<div class="status-bar pending">
+<div style="display: flex; align-items: center; gap: 6px;">
+<span class="chip chip-p"><span class="dot"></span>Pending</span>
+<span class="hint">Plan your route to get started</span>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Route Plan</div>
+
+<div class="route-timeline">
+<div class="rt-line"></div>
+
+<!-- Origin -->
+<div class="rt-node">
+<div class="rt-dot origin"></div>
+<div class="rt-location">TikTok WH, Shenzhen</div>
+<div class="rt-type">Origin (from shipment)</div>
+</div>
+
+<!-- Add stop button -->
+<div class="add-leg">
+<span style="font-size: 14px;">+</span> Add intermediate stop to plan route
+</div>
+
+<!-- Destination -->
+<div class="rt-node">
+<div class="rt-dot dest"></div>
+<div class="rt-location">HK Airport</div>
+<div class="rt-type">Final destination (from shipment)</div>
+</div>
+</div>
+
+<div style="margin-top: 12px; font-size: 10px; color: #9ca3af; line-height: 1.5;">
+No legs planned yet. Add intermediate stops (your hubs) between origin and destination to create legs. Each leg gets its own driver and vehicle assignment.
+<br>If no stops needed, this becomes a direct single-leg trip.
+</div>
+</div>
+</div>
+
+<!-- STATE 2: Route planned, drivers being assigned -->
+<h3>State 2: Route Planned — Assigning Drivers</h3>
+<div class="screen">
+<div class="pg-header">
+<span class="pg-back">← My Jobs</span>
+<span class="pg-badge">J01</span>
+<span class="pg-title">FM Trucking</span>
+<span class="svc">FM</span>
+<span class="pg-meta">DO-2603-001 · TikTok · MAWB 160-84329871</span>
+</div>
+<div class="status-bar pending">
+<div style="display: flex; align-items: center; gap: 6px;">
+<span class="chip chip-p"><span class="dot"></span>Pending</span>
+<span class="hint">Assign drivers to each leg to dispatch</span>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Route Plan · 3 Legs</div>
+
+<div class="route-timeline">
+<div class="rt-line"></div>
+
+<!-- Origin -->
+<div class="rt-node">
+<div class="rt-dot origin"></div>
+<div class="rt-location">TikTok WH, Shenzhen</div>
+<div class="rt-date">30 Mar · 08:00</div>
+</div>
+
+<!-- Leg 1 -->
+<div class="leg-card">
+<div class="leg-label">Leg 1</div>
+<div class="leg-route">TikTok WH → Shenzhen Hub</div>
+<div class="leg-driver blue">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:8px;height:8px;vertical-align:middle;margin-right:2px"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+Zhang Wei · <span class="mono" style="color:#152CFF;font-size:8px">粤B·12345 5T</span>
+</div>
+<div class="leg-status"><span class="chip chip-p"><span class="dot"></span>Planned</span></div>
+</div>
+
+<!-- Hub 1 -->
+<div class="rt-node">
+<div class="rt-dot hub"></div>
+<div class="rt-location">Shenzhen Hub <span class="f" style="font-weight:400;font-size:10px">(your hub)</span></div>
+<div class="rt-type">Hub ops: inbound → processing → outbound</div>
+</div>
+
+<!-- Leg 2 -->
+<div class="leg-card">
+<div class="leg-label">Leg 2 <span style="font-size:8px;color:#92400e;background:#fef3c7;padding:1px 4px;border-radius:2px;margin-left:4px;">CROSS-BORDER</span></div>
+<div class="leg-route">Shenzhen Hub → Huanggang Port</div>
+<div class="leg-driver blue">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:8px;height:8px;vertical-align:middle;margin-right:2px"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+Li Ming · <span class="mono" style="color:#152CFF;font-size:8px">粤B·67890 8T</span>
+</div>
+<div class="leg-status"><span class="chip chip-p"><span class="dot"></span>Planned</span></div>
+</div>
+
+<!-- Hub 2 / Customs -->
+<div class="rt-node">
+<div class="rt-dot hub"></div>
+<div class="rt-location">Huanggang Port</div>
+<div class="rt-type" style="color: #7c3aed;">EC: Customs clearance (handled by Gonda — separate job)</div>
+</div>
+
+<!-- Leg 3 -->
+<div class="leg-card">
+<div class="leg-label">Leg 3</div>
+<div class="leg-route">HK Hub → HK Airport</div>
+<div class="leg-driver empty">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:8px;height:8px;vertical-align:middle;margin-right:2px"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+No driver assigned
+</div>
+<div class="leg-status"><span class="chip chip-p"><span class="dot"></span>Planned</span></div>
+</div>
+
+<!-- Destination -->
+<div class="rt-node">
+<div class="rt-dot dest"></div>
+<div class="rt-location">HK Airport</div>
+<div class="rt-date">30 Mar · 18:00 (estimated)</div>
+</div>
+</div>
+
+<div style="margin-top: 8px;">
+<button class="btn btn-outline" style="font-size: 9px; padding: 3px 8px;">+ Add Stop</button>
+</div>
+</div>
+</div>
+
+<!-- STATE 3: In execution — monitoring progress -->
+<h3>State 3: In Execution — Live Progress</h3>
+<div class="screen">
+<div class="pg-header">
+<span class="pg-back">← My Jobs</span>
+<span class="pg-badge">J01</span>
+<span class="pg-title">FM Trucking</span>
+<span class="svc">FM</span>
+<span class="pg-meta">DO-2603-001 · TikTok · MAWB 160-84329871</span>
+</div>
+<div class="status-bar progress">
+<div style="display: flex; align-items: center; gap: 6px;">
+<span class="chip chip-ip"><span class="dot"></span>In Progress</span>
+<span class="hint">Leg 1 delivered. Hub processing. Leg 2 waiting.</span>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Route Plan · 3 Legs · Leg 1 Complete</div>
+
+<div class="route-timeline">
+<div class="rt-line active" style="bottom: 60%;"></div>
+<div class="rt-line" style="top: 40%;"></div>
+
+<!-- Origin -->
+<div class="rt-node">
+<div class="rt-dot origin"></div>
+<div class="rt-location">TikTok WH, Shenzhen</div>
+<div class="rt-date">30 Mar · 08:00</div>
+</div>
+
+<!-- Leg 1: Complete -->
+<div class="leg-card" style="border-color: #a7f3d0; background: #f0fdf4;">
+<div class="leg-label" style="color: #059669;">Leg 1 ✓</div>
+<div class="leg-route">TikTok WH → Shenzhen Hub</div>
+<div class="leg-driver" style="color: #059669;">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:8px;height:8px;vertical-align:middle;margin-right:2px"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+Zhang Wei · 粤B·12345 · <span class="mono" style="color:#059669">Delivered 30 Mar 10:42</span>
+</div>
+<div class="leg-status"><span class="chip chip-done"><span class="dot"></span>Delivered</span></div>
+</div>
+
+<!-- Hub 1: Processing -->
+<div class="rt-node">
+<div class="rt-dot hub" style="border-color: #a16207; background: #fefce8;"></div>
+<div class="rt-location">Shenzhen Hub</div>
+<div style="display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap;">
+<span class="hub-badge arr">ARR ✓ 10:55</span>
+<span class="hub-badge pal">PAL In Progress</span>
+<span class="hub-badge waiting">DEP Waiting</span>
+</div>
+<div class="mono" style="margin-top: 3px;">Bags: 22/24 processed · 2 in queue</div>
+</div>
+
+<!-- Leg 2: Waiting -->
+<div class="leg-card" style="opacity: 0.6;">
+<div class="leg-label">Leg 2 <span style="font-size:8px;color:#92400e;background:#fef3c7;padding:1px 4px;border-radius:2px;margin-left:4px;">CROSS-BORDER</span></div>
+<div class="leg-route">Shenzhen Hub → Huanggang Port</div>
+<div class="leg-driver blue">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:8px;height:8px;vertical-align:middle;margin-right:2px"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+Li Ming · 粤B·67890
+</div>
+<div class="leg-status"><span class="chip chip-p"><span class="dot"></span>Waiting for hub</span></div>
+</div>
+
+<!-- Hub 2 -->
+<div class="rt-node" style="opacity: 0.5;">
+<div class="rt-dot pending"></div>
+<div class="rt-location" style="color: #9ca3af;">Huanggang Port</div>
+<div class="rt-type" style="color: #d1d5db;">EC: Customs (Gonda)</div>
+</div>
+
+<!-- Leg 3: Waiting -->
+<div class="leg-card" style="opacity: 0.4;">
+<div class="leg-label" style="color: #d1d5db;">Leg 3</div>
+<div class="leg-route" style="color: #9ca3af;">HK Hub → HK Airport</div>
+<div class="leg-driver empty">Wang Jun · 港C·11111</div>
+<div class="leg-status"><span class="chip chip-p"><span class="dot"></span>Planned</span></div>
+</div>
+
+<!-- Destination -->
+<div class="rt-node" style="opacity: 0.4;">
+<div class="rt-dot pending"></div>
+<div class="rt-location" style="color: #9ca3af;">HK Airport</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION B: Table View -->
+<!-- ============================================ -->
+<h2>Option B: Leg Table with Expandable Rows</h2>
+<span class="label" style="background: #dbeafe; color: #1e40af;">Data Dense</span>
+
+<div class="rationale">
+Show legs as table rows. Each row: Leg # | Route | Driver | Vehicle | Status. Expanding a row shows hub ops progress for the destination hub. This follows the "tables not cards" design principle and is consistent with the rest of the vendor app.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Consistent with the rest of the app (tables everywhere)<br>
+• More data dense — all legs visible in less vertical space<br>
+• Column-based scanning (driver column, status column)<br>
+• Familiar to spreadsheet users</div>
+<div class="cons"><strong>Cons</strong><br>
+• Loses the visual journey metaphor (top-to-bottom = start-to-end)<br>
+• Hub ops progress hidden in expandable rows (requires click to see)<br>
+• Harder to see the chain — which leg connects to which hub<br>
+• "Add Leg" interaction is less intuitive (insert row between rows?)</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="pg-header">
+<span class="pg-back">← My Jobs</span>
+<span class="pg-badge">J01</span>
+<span class="pg-title">FM Trucking</span>
+<span class="svc">FM</span>
+<span class="pg-meta">DO-2603-001 · TikTok · MAWB 160-84329871</span>
+</div>
+<div class="status-bar progress">
+<div style="display: flex; align-items: center; gap: 6px;">
+<span class="chip chip-ip"><span class="dot"></span>In Progress</span>
+<span class="hint">Leg 1 complete. Hub processing. 2 legs remaining.</span>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+<span>Route Plan · 3 Legs</span>
+<button class="btn btn-outline" style="font-size: 9px; padding: 2px 8px;">+ Add Leg</button>
+</div>
+
+<div style="font-size: 10px; color: #374151; margin-bottom: 8px;">
+<span class="b">TikTok WH, Shenzhen</span> <span class="f">→</span> <span class="b">HK Airport</span>
+<span class="mono" style="margin-left: 6px;">24 bags · 1,240 kg</span>
+</div>
+
+<table class="leg-table">
+<thead>
+<tr>
+<th style="width:6%">#</th>
+<th style="width:28%">Route</th>
+<th style="width:16%">Driver</th>
+<th style="width:14%">Vehicle</th>
+<th style="width:12%">Hub Status</th>
+<th style="width:12%">Leg Status</th>
+</tr>
+</thead>
+<tbody>
+<tr style="background: #f0fdf4;">
+<td class="b" style="color: #059669;">1</td>
+<td>TikTok WH → Shenzhen Hub</td>
+<td style="font-size:10px; color: #059669;">Zhang Wei</td>
+<td><span class="mono" style="color:#374151;font-size:9px">粤B·12345 5T</span></td>
+<td>
+<span class="hub-badge arr">ARR ✓</span>
+<span class="hub-badge pal">PAL...</span>
+</td>
+<td><span class="chip chip-done"><span class="dot"></span>Delivered</span></td>
+</tr>
+<tr style="opacity: 0.7;">
+<td class="b">2</td>
+<td>Shenzhen Hub → Huanggang Port</td>
+<td style="font-size:10px; color: #152CFF;">Li Ming</td>
+<td><span class="mono" style="color:#374151;font-size:9px">粤B·67890 8T</span></td>
+<td><span class="f" style="font-size:9px">—</span></td>
+<td><span class="chip chip-p"><span class="dot"></span>Waiting</span></td>
+</tr>
+<tr style="opacity: 0.5;">
+<td class="b" style="color:#d1d5db;">3</td>
+<td style="color:#9ca3af;">HK Hub → HK Airport</td>
+<td style="font-size:10px; color: #152CFF;">Wang Jun</td>
+<td><span class="mono" style="color:#9ca3af;font-size:9px">港C·11111 5T</span></td>
+<td><span class="f" style="font-size:9px">—</span></td>
+<td><span class="chip chip-p"><span class="dot"></span>Planned</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION C: Hybrid -->
+<!-- ============================================ -->
+<h2>Option C: Compact Timeline + Leg Table Below</h2>
+<span class="label" style="background: #fef3c7; color: #92400e;">Hybrid</span>
+
+<div class="rationale">
+Split the section in two. Top: a compact horizontal route bar showing the chain of stops (just dots + names, no leg details). Below: a leg table with all the details (driver, vehicle, status, hub ops). The route bar gives the visual journey, the table gives the data.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Route bar gives instant visual overview of the chain<br>
+• Table below gives data density for each leg<br>
+• Best of both: journey metaphor + spreadsheet scanning<br>
+• Route bar is compact (one line), table handles the details</div>
+<div class="cons"><strong>Cons</strong><br>
+• Two representations of the same data (route bar + table) — possible confusion<br>
+• Horizontal route bar breaks at 5+ stops on narrow screens<br>
+• More complex to build (two coordinated components)</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="pg-header">
+<span class="pg-back">← My Jobs</span>
+<span class="pg-badge">J01</span>
+<span class="pg-title">FM Trucking</span>
+<span class="svc">FM</span>
+<span class="pg-meta">DO-2603-001 · TikTok · MAWB 160-84329871</span>
+</div>
+<div class="status-bar progress">
+<div style="display: flex; align-items: center; gap: 6px;">
+<span class="chip chip-ip"><span class="dot"></span>In Progress</span>
+<span class="hint">Leg 1 delivered. Hub processing.</span>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Route Plan · 3 Legs</div>
+
+<!-- Horizontal route bar -->
+<div style="display: flex; align-items: center; gap: 0; padding: 8px 0; margin-bottom: 12px; overflow-x: auto;">
+<div style="text-align: center; min-width: 80px;">
+<div style="width: 10px; height: 10px; border-radius: 50%; background: #152CFF; margin: 0 auto 4px;"></div>
+<div style="font-size: 9px; font-weight: 600; color: #111827;">TikTok WH</div>
+<div style="font-size: 8px; color: #059669;">✓ Picked up</div>
+</div>
+<div style="flex: 1; height: 2px; background: #059669; min-width: 20px;"></div>
+<div style="text-align: center; min-width: 80px;">
+<div style="width: 10px; height: 10px; border-radius: 50%; background: #fefce8; border: 2px solid #a16207; margin: 0 auto 4px;"></div>
+<div style="font-size: 9px; font-weight: 600; color: #111827;">SZ Hub</div>
+<div style="font-size: 8px; color: #a16207;">Processing</div>
+</div>
+<div style="flex: 1; height: 2px; background: #e5e7eb; min-width: 20px;"></div>
+<div style="text-align: center; min-width: 80px;">
+<div style="width: 10px; height: 10px; border-radius: 50%; background: #fff; border: 2px solid #d1d5db; margin: 0 auto 4px;"></div>
+<div style="font-size: 9px; color: #9ca3af;">Huanggang</div>
+<div style="font-size: 8px; color: #d1d5db;">Customs</div>
+</div>
+<div style="flex: 1; height: 2px; background: #e5e7eb; min-width: 20px;"></div>
+<div style="text-align: center; min-width: 80px;">
+<div style="width: 10px; height: 10px; border-radius: 50%; background: #fff; border: 2px solid #d1d5db; margin: 0 auto 4px;"></div>
+<div style="font-size: 9px; color: #9ca3af;">HK Hub</div>
+</div>
+<div style="flex: 1; height: 2px; background: #e5e7eb; min-width: 20px;"></div>
+<div style="text-align: center; min-width: 80px;">
+<div style="width: 10px; height: 10px; border-radius: 50%; background: #fff; border: 2px solid #d1d5db; margin: 0 auto 4px;"></div>
+<div style="font-size: 9px; color: #9ca3af;">HK Airport</div>
+</div>
+</div>
+
+<!-- Leg table below -->
+<table class="leg-table">
+<thead>
+<tr>
+<th style="width:6%">#</th>
+<th style="width:28%">Route</th>
+<th style="width:16%">Driver</th>
+<th style="width:14%">Vehicle</th>
+<th style="width:12%">Hub</th>
+<th style="width:12%">Status</th>
+</tr>
+</thead>
+<tbody>
+<tr style="background: #f0fdf4;">
+<td class="b" style="color:#059669;">1</td>
+<td>TikTok WH → SZ Hub</td>
+<td style="color:#059669;font-size:10px;">Zhang Wei</td>
+<td><span class="mono" style="color:#374151">粤B·12345</span></td>
+<td><span class="hub-badge pal">PAL...</span></td>
+<td><span class="chip chip-done"><span class="dot"></span>Delivered</span></td>
+</tr>
+<tr style="opacity:0.7;">
+<td class="b">2</td>
+<td>SZ Hub → Huanggang</td>
+<td style="color:#152CFF;font-size:10px;">Li Ming</td>
+<td><span class="mono" style="color:#374151">粤B·67890</span></td>
+<td><span class="f" style="font-size:9px">—</span></td>
+<td><span class="chip chip-p"><span class="dot"></span>Waiting</span></td>
+</tr>
+<tr style="opacity:0.5;">
+<td class="b" style="color:#d1d5db;">3</td>
+<td style="color:#9ca3af;">HK Hub → HK Airport</td>
+<td style="color:#152CFF;font-size:10px;">Wang Jun</td>
+<td><span class="mono" style="color:#9ca3af">港C·11111</span></td>
+<td><span class="f" style="font-size:9px">—</span></td>
+<td><span class="chip chip-p"><span class="dot"></span>Planned</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- ============================================ -->
+<!-- VERDICT -->
+<!-- ============================================ -->
+<div class="verdict">
+<h3>Recommendation: Option A — Vertical Timeline</h3>
+<p style="font-size: 12px; line-height: 1.6; color: #374151;">
+Option A wins because route planning is fundamentally a journey, not a spreadsheet. The dispatcher thinks "cargo goes from here, to here, to here." A vertical timeline maps directly to that mental model. Top = start, bottom = end. Each stop is a node. Each movement between stops is a leg card.
+<br><br>
+The killer feature is hub ops visibility inline. When the dispatcher sees "Shenzhen Hub: ARR ✓ · PAL In Progress · DEP Waiting," they instantly know the cargo is being processed and leg 2 can't start yet. In Option B (table), this is hidden in an expandable row. In Option C (hybrid), it's split across two representations.
+<br><br>
+Yes, it's taller than a table. But the dispatcher is on this page to MANAGE a multi-leg journey, not scan 50 rows. They're looking at one FM job with 3-5 legs. The vertical space is justified by the information density per node.
+<br><br>
+Option B is the "safe, consistent" choice but loses the journey metaphor. Option C is clever but shows the same data twice. Option A is the one that makes the dispatcher say "I can see exactly where my cargo is."
+</p>
+</div>
+
+</div>
+</body>
+</html>

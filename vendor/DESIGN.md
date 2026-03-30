@@ -181,6 +181,8 @@ Unlike the admin app (desktop-only, min 1200px), the vendor app targets 768px+.
 | 2026-03-30 | Multi-file proof upload | `<input multiple>` + drag-and-drop + camera button for tablet. Batch activity log entry. Simple file rows, not card boxes. |
 | 2026-03-30 | Fleet page (My Jobs &#124; Fleet) | Drivers + Vehicles as vendor-scoped master data. Dense CRUD tables. Separate page, not crammed into job detail. |
 | 2026-03-30 | Pickup/Delivery Timeline for FM | Two-point layout with big mono times. The single most important data for FM dispatchers. Non-FM services show single Location row instead. |
+| 2026-03-30 | Vertical timeline for FM route planning (HMW-V05) | Nodes for stops (origin, hubs, destination), leg cards between nodes with driver/vehicle/status, hub ops badges (ARR/PAL/DEP) inline on hub nodes. Three states: empty (add stops), planned (assign drivers), execution (live progress with opacity fade for future legs). |
+| 2026-03-30 | No unnecessary complexity | Don't add labels, badges, or classifications that aren't prompted by user needs (e.g., no "cross-border" tags). A leg is a leg. Keep it simple. |
 
 ## Preview
 Open `vendor/design-preview.html` in a browser to see the proposed screens.
