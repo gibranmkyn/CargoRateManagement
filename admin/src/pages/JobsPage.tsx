@@ -702,7 +702,7 @@ export default function JobsPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, overflow: 'hidden' }}>
             <thead>
               <tr>
-                <th style={{ ...th, width: '11%' }}>Shipment &middot; Customer</th>
+                <th style={{ ...th, width: '11%' }}>Trip &middot; Customer</th>
                 <th style={{ ...th, width: '10%' }}>Vendor</th>
                 <th style={{ ...th, width: '6%' }}>Service</th>
                 <th style={{ ...th, width: '38%' }}>Route</th>
@@ -754,7 +754,7 @@ export default function JobsPage() {
                     <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
                       <thead>
                         <tr>
-                          <th style={{ ...th, width: '11%' }}>Shipment &middot; Customer</th>
+                          <th style={{ ...th, width: '11%' }}>Trip &middot; Customer</th>
                           {hideColumn !== 'vendor' && <th style={{ ...th, width: '10%' }}>Vendor</th>}
                           {hideColumn !== 'service' && <th style={{ ...th, width: '6%' }}>Service</th>}
                           <th style={{ ...th, width: '38%' }}>Route</th>

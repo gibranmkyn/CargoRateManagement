@@ -1,8 +1,8 @@
-# Teleport OS — Shipment Management Platform
+# Teleport OS — Trip Management Platform
 
 ## Project
 Logistics operations platform with two apps sharing the same design system:
-- **Teleport OS Admin** (`admin/`) — ops planner tool for managing shipments, jobs, rates, master data
+- **Teleport OS Admin** (`admin/`) — ops planner tool for managing trips, jobs, master data
 - **Teleport OS Vendor** (`vendor/`) — vendor-facing app for job visibility, status updates, fee reconciliation
 
 Both are React + TypeScript + Vite + Tailwind CSS v4. Same design tokens, different interaction posture.
@@ -89,10 +89,10 @@ Key principles:
 - **Vendor routing:** React Router v7. Routes in `vendor/src/App.tsx`
 - **Vendor auth:** `vendor/src/context/VendorAuthContext.tsx` — vendor code stored in localStorage key `vendor_auth`
 - **Fonts:** Instrument Sans (Google Fonts) for everything, JetBrains Mono (@fontsource) for data
-- **Terminology:** "Shipment" in UI = `Trip` in code. "Job" = vendor assignment within a shipment.
+- **Terminology:** "Trip" in both UI and code. "Job" = vendor assignment within a trip.
 
 ## Data Model
-- **Shipment (Trip)** → has many **Jobs**
+- **Trip** → has many **Jobs**
 - Each **Job** = 1 vendor + 1 service + origin/destination (1-service-per-job model)
 - Same vendor can appear multiple times if handling multiple services
 - **FM job = one vendor, one pickup, one delivery.** Admin creates one FM job ("Shenzhen → HK Airport, assigned to HaleSun"). Vendor assigns ONE pickup driver. The first pickup is the handoff: Teleport → Vendor. The final delivery is the completion. Everything in between (intermediate hubs, multiple trucks, warehouse transfers) is the vendor's internal ops, not modeled in the system.
@@ -101,13 +101,12 @@ Key principles:
 - Each Job has: `status` (unified lifecycle) + `activityLog[]` + `proofDocuments[]`
 - **Unified job status:** `Pending → In Progress → Completed (proof uploaded) → Verified (admin sign-off)`
 - Terminal state: `Cancelled` (admin cancels — 3PL can't reject)
-- **Who does what:** Admin creates shipment + assigns vendors to jobs. Vendor assigns pickup driver + vehicle for FM jobs. Driver executes via WeChat (pickup scan + delivery proof). Hub Ops executes OH jobs via WeChat (inbound/processing/outbound scanning). Status updates flow back up: WeChat → Vendor → Admin → Teleport → End Client (TikTok/Shopee).
+- **Who does what:** Admin creates trip + assigns vendors to jobs. Vendor assigns pickup driver + vehicle for FM jobs. Driver executes via WeChat (pickup scan + delivery proof). Hub Ops executes OH jobs via WeChat (inbound/processing/outbound scanning). Status updates flow back up: WeChat → Vendor → Admin → Teleport → End Client (TikTok/Shopee).
 - localStorage auto-migrates old multi-service format to seed data
 
 ## Admin Pages
-- **Shipments** (`/trips`) — demand-side view grouped by client request. Expandable sub-table with jobs.
+- **Trips** (`/trips`) — demand-side view grouped by client request. Expandable sub-table with jobs.
 - **Jobs** (`/jobs`) — supply-side view. Flat power table with status pills, service filters, vendor dropdown, Group by toggle.
-- **Rates** (`/rates`) — vendor rate card management (FTL + service fees)
 - **Master Data** (`/master-data`) — Facilities, Regions, Vendors, Customers, Services
 
 ## Vendor Pages
@@ -132,7 +131,7 @@ Key principles:
 - **One driver per FM job** — the pickup driver is what Teleport sees. Vendor's internal multi-driver coordination (intermediate hubs, truck changes) is not modeled in the system.
 - **Read-only fees/quantities** — vendor views for reconciliation, cannot edit
 - **Vendor actions:** Start Job, Upload Proof, Assign Driver/Vehicle (FM only). No Verify, no Cancel, no fee toggles.
-- **Responsive at 768px+** — condensed table (drop Route, stack Customer+Shipment) per HMW-V01
+- **Responsive at 768px+** — condensed table (drop Route, stack Customer+Trip) per HMW-V01
 - **Activity log actor:** Vendor actions logged with vendor company name, admin actions with "Ops Admin"
 
 ## PRDs

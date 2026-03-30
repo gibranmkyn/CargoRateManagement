@@ -1,6 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { ChevronRight, ChevronDown, Layers } from 'lucide-react';
-import { useRates } from '../../context/RateContext';
 import { SERVICE_HIERARCHY } from '@shared/mockData';
 import type { RateUnit } from '@shared/mockData';
 
@@ -55,46 +54,7 @@ function ServiceBadge({ code, color }: { code: string; color: string }) {
 // --- Component ---
 
 export default function ServicesTab() {
-  const { rates } = useRates();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-
-  // Pre-compute rate counts per costId and vendor counts per costId
-  const { rateCounts, vendorCounts } = useMemo(() => {
-    const rc: Record<string, number> = {};
-    const vc: Record<string, Set<string>> = {};
-    for (const r of rates) {
-      if (!r.isActive) continue;
-      rc[r.costId] = (rc[r.costId] || 0) + 1;
-      if (!vc[r.costId]) vc[r.costId] = new Set();
-      vc[r.costId].add(r.vendorCode);
-    }
-    const vendorCountsFlat: Record<string, number> = {};
-    for (const [k, v] of Object.entries(vc)) vendorCountsFlat[k] = v.size;
-    return { rateCounts: rc, vendorCounts: vendorCountsFlat };
-  }, [rates]);
-
-  // Aggregate counts per L1
-  const l1RateCounts = useMemo(() => {
-    const out: Record<string, number> = {};
-    for (const l1 of SERVICE_HIERARCHY) {
-      out[l1.code] = l1.l2Services.reduce((sum, l2) => sum + (rateCounts[l2.costId] || 0), 0);
-    }
-    return out;
-  }, [rateCounts]);
-
-  const l1VendorCounts = useMemo(() => {
-    const out: Record<string, number> = {};
-    for (const l1 of SERVICE_HIERARCHY) {
-      const vendors = new Set<string>();
-      for (const l2 of l1.l2Services) {
-        for (const r of rates) {
-          if (r.isActive && r.costId === l2.costId) vendors.add(r.vendorCode);
-        }
-      }
-      out[l1.code] = vendors.size;
-    }
-    return out;
-  }, [rates]);
 
   const totalL2 = SERVICE_HIERARCHY.reduce((s, l1) => s + l1.l2Services.length, 0);
 
@@ -122,8 +82,6 @@ export default function ServicesTab() {
             <th style={{ ...th, width: 100 }}>Code / Cost ID</th>
             <th style={th}>Name</th>
             <th style={{ ...th, width: 70 }}>Unit Type</th>
-            <th style={{ ...th, width: 70, textAlign: 'center' }}>Vendors</th>
-            <th style={{ ...th, width: 70, textAlign: 'center' }}>Rates</th>
           </tr>
         </thead>
         <tbody>
@@ -135,16 +93,12 @@ export default function ServicesTab() {
                 l1={l1}
                 isOpen={isOpen}
                 onToggle={() => toggle(l1.code)}
-                rateCount={l1RateCounts[l1.code] || 0}
-                vendorCount={l1VendorCounts[l1.code] || 0}
-                rateCounts={rateCounts}
-                vendorCounts={vendorCounts}
               />
             );
           })}
           {SERVICE_HIERARCHY.length === 0 && (
             <tr>
-              <td colSpan={6} style={{ padding: '48px 16px', textAlign: 'center', color: '#9ca3af' }}>
+              <td colSpan={4} style={{ padding: '48px 16px', textAlign: 'center', color: '#9ca3af' }}>
                 <Layers size={20} style={{ color: '#152CFF', marginBottom: 8 }} />
                 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>No services configured</div>
                 <div style={{ fontSize: 11 }}>Service hierarchy is defined in code</div>
@@ -163,13 +117,9 @@ interface L1RowProps {
   l1: (typeof SERVICE_HIERARCHY)[number];
   isOpen: boolean;
   onToggle: () => void;
-  rateCount: number;
-  vendorCount: number;
-  rateCounts: Record<string, number>;
-  vendorCounts: Record<string, number>;
 }
 
-function L1Row({ l1, isOpen, onToggle, rateCount, vendorCount, rateCounts, vendorCounts }: L1RowProps) {
+function L1Row({ l1, isOpen, onToggle }: L1RowProps) {
   const Chevron = isOpen ? ChevronDown : ChevronRight;
 
   return (
@@ -196,12 +146,6 @@ function L1Row({ l1, isOpen, onToggle, rateCount, vendorCount, rateCounts, vendo
         <td style={{ ...td, borderBottom: isOpen ? '1px solid #e5e7eb' : td.borderBottom }}>
           <span style={{ fontSize: 9, color: '#9ca3af' }}>{l1.rateType}</span>
         </td>
-        <td style={{ ...td, textAlign: 'center', fontSize: 10, color: '#6b7280', borderBottom: isOpen ? '1px solid #e5e7eb' : td.borderBottom }}>
-          {vendorCount || <span style={{ color: '#d1d5db' }}>&mdash;</span>}
-        </td>
-        <td style={{ ...td, textAlign: 'center', fontSize: 10, color: '#6b7280', borderBottom: isOpen ? '1px solid #e5e7eb' : td.borderBottom }}>
-          {rateCount || <span style={{ color: '#d1d5db' }}>&mdash;</span>}
-        </td>
       </tr>
 
       {/* L2 child rows */}
@@ -221,12 +165,6 @@ function L1Row({ l1, isOpen, onToggle, rateCount, vendorCount, rateCounts, vendo
             </td>
             <td style={{ ...td, borderBottom: isLast ? '1px solid #e5e7eb' : td.borderBottom }}>
               <UnitBadge unit={l2.unit} />
-            </td>
-            <td style={{ ...td, textAlign: 'center', fontSize: 10, color: '#6b7280', borderBottom: isLast ? '1px solid #e5e7eb' : td.borderBottom }}>
-              {vendorCounts[l2.costId] || <span style={{ color: '#d1d5db' }}>&mdash;</span>}
-            </td>
-            <td style={{ ...td, textAlign: 'center', fontSize: 10, color: '#6b7280', borderBottom: isLast ? '1px solid #e5e7eb' : td.borderBottom }}>
-              {rateCounts[l2.costId] || <span style={{ color: '#d1d5db' }}>&mdash;</span>}
             </td>
           </tr>
         );

@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, ArrowRight, ArrowLeft, Package } from 'lucide-react';
-import { customers, vendors, serviceTypes, formatCurrency, TRUCK_TYPES, seedBagPackages } from '@shared/mockData';
+import { customers, vendors, serviceTypes, formatCurrency, TRUCK_TYPES, seedBagPackages, seedFtlRates, seedVendorFees } from '@shared/mockData';
 import type { Job, Trip, ServiceType, Currency, FeeLineItem, TruckType } from '@shared/mockData';
 import { useTrips, generateTripId, generateJobId } from '@shared/TripContext';
-import { useRates } from '../context/RateContext';
+import { useLocations } from '../context/LocationContext';
 import { useToast } from '@shared/Toast';
 import LocationDropdown from '../components/shared/LocationDropdown';
 import SelectBagsModal from '../components/trips/SelectBagsModal';
@@ -27,7 +27,7 @@ const SVC_COLOR = '#152CFF';
 export default function CreateTripPage() {
   const navigate = useNavigate();
   const { addTrip } = useTrips();
-  const { ftlRates, vendorFees, getLocationById } = useRates();
+  const { getLocationById } = useLocations();
   const toast = useToast();
 
   const [customerCode, setCustomerCode] = useState('');
@@ -127,7 +127,7 @@ export default function CreateTripPage() {
   // FM: FTL rate lookup
   function getFtlRate(job: JobDraft) {
     if (job.serviceCode !== 'FM' || !job.vendorCode || !job.originDistrictCode || !job.destDistrictCode || !job.truckType) return null;
-    const match = ftlRates.find((r) =>
+    const match = seedFtlRates.find((r) =>
       r.vendorCode === job.vendorCode && r.isActive &&
       r.originCode === job.originDistrictCode && r.destCode === job.destDistrictCode
     );
@@ -140,7 +140,7 @@ export default function CreateTripPage() {
   // Services: vendor fee lookup
   function getVendorJobFees(job: JobDraft) {
     if (job.serviceCode === 'FM' || !job.vendorCode || !job.locationId) return [];
-    return vendorFees.filter((f) =>
+    return seedVendorFees.filter((f) =>
       f.vendorCode === job.vendorCode && f.serviceCode === job.serviceCode &&
       f.locationId === job.locationId && f.isActive
     );
@@ -315,7 +315,7 @@ export default function CreateTripPage() {
     };
 
     addTrip(trip);
-    toast.success(`Shipment created — ${tripId}`);
+    toast.success(`Trip created — ${tripId}`);
     navigate('/trips');
   }
 
@@ -331,9 +331,9 @@ export default function CreateTripPage() {
         <button onClick={() => navigate('/trips')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 6, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}>
           <ArrowLeft size={16} />
         </button>
-        <h1 style={{ fontSize: 16, fontWeight: 800, color: '#111827', letterSpacing: '-0.3px', margin: 0 }}>Create Shipment</h1>
+        <h1 style={{ fontSize: 16, fontWeight: 800, color: '#111827', letterSpacing: '-0.3px', margin: 0 }}>Create Trip</h1>
       </div>
-      <p style={{ fontSize: 11, color: '#9ca3af', marginBottom: 20, marginLeft: 44 }}>Define what needs to happen and assign vendors to this shipment.</p>
+      <p style={{ fontSize: 11, color: '#9ca3af', marginBottom: 20, marginLeft: 44 }}>Define what needs to happen and assign vendors to this trip.</p>
 
       <form onSubmit={handleSubmit}>
         {errors.length > 0 && (
@@ -343,11 +343,11 @@ export default function CreateTripPage() {
           </div>
         )}
 
-        {/* Step 1: Shipment Details */}
+        {/* Step 1: Trip Details */}
         <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: 16, marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
             <span style={{ width: 22, height: 22, borderRadius: 5, background: '#152CFF', color: '#fff', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>1</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Shipment Details</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Trip Details</span>
           </div>
           <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
             <div style={{ flex: 1 }}>
@@ -515,8 +515,8 @@ export default function CreateTripPage() {
                         <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
                           {TRUCK_TYPES.map((t) => {
                             const isSelected = job.truckType === t.type;
-                            // Check if rate exists for this truck type on this route
-                            const hasRate = job.originDistrictCode && job.destDistrictCode && ftlRates.some((r) =>
+                            // Check if pricing exists for this truck type on this route
+                            const hasRate = job.originDistrictCode && job.destDistrictCode && seedFtlRates.some((r) =>
                               r.vendorCode === job.vendorCode && r.isActive &&
                               r.originCode === job.originDistrictCode && r.destCode === job.destDistrictCode &&
                               r.rates[t.type] !== undefined
@@ -550,7 +550,7 @@ export default function CreateTripPage() {
                                 <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700, color: '#111827' }}>{formatCurrency(ftl.currency, ftl.amount)}</span>
                               </div>
                             );
-                            return <span style={{ fontSize: 10, fontWeight: 600, color: '#b45309', padding: '1px 6px', background: '#fefce8', borderRadius: 4, border: '1px solid #fde68a' }}>No FTL rate for this route + truck type</span>;
+                            return <span style={{ fontSize: 10, fontWeight: 600, color: '#b45309', padding: '1px 6px', background: '#fefce8', borderRadius: 4, border: '1px solid #fde68a' }}>No FTL pricing for this route + truck type</span>;
                           } else {
                             const vFees = getVendorJobFees(job);
                             if (vFees.length > 0) {
@@ -576,12 +576,12 @@ export default function CreateTripPage() {
           {/* Shipment totals */}
           {jobs.length > 0 && totals.size > 0 && (
             <div style={{ marginTop: 12, padding: '8px 12px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' }}>Shipment Total</span>
+              <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' }}>Trip Total</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 {Array.from(totals.entries()).map(([curr, total]) => (
                   <span key={curr} style={{ fontSize: 12, fontWeight: 700, color: '#111827', fontFamily: "'JetBrains Mono', monospace" }}>{formatCurrency(curr, total)}</span>
                 ))}
-                {jobsMissingRate > 0 && <span style={{ fontSize: 10, color: '#b45309' }}>*{jobsMissingRate} job{jobsMissingRate > 1 ? 's' : ''} missing rate</span>}
+                {jobsMissingRate > 0 && <span style={{ fontSize: 10, color: '#b45309' }}>*{jobsMissingRate} job{jobsMissingRate > 1 ? 's' : ''} missing pricing</span>}
               </div>
             </div>
           )}
@@ -590,7 +590,7 @@ export default function CreateTripPage() {
         {/* Submit */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16, paddingTop: 16, borderTop: '1px solid #f3f4f6' }}>
           <button type="button" onClick={() => navigate('/trips')} style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#fff', color: '#374151', border: '1px solid #e5e7eb', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
-          <button type="submit" style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#152CFF', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Create Shipment</button>
+          <button type="submit" style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#152CFF', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Create Trip</button>
         </div>
       </form>
 

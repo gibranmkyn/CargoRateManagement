@@ -187,7 +187,7 @@
 ## Current Architecture
 
 ### Navigation
-`Shipments | Jobs | Rates | Master Data`
+`Trips | Jobs | Master Data`
 
 ### Shipments (demand-side — client requests)
 - **Max-width:** 1400px (must match Jobs page for consistent navigation feel)
@@ -216,22 +216,6 @@ Replaces old dual `status` + `proofStatus` model with single field:
 - **Pending** → In Progress → **Completed** (proof uploaded) → **Verified** (admin sign-off)
 - **Cancelled** = admin cancels job with mandatory reason (3PL cannot reject — no vendor portal). Cancelled jobs are immutable. Reassignment = cancel original + create new linked job for new vendor. See PRD Iteration 11 / HMW-51.
 
-### Rate Management (Rates page)
-- **Single vendor dropdown** at top — shared across all service tabs
-- **Service tabs:** FM Trucking | Export Customs | Cargo Submission | Cargo Retrieval | Origin Handling
-
-**FM Trucking tab:**
-- FTL rate table: origin district → destination district × truck types (1.5T/3T/5T/8T/10T/12T/40HQ/45HQ)
-- Routes grouped by city, collapsible
-- CSV upload/download (accepts Chinese district names, no codes needed)
-- Activity log tracks CSV uploads
-
-**Other service tabs (EC, CS, CR, OH):**
-- Vendor fee schedules: vendor's own fee names per service + location
-- Fees listed vertically per location (scrolls down, not right)
-- Shows: fee name (Chinese + English), unit, rate, min charge
-- CSV upload/download for fee schedules
-
 ### Master Data
 - **Facilities** — operational locations (warehouses, airports, ports) with CRUD
 - **Regions** — China city/district hierarchy (GB/T 2260, 33 provinces, 344 cities, 3,077 districts)
@@ -241,14 +225,11 @@ Replaces old dual `status` + `proofStatus` model with single field:
 
 ### Data Model (current)
 - `Job.status` — unified lifecycle: `'Pending' | 'In Progress' | 'Completed' | 'Verified' | 'Rejected' | 'Cancelled'`
-- `FtlRate` — district × truck type for FM trucking
-- `VendorFee` — vendor's own fee schedule per service + location (replaces old VendorRate)
 - `FeeLineItem` — job-level fee with `active` boolean for subtractive model
-- `FtlRateLog` / `VendorFeeLog` — activity tracking for rate changes
 
 ### Currency
 - MYR, CNY, USD supported
-- Currency per-rate (per FTL route, per vendor fee)
+- Currency per-fee (per fee line item on jobs)
 - Display: `CNY 3,200` or `RM 450` — prefix before amount in JetBrains Mono
 
 ### Remaining Implementation
@@ -294,11 +275,11 @@ Replaces old dual `status` + `proofStatus` model with single field:
 | 2026-03-25 | Quick-add service bar in create form | Horizontal [+FM] [+EC] [+CS] etc. bar. Click = add job with service pre-filled. Service-first thinking restored. |
 | 2026-03-25 | Empty state: inline CTA | Teal icon + message + [+ New Shipment] button in empty table body. No hand-holding. |
 | 2026-03-25 | Reactive slide-out panel | Panel stores tripId+jobId, derives data from context. Always fresh after mutations. |
-| 2026-03-25 | ~~Persona-split navigation~~ → Simplified nav | Shipments / Rates / Master Data. Billing dropped (redundant with proof-centric). |
+| 2026-03-25 | ~~Persona-split navigation~~ → Simplified nav | Trips / Jobs / Master Data. Billing dropped (redundant with proof-centric). Rates deferred. |
 | 2026-03-25 | ~~Persona-specific sub-table columns~~ → Flat sub-table | Job/Vendor/Service/Route/Total Cost/Proof. Click row → slide-out for details. (HMW-27) |
 | 2026-03-25 | Service config: FM=route, rest=location | FM Trucking uses origin+destination. EC/CS/CR/OH use single location. Determines form layout per job. |
 | 2026-03-25 | Multi-currency (MYR/CNY/USD) | Currency is per-rate. Display: "CNY 3,200". Mixed totals show separate line per currency. |
-| 2026-03-25 | ~~Add Rate slide-out~~ → CSV upload | Rate management via CSV upload/download, not one-by-one forms. (HMW-42) |
+| 2026-03-25 | ~~Add Rate slide-out~~ → CSV upload | Rate management via CSV upload/download, not one-by-one forms. (HMW-42) — deferred. |
 | 2026-03-25 | ~~Billing severity sort~~ | Removed — billing module dropped. |
 | 2026-03-25 | ~~Bulk match for billing~~ | Removed — billing module dropped. |
 | 2026-03-25 | Location dropdown by zone | Grouped by zone/city (Shenzhen, Guangzhou, HK), not by type. Type shown as badge within group. |
@@ -319,14 +300,8 @@ Replaces old dual `status` + `proofStatus` model with single field:
 | 2026-03-25 | L1/L2 service hierarchy | 5 L1 services → 20 L2 sub-services with Cost IDs from CR Trip Management reference. |
 | 2026-03-25 | Unit type fixed per Cost ID (HMW-35) | /trip, /kg, /bag defined once in master data. All rates for that Cost ID use the same unit. |
 | 2026-03-25 | Fee auto-population (HMW-34) | All L2 fees with rates auto-populate on job creation. Rate in the sheet = fee on the job. |
-| 2026-03-25 | China regions master data | GB/T 2260 standard. 33 provinces, 344 cities, 3,077 districts. For FTL district-to-district pricing. |
+| 2026-03-25 | China regions master data | GB/T 2260 standard. 33 provinces, 344 cities, 3,077 districts. |
 | 2026-03-25 | Facilities vs Regions | Facilities = operational locations (warehouses, airports). Regions = standardized admin divisions. Separate master data tabs. |
-| 2026-03-25 | FTL trucking rates (HMW-37/39) | Origin district → Destination district × truck type. 8 types: 1.5T/3T/5T/8T/10T/12T/40HQ/45HQ. |
-| 2026-03-25 | CSV as primary rate editing (HMW-42) | CSV upload/download for bulk rate management. Grid is read-only dashboard. Accepts district names, not codes. |
-| 2026-03-25 | Rate activity log | Every CSV upload tracked: timestamp, user, filename, summary (new/updated/unchanged). |
-| 2026-03-25 | Unified vendor selector on Rates page | Single dropdown at top, shared across all service tabs. Not separate pills per tab. |
-| 2026-03-25 | Service-based rate tabs | FM Trucking / Export Customs / Cargo Submission / Cargo Retrieval / Origin Handling. Each service has its own rate structure. |
-| 2026-03-25 | Services rates: vertical by location | Each location as a card with fees listed vertically underneath. Scrolls down, not right. |
 | 2026-03-29 | Jobs page (HMW-44→48) | Separate Jobs nav item for vendor/execution-focused view. Flat power table with status pills + Group by toggle. Complementary to Shipments view (demand-side vs supply-side). |
 | 2026-03-29 | ~~Proof-centric lifecycle~~ → Unified status (HMW-47) | Replace dual status+proofStatus with single field: Pending → In Progress → Completed (proof uploaded) → Verified (admin sign-off). Researched Flexport, project44, Uber Freight, TAI TMS. |
 | 2026-03-29 | "In Progress" not "In Transit" | Works for all 5 service types — customs clearance is "in progress" not "in transit". |

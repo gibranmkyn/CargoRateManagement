@@ -26,7 +26,7 @@
   - Status updates from WeChat flow back to Teleport OS Vendor (and then to Admin via shared localStorage/API)
 - **Design needed:** WeChat Mini Program has its own constraints (small screen, WeChat UI kit, camera-first). Needs separate design exploration.
 - **Dependencies:** TODO-047 (driver master data), TODO-048 (driver assignment)
-- **Note:** This introduces a 3rd app in the platform: Admin → Vendor → Driver (WeChat). The data flow is: Admin creates shipment + assigns vendor → Vendor assigns driver + vehicle → Driver executes + uploads proof.
+- **Note:** This introduces a 3rd app in the platform: Admin → Vendor → Driver (WeChat). The data flow is: Admin creates trip + assigns vendor → Vendor assigns driver + vehicle → Driver executes + uploads proof.
 
 ### TODO-050: Driver status updates flow back to vendor + admin
 - **What:** When a driver updates status in WeChat (arrived at pickup, departed, arrived at delivery, proof uploaded), those updates must:
@@ -75,7 +75,7 @@ Login form 32→20px. Upload zone 20→12px. Fee table header fontSize 8→9px.
 ## Completed
 
 ### ~~TODO-010: Create form — FM truck type + district picker (US-026/027)~~ ✅
-Implemented: district pickers from Regions + truck type chip selector + FTL rate lookup.
+Implemented: district pickers from Regions + truck type chip selector + FTL rate lookup. *(Rate lookup deferred — see project_rates_deferred.md)*
 
 ### ~~TODO-011: Create form — vendor fee auto-populate for services (US-031)~~ ✅
 Implemented: VendorFee lookup auto-populates all fees with subtractive model.
@@ -95,7 +95,7 @@ Implemented: CRUD table with customer code, name, active/inactive toggle, search
 ### ~~TODO-016: Link facilities to districts~~ ✅
 Implemented: `districtCode` field on Location interface. All 23 seed facilities mapped to GB/T 2260 codes. District name + code shown in Facilities table.
 
-### ~~TODO-017: Old VendorRate type cleanup~~ ✅
+### ~~TODO-017: Old VendorRate type cleanup~~ ✅ *(Rate module deferred — see project_rates_deferred.md)*
 Removed: VendorRate interface, seedRates, AddRateSlideOut component, all legacy rate actions (ADD_RATE, UPDATE_RATE, DEACTIVATE_RATE, AUTO_END_RATE). Updated ServicesTab and VendorComparisonPopover to use vendorFees.
 
 ### ~~TODO-018: Seed data alignment~~ ✅
@@ -103,9 +103,10 @@ Updated: DO-001 Gonda EC fees → 报关费/查验费/报关服务费, DO-001 Go
 
 ## Design Debt
 
-### TODO-019: HMW mockup for Add Rate form (never built)
+### ~~TODO-019: HMW mockup for Add Rate form~~ DEFERRED
 - **What:** Create HTML mockup for the Add Rate slide-out form for vendor fee schedules.
 - **Why:** TODO-001 from earlier — form was designed in spec but never mockuped.
+- **Status:** Deferred — rate management module deferred (see project_rates_deferred.md).
 
 ## Iteration 10 — Jobs Page + Unified Status (completed)
 
@@ -119,9 +120,9 @@ Implemented: gray (Pending), blue (In Progress), amber (Completed), green (Verif
 Implemented: `/jobs` route with flat power table, status pills, service filters, vendor dropdown, Group by toggle (None/Vendor/Service/Date). Percentage-based column widths (Route 38%).
 
 ### ~~TODO-023: Nav update~~ ✅
-Implemented: Shipments | Jobs | Rates | Master Data.
+Implemented: Trips | Jobs | Master Data. *(Rates removed from nav — rate module deferred.)*
 
-### ~~TODO-024: Update Shipments page for new status model~~ ✅
+### ~~TODO-024: Update Trips page for new status model~~ ✅
 Implemented: Stats bar, sub-table, and filter logic updated. Active = any job not Verified/Cancelled.
 
 ### ~~TODO-025: Slide-out panel — Status Action Bar~~ ✅

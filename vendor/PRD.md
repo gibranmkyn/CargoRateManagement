@@ -1,11 +1,11 @@
 # Teleport OS Vendor
 
-> **v1.0** | Counterpart to Teleport OS Admin — Shipment Management (admin/ops side)
+> **v1.0** | Counterpart to Teleport OS Admin — Trip Management (admin/ops side)
 
 ## Overview
 Teleport OS Vendor is a vendor-facing web app that gives 3PL vendors (trucking companies, customs agents, cargo handlers) visibility into the jobs assigned to them by Teleport's operations team. Its primary purpose is **job reconciliation** — ensuring both Teleport and the vendor agree on what was done, what it cost, and what proof exists — and **status updates** — allowing vendors to progress jobs through the lifecycle without WhatsApp/phone coordination.
 
-This is the read-heavy, action-light counterpart to Teleport OS Admin. Vendors see their slice of the data. They don't create shipments, manage rates, or verify jobs.
+This is the read-heavy, action-light counterpart to Teleport OS Admin. Vendors see their slice of the data. They don't create trips, manage rates, or verify jobs.
 
 ## Users & Context
 
@@ -33,7 +33,7 @@ This is the read-heavy, action-light counterpart to Teleport OS Admin. Vendors s
 
 | Capability | Teleport OS Admin | Teleport OS Vendor |
 |---|---|---|
-| Create shipments | Yes | No |
+| Create trips | Yes | No |
 | Assign vendors to jobs | Yes | No (view only) |
 | See all jobs across all vendors | Yes | No (own jobs only) |
 | Start job (Pending → In Progress) | Yes | Yes |
@@ -43,7 +43,7 @@ This is the read-heavy, action-light counterpart to Teleport OS Admin. Vendors s
 | Edit fees / quantities | Yes (until Verified) | No (view only, can flag) |
 | View fee breakdown | Yes | Yes |
 | View activity log | Yes | Yes |
-| Manage rates | Yes | No |
+| Manage rates | Deferred | No |
 | Manage master data | Yes | No |
 | Manage fleet (drivers + vehicles) | No | Yes (vendor-scoped) |
 | Assign driver + vehicle to FM jobs | No | Yes |
@@ -54,7 +54,7 @@ This is the read-heavy, action-light counterpart to Teleport OS Admin. Vendors s
 The vendor app reads from the same data model as the admin app. No new entities — just a filtered, read-constrained view.
 
 ### What the vendor sees per job:
-- **Job ID** + parent Shipment reference (DO number, customer name, MAWB)
+- **Job ID** + parent Trip reference (DO number, customer name, MAWB)
 - **Service** — what type of work (FM Trucking, Export Customs, etc.)
 - **Route** — origin → destination (or single location for non-FM services)
 - **Pickup date** — when the work is expected
@@ -65,13 +65,13 @@ The vendor app reads from the same data model as the admin app. No new entities 
 - **Proof documents** — uploaded files with timestamps
 - **Activity log** — full history of status changes and uploads
 - **Cargo details** — bags, weight (kg), volume (CBM) at job level
-- **Associated bags** — bag package list from the shipment (bag number, weight, pickup date, origin/destination)
+- **Associated bags** — bag package list from the trip (bag number, weight, pickup date, origin/destination)
 
 ### What the vendor CANNOT see:
 - Jobs assigned to other vendors
-- Internal ops notes/remarks on the shipment
-- Rate card / rate management data
-- Other vendors on the same shipment (only their own jobs)
+- Internal ops notes/remarks on the trip
+- Rate card / rate management data (deferred)
+- Other vendors on the same trip (only their own jobs)
 - Admin-side verification workflow details
 
 ## Core Functionality
@@ -86,7 +86,7 @@ The vendor's primary view. A flat table of all jobs assigned to them, similar to
 - **Date range picker:** for Completed/Verified/Cancelled/All views
 
 **Columns:**
-- DO # (shipment reference)
+- DO # (trip reference)
 - Customer
 - Service
 - Route (origin → destination)
@@ -109,9 +109,9 @@ Full detail for a single job. Read-heavy with limited actions.
 2. **Status Action Bar** — adapts per status (see F3)
 3. **Route** — origin and destination with addresses, dates
 4. **Cargo** — bags, weight, volume (read-only for vendor)
-5. **Associated Bags** — list of bag packages assigned to this job's shipment
+5. **Associated Bags** — list of bag packages assigned to this job's trip
    - Columns: Bag Number | MAWB | Weight (kg) | Pickup Date | Origin | Destination
-   - Read-only — vendor sees what bags are in the shipment for verification
+   - Read-only — vendor sees what bags are in the trip for verification
    - Helps vendor confirm they have the right cargo at pickup/delivery
 6. **Fees** — full fee breakdown table
    - Columns: Fee Name | Unit | Rate | Qty | Amount | Status (active/removed)
@@ -248,7 +248,7 @@ Vendors can export their job data for reconciliation with their own systems.
 - **VUS-010:** As a vendor operator, I want to view full job details including route, dates, cargo, and fees, so I have all the information I need to execute the job.
 - **VUS-011:** As a vendor operator, I want to see the complete activity log for a job, so I know the full history of what happened.
 - **VUS-012:** As a vendor operator, I want to see all proof documents uploaded for a job (including ones uploaded by Teleport), so I have a complete record.
-- **VUS-013:** As a vendor operator, I want to see the list of bag packages associated with a job's shipment (bag number, weight, origin, destination), so I can verify I have the right cargo at pickup and confirm bag counts match.
+- **VUS-013:** As a vendor operator, I want to see the list of bag packages associated with a job's trip (bag number, weight, origin, destination), so I can verify I have the right cargo at pickup and confirm bag counts match.
 
 ### Status Updates
 - **VUS-020:** As a vendor operator, I want to click "Start Job" to move a Pending job to In Progress, so Teleport knows I've begun work.
@@ -309,7 +309,7 @@ Future: `My Jobs | Fleet | Reconciliation | Settings`
 
 See `DESIGN.md` (this folder) for the full design spec. Key adaptations from Teleport OS Admin:
 - **Same design tokens** — colors, typography, spacing, status system. One platform, two perspectives.
-- **Two nav items** — My Jobs + Fleet. Vendor identity on the right. No rates, admin master data, or shipments view.
+- **Two nav items** — My Jobs + Fleet. Vendor identity on the right. No rates (deferred), admin master data, or trips view.
 - **Full-page job detail** (not slide-out) — more room for fee reconciliation table + proof uploads.
 - **Responsive from day 1** (768px+) — vendors are on-site at warehouses/terminals.
 - **Read-only fees/quantities** — view for reconciliation, cannot edit.
@@ -396,7 +396,7 @@ See `design-preview.html` (this folder) for visual mockups of all screens.
 
 ### v3.0 — Full Portal
 - [ ] Individual vendor user accounts
-- [ ] Vendor-side rate card viewing (see what rates Teleport has on file)
+- [ ] Vendor-side rate card viewing (see what rates Teleport has on file) — *deferred (rate module deferred)*
 - [ ] Job acceptance/rejection (if business process changes)
 - [ ] Invoice generation from verified jobs
 - [ ] Multi-language support (Chinese + English + Malay)

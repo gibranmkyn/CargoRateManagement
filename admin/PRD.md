@@ -88,30 +88,30 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 ### Dashboard
 - **US-012:** As an ops planner, I want to see summary cards (total trips, active jobs, completed jobs, pending jobs) at the top of the trip list, so I get an instant health check of operations.
 
-### FTL Trucking Rate Management
-- **US-020:** As a rates admin, I want to manage FTL trucking rates in a route × truck type matrix, so I can see and edit all rates for a vendor at a glance — like the Excel rate cards vendors send us.
-- **US-021:** As a rates admin, I want to select a vendor and see their full FTL rate sheet with rows as origin district → destination district routes and columns as truck types (1.5T, 3T, 5T, 8T, 10T, 12T, 40HQ, 45HQ), so I can manage rates in the same format vendors quote them.
-- **US-022:** As a rates admin, I want to add rates in bulk by filling in a spreadsheet-style grid, so I don't have to add 100+ rates one by one when onboarding a new vendor.
-- **US-023:** As a rates admin, I want to group routes by origin city/zone (Shenzhen, Dongguan, Guangzhou) with collapsible sections, so the rate sheet stays manageable with 50+ routes.
-- **US-024:** As a rates admin, I want each truck type column to show capacity specs (weight cap, volume cap, dimensions), so I know what each truck type means when setting rates.
-- **US-025:** As a rates admin, I want to see the currency per route (RMB for domestic, HKD for cross-border), so rates are quoted in the correct currency.
-- **US-026:** As an ops planner, when creating an FM Trucking job, I want to select a truck type in addition to vendor and route, so the system can look up the correct FTL rate.
-- **US-027:** As an ops planner, I want the FTL rate to auto-populate as a fee line item when I select vendor + origin district + destination district + truck type, so I see the cost before submitting the shipment.
-- **US-028:** As a rates admin, I want FM accessorial fees (FM001 Warehouse Transfer, FM002 Pickup, FM003 Cross-Border Handling) to be managed separately from the base FTL rate, so the base trucking rate and surcharges are distinct.
-- **US-029:** As a rates admin, I want origin and destination to be standardized China districts (GB/T 2260 codes) from the Regions master data, so rate lookup is unambiguous regardless of how the address is written.
+### FTL Trucking Rate Management (deferred — 2026-03-30, code archived to deferred/rates/)
+- **US-020:** ~~As a rates admin, I want to manage FTL trucking rates in a route × truck type matrix, so I can see and edit all rates for a vendor at a glance — like the Excel rate cards vendors send us.~~
+- **US-021:** ~~As a rates admin, I want to select a vendor and see their full FTL rate sheet with rows as origin district → destination district routes and columns as truck types (1.5T, 3T, 5T, 8T, 10T, 12T, 40HQ, 45HQ), so I can manage rates in the same format vendors quote them.~~
+- **US-022:** ~~As a rates admin, I want to add rates in bulk by filling in a spreadsheet-style grid, so I don't have to add 100+ rates one by one when onboarding a new vendor.~~
+- **US-023:** ~~As a rates admin, I want to group routes by origin city/zone (Shenzhen, Dongguan, Guangzhou) with collapsible sections, so the rate sheet stays manageable with 50+ routes.~~
+- **US-024:** ~~As a rates admin, I want each truck type column to show capacity specs (weight cap, volume cap, dimensions), so I know what each truck type means when setting rates.~~
+- **US-025:** ~~As a rates admin, I want to see the currency per route (RMB for domestic, HKD for cross-border), so rates are quoted in the correct currency.~~
+- **US-026:** ~~As an ops planner, when creating an FM Trucking job, I want to select a truck type in addition to vendor and route, so the system can look up the correct FTL rate.~~
+- **US-027:** ~~As an ops planner, I want the FTL rate to auto-populate as a fee line item when I select vendor + origin district + destination district + truck type, so I see the cost before submitting the shipment.~~
+- **US-028:** ~~As a rates admin, I want FM accessorial fees (FM001 Warehouse Transfer, FM002 Pickup, FM003 Cross-Border Handling) to be managed separately from the base FTL rate, so the base trucking rate and surcharges are distinct.~~
+- **US-029:** ~~As a rates admin, I want origin and destination to be standardized China districts (GB/T 2260 codes) from the Regions master data, so rate lookup is unambiguous regardless of how the address is written.~~
 
-### Service-Based Rate Management (EC, CS, CR, OH)
-- **US-030:** As a rates admin, I want to manage each vendor's fee schedule per service and location — using the vendor's own fee names, units, and rates — so rates match exactly what the vendor quotes us. (HMW-43)
-- **US-031:** As an ops planner, I want all fees from the vendor's schedule to auto-populate when a job is created, and I can remove the exceptions that don't apply to this specific job, so fee management is subtractive (remove what doesn't apply) not additive (search and select each fee). (HMW-43)
-- **US-035:** As a rates admin, I want to upload vendor fee schedules via CSV (fee_name, unit, rate, min_charge, currency), so I can onboard a vendor's 15+ fees in one upload.
+### Service-Based Rate Management (EC, CS, CR, OH) (deferred — 2026-03-30, code archived to deferred/rates/)
+- **US-030:** ~~As a rates admin, I want to manage each vendor's fee schedule per service and location — using the vendor's own fee names, units, and rates — so rates match exactly what the vendor quotes us. (HMW-43)~~
+- **US-031:** ~~As an ops planner, I want all fees from the vendor's schedule to auto-populate when a job is created, and I can remove the exceptions that don't apply to this specific job, so fee management is subtractive (remove what doesn't apply) not additive (search and select each fee). (HMW-43)~~
+- **US-035:** ~~As a rates admin, I want to upload vendor fee schedules via CSV (fee_name, unit, rate, min_charge, currency), so I can onboard a vendor's 15+ fees in one upload.~~
 
 ### Future (Phase 3+)
 - **US-013:** As an ops planner, I want to save trip configurations as templates, so I can quickly create similar trips.
 - **US-014:** As a vendor, I want to view trips assigned to me and update status/upload proofs from a vendor portal.
 - **US-015:** As an ops admin, I want a validation dashboard to review completed trips and approve them for payment.
 - **US-016:** As an ops admin, I want to manage master data (vendors, customers, facilities, service types) from the admin portal.
-- **US-032:** As a rates admin, I want to upload a CSV to bulk create/update FTL rates, so I can onboard a vendor's 100+ routes in seconds instead of typing them one by one.
-- **US-034:** As a rates admin, I want to download the current rate sheet as CSV, edit it in Excel, and re-upload to update rates in bulk.
+- **US-032:** ~~As a rates admin, I want to upload a CSV to bulk create/update FTL rates, so I can onboard a vendor's 100+ routes in seconds instead of typing them one by one.~~ (deferred with rate management)
+- **US-034:** ~~As a rates admin, I want to download the current rate sheet as CSV, edit it in Excel, and re-upload to update rates in bulk.~~ (deferred with rate management)
 - **US-033:** As an ops planner, I want the system to auto-resolve a pickup address to its district using geocoding, so I don't have to manually look up which district the pickup is in.
 
 ## Key Design Decisions
@@ -122,7 +122,7 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 3. **5-color status system:** Gray (pending), blue (in progress), amber (completed/needs verification), green (verified), red (cancelled).
 4. **Unified job status lifecycle:** Pending → In Progress → Completed (proof uploaded) → Verified (admin sign-off). Replaces old dual status + proofStatus fields. Researched Flexport, project44, Uber Freight, TAI TMS. (HMW-47)
    - **Cancelled**: Admin cancels a job (mandatory reason) — terminal, immutable. Reassignment = cancel original + create new job for new vendor (linked). Partial completion = Completed with remark + adjusted fees + follow-up job. See Iteration 11.
-5. **Two complementary views:** Shipments (demand-side, grouped by client request) + Jobs (supply-side, flat table with vendor/service/status focus). (HMW-44→48)
+5. **Two complementary views:** Trips (demand-side, grouped by client request) + Jobs (supply-side, flat table with vendor/service/status focus). (HMW-44→48)
 6. **Sub-table for expanded jobs:** Not cards. Expanded shipments show a nested table.
 7. **Slide-out panel for actions:** Proof upload + verification + fee management + activity log in one panel.
 8. **Activity log per job:** Every status change and document upload is auto-logged for billing audit trail.
@@ -172,17 +172,17 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 - [x] Reactive slide-out panel (HMW-23) — derives data from context by ID, always fresh
 - [x] Toast on shipment creation
 
-### Iteration 6 — Rate Management (completed)
-- [x] Location master data with CRUD, zone grouping, inline add (HMW-17)
-- [x] Vendor rate cards: rate + unit type per service/location (HMW-18)
-- [x] Rate management page under "Rates" nav with vendor/service tabs (HMW-16)
-- [x] Add Rate slide-out form with dynamic route vs location fields
-- [x] Rate versioning: auto-end previous rate when adding new rate
-- [x] Location dropdown with zone grouping, search, inline "Add new" (HMW-17)
-- [x] Inline rate display in create form with cost breakdown
-- [x] Multi-currency support (MYR, CNY, USD)
-- [x] Rate + Cost columns in shipments sub-table
-- [x] Seed data: 23 locations, 21 rates, 10 shipments with rate data
+### Iteration 6 — Rate Management (deferred — 2026-03-30, code archived to deferred/rates/)
+- [x] ~~Location master data with CRUD, zone grouping, inline add (HMW-17)~~
+- [x] ~~Vendor rate cards: rate + unit type per service/location (HMW-18)~~
+- [x] ~~Rate management page under "Rates" nav with vendor/service tabs (HMW-16)~~
+- [x] ~~Add Rate slide-out form with dynamic route vs location fields~~
+- [x] ~~Rate versioning: auto-end previous rate when adding new rate~~
+- [x] ~~Location dropdown with zone grouping, search, inline "Add new" (HMW-17)~~
+- [x] ~~Inline rate display in create form with cost breakdown~~
+- [x] ~~Multi-currency support (MYR, CNY, USD)~~
+- [x] ~~Rate + Cost columns in shipments sub-table~~
+- [x] ~~Seed data: 23 locations, 21 rates, 10 shipments with rate data~~
 
 ### Iteration 7 — Multi-Fee Model (completed)
 - [x] FeeLineItem model: each job has N fee line items (L2 cost IDs) (HMW-25)
@@ -201,21 +201,21 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 - [x] Pagination at 50/page for historical views
 - [x] Dropped billing module — redundant with proof-centric shipments
 - [x] Teleport.it brand: Future Blue #152CFF, dark nav, Instrument Sans
-- [x] Nav: Shipments | Rates | Master Data
+- [x] Nav: Trips | ~~Rates~~ | Master Data (Rates removed — deferred)
 
-### Iteration 9 — FTL Trucking Rates + L1/L2 Services + Regions (completed)
+### Iteration 9 — FTL Trucking Rates + L1/L2 Services + Regions (deferred — 2026-03-30, rate code archived to deferred/rates/; L1/L2 services + regions kept)
 - [x] L1/L2 service hierarchy: 5 L1 services → 20 L2 sub-services with Cost IDs (HMW-35/36)
 - [x] Services master data tab: expandable L1/L2 tree with unit types, vendor/rate counts
-- [x] L2 fee × location rate sheet for service-based rates (EC, CS, CR, OH)
+- [x] ~~L2 fee × location rate sheet for service-based rates (EC, CS, CR, OH)~~
 - [x] China administrative regions master data: 33 provinces, 344 cities, 3,077 districts (GB/T 2260)
 - [x] Regions tab in Master Data: searchable province → city → district tree
 - [x] Renamed Locations tab to Facilities
-- [x] FTL rate data model: origin district → destination district × truck type (HMW-37/39)
-- [x] 8 truck types: 1.5T, 3T, 5T, 8T, 10T, 12T, 40HQ, 45HQ with capacity specs
-- [x] Simple FTL rate page: vendor pills, rate table, city collapse, search (HMW-42)
-- [x] CSV upload with name matching — accepts Chinese district names, no codes needed
-- [x] CSV download for current rates
-- [x] Activity log for rate changes (CSV uploads tracked with timestamp/user/filename)
+- [x] ~~FTL rate data model: origin district → destination district × truck type (HMW-37/39)~~
+- [x] ~~8 truck types: 1.5T, 3T, 5T, 8T, 10T, 12T, 40HQ, 45HQ with capacity specs~~
+- [x] ~~Simple FTL rate page: vendor pills, rate table, city collapse, search (HMW-42)~~
+- [x] ~~CSV upload with name matching — accepts Chinese district names, no codes needed~~
+- [x] ~~CSV download for current rates~~
+- [x] ~~Activity log for rate changes (CSV uploads tracked with timestamp/user/filename)~~
 - [x] Master Data tabs: Facilities | Regions | Vendors | Customers | Services
 
 ### Iteration 10 — Jobs Page + Unified Status Lifecycle (completed)
@@ -232,9 +232,9 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
   - Group by toggle: None (default) | Vendor | Service | Date
   - Group by: Vendor — collapsed headers sorted by most outstanding, status badges
   - Default sort within Active: Cancelled → In Progress → Pending
-  - Click job row → slide-out panel. Click shipment link → Shipments view.
-- [x] Nav update: Shipments | **Jobs** | Rates | Master Data
-- [x] Update Shipments sub-table to use new status chips
+  - Click job row → slide-out panel. Click shipment link → Trips view.
+- [x] Nav update: Trips | **Jobs** | Master Data (Rates removed — deferred)
+- [x] Update Trips sub-table to use new status chips
 - [x] Update slide-out panel: proof upload triggers Completed, Verify button triggers Verified
 - [x] Update seed data with unified status values
 
@@ -358,7 +358,7 @@ Both Admin and Vendor apps should display:
 - "Replaces J02" or "Follows J01" link card below status bar
 - Navigable — click to open the original job in the slide-out
 
-**Jobs page / Shipments sub-table:**
+**Jobs page / Trips sub-table:**
 - Replacement chain indicator: "→ J05" link next to cancelled jobs
 - Follow-up indicator: "← J01" link on follow-up jobs
 
@@ -379,26 +379,16 @@ Both Admin and Vendor apps should display:
 - [x] Activity log entries for all cancellation/replacement/follow-up events
 
 ### Known Scaling Limitations (address in Phase 3)
-- **Vendor selector pills** — works for 5-8 vendors but breaks at 30+. Needs to become a searchable dropdown or sidebar list.
-- **No cross-vendor comparison** — can't compare rates for the same route across vendors. Needs a route-first view (pick a route, see all vendors' rates) in addition to the current vendor-first view.
-- **Activity log is flat** — at 30+ vendors uploading CSVs regularly, the log becomes a firehose. Needs per-vendor filtering or a separate audit page.
 - **No vendor grouping** — if HaleSun has sub-entities (HaleSun-SZ, HaleSun-GZ), there's no hierarchy. Needs vendor groups.
-- **localStorage** — with 30 vendors × 100 routes × 8 truck types = 24,000 rate records, localStorage will hit size limits. Needs a backend with server-side pagination.
-- **CSV upload is vendor-scoped** — uploading for 30 vendors means 30 separate CSV uploads. Needs a multi-vendor CSV format or batch upload.
+- **localStorage** — browser storage will hit size limits at scale. Needs a backend with server-side pagination.
 
 ### Deferred (Phase 3)
-- [ ] Vendor selector at scale: searchable dropdown / sidebar for 30+ vendors
-- [ ] Route-first rate comparison view across vendors
+- [ ] Rate management module (code archived to deferred/rates/ — 2026-03-30)
 - [ ] Vendor grouping / sub-entities
-- [ ] Multi-vendor CSV upload
-- [ ] Backend with server-side rate storage
+- [ ] Backend with server-side storage
 - [ ] Address geocoding: lat/long → district auto-resolution (US-033)
-- [ ] Rate suggestion engine (HMW-16 Option C)
-- [ ] Excel import (in addition to CSV) for vendor rate card onboarding
-- [ ] Inline cell editing for quick single-rate fixes
-- [ ] Vendor comparison popover during shipment creation (HMW-19)
 - [ ] Job detail page update for proof/fee model
-- [ ] Inline edit mode for shipments (HMW-11)
+- [ ] Inline edit mode for trips (HMW-11)
 - [ ] Trip templates
 - [ ] Vendor portal (US-014)
 - [ ] Responsive design

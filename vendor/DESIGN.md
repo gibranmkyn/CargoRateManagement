@@ -44,7 +44,7 @@ The vendor app uses the exact same design tokens as the admin app. A vendor and 
 - **No vendor column** — data is pre-filtered to logged-in vendor
 - **No Group By toggle** — no need to group by vendor when you're one vendor
 - **No vendor filter dropdown**
-- **Columns:** Shipment (DO #) 10% | Customer 13% | Service 7% | Where 35% | Pickup 10% | Status 11% | Cost 10%
+- **Columns:** Trip (DO #) 10% | Customer 13% | Service 7% | Where 35% | Pickup 10% | Status 11% | Cost 10%
 - **"Where" column** (renamed from "Route"): shows service-contextual content with sub-lines (HMW-V04):
   - FM: origin → destination + driver/vehicle sub-line (HMW-V03)
   - EC/CS: location + MAWB sub-line
@@ -148,8 +148,8 @@ Unlike the admin app (desktop-only, min 1200px), the vendor app targets 768px+.
 
 | Breakpoint | Job List | Job Detail |
 |------------|----------|------------|
-| ≥1024px | Full 7-column table (Shipment, Customer, Service, Route, Pickup, Status, Cost) | Fees full-width, Route + Cargo side-by-side, Proofs + Log below |
-| 768-1023px | Condensed 5-column table: drop Route, stack Customer+Shipment into one cell (HMW-V01) | All sections stack to single column. Fees still first. |
+| ≥1024px | Full 7-column table (Trip, Customer, Service, Route, Pickup, Status, Cost) | Fees full-width, Route + Cargo side-by-side, Proofs + Log below |
+| 768-1023px | Condensed 5-column table: drop Route, stack Customer+Trip into one cell (HMW-V01) | All sections stack to single column. Fees still first. |
 | <768px | Out of scope for v1. Future: card-based job list on mobile |
 
 ### Authentication Screen
@@ -171,7 +171,7 @@ Unlike the admin app (desktop-only, min 1200px), the vendor app targets 768px+.
 | 2026-03-29 | Vendor identity in nav | Company name + avatar initials on right side. Makes it clear whose data this is. |
 | 2026-03-29 | "Teleport OS Vendor" label | Subtle label next to logo text. Same pattern as "Teleport OS Admin" on the admin side. |
 | 2026-03-29 | Same design tokens, different layout | Coherent platform feel. Vendor and admin discussing the same job see the same visual language. |
-| 2026-03-29 | Condensed table at 768px (HMW-V01) | Drop Route column, stack Customer+Shipment into one cell. Status and Cost always visible. Route available in detail page. |
+| 2026-03-29 | Condensed table at 768px (HMW-V01) | Drop Route column, stack Customer+Trip into one cell. Status and Cost always visible. Route available in detail page. |
 | 2026-03-29 | Fees-first section ordering (HMW-V02) | App exists for reconciliation — lead with the money. Vendor already knows the route. Order: Fees → Route + Cargo → Proofs → Activity Log. |
 | 2026-03-30 | FM assignment above fees (design review) | For FM jobs only, Driver & Vehicle Assignment section sits between Status Action Bar and Fee Breakdown. Dispatcher's first question is "who's driving?" not "are the fees right?" Non-FM services skip this section. |
 | 2026-03-30 | Assignment ≠ Start Job (design review) | Assigning a driver is dispatch-time (morning). Starting the job is execution-time (driver arrives at pickup). Separate actions, separate moments. |

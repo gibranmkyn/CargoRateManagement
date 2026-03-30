@@ -379,14 +379,13 @@ function tripReducer(state: TripState, action: TripAction): TripState {
 // --- ID Generation ---
 
 export function generateTripId(): string {
-  const now = new Date();
-  const pad = (n: number, len = 2) => String(n).padStart(len, '0');
-  return `TRIP${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}${pad(Math.floor(Math.random() * 1000), 3)}`;
+  const seq = Math.floor(Math.random() * 90000) + 10000; // 10000-99999 to avoid seed collisions
+  return `T${String(seq).padStart(5, '0')}`;
 }
 
 export function generateJobId(tripId: string, existingJobs: { id: string }[]): string {
   const num = existingJobs.length + 1;
-  return `${tripId}-J${String(num).padStart(2, '0')}`;
+  return `${tripId}-${String(num).padStart(2, '0')}`;
 }
 
 // --- Context ---
@@ -433,7 +432,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
 
   // Hydrate from localStorage on mount
   // Version key: bump this to force reseed when seed data changes
-  const SEED_VERSION = 'v11-cancellation';
+  const SEED_VERSION = 'v14-expanded-seed-data';
 
   useEffect(() => {
     try {

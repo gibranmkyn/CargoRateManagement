@@ -2,9 +2,8 @@ import { NavLink } from 'react-router-dom';
 import { Ship } from 'lucide-react';
 
 const navItems = [
-  { to: '/trips', label: 'Shipments' },
+  { to: '/trips', label: 'Trips' },
   { to: '/jobs', label: 'Jobs' },
-  { to: '/rates', label: 'Rates' },
   { to: '/master-data', label: 'Master Data' },
 ];
 
@@ -57,6 +56,16 @@ export default function Navbar() {
           }}
         >
           Teleport OS
+        </span>
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 500,
+            color: 'rgba(255,255,255,0.35)',
+            fontFamily: "'Instrument Sans', -apple-system, system-ui, sans-serif",
+          }}
+        >
+          Admin
         </span>
       </NavLink>
 

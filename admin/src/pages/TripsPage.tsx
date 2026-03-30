@@ -85,7 +85,7 @@ export default function TripsPage() {
       if (created < dateRange.start || created > dateRange.end) return false;
     }
     // Existing filters
-    if (mawbSearch && !t.mawb.toLowerCase().includes(mawbSearch.toLowerCase())) return false;
+    if (mawbSearch && !t.mawb.toLowerCase().includes(mawbSearch.toLowerCase()) && !t.id.toLowerCase().includes(mawbSearch.toLowerCase())) return false;
     if (customerFilter && t.customer.code !== customerFilter) return false;
     if (vendorFilter && !t.jobs.some((j) => j.vendor.code === vendorFilter)) return false;
     return true;
@@ -192,7 +192,7 @@ export default function TripsPage() {
 
       {/* -- Stats bar -- */}
       <div style={{ display: 'flex', alignItems: 'center', padding: '8px 16px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontSize: 12, gap: 0 }}>
-        <span style={{ color: '#111827', fontWeight: 600 }}>{filtered.length} shipments</span>
+        <span style={{ color: '#111827', fontWeight: 600 }}>{filtered.length} trips</span>
         <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
         <span style={{ color: '#9ca3af', fontWeight: 600 }}>{stats.pending} pending</span>
         <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
@@ -210,8 +210,8 @@ export default function TripsPage() {
       {/* -- Page header -- */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: '16px 16px 0 16px' }}>
         <div>
-          <h1 style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.3px', color: '#111827', margin: 0 }}>Shipments</h1>
-          <p style={{ fontSize: 11, color: '#9ca3af', margin: '2px 0 0 0' }}>Monitor and manage shipments across vendors</p>
+          <h1 style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.3px', color: '#111827', margin: 0 }}>Trips</h1>
+          <p style={{ fontSize: 11, color: '#9ca3af', margin: '2px 0 0 0' }}>Monitor and manage trips across vendors</p>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <button style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#fff', color: '#374151', border: '1px solid #e5e7eb', cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -221,7 +221,7 @@ export default function TripsPage() {
             onClick={() => navigate('/create-trip')}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#152CFF', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
           >
-            <Plus size={12} /> New Shipment
+            <Plus size={12} /> New Trip
           </button>
         </div>
       </div>
@@ -254,10 +254,10 @@ export default function TripsPage() {
 
         <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
         <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#9ca3af' }}>
-          MAWB
+          Trip / MAWB
           <div style={{ position: 'relative' }}>
             <Search size={11} style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', color: '#d1d5db' }} />
-            <input type="text" placeholder="Search..." value={mawbSearch} onChange={(e) => setMawbSearch(e.target.value)} style={{ paddingLeft: 22, fontFamily: 'var(--font-mono)', fontSize: 11, borderRadius: 4, padding: '4px 8px 4px 22px', border: '1px solid #e5e7eb', outline: 'none', width: 160 }} />
+            <input type="text" placeholder="T00001 or MAWB" value={mawbSearch} onChange={(e) => setMawbSearch(e.target.value)} style={{ paddingLeft: 22, fontFamily: 'var(--font-mono)', fontSize: 11, borderRadius: 4, padding: '4px 8px 4px 22px', border: '1px solid #e5e7eb', outline: 'none', width: 160 }} />
           </div>
         </label>
         <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#9ca3af' }}>
@@ -275,7 +275,7 @@ export default function TripsPage() {
           </select>
         </label>
         <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 11, color: '#9ca3af' }}>
-          {filtered.length} shipments
+          {filtered.length} trips
         </span>
       </div>
 
@@ -285,41 +285,37 @@ export default function TripsPage() {
           <thead>
             <tr>
               <th style={{ ...th, width: 24, padding: '6px 8px' }} />
+              <th style={th}>Trip</th>
               <th style={th}>Customer</th>
+              <th style={th}>Pickup</th>
+              <th style={th}>Delivery</th>
               <th style={th}>MAWB</th>
-              <th style={th}>Pickup Date</th>
-              <th style={th}>Delivery Date</th>
               <th style={th}>Route</th>
               <th style={th}>Cargo</th>
-              <th style={th}>Jobs</th>
-              <th style={{ ...th, width: 40 }}>Actions</th>
+              <th style={{ ...th, width: 40 }} />
             </tr>
           </thead>
           <tbody>
             {paginatedFiltered.length > 0 ? paginatedFiltered.flatMap((trip) => {
               const isExpanded = expandedId === trip.id;
-              const hasRejected = trip.jobs.some((j) => j.status === 'Cancelled');
               const route = buildRoute(trip);
 
               const rows = [
                 <tr
                   key={trip.id}
                   onClick={() => setExpandedId(isExpanded ? null : trip.id)}
-                  style={{ cursor: 'pointer', background: hasRejected ? '#fefafa' : isExpanded ? '#f9fafb' : undefined, transition: 'background 0.1s' }}
-                  onMouseEnter={(e) => { if (!isExpanded && !hasRejected) e.currentTarget.style.background = '#f9fafb'; }}
-                  onMouseLeave={(e) => { if (!isExpanded && !hasRejected) e.currentTarget.style.background = ''; }}
+                  style={{ cursor: 'pointer', background: isExpanded ? '#f9fafb' : undefined, transition: 'background 0.1s' }}
+                  onMouseEnter={(e) => { if (!isExpanded) e.currentTarget.style.background = '#f9fafb'; }}
+                  onMouseLeave={(e) => { if (!isExpanded) e.currentTarget.style.background = ''; }}
                 >
                   <td style={{ padding: '8px 4px 8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6', color: isExpanded ? '#152CFF' : '#d1d5db', fontSize: 12, fontWeight: isExpanded ? 700 : 400 }}>
-                    {hasRejected && !isExpanded ? <span style={{ color: '#dc2626', fontWeight: 700, fontSize: 12 }}>!</span> : (isExpanded ? '\u25be' : '\u25b8')}
+                    {isExpanded ? '\u25be' : '\u25b8'}
                   </td>
                   <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', letterSpacing: '-0.2px', marginBottom: 2 }}>
-                      {trip.customer.name}
-                    </div>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#9ca3af', background: '#f3f4f6', padding: '1px 5px', borderRadius: 4, border: '1px solid #e5e7eb' }}>{trip.id}</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, color: '#152CFF' }}>{trip.id}</span>
                   </td>
                   <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#374151' }}>{trip.mawb}</div>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: '#111827' }}>{trip.customer.name}</span>
                   </td>
                   <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
                     {(() => {
@@ -342,27 +338,13 @@ export default function TripsPage() {
                     })() : <span style={{ fontSize: 11, color: '#d1d5db' }}>—</span>}
                   </td>
                   <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#374151' }}>{trip.mawb}</div>
+                  </td>
+                  <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
                     <span style={{ fontSize: 11, color: '#374151' }}>{route}</span>
                   </td>
                   <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
                     <span style={{ fontSize: 11, color: '#9ca3af' }}>{trip.bags} bags &middot; {trip.weight} kg</span>
-                  </td>
-                  <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
-                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                      {trip.jobs.map((job, i) => {
-                        const c = getStatusColors(job.status);
-                        return (
-                          <button
-                            key={job.id}
-                            onClick={(e) => { e.stopPropagation(); setPanelIds({ tripId: trip.id, jobId: job.id }); }}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600, border: `1px solid ${c.border}`, background: c.bg, color: c.text, cursor: 'pointer', fontFamily: 'inherit', transition: 'box-shadow 0.15s' }}
-                          >
-                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: c.dot, display: 'inline-block' }} />
-                            {job.vendor.name} &middot; {job.service.code}
-                          </button>
-                        );
-                      })}
-                    </div>
                   </td>
                   <td style={{ padding: '8px 4px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6', textAlign: 'center' }}>
                     <span
@@ -462,18 +444,18 @@ export default function TripsPage() {
                     <Ship size={18} style={{ color: '#152CFF' }} />
                   </div>
                   <p style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>
-                    {trips.length === 0 ? 'No shipments yet' : 'No shipments match your filters'}
+                    {trips.length === 0 ? 'No trips yet' : 'No trips match your filters'}
                   </p>
                   <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4, marginBottom: 16 }}>
                     {trips.length === 0
-                      ? 'Create your first shipment to start managing vendor assignments.'
+                      ? 'Create your first trip to start managing vendor assignments.'
                       : 'Try adjusting your search or filters above.'}
                   </p>
                   <button
                     onClick={() => navigate('/create-trip')}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#152CFF', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
                   >
-                    <Plus size={12} /> New Shipment
+                    <Plus size={12} /> New Trip
                   </button>
                 </td>
               </tr>
@@ -485,7 +467,7 @@ export default function TripsPage() {
       {/* -- Pagination (only for All/Completed) -- */}
       {showDatePicker && totalPages > 1 && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderTop: '1px solid #e5e7eb' }}>
-          <span style={{ fontSize: 10, color: '#9ca3af' }}>Page {page} of {totalPages} · {totalFiltered} shipments</span>
+          <span style={{ fontSize: 10, color: '#9ca3af' }}>Page {page} of {totalPages} · {totalFiltered} trips</span>
           <div style={{ display: 'flex', gap: 4 }}>
             <button disabled={page <= 1} onClick={() => setPage(page - 1)} style={{ padding: '3px 8px', borderRadius: 4, border: '1px solid #e5e7eb', background: '#fff', color: page <= 1 ? '#d1d5db' : '#6b7280', fontSize: 10, cursor: page <= 1 ? 'default' : 'pointer', fontFamily: 'inherit' }}>← Prev</button>
             {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((p) => (

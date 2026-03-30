@@ -220,6 +220,11 @@ Every design decision starts with a **"How Might We"** question. We generate 2-3
 - B) Red highlight on trip row + inline reassignment in slide-out panel
 - C) Dedicated "Needs Attention" view combining all actionable items
 
+### HMW-52: How might we restructure the Trips table columns so Trip ID is the primary identifier and redundant columns are removed?
+**Options:** A) Client's exact order — Trip first, no Jobs column, B) Trip-first + compact job summary, C) Ultra-dense — customer under trip ID
+**Decision:** Option A — Trip ID leads, Jobs column removed. Expandable sub-row already provides full job detail on click. Column order: Trip → Customer → Pickup → Delivery → MAWB → Route → Cargo.
+**File:** `52-hmw-trips-table-columns.html`
+
 ### HMW-10: How might we structure navigation so it scales as the app grows (validation, master data, reports) without cluttering the daily trip management workflow?
 **Options to explore:**
 - A) Top nav (current — simple, max vertical workspace)

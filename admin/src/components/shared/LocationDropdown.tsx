@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronDown, Plus, Check, X, MapPin } from 'lucide-react';
-import { useRates, generateLocationId } from '../../context/RateContext';
+import { useLocations, generateLocationId } from '../../context/LocationContext';
 import { useToast } from '@shared/Toast';
 import type { LocationType } from '@shared/mockData';
 
@@ -15,7 +15,7 @@ interface LocationDropdownProps {
 }
 
 export default function LocationDropdown({ value, onChange, placeholder = 'Select location...', excludeId }: LocationDropdownProps) {
-  const { locations, getLocationsGroupedByZone, getLocationById, addLocation } = useRates();
+  const { locations, getLocationsGroupedByZone, getLocationById, addLocation } = useLocations();
   const toast = useToast();
 
   const [open, setOpen] = useState(false);

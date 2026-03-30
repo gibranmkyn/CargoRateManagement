@@ -9,7 +9,6 @@ export default function LoginPage() {
   const navigate = useNavigate();
 
   const [selectedVendor, setSelectedVendor] = useState('');
-  const [accessCode, setAccessCode] = useState('');
   const [error, setError] = useState('');
 
   function handleSubmit(e: FormEvent) {
@@ -18,12 +17,6 @@ export default function LoginPage() {
 
     if (!selectedVendor) {
       setError('Please select your company');
-      return;
-    }
-
-    // Prototype: accept any non-empty access code
-    if (!accessCode.trim()) {
-      setError('Please enter an access code');
       return;
     }
 
@@ -164,44 +157,6 @@ export default function LoginPage() {
               </option>
             ))}
           </select>
-        </div>
-
-        {/* Access code */}
-        <div style={{ marginBottom: 18 }}>
-          <label
-            style={{
-              display: 'block',
-              fontSize: 9,
-              fontWeight: 600,
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-              color: '#9ca3af',
-              marginBottom: 4,
-              fontFamily: font,
-            }}
-          >
-            Access code
-          </label>
-          <input
-            type="password"
-            placeholder="Access code"
-            value={accessCode}
-            onChange={(e) => {
-              setAccessCode(e.target.value);
-              if (error) setError('');
-            }}
-            style={{
-              width: '100%',
-              fontSize: 12,
-              padding: '6px 8px',
-              borderRadius: 4,
-              border: '1px solid #e5e7eb',
-              background: '#fff',
-              color: '#111827',
-              fontFamily: font,
-              outline: 'none',
-            }}
-          />
         </div>
 
         {/* Error message */}

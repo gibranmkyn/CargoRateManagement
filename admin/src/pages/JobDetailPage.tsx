@@ -77,7 +77,7 @@ export default function JobDetailPage() {
           }}
         >
           <ArrowLeft size={12} />
-          Back to shipments
+          Back to trips
         </Link>
       </div>
     );
@@ -158,7 +158,7 @@ export default function JobDetailPage() {
           }}
         >
           <ArrowLeft size={11} />
-          Shipments
+          Trips
         </button>
         <ChevronRight size={10} style={{ color: '#d1d5db' }} />
         <span
@@ -561,7 +561,7 @@ export default function JobDetailPage() {
             )}
 
             {/* Fee Breakdown */}
-            <h3 style={sectionTitle}>Fees — from rate card</h3>
+            <h3 style={sectionTitle}>Fee Breakdown</h3>
             {(job.fees ?? []).length > 0 ? (
               <div style={{ border: '1px solid #e5e7eb', borderRadius: 6, overflow: 'hidden', marginBottom: 12 }}>
                 {(job.fees ?? []).map((fee) => (

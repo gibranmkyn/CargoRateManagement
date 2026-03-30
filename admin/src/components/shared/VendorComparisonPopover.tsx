@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
-import { useRates } from '../../context/RateContext';
+import { useLocations } from '../../context/LocationContext';
 import { useTrips } from '@shared/TripContext';
-import { vendors, SERVICE_CONFIG } from '@shared/mockData';
+import { vendors, SERVICE_CONFIG, seedVendorFees } from '@shared/mockData';
 
 interface Props {
   serviceCode: string;
@@ -12,7 +12,7 @@ interface Props {
 }
 
 export default function VendorComparisonPopover({ serviceCode, locationId, currentVendorCode, onSelect, onClose }: Props) {
-  const { vendorFees, getLocationById } = useRates();
+  const { getLocationById } = useLocations();
   const { trips } = useTrips();
   const ref = useRef<HTMLDivElement>(null);
 
@@ -33,7 +33,7 @@ export default function VendorComparisonPopover({ serviceCode, locationId, curre
   const cfg = SERVICE_CONFIG[serviceCode];
 
   // Find all matching vendor fees for this service + location
-  const matchingFees = vendorFees.filter((f) => {
+  const matchingFees = seedVendorFees.filter((f) => {
     if (f.serviceCode !== serviceCode || !f.isActive) return false;
     return f.locationId === locationId;
   });

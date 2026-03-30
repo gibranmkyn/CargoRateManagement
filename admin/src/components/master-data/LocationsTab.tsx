@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, Pencil, Trash2, Check, X, MapPin } from 'lucide-react';
-import { useRates, generateLocationId } from '../../context/RateContext';
+import { useLocations, generateLocationId } from '../../context/LocationContext';
 import { useTrips } from '@shared/TripContext';
 import { useToast } from '@shared/Toast';
 import type { Location, LocationType } from '@shared/mockData';
@@ -13,7 +13,7 @@ const td: React.CSSProperties = { padding: '8px 12px', fontSize: 11, color: '#37
 const typeBadge = (type: LocationType): React.CSSProperties => ({ padding: '1px 5px', borderRadius: 4, fontSize: 9, fontWeight: 600, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb' });
 
 export default function LocationsTab() {
-  const { locations, rates, addLocation, updateLocation, deleteLocation } = useRates();
+  const { locations, addLocation, updateLocation, deleteLocation } = useLocations();
   const { trips } = useTrips();
   const toast = useToast();
 
@@ -39,9 +39,6 @@ export default function LocationsTab() {
   const zones = [...new Set(locations.map((l) => l.zone))].sort();
 
   // Derived counts
-  function ratesLinked(locId: string): number {
-    return rates.filter((r) => r.locationId === locId || r.originLocationId === locId || r.destinationLocationId === locId).length;
-  }
   function jobsCount(locName: string): number {
     return trips.flatMap((t) => t.jobs).filter((j) => j.origin.location === locName || j.destination.location === locName).length;
   }
@@ -83,8 +80,8 @@ export default function LocationsTab() {
   }
 
   function handleDelete(loc: Location) {
-    const linked = ratesLinked(loc.id);
-    if (linked > 0) { toast.error(`Cannot delete ${loc.name} — ${linked} rate(s) linked`); return; }
+    const linked = jobsCount(loc.name);
+    if (linked > 0) { toast.error(`Cannot delete ${loc.name} — ${linked} job(s) linked`); return; }
     deleteLocation(loc.id);
     toast.success(`Location deleted: ${loc.name}`);
   }
@@ -126,7 +123,6 @@ export default function LocationsTab() {
             <th style={{ ...th, width: 80 }}>Code</th>
             <th style={{ ...th, width: 100 }}>Zone</th>
             <th style={{ ...th, width: 90 }}>Type</th>
-            <th style={{ ...th, width: 50, textAlign: 'center' }}>Rates</th>
             <th style={{ ...th, width: 50, textAlign: 'center' }}>Jobs</th>
             <th style={{ ...th, width: 70, textAlign: 'center' }}>Actions</th>
           </tr>
@@ -149,7 +145,6 @@ export default function LocationsTab() {
                   {LOCATION_TYPES.map((t) => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}
                 </select>
               </td>
-              <td style={{ ...td, textAlign: 'center' }}>—</td>
               <td style={{ ...td, textAlign: 'center' }}>—</td>
               <td style={{ ...td, textAlign: 'center' }}>
                 <button onClick={handleAdd} title="Save" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#059669', padding: 2 }}><Check size={14} /></button>
@@ -178,7 +173,6 @@ export default function LocationsTab() {
                     : <span style={typeBadge(loc.type)}>{TYPE_LABEL[loc.type]}</span>
                   }
                 </td>
-                <td style={{ ...td, textAlign: 'center', fontSize: 10, color: '#6b7280' }}>{ratesLinked(loc.id)}</td>
                 <td style={{ ...td, textAlign: 'center', fontSize: 10, color: '#6b7280' }}>{jobsCount(loc.name)}</td>
                 <td style={{ ...td, textAlign: 'center' }}>
                   {isEditing ? (
@@ -200,13 +194,13 @@ export default function LocationsTab() {
           {/* Empty state */}
           {filtered.length === 0 && !showAddForm && (
             <tr>
-              <td colSpan={7} style={{ padding: '48px 16px', textAlign: 'center', color: '#9ca3af' }}>
+              <td colSpan={6} style={{ padding: '48px 16px', textAlign: 'center', color: '#9ca3af' }}>
                 <MapPin size={20} style={{ color: '#152CFF', marginBottom: 8 }} />
                 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
                   {locations.length === 0 ? 'No locations yet' : 'No locations match filters'}
                 </div>
                 <div style={{ fontSize: 11, marginBottom: 12 }}>
-                  {locations.length === 0 ? 'Add managed locations for rate lookups' : 'Try adjusting your filters'}
+                  {locations.length === 0 ? 'Add managed locations for job routing' : 'Try adjusting your filters'}
                 </div>
                 {locations.length === 0 && (
                   <button onClick={() => setShowAddForm(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 6, border: 'none', background: '#152CFF', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>

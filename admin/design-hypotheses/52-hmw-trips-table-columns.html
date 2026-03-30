@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HMW-52: Trips Table Column Restructure</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', 'SF Mono', monospace; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #0D9488; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #0D9488; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+/* Mockup table styles */
+.mock-table { width: 100%; border-collapse: collapse; font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; }
+.mock-table th { text-align: left; padding: 6px 12px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+.mock-table td { padding: 8px 12px; font-size: 11px; color: #374151; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+.mock-table tr:hover td { background: #f9fafb; }
+.trip-id { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #152CFF; }
+.trip-id-chip { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9ca3af; background: #f3f4f6; padding: 1px 5px; border-radius: 4px; border: 1px solid #e5e7eb; }
+.customer-name { font-size: 11px; font-weight: 600; color: #111827; }
+.customer-sub { font-size: 10px; color: #9ca3af; margin-top: 1px; }
+.mawb { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #374151; }
+.date-val { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #374151; }
+.date-time { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9ca3af; }
+.route { font-size: 11px; color: #374151; }
+.cargo { font-size: 10px; color: #9ca3af; }
+.expand-arrow { color: #d1d5db; font-size: 12px; cursor: pointer; }
+
+.status-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: pointer; }
+.status-dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+
+.s-pending { background: #f9fafb; border: 1px solid #e5e7eb; color: #9ca3af; }
+.s-pending .status-dot { background: #9ca3af; }
+.s-progress { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); color: #152CFF; }
+.s-progress .status-dot { background: #152CFF; }
+.s-completed { background: #fefce8; border: 1px solid #fde68a; color: #a16207; }
+.s-completed .status-dot { background: #a16207; }
+.s-verified { background: #f0fdf4; border: 1px solid #a7f3d0; color: #059669; }
+.s-verified .status-dot { background: #059669; }
+.s-cancelled { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
+.s-cancelled .status-dot { background: #dc2626; }
+
+.job-count { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: #6b7280; background: #f3f4f6; padding: 2px 7px; border-radius: 4px; border: 1px solid #e5e7eb; }
+.job-summary { font-size: 10px; color: #9ca3af; }
+
+.comparison-label { position: absolute; top: 8px; right: 12px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 8px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-52: Trips Table Column Restructure</h1>
+<div class="hmw">How might we restructure the Trips table columns so the trip ID is the primary scannable identifier, dates and MAWB are immediately visible, and redundant columns are eliminated?</div>
+
+<div class="context">
+<strong>Client feedback:</strong> "Trip Number should be the leftmost column. Column order should be Trip Number, Pickup Date, Delivery Date, MAWB, then Route. The Jobs column feels redundant."<br><br>
+<strong>Current state:</strong> The table leads with Customer name, trip ID is a small gray chip underneath. The Jobs column shows colored vendor pills (e.g., "HaleSun &middot; FM") taking ~20% of table width. The same job detail is available in the expanded sub-row.<br><br>
+<strong>Key question:</strong> Is the Jobs column truly redundant, or does it provide at-a-glance status value that the expansion doesn't? And does leading with Trip ID work when the Customer context matters for quick scanning?
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION A: Client's exact column order -->
+<!-- ============================================ -->
+
+<h2>Option A: Client's Column Order (Trip-First, No Jobs)</h2>
+<span class="label" style="background: #dbeafe; color: #1e40af;">Client Request</span>
+
+<div class="rationale">
+Exactly what the client asked for: Trip Number leads, followed by dates and MAWB, then Route. Jobs column removed entirely. Customer name moves to a secondary position after the trip ID.
+<div class="pros-cons">
+<div class="pros"><strong>Pros:</strong><br>
+&bull; Trip ID is the primary lookup key ops uses in calls/WhatsApp<br>
+&bull; Dates front-and-center matches planning workflow (what's moving today?)<br>
+&bull; Removing Jobs column gives more room to other columns<br>
+&bull; Cleaner, less visual noise per row
+</div>
+<div class="cons"><strong>Cons:</strong><br>
+&bull; No job status visibility without expanding every row<br>
+&bull; "Is this trip healthy?" requires a click to find out<br>
+&bull; Loses the quick "3 jobs, 2 green, 1 red" signal<br>
+&bull; Customer name is secondary — harder to scan by client
+</div>
+</div>
+</div>
+
+<div class="screen" style="position: relative;">
+<span class="comparison-label" style="background: #dbeafe; color: #1e40af;">Option A — Client's order, no Jobs column</span>
+<table class="mock-table" style="margin-top: 0;">
+<thead>
+<tr>
+<th style="width: 24px; padding: 6px 8px;"></th>
+<th style="width: 13%;">Trip</th>
+<th>Customer</th>
+<th>Pickup</th>
+<th>Delivery</th>
+<th>MAWB</th>
+<th>Route</th>
+<th>Cargo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="expand-arrow">&#9656;</span></td>
+<td><span class="trip-id">DO-20260312-008</span></td>
+<td><span class="customer-name">TikTok</span></td>
+<td><span class="date-val">12 Mar</span><br><span class="date-time">14:00</span></td>
+<td><span class="date-val">14 Mar</span></td>
+<td><span class="mawb">160-84329871</span></td>
+<td><span class="route">TikTok WH, Shenzhen &rarr; SZX Cargo Terminal</span></td>
+<td><span class="cargo">120 bags &middot; 2,400 kg</span></td>
+</tr>
+<tr>
+<td><span class="expand-arrow">&#9656;</span></td>
+<td><span class="trip-id">DO-20260311-007</span></td>
+<td><span class="customer-name">Shein</span></td>
+<td><span class="date-val">11 Mar</span><br><span class="date-time">09:30</span></td>
+<td><span class="date-val">13 Mar</span></td>
+<td><span class="mawb">160-84329883</span></td>
+<td><span class="route">Dongguan Hubscan &rarr; HK Airport</span></td>
+<td><span class="cargo">85 bags &middot; 1,600 kg</span></td>
+</tr>
+<tr>
+<td><span class="expand-arrow">&#9656;</span></td>
+<td><span class="trip-id">DO-20260310-006</span></td>
+<td><span class="customer-name">TikTok</span></td>
+<td><span class="date-val">10 Mar</span><br><span class="date-time">11:00</span></td>
+<td><span class="date-val">12 Mar</span></td>
+<td><span class="mawb">160-84329895</span></td>
+<td><span class="route">Yiwu WH &rarr; SZX Airport</span></td>
+<td><span class="cargo">200 bags &middot; 4,100 kg</span></td>
+</tr>
+<tr>
+<td><span class="expand-arrow">&#9656;</span></td>
+<td><span class="trip-id">DO-20260309-005</span></td>
+<td><span class="customer-name">Shopee</span></td>
+<td><span class="date-val">09 Mar</span><br><span class="date-time">15:00</span></td>
+<td><span class="date-val">11 Mar</span></td>
+<td><span class="mawb">160-84329907</span></td>
+<td><span class="route">Yantian Port &rarr; Shenzhen Airport</span></td>
+<td><span class="cargo">60 bags &middot; 980 kg</span></td>
+</tr>
+<tr>
+<td><span class="expand-arrow">&#9656;</span></td>
+<td><span class="trip-id">DO-20260309-004</span></td>
+<td><span class="customer-name">AliExpress</span></td>
+<td><span class="date-val">09 Mar</span><br><span class="date-time">08:00</span></td>
+<td><span class="date-val">—</span></td>
+<td><span class="mawb">160-84329919</span></td>
+<td><span class="route">Tou Warehouse &rarr; SZX Cargo Terminal</span></td>
+<td><span class="cargo">45 bags &middot; 750 kg</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION B: Trip-first with compact job summary -->
+<!-- ============================================ -->
+
+<h2>Option B: Trip-First + Compact Job Summary</h2>
+<span class="label" style="background: #f0fdf4; color: #059669;">Recommended</span>
+
+<div class="rationale">
+Trip ID leads (client's ask). Dates and MAWB follow. But instead of removing the Jobs column entirely, replace the verbose pills with a compact count + status summary. This preserves the "is this trip healthy?" signal in a fraction of the space.
+<div class="pros-cons">
+<div class="pros"><strong>Pros:</strong><br>
+&bull; Trip ID leads — matches ops lookup workflow<br>
+&bull; Dates visible for planning — "what's moving today?"<br>
+&bull; Job health at a glance: "4 jobs &middot; 3 verified" tells you instantly<br>
+&bull; 80% less horizontal space than the current pills
+</div>
+<div class="cons"><strong>Cons:</strong><br>
+&bull; Loses per-vendor detail at the top level (which vendor is behind?)<br>
+&bull; One more column than Option A (marginally wider)<br>
+&bull; Count alone doesn't show which service is lagging
+</div>
+</div>
+</div>
+
+<div class="screen" style="position: relative;">
+<span class="comparison-label" style="background: #f0fdf4; color: #059669;">Option B — Trip-first + compact job summary</span>
+<table class="mock-table" style="margin-top: 0;">
+<thead>
+<tr>
+<th style="width: 24px; padding: 6px 8px;"></th>
+<th style="width: 13%;">Trip</th>
+<th>Customer</th>
+<th>Pickup</th>
+<th>Delivery</th>
+<th>MAWB</th>
+<th>Route</th>
+<th style="width: 10%;">Jobs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="expand-arrow">&#9656;</span></td>
+<td><span class="trip-id">DO-20260312-008</span></td>
+<td><span class="customer-name">TikTok</span></td>
+<td><span class="date-val">12 Mar</span><br><span class="date-time">14:00</span></td>
+<td><span class="date-val">14 Mar</span></td>
+<td><span class="mawb">160-84329871</span></td>
+<td><span class="route">TikTok WH &rarr; SZX Cargo</span></td>
+<td>
+<span class="job-count">4</span>
+<span class="job-summary">&middot; 3 verified</span>
+</td>
+</tr>
+<tr>
+<td><span class="expand-arrow">&#9656;</span></td>
+<td><span class="trip-id">DO-20260311-007</span></td>
+<td><span class="customer-name">Shein</span></td>
+<td><span class="date-val">11 Mar</span><br><span class="date-time">09:30</span></td>
+<td><span class="date-val">13 Mar</span></td>
+<td><span class="mawb">160-84329883</span></td>
+<td><span class="route">Dongguan &rarr; HK Airport</span></td>
+<td>
+<span class="job-count">3</span>
+<span class="job-summary">&middot; 1 pending</span>
+</td>
+</tr>
+<tr>
+<td><span class="expand-arrow">&#9656;</span></td>
+<td><span class="trip-id">DO-20260310-006</span></td>
+<td><span class="customer-name">TikTok</span></td>
+<td><span class="date-val">10 Mar</span><br><span class="date-time">11:00</span></td>
+<td><span class="date-val">12 Mar</span></td>
+<td><span class="mawb">160-84329895</span></td>
+<td><span class="route">Yiwu WH &rarr; SZX Airport</span></td>
+<td>
+<span class="job-count">5</span>
+<span class="job-summary">&middot; <span style="color: #059669;">all verified</span></span>
+</td>
+</tr>
+<tr>
+<td><span class="expand-arrow">&#9656;</span></td>
+<td><span class="trip-id">DO-20260309-005</span></td>
+<td><span class="customer-name">Shopee</span></td>
+<td><span class="date-val">09 Mar</span><br><span class="date-time">15:00</span></td>
+<td><span class="date-val">11 Mar</span></td>
+<td><span class="mawb">160-84329907</span></td>
+<td><span class="route">Yantian &rarr; SZ Airport</span></td>
+<td>
+<span class="job-count">2</span>
+<span class="job-summary">&middot; <span style="color: #dc2626;">1 cancelled</span></span>
+</td>
+</tr>
+<tr>
+<td><span class="expand-arrow">&#9656;</span></td>
+<td><span class="trip-id">DO-20260309-004</span></td>
+<td><span class="customer-name">AliExpress</span></td>
+<td><span class="date-val">09 Mar</span><br><span class="date-time">08:00</span></td>
+<td><span class="date-val">—</span></td>
+<td><span class="mawb">160-84329919</span></td>
+<td><span class="route">Tou WH &rarr; SZX Cargo</span></td>
+<td>
+<span class="job-count">3</span>
+<span class="job-summary">&middot; 2 in progress</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION C: Trip-first, Customer merged with Trip, Cargo dropped -->
+<!-- ============================================ -->
+
+<h2>Option C: Ultra-Dense — Customer Under Trip ID, No Cargo Column</h2>
+<span class="label" style="background: #fef3c7; color: #92400e;">Radical</span>
+
+<div class="rationale">
+Maximize density: merge Customer as a sub-line under Trip ID (like the current design does in reverse). Drop the Cargo column (bags/weight are visible in the expanded sub-row and on the create form). This frees space for wider date and route columns.
+<div class="pros-cons">
+<div class="pros"><strong>Pros:</strong><br>
+&bull; Most compact option — only 7 columns total<br>
+&bull; Trip ID + Customer in one cell = one mental unit<br>
+&bull; Dates and route get more breathing room<br>
+&bull; Cargo (bags/kg) rarely drives ops decisions at the trip level
+</div>
+<div class="cons"><strong>Cons:</strong><br>
+&bull; Customer name is harder to scan vertically (tucked under ID)<br>
+&bull; Cargo weight matters for FM trucking (truck type selection)<br>
+&bull; Filtering by customer requires reading sub-text, not primary column
+</div>
+</div>
+</div>
+
+<div class="screen" style="position: relative;">
+<span class="comparison-label" style="background: #fef3c7; color: #92400e;">Option C — Ultra-dense, customer under trip ID</span>
+<table class="mock-table" style="margin-top: 0;">
+<thead>
+<tr>
+<th style="width: 24px; padding: 6px 8px;"></th>
+<th style="width: 15%;">Trip</th>
+<th>Pickup</th>
+<th>Delivery</th>
+<th>MAWB</th>
+<th style="width: 30%;">Route</th>
+<th style="width: 10%;">Jobs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="expand-arrow">&#9656;</span></td>
+<td>
+<span class="trip-id">DO-20260312-008</span><br>
+<span class="customer-sub">TikTok</span>
+</td>
+<td><span class="date-val">12 Mar</span><br><span class="date-time">14:00</span></td>
+<td><span class="date-val">14 Mar</span></td>
+<td><span class="mawb">160-84329871</span></td>
+<td><span class="route">TikTok WH, Shenzhen &rarr; SZX Cargo Terminal</span></td>
+<td>
+<span class="job-count">4</span>
+<span class="job-summary">&middot; 3 verified</span>
+</td>
+</tr>
+<tr>
+<td><span class="expand-arrow">&#9656;</span></td>
+<td>
+<span class="trip-id">DO-20260311-007</span><br>
+<span class="customer-sub">Shein</span>
+</td>
+<td><span class="date-val">11 Mar</span><br><span class="date-time">09:30</span></td>
+<td><span class="date-val">13 Mar</span></td>
+<td><span class="mawb">160-84329883</span></td>
+<td><span class="route">Dongguan Hubscan &rarr; Hong Kong Airport</span></td>
+<td>
+<span class="job-count">3</span>
+<span class="job-summary">&middot; 1 pending</span>
+</td>
+</tr>
+<tr>
+<td><span class="expand-arrow">&#9656;</span></td>
+<td>
+<span class="trip-id">DO-20260310-006</span><br>
+<span class="customer-sub">TikTok</span>
+</td>
+<td><span class="date-val">10 Mar</span><br><span class="date-time">11:00</span></td>
+<td><span class="date-val">12 Mar</span></td>
+<td><span class="mawb">160-84329895</span></td>
+<td><span class="route">Yiwu Warehouse &rarr; SZX Airport Cargo Terminal</span></td>
+<td>
+<span class="job-count">5</span>
+<span class="job-summary">&middot; <span style="color: #059669;">all verified</span></span>
+</td>
+</tr>
+<tr>
+<td><span class="expand-arrow">&#9656;</span></td>
+<td>
+<span class="trip-id">DO-20260309-005</span><br>
+<span class="customer-sub">Shopee</span>
+</td>
+<td><span class="date-val">09 Mar</span><br><span class="date-time">15:00</span></td>
+<td><span class="date-val">11 Mar</span></td>
+<td><span class="mawb">160-84329907</span></td>
+<td><span class="route">Yantian Port &rarr; Shenzhen Airport</span></td>
+<td>
+<span class="job-count">2</span>
+<span class="job-summary">&middot; <span style="color: #dc2626;">1 cancelled</span></span>
+</td>
+</tr>
+<tr>
+<td><span class="expand-arrow">&#9656;</span></td>
+<td>
+<span class="trip-id">DO-20260309-004</span><br>
+<span class="customer-sub">AliExpress</span>
+</td>
+<td><span class="date-val">09 Mar</span><br><span class="date-time">08:00</span></td>
+<td><span class="date-val">—</span></td>
+<td><span class="mawb">160-84329919</span></td>
+<td><span class="route">Tou Warehouse &rarr; SZX Cargo Terminal</span></td>
+<td>
+<span class="job-count">3</span>
+<span class="job-summary">&middot; 2 in progress</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<!-- ============================================ -->
+<!-- VERDICT -->
+<!-- ============================================ -->
+
+<div class="verdict">
+<h3>Recommendation: Option B — Trip-First + Compact Job Summary</h3>
+<p style="font-size: 12px; line-height: 1.6; color: #374151;">
+<strong>The client's core feedback is valid:</strong> Trip ID should lead, dates should be prominent, and the current Jobs pills are too verbose. But removing job visibility entirely (Option A) sacrifices a genuinely useful signal — "is this trip healthy?" — that prevents ops from having to expand every row.
+</p>
+<p style="font-size: 12px; line-height: 1.6; color: #374151; margin-top: 8px;">
+Option B gives the client what they asked for (Trip ID first, dates prominent, MAWB visible) while replacing the bloated job pills with a compact <code>"4 &middot; 3 verified"</code> summary that takes ~10% of the table width instead of ~20%. The summary highlights the "worst" status (cancelled > pending > in progress > verified) so ops attention goes where it's needed.
+</p>
+<p style="font-size: 12px; line-height: 1.6; color: #374151; margin-top: 8px;">
+<strong>Cargo column kept</strong> — weight/bags inform truck planning and are used in fee calculations. Option C's density gain isn't worth the loss.
+</p>
+<p style="font-size: 12px; line-height: 1.6; color: #374151; margin-top: 8px;">
+<strong>Final column order:</strong> Trip &rarr; Customer &rarr; Pickup &rarr; Delivery &rarr; MAWB &rarr; Route &rarr; Cargo &rarr; Jobs (compact)
+</p>
+</div>
+
+</div>
+</body>
+</html>

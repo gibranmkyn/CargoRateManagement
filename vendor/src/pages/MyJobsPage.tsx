@@ -95,7 +95,7 @@ function sortDefaultJobs(a: FlatJob, b: FlatJob): number {
 }
 
 function exportCSV(jobs: FlatJob[]) {
-  const header = ['Shipment', 'Customer', 'Service', 'Origin', 'Destination', 'Pickup', 'Status', 'Cost'];
+  const header = ['Trip', 'Customer', 'Service', 'Origin', 'Destination', 'Pickup', 'Status', 'Cost'];
   const rows = jobs.map((j) => {
     const costMap = getJobCostMap(j);
     const costStr = Array.from(costMap.entries()).map(([c, t]) => formatCurrency(c as Currency, t)).join(' + ') || '-';
@@ -298,7 +298,7 @@ export default function MyJobsPage() {
         onMouseEnter={(e) => { if (!isRejected) e.currentTarget.style.background = '#f9fafb'; }}
         onMouseLeave={(e) => { if (!isRejected) e.currentTarget.style.background = ''; }}
       >
-        {/* Shipment */}
+        {/* Trip */}
         <td style={{ padding: '7px 12px', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' }}>
           <span
             style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#152CFF', background: 'rgba(21,44,255,0.04)', padding: '1px 5px', borderRadius: 3, border: '1px solid rgba(21,44,255,0.1)' }}
@@ -438,7 +438,7 @@ export default function MyJobsPage() {
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: '16px 16px 0 16px' }}>
         <div>
           <h1 style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.3px', color: '#111827', margin: 0 }}>My Jobs</h1>
-          <p style={{ fontSize: 11, color: '#9ca3af', margin: '2px 0 0 0' }}>Your assigned shipment jobs</p>
+          <p style={{ fontSize: 11, color: '#9ca3af', margin: '2px 0 0 0' }}>Your assigned jobs</p>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <button
@@ -536,7 +536,7 @@ export default function MyJobsPage() {
         <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, overflow: 'hidden', tableLayout: 'fixed' }}>
           <thead>
             <tr>
-              <th style={{ ...th, width: '10%' }}>Shipment</th>
+              <th style={{ ...th, width: '10%' }}>Trip</th>
               <th style={{ ...th, width: '13%' }}>Customer</th>
               <th style={{ ...th, width: '7%' }}>Service</th>
               <th style={{ ...th, width: '35%' }}>Where</th>

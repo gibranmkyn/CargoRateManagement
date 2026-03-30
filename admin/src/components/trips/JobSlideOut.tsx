@@ -363,7 +363,7 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
 
         {!isCancelled && (
           <div style={{ fontSize: 10, color: '#9ca3af', textAlign: 'center', padding: '6px', border: '1px dashed #e5e7eb', borderRadius: 4 }}>
-            Fees are configured in <Link to="/rates" style={{ color: '#152CFF', textDecoration: 'none', fontWeight: 600 }}>Rates →</Link>
+            Fees are auto-populated from vendor fee schedules
           </div>
         )}
       </div>
