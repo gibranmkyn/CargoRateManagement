@@ -317,11 +317,33 @@ export default function MyJobsPage() {
           {renderServiceTag(job.service)}
         </td>
 
-        {/* Route */}
+        {/* Where */}
         <td style={{ padding: '7px 12px', borderBottom: '1px solid #f3f4f6', fontSize: 10, color: '#374151', verticalAlign: 'middle', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 0 }}>
-          {job.origin.location === job.destination.location
-            ? job.origin.location
-            : `${job.origin.location} \u2192 ${job.destination.location}`}
+          <div>
+            {job.service.code === 'FM'
+              ? `${job.origin.location} \u2192 ${job.destination.location}`
+              : job.origin.location}
+          </div>
+          <div style={{ fontSize: 9, marginTop: 2 }}>
+            {job.service.code === 'FM' ? (
+              job.driverAssignment ? (
+                <span style={{ color: '#152CFF', display: 'inline-flex', alignItems: 'center' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ width: 8, height: 8, verticalAlign: 'middle', marginRight: 2 }}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  {job.driverAssignment.name}{job.vehicleAssignment ? ` · ${job.vehicleAssignment.plateNumber}` : ''}
+                </span>
+              ) : (
+                <span style={{ color: '#d1d5db' }}>No driver assigned</span>
+              )
+            ) : (job.service.code === 'EC' || job.service.code === 'CS') ? (
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: '#6b7280' }}>
+                MAWB {job.trip.mawb}
+              </span>
+            ) : (job.service.code === 'OH' || job.service.code === 'CR') ? (
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: '#6b7280' }}>
+                {job.trip.bags.toLocaleString()} bags &middot; {job.trip.weight.toLocaleString()} kg
+              </span>
+            ) : null}
+          </div>
         </td>
 
         {/* Pickup */}
@@ -517,7 +539,7 @@ export default function MyJobsPage() {
               <th style={{ ...th, width: '10%' }}>Shipment</th>
               <th style={{ ...th, width: '13%' }}>Customer</th>
               <th style={{ ...th, width: '7%' }}>Service</th>
-              <th style={{ ...th, width: '35%' }}>Route</th>
+              <th style={{ ...th, width: '35%' }}>Where</th>
               <th style={{ ...th, width: '10%' }}>Pickup</th>
               <th style={{ ...th, width: '11%' }}>Status</th>
               <th style={{ ...th, width: '10%', textAlign: 'right' }}>Cost</th>

@@ -37,3 +37,7 @@
 ### HMW-V07: FM Job Detail page — simplified (no legs)
 **Decision:** Status Bar → Driver & Vehicle (dropdowns, confirmed state, reassign link) → Route (two points: Pickup → Delivery) → Cargo (one line) → Fees → Proofs → Activity Log. Same layout across all 4 states. No timeline.
 **File:** `07-hmw-fm-job-detail-simplified.html`
+
+### HMW-V08: Non-FM Job Detail (OH/EC/CS/CR)
+**Decision:** Status Bar → Location (single facility) → [Hub Ops Progress for OH: Inbound/Processed/Outbound counters] → Cargo → Fees → Proofs → Log. EC/CS/CR identical layout, OH gets one extra section. No upload zone for OH (hub ops uploads via WeChat).
+**File:** `08-hmw-non-fm-job-detail.html`

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-V08: Non-FM Job Detail (OH/EC/CS/CR)</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.page { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 40px 0 6px; color: #152CFF; }
+h3 { font-size: 14px; font-weight: 700; margin: 24px 0 6px; color: #374151; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; margin-top: 0; }
+
+/* Mock page */
+.fp { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; max-width: 960px; margin-left: auto; margin-right: auto; }
+.mono { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; }
+.b { font-weight: 600; color: #111827; }
+.f { color: #9ca3af; }
+
+/* Header */
+.hd { padding: 10px 16px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hd-back { font-size: 11px; color: #9ca3af; }
+.hd-badge { font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 1px 5px; border-radius: 3px; background: #f3f4f6; border: 1px solid #e5e7eb; color: #9ca3af; }
+.hd-title { font-size: 14px; font-weight: 700; }
+.svc { font-size: 8px; font-weight: 600; padding: 1px 5px; border-radius: 99px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF; font-family: 'JetBrains Mono', monospace; }
+.hd-meta { margin-left: auto; font-size: 10px; color: #9ca3af; }
+
+/* Status bar */
+.sb { padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; }
+.sb-p { background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+.sb-ip { background: rgba(21,44,255,0.03); border-bottom: 1px solid rgba(21,44,255,0.12); }
+.sb-c { background: #fefce8; border-bottom: 1px solid #fde68a; }
+.sb-v { background: #f0fdf4; border-bottom: 1px solid #a7f3d0; }
+.chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; }
+.chip .dt { width: 4px; height: 4px; border-radius: 50%; }
+.chip-p { background: #f9fafb; border: 1px solid #e5e7eb; color: #9ca3af; }
+.chip-p .dt { background: #9ca3af; }
+.chip-ip { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); color: #152CFF; }
+.chip-ip .dt { background: #152CFF; }
+.chip-c { background: #fefce8; border: 1px solid #fde68a; color: #a16207; }
+.chip-c .dt { background: #a16207; }
+.chip-v { background: #f0fdf4; border: 1px solid #a7f3d0; color: #059669; }
+.chip-v .dt { background: #059669; }
+.hint { font-size: 10px; color: #6b7280; }
+.btn { font-family: 'Instrument Sans', sans-serif; font-size: 10px; font-weight: 600; padding: 4px 12px; border-radius: 5px; border: none; cursor: pointer; }
+.btn-b { background: #152CFF; color: #fff; }
+
+/* Sections */
+.sec { padding: 14px 16px; }
+.sec + .sec { border-top: 1px solid #f3f4f6; }
+.sec-t { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px; }
+
+/* Location */
+.loc-box { padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 6px; background: #f9fafb; }
+.loc-name { font-size: 12px; font-weight: 600; color: #111827; }
+.loc-zone { font-size: 9px; color: #6b7280; margin-top: 1px; }
+
+/* Cargo */
+.cargo { display: flex; gap: 16px; padding: 4px 0; }
+.cargo-item { display: flex; align-items: baseline; gap: 3px; }
+.cargo-l { font-size: 8px; font-weight: 600; text-transform: uppercase; color: #9ca3af; }
+.cargo-v { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #111827; }
+
+/* Fee table */
+.ft { width: 100%; border-collapse: collapse; font-size: 10px; }
+.ft thead th { font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #9ca3af; padding: 4px 8px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+.ft thead th:last-child { text-align: right; }
+.ft tbody td { padding: 5px 8px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+.ft tbody td:last-child { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600; }
+.ft tbody tr.off { opacity: 0.35; text-decoration: line-through; }
+.ft tfoot td { padding: 6px 8px; font-weight: 700; border-top: 2px solid #e5e7eb; font-size: 11px; }
+.ft tfoot td:last-child { font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+
+/* Proof */
+.proof { display: flex; align-items: center; gap: 6px; padding: 4px 0; font-size: 10px; }
+.proof-dot { width: 5px; height: 5px; border-radius: 50%; background: #152CFF; }
+.proof-name { font-weight: 500; color: #111827; }
+.proof-time { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: #9ca3af; }
+
+/* Upload zone */
+.upload { margin-top: 8px; padding: 12px; border: 2px dashed #e5e7eb; border-radius: 6px; text-align: center; font-size: 10px; color: #9ca3af; }
+.upload-cta { color: #152CFF; font-weight: 600; cursor: pointer; }
+
+/* Log */
+.log { display: flex; gap: 8px; padding: 4px 0; border-bottom: 1px solid #f3f4f6; font-size: 10px; }
+.log-t { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: #9ca3af; min-width: 80px; }
+.log-a { color: #374151; }
+.log-u { color: #6b7280; font-weight: 500; }
+.log-d { font-size: 9px; color: #9ca3af; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-V08: Non-FM Job Detail (OH/EC/CS/CR)</h1>
+<div class="hmw">What does the vendor job detail page look like for services that aren't FM Trucking? No driver, no route — just a single location, fees, and status progression.</div>
+
+<div class="context">
+<strong>Non-FM services:</strong> OH (Origin Handling), EC (Export Customs), CS (Cargo Submission), CR (Cargo Retrieval). These all happen at a single facility, not a route. There's no driver assignment (the vendor's staff at that facility handle it). The vendor views this page for status monitoring and fee reconciliation. For OH jobs, hub ops does bag scanning (ARR/PAL/DEP) via WeChat. For EC/CS/CR, the vendor updates status manually or via proof upload.
+</div>
+
+<!-- ============================================ -->
+<!-- OH Job: Origin Handling -->
+<!-- ============================================ -->
+<h2>OH Job — Origin Handling (with Hub Ops Scanning)</h2>
+<span class="label" style="background: #dbeafe; color: #1e40af;">Hub Ops Service</span>
+
+<div class="rationale">
+OH is the most complex non-FM service. Hub ops scans bags through three stages: Inbound (ARR), Processing (PAL), Outbound (DEP). The vendor dispatcher needs to see progress through these stages. The question: how do we show ARR/PAL/DEP progress without overdesigning it?
+<br><br>
+Answer: a simple inline progress row showing the three stages with counts. Not a timeline, not badges — just "Inbound: 24/24 · Processing: 18/24 · Outbound: 0/24".
+</div>
+
+<h3>State: In Progress — Hub Ops Processing</h3>
+<div class="fp">
+<div class="hd">
+<span class="hd-back">← My Jobs</span>
+<span class="hd-badge">J03</span>
+<span class="hd-title">Origin Handling</span>
+<span class="svc">OH</span>
+<span class="hd-meta"><span class="mono">DO-2603-001</span> · <span class="b" style="font-size:10px">TikTok</span> · <span class="mono">MAWB 160-84329871</span></span>
+</div>
+<div class="sb sb-ip">
+<div style="display:flex;align-items:center;gap:6px;">
+<span class="chip chip-ip"><span class="dt"></span>In Progress</span>
+<span class="hint">18/24 bags processed</span>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Location</div>
+<div class="loc-box">
+<div class="loc-name">SZX Airport Cargo Terminal</div>
+<div class="loc-zone">Shenzhen, Guangdong</div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Hub Ops Progress</div>
+<div style="display: flex; gap: 16px; padding: 4px 0;">
+<div class="cargo-item"><span class="cargo-l">Inbound</span> <span class="cargo-v" style="color:#059669;">24/24</span></div>
+<div class="cargo-item"><span class="cargo-l">Processed</span> <span class="cargo-v" style="color:#152CFF;">18/24</span></div>
+<div class="cargo-item"><span class="cargo-l">Outbound</span> <span class="cargo-v" style="color:#9ca3af;">0/24</span></div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Cargo</div>
+<div class="cargo">
+<div class="cargo-item"><span class="cargo-l">Bags</span> <span class="cargo-v">24</span></div>
+<div class="cargo-item"><span class="cargo-l">Weight</span> <span class="cargo-v">1,240 kg</span></div>
+<div class="cargo-item"><span class="cargo-l">Volume</span> <span class="cargo-v">8.4 CBM</span></div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Fee Breakdown</div>
+<table class="ft">
+<thead><tr><th>Fee</th><th>Unit</th><th>Rate</th><th>Qty</th><th>Amount</th></tr></thead>
+<tbody>
+<tr><td style="font-weight:500">前置仓操作费 (WH handling)</td><td>per kg</td><td>MYR 0.30</td><td>1,240</td><td>MYR 372</td></tr>
+<tr><td style="font-weight:500">提单费 (AWB fee)</td><td>flat</td><td>MYR 50</td><td>1</td><td>MYR 50</td></tr>
+<tr><td style="font-weight:500">装卸费 (Loading/unloading)</td><td>per kg</td><td>MYR 0.20</td><td>1,240</td><td>MYR 248</td></tr>
+<tr><td style="font-weight:500">安检费 (Security X-ray)</td><td>per kg</td><td>MYR 0.30</td><td>1,240</td><td>MYR 372</td></tr>
+<tr><td style="font-weight:500">托盘费 (Pallet)</td><td>flat</td><td>MYR 120</td><td>1</td><td>MYR 120</td></tr>
+<tr class="off"><td>仓储费 (Storage 3d free)</td><td>per kg</td><td>MYR 0.10</td><td>1,240</td><td>MYR 124</td></tr>
+</tbody>
+<tfoot><tr><td colspan="4">Total (active)</td><td>MYR 1,162</td></tr></tfoot>
+</table>
+</div>
+
+<div class="sec">
+<div class="sec-t">Proof of Service</div>
+<div class="proof"><span class="proof-dot"></span><span class="proof-name">inbound-scan-receipt.pdf</span><span class="proof-time">30 Mar 11:00 · Hub Ops Liu Wei</span></div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Activity Log</div>
+<div class="log"><span class="log-t">30 Mar 12:30</span><div><span class="log-a">Processing: 18/24 bags</span> · <span class="log-u">Hub Ops Liu Wei</span></div></div>
+<div class="log"><span class="log-t">30 Mar 11:00</span><div><span class="log-a">Inbound complete: 24/24 bags</span> · <span class="log-u">Hub Ops Liu Wei</span></div></div>
+<div class="log"><span class="log-t">30 Mar 10:45</span><div><span class="log-a">Inbound started</span> · <span class="log-u">Hub Ops Liu Wei</span></div></div>
+<div class="log"><span class="log-t">29 Mar 16:00</span><div><span class="log-a">Job created</span> · <span class="log-u">Ops Admin</span></div></div>
+</div>
+</div>
+
+<!-- ============================================ -->
+<!-- EC Job: Export Customs -->
+<!-- ============================================ -->
+<h2>EC Job — Export Customs Clearance</h2>
+<span class="label" style="background: #fef3c7; color: #92400e;">Standard Service</span>
+
+<div class="rationale">
+EC is simpler than OH. No hub ops scanning stages. The customs broker processes the declaration, and the job goes Pending → In Progress → Completed (proof uploaded) → Verified. The vendor sees location, MAWB (important for customs), fees, and proof documents.
+</div>
+
+<h3>State: Completed — Awaiting Verification</h3>
+<div class="fp">
+<div class="hd">
+<span class="hd-back">← My Jobs</span>
+<span class="hd-badge">J02</span>
+<span class="hd-title">Export Customs Clearance</span>
+<span class="svc">EC</span>
+<span class="hd-meta"><span class="mono">DO-2603-001</span> · <span class="b" style="font-size:10px">TikTok</span> · <span class="mono">MAWB 160-84329871</span></span>
+</div>
+<div class="sb sb-c">
+<div style="display:flex;align-items:center;gap:6px;">
+<span class="chip chip-c"><span class="dt"></span>Completed</span>
+<span class="hint">Waiting for Teleport verification</span>
+</div>
+<span class="mono" style="color:#a16207;">Completed 30 Mar 15:20</span>
+</div>
+
+<div class="sec">
+<div class="sec-t">Location</div>
+<div class="loc-box">
+<div class="loc-name">Huanggang Port</div>
+<div class="loc-zone">Shenzhen, Guangdong</div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Cargo</div>
+<div class="cargo">
+<div class="cargo-item"><span class="cargo-l">Bags</span> <span class="cargo-v">24</span></div>
+<div class="cargo-item"><span class="cargo-l">Weight</span> <span class="cargo-v">1,240 kg</span></div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Fee Breakdown</div>
+<table class="ft">
+<thead><tr><th>Fee</th><th>Unit</th><th>Rate</th><th>Qty</th><th>Amount</th></tr></thead>
+<tbody>
+<tr><td style="font-weight:500">报关费 (Customs declaration)</td><td>flat</td><td>MYR 120</td><td>1</td><td>MYR 120</td></tr>
+<tr><td style="font-weight:500">查验费 (Customs inspection)</td><td>flat</td><td>MYR 45</td><td>1</td><td>MYR 45</td></tr>
+<tr><td style="font-weight:500">报关服务费 (Customs service)</td><td>flat</td><td>MYR 25</td><td>1</td><td>MYR 25</td></tr>
+</tbody>
+<tfoot><tr><td colspan="4">Total</td><td>MYR 190</td></tr></tfoot>
+</table>
+</div>
+
+<div class="sec">
+<div class="sec-t">Proof of Service</div>
+<div class="proof"><span class="proof-dot"></span><span class="proof-name">customs-declaration-stamp.pdf</span><span class="proof-time">30 Mar 15:18 · Gonda</span></div>
+<div class="proof"><span class="proof-dot"></span><span class="proof-name">inspection-clearance.jpg</span><span class="proof-time">30 Mar 15:20 · Gonda</span></div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Activity Log</div>
+<div class="log"><span class="log-t">30 Mar 15:20</span><div><span class="log-a">Proof uploaded</span> · <span class="log-u">Gonda</span><div class="log-d">inspection-clearance.jpg</div></div></div>
+<div class="log"><span class="log-t">30 Mar 15:18</span><div><span class="log-a">Proof uploaded</span> · <span class="log-u">Gonda</span><div class="log-d">customs-declaration-stamp.pdf</div></div></div>
+<div class="log"><span class="log-t">30 Mar 13:00</span><div><span class="log-a">Job started</span> · <span class="log-u">Gonda</span></div></div>
+<div class="log"><span class="log-t">29 Mar 16:00</span><div><span class="log-a">Job created</span> · <span class="log-u">Ops Admin</span></div></div>
+</div>
+</div>
+
+<!-- ============================================ -->
+<!-- CS Job: Cargo Submission -->
+<!-- ============================================ -->
+<h2>CS Job — Cargo Submission</h2>
+
+<div class="rationale">
+CS follows the same pattern as EC. Single location (airport terminal), standard status flow, fees, proof. The only difference is the fee names. The page layout is identical to EC.
+</div>
+
+<h3>State: Verified</h3>
+<div class="fp">
+<div class="hd">
+<span class="hd-back">← My Jobs</span>
+<span class="hd-badge">J04</span>
+<span class="hd-title">Cargo Submission</span>
+<span class="svc">CS</span>
+<span class="hd-meta"><span class="mono">DO-2603-001</span> · <span class="b" style="font-size:10px">TikTok</span> · <span class="mono">MAWB 160-84329871</span></span>
+</div>
+<div class="sb sb-v">
+<div style="display:flex;align-items:center;gap:6px;">
+<span class="chip chip-v"><span class="dt"></span>Verified</span>
+<span class="hint">Verified by Teleport — ready for billing</span>
+</div>
+<span class="mono" style="color:#059669;">Verified 31 Mar 09:00</span>
+</div>
+
+<div class="sec">
+<div class="sec-t">Location</div>
+<div class="loc-box">
+<div class="loc-name">SZX Airport Cargo Terminal</div>
+<div class="loc-zone">Shenzhen, Guangdong</div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Cargo</div>
+<div class="cargo">
+<div class="cargo-item"><span class="cargo-l">Bags</span> <span class="cargo-v">24</span></div>
+<div class="cargo-item"><span class="cargo-l">Weight</span> <span class="cargo-v">1,240 kg</span></div>
+</div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Fee Breakdown</div>
+<table class="ft">
+<thead><tr><th>Fee</th><th>Unit</th><th>Rate</th><th>Qty</th><th>Amount</th></tr></thead>
+<tbody>
+<tr><td style="font-weight:500">地面操作费 (Ground handling)</td><td>flat</td><td>MYR 80</td><td>1</td><td>MYR 80</td></tr>
+<tr><td style="font-weight:500">安检费 (Security X-ray)</td><td>per kg</td><td>MYR 0.30</td><td>1,240</td><td>MYR 372</td></tr>
+<tr><td style="font-weight:500">货站操作费 (Terminal handling)</td><td>per kg</td><td>MYR 0.25</td><td>1,240</td><td>MYR 310</td></tr>
+</tbody>
+<tfoot><tr><td colspan="4">Total</td><td>MYR 762</td></tr></tfoot>
+</table>
+</div>
+
+<div class="sec">
+<div class="sec-t">Proof of Service</div>
+<div class="proof"><span class="proof-dot"></span><span class="proof-name">xray-submission-receipt.pdf</span><span class="proof-time">30 Mar 21:00 · Gonda</span></div>
+</div>
+
+<div class="sec">
+<div class="sec-t">Activity Log</div>
+<div class="log"><span class="log-t">31 Mar 09:00</span><div><span class="log-a">Verified</span> · <span class="log-u">Ops Admin</span></div></div>
+<div class="log"><span class="log-t">30 Mar 21:00</span><div><span class="log-a">Proof uploaded</span> · <span class="log-u">Gonda</span></div></div>
+<div class="log"><span class="log-t">30 Mar 19:00</span><div><span class="log-a">Job started</span> · <span class="log-u">Gonda</span></div></div>
+<div class="log"><span class="log-t">29 Mar 16:00</span><div><span class="log-a">Job created</span> · <span class="log-u">Ops Admin</span></div></div>
+</div>
+</div>
+
+<!-- ============================================ -->
+<!-- VERDICT -->
+<!-- ============================================ -->
+<div class="verdict">
+<h3>Non-FM Job Detail: One Layout, Service-Aware Content</h3>
+<p style="font-size: 12px; line-height: 1.6; color: #374151;">
+All non-FM services share the same page layout: <strong>Status Bar → Location → [Hub Ops Progress for OH only] → Cargo → Fees → Proofs → Activity Log</strong>
+<br><br>
+<strong>Location replaces Route.</strong> Single facility name + zone. No origin → destination. No driver assignment.
+<br><br>
+<strong>OH gets one extra section: Hub Ops Progress.</strong> Three counters — Inbound, Processed, Outbound — with bag counts. "24/24 · 18/24 · 0/24". Green when done, blue when in progress, gray when waiting. This is the only difference between OH and EC/CS/CR. Same compact inline row as Cargo. No timeline, no badges.
+<br><br>
+<strong>EC/CS/CR are identical layouts.</strong> The only thing that changes is the service name, location, and fee names. One component, different data.
+<br><br>
+<strong>Fees-first still applies for non-FM.</strong> But Location is above Fees because it's tiny (one line) and the vendor needs to confirm they're looking at the right facility before reviewing fees.
+</p>
+</div>
+
+</div>
+</body>
+</html>
