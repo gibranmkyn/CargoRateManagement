@@ -39,10 +39,10 @@ export default function JobCard({ job, index, tripId, totalJobs, onClick }: JobC
         background: '#fff',
         overflow: 'hidden',
         cursor: onClick ? 'pointer' : undefined,
-        transition: 'box-shadow 200ms',
+        transition: 'background 150ms',
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = '#fafbfc'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
     >
       {/* Body */}
       <div style={{ padding: '10px 12px' }}>

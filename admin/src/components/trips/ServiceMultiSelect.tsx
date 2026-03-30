@@ -67,7 +67,7 @@ export default function ServiceMultiSelect({ selected, onChange }: ServiceMultiS
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 right-0 mt-1 z-20 bg-white border border-[var(--color-border)] rounded-lg py-1" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+        <div className="absolute top-full left-0 right-0 mt-1 z-20 bg-white border border-[var(--color-border)] rounded-lg py-1">
           {serviceTypes.map((svc) => {
             const isSelected = selected.some((s) => s.code === svc.code);
             return (

@@ -121,7 +121,7 @@ export default function JobTable({ jobs, tripId, onStatusChange }: JobTableProps
                 <StatusBadge status={job.status} />
               </button>
               {openStatusId === job.id && (
-                <div ref={popoverRef} className="absolute top-full right-0 mt-1 z-20 bg-white border border-[var(--color-border)] rounded-lg py-1 min-w-[140px]" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+                <div ref={popoverRef} className="absolute top-full right-0 mt-1 z-20 bg-white border border-[var(--color-border)] rounded-lg py-1 min-w-[140px]">
                   {allStatuses.map((s) => (
                     <button
                       key={s}

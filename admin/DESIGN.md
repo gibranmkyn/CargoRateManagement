@@ -154,15 +154,17 @@
   - **In Progress:** Blue bar + hint text "Upload proof to complete →"
   - **Completed:** Amber bar + `[✓ Verify]` button (green)
   - **Verified:** Green bar + "Ready for billing" text. Everything read-only.
-  - **Rejected:** Red bar + rejection reason text. Reassign vendor dropdown below.
+  - **Cancelled:** Red bar + cancel reason (read-only, immutable). "Replaced By" link if replacement exists. No vendor reassignment dropdown.
 - **Sections below bar:** Route, Proof of Service, Quantities, Fees, Activity Log
+- **Cancel Job button:** Red outline at bottom of slide-out, available on Pending/In Progress. Expands inline cancel form: mandatory reason + optional "Create replacement" checkbox + vendor picker. (HMW-51)
 - **Editability rules:**
   - Pending through Completed: fees toggleable, quantities editable, proof upload available
   - Verified: everything locked — no toggles, no inputs, no upload, no proof removal
+  - Cancelled: everything immutable — cancel reason, vendor, fees permanently recorded
 - **Auto-transitions:**
   - Proof upload while Pending or In Progress → auto-transitions to Completed
   - Clicking Verify → transitions to Verified, locks everything
-  - Reassign rejected job → resets to Pending with new vendor
+- **Job linkage:** Cancelled/partial jobs show "Replaced By J05" link. Replacement/follow-up jobs show "Replaces J02" link. Both navigable.
 
 ### Create Shipment Form
 - 2-step flow: ① Shipment Details → ② Assign Vendors
@@ -212,7 +214,7 @@
 ### Unified Job Status Lifecycle
 Replaces old dual `status` + `proofStatus` model with single field:
 - **Pending** → In Progress → **Completed** (proof uploaded) → **Verified** (admin sign-off)
-- **Cancelled** = admin cancels job (3PL cannot reject — no vendor portal). Admin can reassign to a different vendor (resets to Pending) or cancel outright.
+- **Cancelled** = admin cancels job with mandatory reason (3PL cannot reject — no vendor portal). Cancelled jobs are immutable. Reassignment = cancel original + create new linked job for new vendor. See PRD Iteration 11 / HMW-51.
 
 ### Rate Management (Rates page)
 - **Single vendor dropdown** at top — shared across all service tabs
@@ -250,9 +252,7 @@ Replaces old dual `status` + `proofStatus` model with single field:
 - Display: `CNY 3,200` or `RM 450` — prefix before amount in JetBrains Mono
 
 ### Remaining Implementation
-- **Jobs page:** flat table with status pills, Group by toggle, slide-out integration (HMW-48)
-- **Unified status refactor:** replace dual `status`+`proofStatus` with single `status` field
-- **Status color refactor:** update all status-related components to 5-state system
+- **Iteration 11:** Cancellation, Reassignment & Partial Completion (HMW-51) — see PRD.md and TODOS.md
 
 ## Global CSS Rules
 1. Body font: Instrument Sans via `--font-sans` CSS variable
@@ -344,3 +344,6 @@ Replaces old dual `status` + `proofStatus` model with single field:
 | 2026-03-29 | Consistent 1400px max-width across pages | Both Shipments and Jobs pages use maxWidth: 1400px. Different widths caused a jarring shift when navigating between pages. |
 | 2026-03-29 | ~~Delivery Order~~ → Shipment | "Delivery Order" means cargo release document in freight — actively misleading. "Shipment" is industry standard (Flexport, project44, CargoWise, IATA). 1 Shipment = 1 MAWB. See PRD.md for full alternatives analysis. |
 | 2026-03-29 | 1 origin + 1 destination per shipment | Trip interface gets `origin` and `destination` fields. Jobs are parallel services at these locations, not sequential legs forming a chain. FM trucking moves goods origin→dest; other services operate at the destination. |
+| 2026-03-30 | Immutable cancellation + Cancel & Replace (HMW-51) | Cancelled jobs are immutable — no vendor swap, no reason edit. Reassignment = cancel original (mandatory reason) + create new linked job. Inline cancel form in slide-out with optional "Create replacement" checkbox. |
+| 2026-03-30 | Completion remark for partial completion | Completed jobs can have `completionRemark` (e.g., "pickup not ready"). Admin adjusts fees to partial via existing fee editing. "Create Follow-up Job" button for retries. Linked via `replacedByJobId`/`replacesJobId`. |
+| 2026-03-30 | AI slop cleanup | Deleted unused DashboardCards. VendorViewTab: cards→dense section headers. Vendor JobDetailPage: route/cargo/proofs de-cardified. Shadows removed from JobCard/JobTable/ServiceMultiSelect. Emoji icons removed from STATUS_LABELS. Vendor padding tightened. |

@@ -45,6 +45,8 @@ This is the read-heavy, action-light counterpart to Teleport OS Admin. Vendors s
 | View activity log | Yes | Yes |
 | Manage rates | Yes | No |
 | Manage master data | Yes | No |
+| Manage fleet (drivers + vehicles) | No | Yes (vendor-scoped) |
+| Assign driver + vehicle to FM jobs | No | Yes |
 | Export job data | Yes | Yes (own jobs only) |
 
 ## Data Model (Vendor's View)
@@ -119,6 +121,40 @@ Full detail for a single job. Read-heavy with limited actions.
 6. **Proof of Service** — uploaded documents with thumbnails/names, upload timestamps
    - Upload button available when status is Pending or In Progress
 7. **Activity Log** — chronological list of all events (status changes, uploads, fee changes)
+
+### F7: Fleet Management (Drivers & Vehicles)
+Vendors manage their own fleet data for FM Trucking dispatch.
+
+**Drivers:**
+- Name, phone number, WeChat ID, default vehicle (optional), active/inactive
+- CRUD table on Fleet page (new nav item)
+
+**Vehicles:**
+- Plate number, truck type (1.5T/3T/5T/8T/10T/12T/40HQ/45HQ), capacity specs, active/inactive
+- CRUD table on Fleet page
+
+### F8: Driver & Vehicle Assignment (FM Trucking Jobs)
+For FM Trucking jobs only, vendor dispatcher assigns a driver and vehicle before the job starts.
+
+- Assignment section appears on Job Detail page between Status Action Bar and Fee Breakdown (FM only)
+- Driver dropdown (from vendor's driver list) + Vehicle dropdown (filtered by truck type)
+- Assigning a driver does NOT auto-start the job. Assignment is dispatch-time, Start Job is execution-time.
+- Can reassign driver/vehicle while job is Pending or In Progress
+- Locked after Completed/Verified/Cancelled
+- Activity log records: "Assigned Driver Zhang Wei + 粤B·12345"
+
+**FM Dispatcher Journey:**
+
+| Step | Dispatcher Does | Feels | Design Supports With |
+|------|----------------|-------|---------------------|
+| 1 | Opens My Jobs, sees new Pending FM job | "What's new today?" | Active tab, Pending jobs sorted first |
+| 2 | Clicks into FM job detail | "Who should I send?" | Assignment section is first thing after status bar |
+| 3 | Picks driver from dropdown | "Zhang Wei is free, he knows this route" | Dropdown shows name + phone + default vehicle |
+| 4 | Picks vehicle (or auto-filled from driver's default) | "Done, dispatched" | Toast: "Assigned Zhang Wei + 粤B·12345" |
+| 5 | Moves on to next job | "What else?" | Back to My Jobs. Job still Pending but has driver indicator |
+| 6 | Later: driver starts job | (driver or dispatcher clicks Start Job) | Job → In Progress. Activity log: "Driver Zhang Wei — Job started" |
+| 7 | Later: checks status | "Is it done yet?" | Status chip updated, activity log shows progress |
+| 8 | Reconciles fees after completion | "Do the numbers match?" | Fee table below assignment, read-only |
 
 ### F3: Status Updates (Vendor Actions)
 Vendors can progress jobs forward through the lifecycle. They cannot go backward or skip ahead (except proof upload skipping In Progress).
@@ -217,6 +253,19 @@ Vendors can export their job data for reconciliation with their own systems.
 - **VUS-032:** As a vendor finance admin, I want to export my jobs with fee details as CSV, so I can import into our accounting system for reconciliation.
 - **VUS-033:** As a vendor finance admin, I want to see job-level quantities (bags, weight, volume) that Teleport has on record, so I can verify they match our measurements.
 
+### Fleet Management
+- **VUS-050:** As a vendor dispatcher, I want to manage a list of my company's drivers (name, phone, WeChat ID, default vehicle), so I can quickly assign them to FM jobs.
+- **VUS-051:** As a vendor dispatcher, I want to manage a list of my company's vehicles (plate number, truck type, capacity), so I can match the right vehicle to each job's requirements.
+- **VUS-052:** As a vendor dispatcher, I want to deactivate drivers and vehicles without deleting them, so historical job records still reference the correct driver/vehicle.
+
+### Driver & Vehicle Assignment (FM Trucking)
+- **VUS-060:** As a vendor dispatcher, I want to assign a driver and vehicle to an FM Trucking job from my fleet master data, so I can dispatch the right person and truck.
+- **VUS-061:** As a vendor dispatcher, I want the vehicle dropdown filtered by compatible truck type, so I don't accidentally assign a 1.5T truck to an 8T job.
+- **VUS-062:** As a vendor dispatcher, I want to see the assigned driver name + vehicle plate under the route in the job list, so I can scan which FM jobs still need a driver without opening each one. (HMW-V03 — sub-line under Route column)
+- **VUS-063:** As a vendor dispatcher, I want to reassign a different driver/vehicle while the job is Pending or In Progress, so I can handle schedule changes.
+- **VUS-064:** As a vendor dispatcher, I want driver/vehicle assignment locked after the job is Completed, so the billing record is immutable.
+- **VUS-065:** As a vendor dispatcher, I want assigning a driver to be separate from starting the job, so I can dispatch in the morning and the driver starts when they arrive at pickup.
+
 ### Notifications (Future — v2)
 - **VUS-040:** As a vendor operator, I want to be notified when a new job is assigned to me, so I don't have to constantly check the app.
 - **VUS-041:** As a vendor operator, I want to be notified when a job is cancelled, so I can stop work immediately.
@@ -225,26 +274,33 @@ Vendors can export their job data for reconciliation with their own systems.
 ## Pages & Navigation
 
 ### Navigation
-`My Jobs` — single primary page. Minimal nav for v1.
+`My Jobs | Fleet` — two nav items.
 
-Future: `My Jobs | Reconciliation | Settings`
+Future: `My Jobs | Fleet | Reconciliation | Settings`
 
 ### Page: My Jobs (`/jobs`)
 - Flat table with filters (status pills, service pills, date range)
 - Click row → navigates to job detail page
 - Stats bar at top: `12 jobs | 3 pending | 5 in progress | 2 completed | 2 verified`
+- FM jobs show driver + vehicle sub-line under Route column (HMW-V03)
 - Export CSV button in header
 
-### Page: Job Detail (`/jobs/:jobId`)
-- Full job detail with sections: header, status action bar, route, cargo, fees, proofs, activity log
+### Page: Job Detail (`/jobs/:tripId/:jobId`)
+- Full job detail with sections: header, status action bar, [driver assignment for FM], fees, route + cargo, proofs, activity log
+- For FM jobs: Driver & Vehicle Assignment section between Status Action Bar and Fee Breakdown
 - Back navigation to job list
 - Status action bar with contextual actions (Start Job / Upload Proof / read-only states)
+
+### Page: Fleet (`/fleet`)
+- Two tabs: Drivers | Vehicles
+- **Drivers tab:** CRUD table with Name, Phone, WeChat ID, Default Vehicle, Status (active/inactive). Stats bar. [+ Add Driver] button.
+- **Vehicles tab:** CRUD table with Plate, Truck Type, Capacity, Assigned Driver, Status (active/inactive). Stats bar. [+ Add Vehicle] button.
 
 ## Design Direction
 
 See `DESIGN.md` (this folder) for the full design spec. Key adaptations from Teleport OS Admin:
 - **Same design tokens** — colors, typography, spacing, status system. One platform, two perspectives.
-- **Simpler navigation** — 1 nav item (My Jobs) + vendor identity on the right. No rates, master data, or shipments view.
+- **Two nav items** — My Jobs + Fleet. Vendor identity on the right. No rates, admin master data, or shipments view.
 - **Full-page job detail** (not slide-out) — more room for fee reconciliation table + proof uploads.
 - **Responsive from day 1** (768px+) — vendors are on-site at warehouses/terminals.
 - **Read-only fees/quantities** — view for reconciliation, cannot edit.
@@ -301,15 +357,32 @@ See `design-preview.html` (this folder) for visual mockups of all screens.
 - [ ] Cancelled job visibility with reason
 - [ ] CSV export
 
-### v1.1 — Reconciliation
+### v1.1 — FM Dispatch (Driver & Vehicle Assignment)
+- [ ] Fleet page with Drivers and Vehicles tabs (CRUD)
+- [ ] Driver master data: name, phone, WeChat ID, default vehicle, active/inactive
+- [ ] Vehicle master data: plate number, truck type, capacity, active/inactive
+- [ ] Driver & Vehicle Assignment section on FM job detail (between Status Action Bar and Fees)
+- [ ] Driver + vehicle sub-line under Route in job list (HMW-V03)
+- [ ] Assignment locked after Completed
+- [ ] Activity log: "Assigned Driver Zhang Wei + 粤B·12345"
+- [ ] "Fleet" nav item added to vendor navbar
+
+### v1.2 — Reconciliation
 - [ ] Fee discrepancy flagging (vendor can mark "doesn't match our records")
 - [ ] Batch reconciliation view (date range, fee totals, exportable)
 - [ ] Notification badges (new jobs, cancellations, verifications)
 
-### v2.0 — Mobile + Notifications
-- [ ] Responsive/mobile layout
+### v2.0 — WeChat Mini Program (Driver Access)
+- [ ] WeChat Mini Program for drivers assigned to FM jobs
+- [ ] Driver sees: pickup/delivery locations, pickup time, cargo details, customer name
+- [ ] Driver status updates: arrived at pickup, departed, arrived at delivery
+- [ ] Driver proof photo upload from phone camera
+- [ ] Status updates flow back to vendor app + admin app
+- [ ] Activity log entries with driver name as actor
+
+### v2.1 — Mobile + Notifications
+- [ ] Responsive/mobile layout for vendor web app
 - [ ] Push notifications (new assignment, cancellation, verification)
-- [ ] Photo capture from device camera (not just file upload)
 - [ ] Offline support for proof photos (upload when back online)
 
 ### v3.0 — Full Portal

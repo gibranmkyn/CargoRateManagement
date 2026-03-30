@@ -52,14 +52,29 @@ The vendor app uses the exact same design tokens as the admin app. A vendor and 
 ### Job Detail — Full Page (NOT Slide-Out)
 The admin uses a 380px slide-out panel because ops planners rapidly scan a table and peek at jobs. Vendors open one job, review everything, take action, move on. Full page gives more room for the fee reconciliation table.
 
-**Layout:**
+**Layout — Service-Adaptive:**
 - **Header:** Back link ("← My Jobs") + Job ID badge + service name + service tag + DO ref + customer + MAWB
 - **Status Action Bar:** Full-width colored bar below header. Same 5-color treatment as admin slide-out bar.
-- **Body:** Sections ordered by priority, not by convention (HMW-V02):
-  1. **Fee Breakdown** — full-width, immediately after action bar. Lead with reconciliation data.
-  2. **Route + Cargo** — side-by-side on desktop (Route left, Cargo right). Stacks on tablet.
-  3. **Proof of Service** — file list + upload zone
-  4. **Activity Log** — reverse chronological
+- **Body:** Same skeleton, adaptive middle section per service type:
+
+**FM Trucking layout:**
+  1. **Status Action Bar** (existing)
+  2. **Dispatch Assignment** — driver dropdown + vehicle dropdown + truck type badge. FM-only. Locked after Completed. See Fleet Management below.
+  3. **Pickup/Delivery Timeline** — two-point layout: Origin (location + pickup datetime in big mono) → arrow → Destination (location + delivery datetime). Times are the most important data for FM.
+  4. **Cargo** — compact inline row: `24 bags · 1,280 kg · 8.4 CBM`
+  5. **Fee Breakdown** — full-width table (read-only)
+  6. **Proof of Service** — multi-file upload zone + file list rows
+  7. **Activity Log** — reverse chronological
+
+**EC / CS / CR / OH layout:**
+  1. **Status Action Bar** (existing)
+  2. **Location** — single facility name + zone (these are single-location services, no origin→destination)
+  3. **Cargo** — compact inline row
+  4. **Fee Breakdown** — full-width table (read-only)
+  5. **Proof of Service** — multi-file upload zone + file list rows
+  6. **Activity Log** — reverse chronological
+
+No dispatch assignment (not applicable to non-FM). No origin→destination (single location).
 
 **Status Action Bar (vendor-adapted):**
 
@@ -120,6 +135,9 @@ Unlike the admin app (desktop-only, min 1200px), the vendor app targets 768px+.
 | 2026-03-29 | Same design tokens, different layout | Coherent platform feel. Vendor and admin discussing the same job see the same visual language. |
 | 2026-03-29 | Condensed table at 768px (HMW-V01) | Drop Route column, stack Customer+Shipment into one cell. Status and Cost always visible. Route available in detail page. |
 | 2026-03-29 | Fees-first section ordering (HMW-V02) | App exists for reconciliation — lead with the money. Vendor already knows the route. Order: Fees → Route + Cargo → Proofs → Activity Log. |
+| 2026-03-30 | FM assignment above fees (design review) | For FM jobs only, Driver & Vehicle Assignment section sits between Status Action Bar and Fee Breakdown. Dispatcher's first question is "who's driving?" not "are the fees right?" Non-FM services skip this section. |
+| 2026-03-30 | Assignment ≠ Start Job (design review) | Assigning a driver is dispatch-time (morning). Starting the job is execution-time (driver arrives at pickup). Separate actions, separate moments. |
+| 2026-03-30 | Driver sub-line under Route (HMW-V03) | Driver name + vehicle plate shown as sub-line under route text in job list. Blue for assigned, faint gray "No driver assigned" for unassigned FM jobs. Non-FM shows nothing. Route column has most width (35%) and strongest semantic link. |
 
 ## Preview
 Open `vendor/design-preview.html` in a browser to see the proposed screens:

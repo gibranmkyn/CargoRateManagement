@@ -23,12 +23,12 @@ function fmtDateShort(dt: string) {
 const sectionTitle: React.CSSProperties = { fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 10 };
 
 // Status-based labels (unified lifecycle — TODO-020)
-const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; border: string; icon: string }> = {
-  Pending: { label: 'Pending', color: '#9ca3af', bg: '#f3f4f6', border: '#e5e7eb', icon: '○' },
-  'In Progress': { label: 'In Progress', color: '#152CFF', bg: 'rgba(21,44,255,0.04)', border: 'rgba(21,44,255,0.15)', icon: '◉' },
-  Completed: { label: 'Completed', color: '#b45309', bg: 'rgba(180,83,9,0.04)', border: 'rgba(180,83,9,0.15)', icon: '📄' },
-  Verified: { label: 'Verified', color: '#059669', bg: '#f0fdf4', border: '#a7f3d0', icon: '✓' },
-  Cancelled: { label: 'Cancelled', color: '#dc2626', bg: '#fef2f2', border: '#fecaca', icon: '✕' },
+const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  Pending: { label: 'Pending', color: '#9ca3af', bg: '#f3f4f6', border: '#e5e7eb' },
+  'In Progress': { label: 'In Progress', color: '#152CFF', bg: 'rgba(21,44,255,0.04)', border: 'rgba(21,44,255,0.15)' },
+  Completed: { label: 'Completed', color: '#b45309', bg: 'rgba(180,83,9,0.04)', border: 'rgba(180,83,9,0.15)' },
+  Verified: { label: 'Verified', color: '#059669', bg: '#f0fdf4', border: '#a7f3d0' },
+  Cancelled: { label: 'Cancelled', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
 };
 
 interface Props {

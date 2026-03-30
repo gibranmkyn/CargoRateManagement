@@ -52,7 +52,7 @@ export default function LoginPage() {
           background: '#fff',
           borderRadius: 6,
           border: '1px solid #e5e7eb',
-          padding: 32,
+          padding: 20,
         }}
       >
         {/* Logo */}

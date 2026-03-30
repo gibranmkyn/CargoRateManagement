@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-V03: Driver Assignment Visibility in Job List</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+/* Shared mockup tokens */
+.mock-nav { height: 40px; padding: 0 12px; background: #111827; display: flex; align-items: center; gap: 8px; }
+.mock-nav .logo { width: 18px; height: 18px; background: #152CFF; border-radius: 4px; }
+.mock-nav .logo-text { font-weight: 700; font-size: 12px; color: #fff; }
+.mock-nav .logo-label { font-size: 9px; color: rgba(255,255,255,0.35); }
+.mock-nav .nav-active { font-size: 11px; padding: 3px 8px; border-radius: 3px; color: #fff; background: rgba(255,255,255,0.1); font-weight: 600; }
+.mock-nav .vendor-id { margin-left: auto; font-size: 10px; color: rgba(255,255,255,0.6); font-weight: 600; }
+
+.mock-filters { padding: 6px 12px; border-bottom: 1px solid #e5e7eb; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.mock-pill { font-size: 10px; padding: 2px 8px; border-radius: 3px; border: 1px solid #e5e7eb; color: #6b7280; font-weight: 500; }
+.mock-pill.active { background: #111827; color: #fff; border-color: #111827; font-weight: 600; }
+.mock-pill .ct { font-family: 'JetBrains Mono', monospace; font-size: 9px; opacity: 0.6; margin-left: 3px; }
+
+table.mt { width: 100%; border-collapse: collapse; font-size: 11px; }
+table.mt thead th { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #f9fafb; padding: 5px 10px; text-align: left; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+table.mt tbody td { padding: 7px 10px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: middle; }
+table.mt tbody tr:hover { background: #f9fafb; }
+
+.chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; white-space: nowrap; }
+.chip .dot { width: 4px; height: 4px; border-radius: 50%; }
+.chip-pending { background: #f9fafb; border: 1px solid #e5e7eb; color: #9ca3af; }
+.chip-pending .dot { background: #9ca3af; }
+.chip-progress { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); color: #152CFF; }
+.chip-progress .dot { background: #152CFF; }
+
+.svc { font-size: 8px; font-weight: 600; padding: 1px 4px; border-radius: 99px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF; font-family: 'JetBrains Mono', monospace; }
+.bold { font-weight: 600; color: #111827; }
+.faint { color: #9ca3af; }
+.mono { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; }
+.cost { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: #111827; text-align: right; }
+
+/* Driver-specific */
+.driver-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 9px; color: #374151; font-weight: 500; }
+.driver-badge svg { width: 10px; height: 10px; color: #152CFF; }
+.driver-icon { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 3px; background: rgba(21,44,255,0.08); margin-left: 4px; }
+.driver-icon svg { width: 8px; height: 8px; color: #152CFF; }
+.no-driver { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 3px; background: #f3f4f6; margin-left: 4px; }
+.no-driver svg { width: 8px; height: 8px; color: #d1d5db; }
+
+.person-svg { display: inline-block; vertical-align: middle; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-V03: Driver Assignment Visibility in Job List</h1>
+<div class="hmw">How might we show the dispatcher which FM jobs already have a driver assigned, so they can scan the job list and quickly spot "which jobs still need a driver" without opening each one?</div>
+
+<div class="context">
+<strong>Context:</strong> The vendor dispatcher opens My Jobs each morning with ~10-20 jobs. Some are FM Trucking (need a driver), others are EC/CS/CR/OH (no driver needed). Among the FM jobs, some already have a driver assigned from yesterday, some are new and need assignment. The dispatcher's first task is: "scan the list, find the unassigned FM jobs, assign drivers." This scan needs to be fast. The question is how much driver info belongs in the list vs the detail page.
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION A: Driver Column -->
+<!-- ============================================ -->
+<h2>Option A: Dedicated "Driver" Column</h2>
+<span class="label" style="background: #dbeafe; color: #1e40af;">Most Info</span>
+
+<div class="rationale">
+Add a "Driver" column to the table. FM jobs show the assigned driver name (or "—" if unassigned). Non-FM services show "—" since they don't have drivers. This gives the most information at a glance but adds a column to an already-dense table.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Dispatcher sees driver name without clicking into the job<br>
+• Can answer "which jobs is Zhang Wei on today?" by scanning one column<br>
+• Unassigned FM jobs are obvious ("—" in the driver column)</div>
+<div class="cons"><strong>Cons</strong><br>
+• Adds an 8th column to a 7-column table. At 768px this breaks the condensed layout.<br>
+• Non-FM jobs show "—" in this column, wasting space for EC/CS/CR/OH vendors<br>
+• Table becomes wider than admin Jobs page, breaking "same system" feel<br>
+• HaleSun does FM + OH. Only FM rows use the column. 40-60% of rows show "—".</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="mock-nav">
+<div class="logo"></div>
+<span class="logo-text">Teleport OS</span>
+<span class="logo-label">Vendor</span>
+<span class="mock-pill active" style="margin-left: 12px; font-size: 10px; border: none;">My Jobs</span>
+<span class="nav-active" style="font-size: 11px; padding: 3px 8px; border-radius: 3px; color: rgba(255,255,255,0.5); background: transparent;">Fleet</span>
+<span class="vendor-id">HaleSun</span>
+</div>
+<div class="mock-filters">
+<span class="mock-pill active">Active <span class="ct">8</span></span>
+<span class="mock-pill">Completed <span class="ct">3</span></span>
+<span class="mock-pill">Verified <span class="ct">5</span></span>
+<span class="mock-pill">All <span class="ct">18</span></span>
+</div>
+<table class="mt">
+<thead><tr>
+<th style="width: 9%">Shipment</th>
+<th style="width: 11%">Customer</th>
+<th style="width: 6%">Svc</th>
+<th style="width: 26%">Route</th>
+<th style="width: 8%">Pickup</th>
+<th style="width: 12%">Driver</th>
+<th style="width: 10%">Status</th>
+<th style="width: 9%; text-align: right;">Cost</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><span class="mono">DO-2603-001</span></td>
+<td class="bold">TikTok</td>
+<td><span class="svc">FM</span></td>
+<td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">TikTok WH, Shenzhen → SZX Airport</td>
+<td><span class="mono">30 Mar<br>08:00</span></td>
+<td><span class="driver-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="person-svg" style="width:10px;height:10px;color:#152CFF"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Zhang Wei</span></td>
+<td><span class="chip chip-pending"><span class="dot"></span>Pending</span></td>
+<td class="cost">MYR 310</td>
+</tr>
+<tr>
+<td><span class="mono">DO-2603-003</span></td>
+<td class="bold">Shopee</td>
+<td><span class="svc">FM</span></td>
+<td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">Yantian Port → Shenzhen Airport</td>
+<td><span class="mono">30 Mar<br>10:00</span></td>
+<td style="color: #d1d5db;">—</td>
+<td><span class="chip chip-pending"><span class="dot"></span>Pending</span></td>
+<td class="cost">MYR 520</td>
+</tr>
+<tr>
+<td><span class="mono">DO-2603-002</span></td>
+<td class="bold">Shopee</td>
+<td><span class="svc">CR</span></td>
+<td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">Yantian Port</td>
+<td><span class="mono">30 Mar<br>09:00</span></td>
+<td style="color: #d1d5db;">—</td>
+<td><span class="chip chip-progress"><span class="dot"></span>In Progress</span></td>
+<td class="cost">CNY 400</td>
+</tr>
+<tr>
+<td><span class="mono">DO-2603-005</span></td>
+<td class="bold">Shein</td>
+<td><span class="svc">OH</span></td>
+<td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">SZX Airport Cargo Terminal</td>
+<td><span class="mono">30 Mar<br>14:00</span></td>
+<td style="color: #d1d5db;">—</td>
+<td><span class="chip chip-pending"><span class="dot"></span>Pending</span></td>
+<td class="cost">MYR 338</td>
+</tr>
+<tr>
+<td><span class="mono">DO-2603-007</span></td>
+<td class="bold">Temu</td>
+<td><span class="svc">FM</span></td>
+<td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">Qianhai FTZ → Huanggang Port</td>
+<td><span class="mono">30 Mar<br>15:00</span></td>
+<td><span class="driver-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="person-svg" style="width:10px;height:10px;color:#152CFF"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Li Ming</span></td>
+<td><span class="chip chip-progress"><span class="dot"></span>In Progress</span></td>
+<td class="cost">MYR 480</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION B: Icon Indicator -->
+<!-- ============================================ -->
+<h2>Option B: Small Icon Indicator Next to Status</h2>
+<span class="label" style="background: #fef3c7; color: #92400e;">Balanced</span>
+
+<div class="rationale">
+No new column. Instead, show a small person icon next to the status chip for FM jobs that have a driver assigned. Unassigned FM jobs show a faded/empty person icon. Non-FM jobs show nothing. Hover the icon to see driver name + plate in a tooltip. This keeps the table at 7 columns while still letting the dispatcher scan for unassigned jobs.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Table stays at 7 columns, no width breakage<br>
+• Unassigned FM jobs visually distinct (faded icon vs blue icon)<br>
+• Non-FM services unaffected (no icon, no wasted space)<br>
+• Works at 768px condensed layout without changes</div>
+<div class="cons"><strong>Cons</strong><br>
+• Can't see driver NAME without hovering or clicking<br>
+• Icon is small (14px), might be missed by some users<br>
+• Hover tooltips don't work on tablet (touch devices)</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="mock-nav">
+<div class="logo"></div>
+<span class="logo-text">Teleport OS</span>
+<span class="logo-label">Vendor</span>
+<span class="mock-pill active" style="margin-left: 12px; font-size: 10px; border: none;">My Jobs</span>
+<span class="nav-active" style="font-size: 11px; padding: 3px 8px; border-radius: 3px; color: rgba(255,255,255,0.5); background: transparent;">Fleet</span>
+<span class="vendor-id">HaleSun</span>
+</div>
+<div class="mock-filters">
+<span class="mock-pill active">Active <span class="ct">8</span></span>
+<span class="mock-pill">Completed <span class="ct">3</span></span>
+<span class="mock-pill">Verified <span class="ct">5</span></span>
+<span class="mock-pill">All <span class="ct">18</span></span>
+</div>
+<table class="mt">
+<thead><tr>
+<th style="width: 10%">Shipment</th>
+<th style="width: 13%">Customer</th>
+<th style="width: 7%">Svc</th>
+<th style="width: 32%">Route</th>
+<th style="width: 10%">Pickup</th>
+<th style="width: 13%">Status</th>
+<th style="width: 10%; text-align: right;">Cost</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><span class="mono">DO-2603-001</span></td>
+<td class="bold">TikTok</td>
+<td><span class="svc">FM</span></td>
+<td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">TikTok WH, Shenzhen → SZX Airport</td>
+<td><span class="mono">30 Mar<br>08:00</span></td>
+<td>
+<span class="chip chip-pending"><span class="dot"></span>Pending</span>
+<span class="driver-icon" title="Zhang Wei · 粤B·12345"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:8px;height:8px;color:#152CFF"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+</td>
+<td class="cost">MYR 310</td>
+</tr>
+<tr>
+<td><span class="mono">DO-2603-003</span></td>
+<td class="bold">Shopee</td>
+<td><span class="svc">FM</span></td>
+<td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">Yantian Port → Shenzhen Airport</td>
+<td><span class="mono">30 Mar<br>10:00</span></td>
+<td>
+<span class="chip chip-pending"><span class="dot"></span>Pending</span>
+<span class="no-driver" title="No driver assigned"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:8px;height:8px;color:#d1d5db"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+</td>
+<td class="cost">MYR 520</td>
+</tr>
+<tr>
+<td><span class="mono">DO-2603-002</span></td>
+<td class="bold">Shopee</td>
+<td><span class="svc">CR</span></td>
+<td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">Yantian Port</td>
+<td><span class="mono">30 Mar<br>09:00</span></td>
+<td><span class="chip chip-progress"><span class="dot"></span>In Progress</span></td>
+<td class="cost">CNY 400</td>
+</tr>
+<tr>
+<td><span class="mono">DO-2603-005</span></td>
+<td class="bold">Shein</td>
+<td><span class="svc">OH</span></td>
+<td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">SZX Airport Cargo Terminal</td>
+<td><span class="mono">30 Mar<br>14:00</span></td>
+<td><span class="chip chip-pending"><span class="dot"></span>Pending</span></td>
+<td class="cost">MYR 338</td>
+</tr>
+<tr>
+<td><span class="mono">DO-2603-007</span></td>
+<td class="bold">Temu</td>
+<td><span class="svc">FM</span></td>
+<td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">Qianhai FTZ → Huanggang Port</td>
+<td><span class="mono">30 Mar<br>15:00</span></td>
+<td>
+<span class="chip chip-progress"><span class="dot"></span>In Progress</span>
+<span class="driver-icon" title="Li Ming · 粤B·67890"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:8px;height:8px;color:#152CFF"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+</td>
+<td class="cost">MYR 480</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION C: Stacked Sub-line -->
+<!-- ============================================ -->
+<h2>Option C: Driver Name as Sub-line Under Customer</h2>
+<span class="label" style="background: #f0fdf4; color: #059669;">Recommended</span>
+
+<div class="rationale">
+No new column, no icon. For FM jobs with a driver assigned, show the driver name as a small sub-line under the customer name (same cell, stacked). Unassigned FM jobs show "No driver" in faint text. Non-FM jobs show nothing under the customer name. This uses the existing Customer column's vertical space and avoids adding visual elements to the Status column, which should stay focused on status.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Driver name visible without hover or click<br>
+• No new column, table stays at 7 columns<br>
+• Status column stays clean (status only)<br>
+• Sub-line pattern is already used in the table (shipment DO# under customer)<br>
+• Works on tablet and touch devices (no hover dependency)<br>
+• "No driver" faint text makes unassigned FM jobs scannable</div>
+<div class="cons"><strong>Cons</strong><br>
+• Customer cell gets taller for FM jobs (2 lines vs 1 for non-FM)<br>
+• Driver info is coupled with customer info spatially, which is semantically odd<br>
+• If the sub-line already shows DO# below customer, adding driver makes it 3 lines</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="mock-nav">
+<div class="logo"></div>
+<span class="logo-text">Teleport OS</span>
+<span class="logo-label">Vendor</span>
+<span class="mock-pill active" style="margin-left: 12px; font-size: 10px; border: none;">My Jobs</span>
+<span class="nav-active" style="font-size: 11px; padding: 3px 8px; border-radius: 3px; color: rgba(255,255,255,0.5); background: transparent;">Fleet</span>
+<span class="vendor-id">HaleSun</span>
+</div>
+<div class="mock-filters">
+<span class="mock-pill active">Active <span class="ct">8</span></span>
+<span class="mock-pill">Completed <span class="ct">3</span></span>
+<span class="mock-pill">Verified <span class="ct">5</span></span>
+<span class="mock-pill">All <span class="ct">18</span></span>
+</div>
+<table class="mt">
+<thead><tr>
+<th style="width: 10%">Shipment</th>
+<th style="width: 13%">Customer</th>
+<th style="width: 7%">Svc</th>
+<th style="width: 35%">Route</th>
+<th style="width: 10%">Pickup</th>
+<th style="width: 11%">Status</th>
+<th style="width: 10%; text-align: right;">Cost</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><span class="mono">DO-2603-001</span></td>
+<td>
+<div class="bold">TikTok</div>
+<div style="font-size: 9px; color: #152CFF; font-weight: 500; margin-top: 1px;">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:8px;height:8px;vertical-align:middle;margin-right:2px;color:#152CFF"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Zhang Wei
+</div>
+</td>
+<td><span class="svc">FM</span></td>
+<td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">TikTok WH, Shenzhen → SZX Airport</td>
+<td><span class="mono">30 Mar<br>08:00</span></td>
+<td><span class="chip chip-pending"><span class="dot"></span>Pending</span></td>
+<td class="cost">MYR 310</td>
+</tr>
+<tr>
+<td><span class="mono">DO-2603-003</span></td>
+<td>
+<div class="bold">Shopee</div>
+<div style="font-size: 9px; color: #d1d5db; font-weight: 500; margin-top: 1px;">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:8px;height:8px;vertical-align:middle;margin-right:2px;color:#d1d5db"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>No driver
+</div>
+</td>
+<td><span class="svc">FM</span></td>
+<td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">Yantian Port → Shenzhen Airport</td>
+<td><span class="mono">30 Mar<br>10:00</span></td>
+<td><span class="chip chip-pending"><span class="dot"></span>Pending</span></td>
+<td class="cost">MYR 520</td>
+</tr>
+<tr>
+<td><span class="mono">DO-2603-002</span></td>
+<td>
+<div class="bold">Shopee</div>
+</td>
+<td><span class="svc">CR</span></td>
+<td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">Yantian Port</td>
+<td><span class="mono">30 Mar<br>09:00</span></td>
+<td><span class="chip chip-progress"><span class="dot"></span>In Progress</span></td>
+<td class="cost">CNY 400</td>
+</tr>
+<tr>
+<td><span class="mono">DO-2603-005</span></td>
+<td>
+<div class="bold">Shein</div>
+</td>
+<td><span class="svc">OH</span></td>
+<td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">SZX Airport Cargo Terminal</td>
+<td><span class="mono">30 Mar<br>14:00</span></td>
+<td><span class="chip chip-pending"><span class="dot"></span>Pending</span></td>
+<td class="cost">MYR 338</td>
+</tr>
+<tr>
+<td><span class="mono">DO-2603-007</span></td>
+<td>
+<div class="bold">Temu</div>
+<div style="font-size: 9px; color: #152CFF; font-weight: 500; margin-top: 1px;">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:8px;height:8px;vertical-align:middle;margin-right:2px;color:#152CFF"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Li Ming
+</div>
+</td>
+<td><span class="svc">FM</span></td>
+<td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">Qianhai FTZ → Huanggang Port</td>
+<td><span class="mono">30 Mar<br>15:00</span></td>
+<td><span class="chip chip-progress"><span class="dot"></span>In Progress</span></td>
+<td class="cost">MYR 480</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION D: Sub-line Under Route -->
+<!-- ============================================ -->
+<h2>Option D: Driver + Vehicle as Sub-line Under Route</h2>
+<span class="label" style="background: #f0fdf4; color: #059669;">Recommended</span>
+
+<div class="rationale">
+Show driver name + vehicle plate as a small sub-line under the route text. The route column has the most horizontal space (35%) and the driver/vehicle is semantically linked to the route, not the customer. The driver IS the person executing that route. Unassigned FM jobs show "No driver assigned" in faint text. Non-FM jobs show nothing.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Semantic fit: driver + vehicle belong to the route, not the customer<br>
+• Route column has the most width (35%), plenty of room for a sub-line<br>
+• Driver name + plate visible without hover or click (works on tablets)<br>
+• No new column, table stays at 7 columns<br>
+• "No driver assigned" in faint text makes unassigned FM jobs instantly scannable<br>
+• At 768px condensed layout, Route column is dropped anyway, so sub-line info moves to detail page naturally</div>
+<div class="cons"><strong>Cons</strong><br>
+• Route cell gets taller for FM jobs (route text + driver sub-line)<br>
+• Route text is already truncated with ellipsis. Adding a second line means more vertical space</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="mock-nav">
+<div class="logo"></div>
+<span class="logo-text">Teleport OS</span>
+<span class="logo-label">Vendor</span>
+<span class="mock-pill active" style="margin-left: 12px; font-size: 10px; border: none;">My Jobs</span>
+<span class="nav-active" style="font-size: 11px; padding: 3px 8px; border-radius: 3px; color: rgba(255,255,255,0.5); background: transparent;">Fleet</span>
+<span class="vendor-id">HaleSun</span>
+</div>
+<div class="mock-filters">
+<span class="mock-pill active">Active <span class="ct">8</span></span>
+<span class="mock-pill">Completed <span class="ct">3</span></span>
+<span class="mock-pill">Verified <span class="ct">5</span></span>
+<span class="mock-pill">All <span class="ct">18</span></span>
+</div>
+<table class="mt">
+<thead><tr>
+<th style="width: 10%">Shipment</th>
+<th style="width: 13%">Customer</th>
+<th style="width: 7%">Svc</th>
+<th style="width: 35%">Route</th>
+<th style="width: 10%">Pickup</th>
+<th style="width: 11%">Status</th>
+<th style="width: 10%; text-align: right;">Cost</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><span class="mono">DO-2603-001</span></td>
+<td class="bold">TikTok</td>
+<td><span class="svc">FM</span></td>
+<td>
+<div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">TikTok WH, Shenzhen → SZX Airport</div>
+<div style="font-size: 9px; color: #152CFF; font-weight: 500; margin-top: 2px;">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:8px;height:8px;vertical-align:middle;margin-right:2px;color:#152CFF"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Zhang Wei · <span style="font-family:'JetBrains Mono',monospace;font-size:8px;">粤B·12345</span>
+</div>
+</td>
+<td><span class="mono">30 Mar<br>08:00</span></td>
+<td><span class="chip chip-pending"><span class="dot"></span>Pending</span></td>
+<td class="cost">MYR 310</td>
+</tr>
+<tr>
+<td><span class="mono">DO-2603-003</span></td>
+<td class="bold">Shopee</td>
+<td><span class="svc">FM</span></td>
+<td>
+<div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Yantian Port → Shenzhen Airport</div>
+<div style="font-size: 9px; color: #d1d5db; font-weight: 500; margin-top: 2px;">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:8px;height:8px;vertical-align:middle;margin-right:2px;color:#d1d5db"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>No driver assigned
+</div>
+</td>
+<td><span class="mono">30 Mar<br>10:00</span></td>
+<td><span class="chip chip-pending"><span class="dot"></span>Pending</span></td>
+<td class="cost">MYR 520</td>
+</tr>
+<tr>
+<td><span class="mono">DO-2603-002</span></td>
+<td class="bold">Shopee</td>
+<td><span class="svc">CR</span></td>
+<td>
+<div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Yantian Port</div>
+</td>
+<td><span class="mono">30 Mar<br>09:00</span></td>
+<td><span class="chip chip-progress"><span class="dot"></span>In Progress</span></td>
+<td class="cost">CNY 400</td>
+</tr>
+<tr>
+<td><span class="mono">DO-2603-005</span></td>
+<td class="bold">Shein</td>
+<td><span class="svc">OH</span></td>
+<td>
+<div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">SZX Airport Cargo Terminal</div>
+</td>
+<td><span class="mono">30 Mar<br>14:00</span></td>
+<td><span class="chip chip-pending"><span class="dot"></span>Pending</span></td>
+<td class="cost">MYR 338</td>
+</tr>
+<tr>
+<td><span class="mono">DO-2603-007</span></td>
+<td class="bold">Temu</td>
+<td><span class="svc">FM</span></td>
+<td>
+<div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Qianhai FTZ → Huanggang Port</div>
+<div style="font-size: 9px; color: #152CFF; font-weight: 500; margin-top: 2px;">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:8px;height:8px;vertical-align:middle;margin-right:2px;color:#152CFF"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Li Ming · <span style="font-family:'JetBrains Mono',monospace;font-size:8px;">粤B·67890</span>
+</div>
+</td>
+<td><span class="mono">30 Mar<br>15:00</span></td>
+<td><span class="chip chip-progress"><span class="dot"></span>In Progress</span></td>
+<td class="cost">MYR 480</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<!-- ============================================ -->
+<!-- VERDICT -->
+<!-- ============================================ -->
+<div class="verdict">
+<h3>Recommendation: Option D — Driver + Vehicle Sub-line Under Route</h3>
+<p style="font-size: 12px; line-height: 1.6; color: #374151;">
+Option D wins on semantic fit. The driver and vehicle are executing the ROUTE, not serving the customer. Placing "Zhang Wei · 粤B·12345" under "TikTok WH → SZX Airport" reads naturally: here's where the cargo goes, and here's who's taking it there.
+<br><br>
+The route column has the most horizontal space (35%), so the sub-line fits without cramping. Blue text for assigned drivers, faint gray "No driver assigned" for unassigned FM jobs. Non-FM services (CR, OH, EC, CS) show nothing extra. At 768px the Route column is already dropped per HMW-V01, so the driver info naturally moves to the detail page.
+<br><br>
+Option A (column) wastes space for non-FM. Option B (icon) requires hover. Option C (under Customer) has weak semantic connection. Option D uses the widest column and the strongest semantic link.
+</p>
+</div>
+
+</div>
+</body>
+</html>

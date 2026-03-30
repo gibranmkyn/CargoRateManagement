@@ -272,11 +272,11 @@ export default function JobDetailPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb' }}>Fee</th>
-                  <th style={{ textAlign: 'center', padding: '6px 8px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', width: 60 }}>Unit</th>
-                  <th style={{ textAlign: 'right', padding: '6px 8px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', width: 70 }}>Rate</th>
-                  <th style={{ textAlign: 'center', padding: '6px 8px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', width: 50 }}>Qty</th>
-                  <th style={{ textAlign: 'right', padding: '6px 10px', fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', width: 90 }}>Amount</th>
+                  <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb' }}>Fee</th>
+                  <th style={{ textAlign: 'center', padding: '6px 8px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', width: 60 }}>Unit</th>
+                  <th style={{ textAlign: 'right', padding: '6px 8px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', width: 70 }}>Rate</th>
+                  <th style={{ textAlign: 'center', padding: '6px 8px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', width: 50 }}>Qty</th>
+                  <th style={{ textAlign: 'right', padding: '6px 10px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', width: 90 }}>Amount</th>
                 </tr>
               </thead>
               <tbody>
@@ -358,86 +358,43 @@ export default function JobDetailPage() {
       </div>
 
       {/* ===== 4. ROUTE + CARGO ===== */}
-      <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
-        {/* Route */}
-        <div style={{ flex: '1 1 400px', minWidth: 0 }}>
-          <div style={sectionTitle}>Route</div>
-          <div style={{ display: 'flex', alignItems: 'stretch', gap: 10 }}>
-            {/* Origin card */}
-            <div style={{
-              flex: 1, padding: '10px 12px', borderRadius: 6,
-              background: '#f9fafb', border: '1px solid #e5e7eb',
-            }}>
-              <div style={{
-                fontSize: 8, fontWeight: 700, textTransform: 'uppercase',
-                letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 4,
-              }}>
-                Origin
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-                <MapPin size={11} style={{ color: '#152CFF', flexShrink: 0 }} />
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#111827' }}>{job.origin.location}</span>
-              </div>
-              {job.origin.date && (
-                <div style={{ ...mono, fontSize: 10, color: '#9ca3af', marginLeft: 15 }}>
-                  {fmtDateTime(job.origin.date)}
-                </div>
-              )}
-            </div>
-            {/* Arrow */}
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <ArrowRight size={14} style={{ color: '#d1d5db' }} />
-            </div>
-            {/* Destination card */}
-            <div style={{
-              flex: 1, padding: '10px 12px', borderRadius: 6,
-              background: '#f9fafb', border: '1px solid #e5e7eb',
-            }}>
-              <div style={{
-                fontSize: 8, fontWeight: 700, textTransform: 'uppercase',
-                letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 4,
-              }}>
-                Destination
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-                <MapPin size={11} style={{ color: '#059669', flexShrink: 0 }} />
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#111827' }}>{job.destination.location}</span>
-              </div>
-              {job.destination.date && (
-                <div style={{ ...mono, fontSize: 10, color: '#9ca3af', marginLeft: 15 }}>
-                  {fmtDateTime(job.destination.date)}
-                </div>
-              )}
-            </div>
-          </div>
+      <div style={{ marginBottom: 24 }}>
+        <div style={sectionTitle}>Route & Cargo</div>
+        {/* Route — compact inline row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+          <MapPin size={11} style={{ color: '#152CFF', flexShrink: 0 }} />
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#111827' }}>{job.origin.location}</span>
+          {job.origin.location !== job.destination.location && (
+            <>
+              <ArrowRight size={10} style={{ color: '#d1d5db' }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#111827' }}>{job.destination.location}</span>
+            </>
+          )}
+          {job.origin.date && (
+            <span style={{ ...mono, fontSize: 10, color: '#9ca3af', marginLeft: 4 }}>{fmtDateTime(job.origin.date)}</span>
+          )}
+          {job.destination.date && job.origin.location !== job.destination.location && (
+            <span style={{ ...mono, fontSize: 10, color: '#9ca3af' }}>&rarr; {fmtDateTime(job.destination.date)}</span>
+          )}
         </div>
-
-        {/* Cargo */}
-        <div style={{ flex: '0 0 240px' }}>
-          <div style={sectionTitle}>Cargo</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-            {[
-              { label: 'Bags', value: job.jobBags ?? trip.bags },
-              { label: 'Weight (kg)', value: job.jobWeight ?? trip.weight },
-              { label: 'Volume (CBM)', value: job.jobVolume ?? 0 },
-            ].map(({ label, value }) => (
-              <div key={label} style={{
-                padding: '8px 10px', borderRadius: 6,
-                background: '#f9fafb', border: '1px solid #e5e7eb',
-                textAlign: 'center',
-              }}>
-                <div style={{
-                  fontSize: 8, fontWeight: 700, textTransform: 'uppercase',
-                  letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 4,
-                }}>
-                  {label}
-                </div>
-                <div style={{ ...mono, fontSize: 13, fontWeight: 600, color: '#111827' }}>
-                  {typeof value === 'number' ? value.toLocaleString() : value}
-                </div>
-              </div>
-            ))}
-          </div>
+        {/* Cargo — single inline row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '6px 10px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 4 }}>
+          <span style={{ fontSize: 10, color: '#9ca3af' }}>Cargo</span>
+          <span style={{ ...mono, fontSize: 11, fontWeight: 600, color: '#111827' }}>
+            {(job.jobBags ?? trip.bags).toLocaleString()} bags
+          </span>
+          <span style={{ color: '#d1d5db' }}>&middot;</span>
+          <span style={{ ...mono, fontSize: 11, fontWeight: 600, color: '#111827' }}>
+            {(job.jobWeight ?? trip.weight).toLocaleString()} kg
+          </span>
+          {(job.jobVolume ?? 0) > 0 && (
+            <>
+              <span style={{ color: '#d1d5db' }}>&middot;</span>
+              <span style={{ ...mono, fontSize: 11, fontWeight: 600, color: '#111827' }}>
+                {(job.jobVolume ?? 0).toLocaleString()} CBM
+              </span>
+            </>
+          )}
         </div>
       </div>
 
@@ -445,28 +402,19 @@ export default function JobDetailPage() {
       <div style={{ marginBottom: 24 }}>
         <div style={sectionTitle}>Proof of Service</div>
         {proofs.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: canUpload ? 10 : 0 }}>
+          <div style={{ marginBottom: canUpload ? 10 : 0 }}>
             {proofs.map((doc) => (
               <div key={doc.id} style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '8px 12px', borderRadius: 6,
-                background: '#f9fafb', border: '1px solid #e5e7eb',
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '5px 0', borderBottom: '1px solid #f3f4f6',
               }}>
-                <div style={{
-                  width: 28, height: 28, borderRadius: 6,
-                  background: 'rgba(21,44,255,0.07)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  {docIcon(doc)}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 11, fontWeight: 500, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {doc.name}
-                  </div>
-                  <div style={{ ...mono, fontSize: 9, color: '#9ca3af' }}>
-                    {fmtDateTime(doc.uploadedAt)}
-                  </div>
-                </div>
+                {docIcon(doc)}
+                <span style={{ fontSize: 11, fontWeight: 500, color: '#111827', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {doc.name}
+                </span>
+                <span style={{ ...mono, fontSize: 9, color: '#9ca3af', flexShrink: 0 }}>
+                  {fmtDateTime(doc.uploadedAt)}
+                </span>
               </div>
             ))}
           </div>
@@ -486,7 +434,7 @@ export default function JobDetailPage() {
           <div
             onClick={() => fileRef.current?.click()}
             style={{
-              padding: '20px 16px', textAlign: 'center',
+              padding: '12px 16px', textAlign: 'center',
               border: '1.5px dashed rgba(21,44,255,0.25)', borderRadius: 6,
               cursor: 'pointer', background: 'rgba(21,44,255,0.02)',
               transition: 'border-color 150ms, background 150ms',

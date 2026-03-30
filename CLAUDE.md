@@ -109,8 +109,9 @@ Key principles:
 
 ## Vendor Pages
 - **Login** (`/`) — vendor code selector + access code (prototype: any code works)
-- **My Jobs** (`/jobs`) — flat table filtered by vendor. Status pills, service pills, CSV export.
-- **Job Detail** (`/jobs/:tripId/:jobId`) — full-page detail. Fees-first layout (HMW-V02). Status Action Bar with Start Job + Upload Proof.
+- **My Jobs** (`/jobs`) — flat table filtered by vendor. Status pills, service pills, CSV export. FM jobs show driver + vehicle sub-line under Route (HMW-V03).
+- **Job Detail** (`/jobs/:tripId/:jobId`) — full-page detail. FM jobs: Assignment → Fees → Route + Cargo → Proofs → Log. Non-FM: Fees → Route + Cargo → Proofs → Log.
+- **Fleet** (`/fleet`) — Drivers + Vehicles CRUD tables (vendor-scoped). Second nav item.
 
 ## Admin Key Interaction Patterns
 - **Slide-out panel:** Status Action Bar at top adapts per stage (HMW-49)
@@ -122,9 +123,11 @@ Key principles:
 
 ## Vendor Key Interaction Patterns
 - **Full-page job detail** (not slide-out — more room for fee reconciliation)
-- **Fees-first layout:** Status Action Bar → Fee Breakdown → Route + Cargo → Proofs → Activity Log
+- **FM jobs layout:** Status Action Bar → Driver & Vehicle Assignment → Fee Breakdown → Route + Cargo → Proofs → Activity Log
+- **Non-FM layout:** Status Action Bar → Fee Breakdown → Route + Cargo → Proofs → Activity Log
+- **Driver assignment ≠ Start Job** — assignment is dispatch-time (morning), Start Job is execution-time (driver arrives). Separate actions.
 - **Read-only fees/quantities** — vendor views for reconciliation, cannot edit
-- **Vendor actions:** Start Job, Upload Proof only. No Verify, no Cancel, no fee toggles.
+- **Vendor actions:** Start Job, Upload Proof, Assign Driver/Vehicle (FM only). No Verify, no Cancel, no fee toggles.
 - **Responsive at 768px+** — condensed table (drop Route, stack Customer+Shipment) per HMW-V01
 - **Activity log actor:** Vendor actions logged with vendor company name, admin actions with "Ops Admin"
 

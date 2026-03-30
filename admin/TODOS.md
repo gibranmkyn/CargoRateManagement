@@ -39,31 +39,20 @@
 
 ## AI Slop Cleanup (from design audit 2026-03-29)
 
-### TODO-038: Delete or replace DashboardCards component (admin)
-- **What:** `admin/src/components/trips/DashboardCards.tsx` uses `rounded-2xl` (16px), shadows, `scale-105` hover animation. DESIGN.md says "No big dashboard cards." Either delete the component entirely (if unused) or replace with the stats bar pattern that TripsPage/JobsPage already use.
-- **Files:** `admin/src/components/trips/DashboardCards.tsx`, check if imported anywhere
+### ~~TODO-038: Delete or replace DashboardCards component (admin)~~ ✅
+Deleted — component was unused (no imports anywhere).
 
-### TODO-039: Rewrite VendorViewTab — cards → table section headers (admin)
-- **What:** `admin/src/components/trips/VendorViewTab.tsx` uses `rounded-xl` and layered shadows for vendor group cards. Replace with collapsible table section headers (dense, border-only). Same pattern as JobsPage Group By: Vendor.
-- **Files:** `admin/src/components/trips/VendorViewTab.tsx`
+### ~~TODO-039: Rewrite VendorViewTab — cards → table section headers (admin)~~ ✅
+Replaced `rounded-xl` + shadow cards with dense border-only section headers using inline styles.
 
-### TODO-040: De-cardify vendor JobDetailPage
-- **What:** Route section uses two separate bordered cards + arrow. Cargo uses 3 mini-cards in grid. Proof docs use individual card boxes. For a dense data tool:
-  - Route → compact inline row: `Origin → Destination · date range`
-  - Cargo → single inline row: `24 bags · 1,280 kg · 8.4 CBM`
-  - Proofs → simple file list rows, not individual boxes
-- **Files:** `vendor/src/pages/JobDetailPage.tsx`
+### ~~TODO-040: De-cardify vendor JobDetailPage~~ ✅
+Route → compact inline row with MapPin. Cargo → single inline row (`24 bags · 1,280 kg`). Proofs → simple file list rows (no card boxes).
 
-### TODO-041: Remove shadow creep from admin interactive elements
-- **What:** Remove hover shadows from:
-  - `admin/src/components/trips/JobCard.tsx` — hover boxShadow on cards (use bg color change instead)
-  - `admin/src/components/trips/JobTable.tsx` — `shadow-lg` on status popover (use border)
-  - `admin/src/components/trips/ServiceMultiSelect.tsx` — shadows on dropdown/button (use border)
-- **Principle:** "Borders are sufficient" (DESIGN.md)
+### ~~TODO-041: Remove shadow creep from admin interactive elements~~ ✅
+JobCard: hover shadow → bg color change. JobTable: popover shadow removed. ServiceMultiSelect: dropdown shadow removed.
 
-### TODO-042: Replace emoji status icons in JobSlideOut (admin)
-- **What:** `admin/src/components/trips/JobSlideOut.tsx` lines 27-32 use emoji (`📄`, `✓`, `✕`, `—`) as status indicators. Replace with consistent colored dot indicator (same as status chips) or lucide-react icons.
-- **Files:** `admin/src/components/trips/JobSlideOut.tsx`
+### ~~TODO-042: Replace emoji status icons in JobSlideOut (admin)~~ ✅
+Removed emoji icon field from STATUS_LABELS — slide-out already uses colored dots consistently.
 
 ### TODO-044: Vendor multi-file proof upload
 - **What:** Vendor proof upload currently accepts one file at a time. Allow selecting/dropping multiple files in a single action. Each file becomes a separate ProofDocument entry. Activity log should record all filenames in one entry (e.g., "Uploaded 3 files: pod-front.jpg, pod-back.jpg, customs-stamp.pdf").
@@ -84,9 +73,8 @@
 - **What:** On the vendor Job Detail page, the Route section should display origin date (pickup) and destination date (delivery) prominently. Currently the route card shows locations but dates may not be visible or prominent enough, especially for FM Trucking where the vendor needs to know exactly when to pick up and deliver.
 - **Files:** `vendor/src/pages/JobDetailPage.tsx` (Route section)
 
-### TODO-043: Tighten vendor padding (minor)
-- **What:** Login form padding 32px → 20px. Upload zone padding 20px → 12px. Normalize fee table header fontSize 8 → 9 (match jobs table).
-- **Files:** `vendor/src/pages/LoginPage.tsx`, `vendor/src/pages/JobDetailPage.tsx`
+### ~~TODO-043: Tighten vendor padding (minor)~~ ✅
+Login form 32→20px. Upload zone 20→12px. Fee table header fontSize 8→9px.
 
 ## Completed
 

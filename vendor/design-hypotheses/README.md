@@ -2,7 +2,10 @@
 
 ## Open
 
-(none)
+### HMW-V03: How might we show the dispatcher which FM jobs have a driver assigned in the job list?
+**Options:** A) Dedicated "Driver" column, B) Small icon indicator next to status chip, C) Driver name as sub-line under Customer, D) Driver + vehicle as sub-line under Route
+**Decision:** D) Driver + vehicle as sub-line under Route — semantic fit (driver executes the route), uses widest column (35%), no new column, works on tablets, "No driver assigned" in faint gray for unassigned FM jobs.
+**File:** `03-hmw-driver-assignment-visibility.html`
 
 ## Resolved
 
