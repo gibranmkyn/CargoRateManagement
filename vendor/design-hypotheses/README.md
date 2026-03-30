@@ -26,7 +26,10 @@
 **Decision:** A) Rename "Route" to "Where". Same 7-column table. Sub-lines per service: FM shows driver+vehicle, EC/CS shows MAWB, OH/CR shows bag count+weight. Simplest change, respects the smart spreadsheet principle.
 **File:** `04-hmw-vendor-job-list-redesign.html`
 
-### HMW-V05: How might we design the FM route planning & leg management experience?
-**Options:** A) Vertical timeline with leg cards and inline hub ops badges, B) Leg table with expandable rows, C) Compact horizontal route bar + leg table below
-**Decision:** A) Vertical timeline — nodes for stops, leg cards between nodes, hub ops badges inline. Reads like the physical journey. No unnecessary labels (no cross-border tags etc).
-**File:** `05-hmw-fm-route-planning-experience.html`
+### ~~HMW-V05: FM route planning & leg management~~ SUPERSEDED
+**Decision:** Leg model removed. FM job = one vendor, one pickup driver, one delivery. Vendor's internal multi-driver ops not modeled. See PRD rationale.
+**File:** `05-hmw-fm-route-planning-experience.html` (historical)
+
+### ~~HMW-V06: FM job detail full page layout~~ SUPERSEDED
+**Decision:** Leg-based timeline replaced by simple driver assignment section. FM job detail is now much simpler.
+**File:** `06-hmw-fm-job-detail-full-page.html` (historical)

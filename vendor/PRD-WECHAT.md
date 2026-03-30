@@ -34,41 +34,29 @@ This PRD covers both the **Driver role** (FM Trucking pickup/delivery) and the *
 3. Driver opens WeChat, searches for "Teleport OS" mini program, logs in with phone + password
 4. Driver sees their assigned trips. Hub Ops sees their assigned hub operations.
 
-## Operational Model: Shipment → Job → Leg
+## Operational Model: Shipment → Job (no legs)
 
-The cargo flow from origin to final destination is a chain, not parallel tasks:
+**Why no legs:** The first pickup is the handoff moment that Teleport cares about: cargo responsibility transfers from Teleport to the vendor. How the vendor moves cargo internally (intermediate hubs, multiple trucks, warehouse transfers) is the vendor's own operations, not modeled in the system. Teleport doesn't have hub codes for vendor's internal facilities.
 
 ```
-TikTok WH (Shenzhen)
-  ↓ FM Leg 1 (driver: Zhang Wei)
-Shenzhen Hub (vendor's hub)
-  ↓ Hub Ops: Inbound (ARR) → Processing (PAL) → Outbound (DEP)
-  ↓ FM Leg 2 (driver: Li Ming, cross-border)
-Huanggang Port
-  ↓ EC Job: customs clearance (separate job, assigned to Gonda)
-HK Hub (vendor's hub)
-  ↓ Hub Ops: Inbound → Processing → Outbound
-  ↓ FM Leg 3 (driver: Wang Jun)
-HK Airport
-  ↓ OH Job: origin handling (separate job, assigned to Gonda)
-  ↓ CS Job: cargo submission (separate job, assigned to Gonda)
-✈ Fly
+Shipment: TikTok cargo → HK Airport
+
+FM Job (HaleSun): Shenzhen → HK Airport
+  ↓ Driver picks up at TikTok WH (bag scanning + proof)
+  ↓ [vendor's internal ops — not in system]
+  ↓ Driver delivers at HK Airport (proof)
+
+EC Job (Gonda): Customs at Huanggang
+OH Job (Gonda): Origin Handling at HK Airport Terminal
+CS Job (Gonda): Cargo Submission at HK Airport
 ```
 
-**Three layers:**
-1. **Shipment** — Admin creates. High-level: customer, MAWB, origin, destination, bags.
-2. **Job** — Admin assigns to vendor. One service per job. FM job = "get cargo from A to Z." EC/OH/CS jobs = specific service at a specific facility.
-3. **Leg** — Vendor creates within an FM job. One leg = one driver + one vehicle + one origin → one destination. Vendor owns the route planning.
-
-**Key rules:**
-- Admin creates ONE FM job per vendor ("Shenzhen → HK Airport assigned to HaleSun")
-- Vendor breaks it into legs based on their route knowledge and hub network
-- Hub ops scanning at intermediate hubs (vendor's own hubs) = status checkpoints on the FM leg, not separate jobs
-- OH/EC/CS jobs are separate admin-created jobs at specific facilities, with their own lifecycle
-- Jobs can be sequential: FM leg 2 can't start until leg 1 + hub ops completes
+**Two layers:**
+1. **Shipment** — Admin creates. Customer, MAWB, origin, destination, bags.
+2. **Job** — Admin assigns to vendor. One service per job. FM = one vendor, one pickup driver, one delivery. OH/EC/CS = specific service at a specific facility.
 
 **Status updates flow upstream:**
-WeChat (driver scans bags) → Vendor app (sees leg progress) → Admin (sees job progress) → Teleport → End Client (TikTok gets parcel-level tracking)
+WeChat (driver scans bags) → Vendor app (sees job progress) → Admin (sees shipment progress) → Teleport → End Client (TikTok gets parcel-level tracking)
 
 ## Relationship to Other Apps
 
@@ -76,91 +64,55 @@ WeChat (driver scans bags) → Vendor app (sees leg progress) → Admin (sees jo
 |---|---|---|---|---|
 | Create shipments | Yes | No | No | No |
 | Assign vendor to jobs | Yes | No | No | No |
-| Break FM job into legs | No | Yes | No | No |
-| Assign driver + vehicle per leg | No | Yes | No | No |
+| Assign pickup driver + vehicle (FM) | No | Yes | No | No |
 | Manage fleet (drivers/vehicles) | No | Yes | No | No |
-| Execute FM leg (pickup/delivery) | No | No | Yes | No |
-| Scan bags at pickup/delivery | No | No | Yes | No |
-| Upload proof of pickup/delivery | No | No | Yes | No |
-| Scan inbound/outbound at hub | No | No | No | Yes |
-| Process bags at hub | No | No | No | Yes |
+| Execute FM pickup (scan bags, proof) | No | No | Yes | No |
+| Execute FM delivery (proof) | No | No | Yes | No |
+| Scan bags for OH jobs (ARR/PAL/DEP) | No | No | No | Yes |
 | Handle exceptions | No | No | No | Yes |
-| Scan bags for OH jobs | No | No | No | Yes |
 | Verify completed jobs | Yes | No | No | No |
 | View fees (reconciliation) | Yes | Yes (read-only) | No | No |
 
 ## Data Model
 
-### Leg (new concept)
+### Status Lifecycle — Driver (FM Job)
 
-An FM job can have multiple legs. Each leg is one physical trip:
-
-```typescript
-interface Leg {
-  id: string;
-  jobId: string;              // parent FM job
-  sequence: number;           // 1, 2, 3...
-  origin: { location: string; date: string };
-  destination: { location: string; date: string };
-  driver?: { id: string; name: string; phone: string };
-  vehicle?: { id: string; plate: string; truckType: TruckType };
-  status: LegStatus;
-  hubOpsStatus?: HubOpsStatus;  // status at destination hub (if applicable)
-  bagScans: BagScan[];
-  proofDocuments: ProofDocument[];
-  activityLog: ActivityLogEntry[];
-}
-
-type LegStatus = 'Planned' | 'Start Pickup' | 'Pickup Complete' | 'Start Delivery' | 'Delivered';
-type HubOpsStatus = 'Awaiting Inbound' | 'Inbound Complete' | 'Processing' | 'Outbound Complete';
-```
-
-The FM job's overall status is derived from its legs:
-- All legs Planned → Job is Pending
-- Any leg in progress → Job is In Progress
-- Last leg Delivered → Job is Completed (pending admin verification)
-
-### Status Lifecycle — Driver (FM Leg)
-
-Granular statuses per leg that map to physical moments:
+Granular statuses that map to physical moments:
 
 ```
-Planned → Start Pickup → [Scan Bags] → Pickup Complete (proof) → Start Delivery → Delivered (proof)
+Assigned → Start Pickup → [Scan Bags] → Pickup Complete (proof) → Start Delivery → Delivered (proof)
 ```
 
-| Leg Status | What Happened | What Admin Sees on Job |
+| WeChat Status | What Happened | What Admin/Teleport Sees |
 |---|---|---|
-| Planned | Vendor created leg, assigned driver | Pending (if first leg) or In Progress |
-| Start Pickup | Driver arrived at pickup location | In Progress |
-| Pickup Complete | Bags scanned, proof uploaded, cargo in truck | In Progress |
+| Assigned | Vendor assigned pickup driver | Pending |
+| Start Pickup | Driver arrived at origin | In Progress |
+| Pickup Complete | Bags scanned, proof uploaded. Cargo handed off to vendor. | In Progress |
 | Start Delivery | Driver departed for destination | In Progress |
-| Delivered | Proof of delivery uploaded, arrived at destination | In Progress (unless last leg → Completed) |
+| Delivered | Proof of delivery uploaded | Completed |
 
-### Status Lifecycle — Hub Ops at Intermediate Hubs
+The first pickup is the critical moment: Teleport → Vendor handoff. The delivery is the completion.
 
-When an FM leg delivers to a vendor's hub, hub ops scanning happens as stages of that leg's lifecycle. These are NOT separate jobs — they're status checkpoints that generate tracking updates.
+### Status Lifecycle — Hub Ops (OH Jobs)
 
-| Hub Stage | Code | What Happened | Triggered By |
-|---|---|---|---|
-| Awaiting Inbound | — | FM leg delivered cargo to this hub | Previous leg status = Delivered |
-| Inbound Complete | ARR | Bags scanned into warehouse | Hub ops scans bags |
-| Processing | PAL | Bags weighed, palletized, labeled, x-rayed | Hub ops scans + selects processing type |
-| Outbound Complete | DEP | Bags scanned out, ready for next leg | Hub ops scans bags |
+OH jobs are admin-created jobs at specific facilities. Hub ops uses the scanning UX (ARR/PAL/DEP) on the job:
 
-After Outbound Complete, the next leg becomes actionable (driver can Start Pickup).
+| Hub Stage | Code | What Happened |
+|---|---|---|
+| Inbound | ARR | Bags scanned into facility |
+| Processing | PAL | Bags processed (weighed, palletized, x-rayed, labeled) |
+| Outbound | DEP | Bags scanned out of facility |
 
-### Status Lifecycle — OH/EC/CS Jobs (Separate Admin-Created Jobs)
+### Status Lifecycle — EC/CS Jobs
 
-These are standalone jobs at specific facilities (airport terminal, customs checkpoint). They have the standard job lifecycle:
+Standard job lifecycle:
 
 | Job Status | What Happened |
 |---|---|
 | Pending | Admin created job, assigned to vendor |
-| In Progress | Work started (hub ops scanning for OH, customs processing for EC) |
+| In Progress | Work started |
 | Completed | Proof uploaded, work done |
 | Verified | Admin verified, ready for billing |
-
-For OH jobs, hub ops uses the same scanning UX (ARR/PAL/DEP) but the scanning is on the JOB, not on an FM leg.
 
 ### Bag-Level Scanning
 | Outbound from Hub | DEP | Bags scanned out, ready for next leg |

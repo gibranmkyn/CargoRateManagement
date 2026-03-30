@@ -116,8 +116,8 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 
 ## Key Design Decisions
 1. **1 job = 1 service:** Each job has exactly 1 vendor + 1 service code + origin/destination. Same vendor can appear multiple times. Each job is a billable line item.
-   - **FM jobs have legs:** Admin creates ONE FM job ("Shenzhen → HK Airport"). Vendor breaks it into legs based on their route knowledge. Each leg = one driver + vehicle + origin → destination. Hub ops at intermediate hubs are status checkpoints on legs, not separate jobs.
-   - **Vendor owns route planning:** Admin defines what (origin, destination, service). Vendor decides how (which hubs, how many legs, which drivers).
+   - **FM job = one vendor, one pickup, one delivery.** The first pickup is the Teleport → Vendor handoff. How the vendor moves cargo internally (intermediate hubs, multiple trucks) is their own operations, not modeled. No legs concept.
+   - **Vendor assigns pickup driver:** Admin defines what (origin, destination, service). Vendor assigns who (driver + vehicle for the pickup).
 2. **Dense data design:** 40px nav, stats bar (no dashboard cards), 8px table cells, 4-6px radius.
 3. **5-color status system:** Gray (pending), blue (in progress), amber (completed/needs verification), green (verified), red (cancelled).
 4. **Unified job status lifecycle:** Pending → In Progress → Completed (proof uploaded) → Verified (admin sign-off). Replaces old dual status + proofStatus fields. Researched Flexport, project44, Uber Freight, TAI TMS. (HMW-47)

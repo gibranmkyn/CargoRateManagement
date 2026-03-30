@@ -133,46 +133,37 @@ Vendors manage their own fleet data for FM Trucking dispatch.
 - Plate number, truck type (1.5T/3T/5T/8T/10T/12T/40HQ/45HQ), capacity specs, active/inactive
 - CRUD table on Fleet page
 
-### F8: Route Planning (FM Trucking Jobs — Legs)
-Admin creates ONE FM job ("Shenzhen → HK Airport"). The vendor breaks it into operational legs based on their route knowledge and hub network.
+### F8: Driver & Vehicle Assignment (FM Trucking Jobs)
+For FM Trucking jobs, the vendor assigns ONE pickup driver and vehicle. This is the operational handoff: Teleport → Vendor.
 
-**Route Planning flow:**
-- FM Job Detail page shows a "Route Plan" section (above fee breakdown)
-- Vendor adds legs: Leg 1 origin → destination, Leg 2 origin → destination, etc.
-- Each leg's origin must match the previous leg's destination (chain validation)
-- Leg 1 origin must match the FM job's origin. Last leg destination must match the FM job's destination.
-- Intermediate destinations are the vendor's own hubs (selected from Fleet/Facilities master data)
+**Why one driver, not multiple legs:**
+The first pickup is the moment that matters to Teleport. It proves the vendor has taken responsibility for the cargo. How the vendor moves cargo between their own hubs (intermediate trucks, warehouse transfers) is the vendor's internal operations, not modeled in the system. The vendor coordinates multi-driver handoffs via WeChat and their own dispatch, same as today.
 
-**Per-leg assignment:**
-- Each leg gets its own driver + vehicle assignment
-- Driver dropdown (from vendor's driver list) + Vehicle dropdown (filtered by truck type)
-- Assigning a driver does NOT auto-start the leg. Assignment is dispatch-time, execution is via WeChat.
-- Can reassign driver/vehicle while leg is Planned or in progress
-- Locked after leg is Delivered
+**Assignment flow:**
+- FM Job Detail page shows a "Driver & Vehicle" section (above fee breakdown)
+- Driver dropdown (from vendor's fleet list) + Vehicle dropdown (filtered by truck type)
+- Assigning a driver does NOT auto-start the job. Assignment is dispatch-time, Start Job is execution-time (driver arrives at pickup via WeChat).
+- Can reassign driver/vehicle while job is Pending or In Progress
+- Locked after Completed/Verified/Cancelled
+- Activity log records: "Assigned Driver Zhang Wei + 粤B·12345"
 
-**Hub ops at intermediate hubs:**
-- When an FM leg delivers to a vendor's hub, hub ops scanning (inbound/processing/outbound) is tracked as stages of that leg
-- These are status checkpoints, not separate jobs
-- Hub ops work must complete before the next leg can start
-- Status updates (ARR/PAL/DEP) generate tracking events that flow upstream to Admin → Teleport → End Client
-
-**Activity log records per leg:** "Leg 1: Assigned Driver Zhang Wei + 粤B·12345", "Leg 1: Start Pickup", "Leg 1: Delivered to Shenzhen Hub", "Shenzhen Hub: Inbound Complete (ARR)", etc.
+**FM job status (what Teleport sees):**
+```
+Pending → Picked Up (driver scanned bags at origin) → Delivered (proof at destination) → Completed → Verified
+```
 
 **FM Dispatcher Journey:**
 
 | Step | Dispatcher Does | Feels | Design Supports With |
 |------|----------------|-------|---------------------|
-| 1 | Opens My Jobs, sees new Pending FM job "Shenzhen → HK Airport" | "New job, need to plan the route" | Active tab, Pending jobs sorted first |
-| 2 | Clicks into FM job detail | "How should I route this?" | Route Plan section is first thing after status bar |
-| 3 | Adds legs: WH → Shenzhen Hub → Huanggang → HK Hub → HK Airport | "3 legs, I know this route" | Add Leg button, hub picker from facilities |
-| 4 | Assigns driver + vehicle per leg | "Zhang Wei for leg 1, Li Ming for cross-border" | Per-leg driver/vehicle dropdowns |
-| 5 | Done planning, moves to next job | "Route planned, drivers notified" | Toast: "3 legs planned". Drivers see trips in WeChat. |
-| 6 | Later: monitors leg progress | "Where is the cargo?" | Leg status timeline in job detail (Leg 1: Delivered, Hub: Processing, Leg 2: Pickup Started...) |
-| 7 | All legs complete | "Job done, fees match?" | Job auto-transitions to Completed. Fee reconciliation below. |
+| 1 | Opens My Jobs, sees new Pending FM job | "What's new today?" | Active tab, Pending jobs sorted first |
+| 2 | Clicks into FM job detail | "Who should I send?" | Assignment section is first thing after status bar |
+| 3 | Picks driver from dropdown | "Zhang Wei is free, he knows this route" | Dropdown shows name + phone + default vehicle |
+| 4 | Picks vehicle (or auto-filled from driver default) | "Done, dispatched" | Toast: "Assigned Zhang Wei + 粤B·12345" |
 | 5 | Moves on to next job | "What else?" | Back to My Jobs. Job still Pending but has driver indicator |
-| 6 | Later: driver starts job | (driver or dispatcher clicks Start Job) | Job → In Progress. Activity log: "Driver Zhang Wei — Job started" |
-| 7 | Later: checks status | "Is it done yet?" | Status chip updated, activity log shows progress |
-| 8 | Reconciles fees after completion | "Do the numbers match?" | Fee table below assignment, read-only |
+| 6 | Later: driver picks up via WeChat | Driver scans bags at origin | Job → Picked Up. Activity log: "Driver Zhang Wei — Pickup complete. 24/24 bags scanned." |
+| 7 | Later: driver delivers | Driver uploads proof at destination | Job → Delivered → Completed. |
+| 8 | Reconciles fees | "Do the numbers match?" | Fee table below assignment, read-only |
 
 ### F3: Status Updates (Vendor Actions)
 Vendors can progress jobs forward through the lifecycle. They cannot go backward or skip ahead (except proof upload skipping In Progress).
