@@ -77,36 +77,42 @@ export default function Navbar() {
 
       {/* Nav items */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <NavLink
-          to="/jobs"
-          style={({ isActive }) => ({
-            fontSize: 12,
-            padding: '4px 10px',
-            borderRadius: 4,
-            color: isActive ? '#fff' : 'rgba(255,255,255,0.5)',
-            background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
-            fontWeight: isActive ? 600 : 400,
-            textDecoration: 'none',
-            transition: 'color 150ms, background 150ms',
-            fontFamily: "'Instrument Sans', -apple-system, system-ui, sans-serif",
-          })}
-          onMouseEnter={(e) => {
-            const el = e.currentTarget;
-            if (!el.classList.contains('active')) {
-              el.style.color = 'rgba(255,255,255,0.8)';
-              el.style.background = 'rgba(255,255,255,0.06)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            const el = e.currentTarget;
-            if (!el.classList.contains('active')) {
-              el.style.color = 'rgba(255,255,255,0.5)';
-              el.style.background = 'transparent';
-            }
-          }}
-        >
-          My Jobs
-        </NavLink>
+        {[
+          { to: '/jobs', label: 'My Jobs' },
+          { to: '/fleet', label: 'Fleet' },
+        ].map(({ to, label }) => (
+          <NavLink
+            key={to}
+            to={to}
+            style={({ isActive }) => ({
+              fontSize: 12,
+              padding: '4px 10px',
+              borderRadius: 4,
+              color: isActive ? '#fff' : 'rgba(255,255,255,0.5)',
+              background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
+              fontWeight: isActive ? 600 : 400,
+              textDecoration: 'none',
+              transition: 'color 150ms, background 150ms',
+              fontFamily: "'Instrument Sans', -apple-system, system-ui, sans-serif",
+            })}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget;
+              if (!el.classList.contains('active')) {
+                el.style.color = 'rgba(255,255,255,0.8)';
+                el.style.background = 'rgba(255,255,255,0.06)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget;
+              if (!el.classList.contains('active')) {
+                el.style.color = 'rgba(255,255,255,0.5)';
+                el.style.background = 'transparent';
+              }
+            }}
+          >
+            {label}
+          </NavLink>
+        ))}
       </div>
 
       {/* Right side: vendor info + logout */}

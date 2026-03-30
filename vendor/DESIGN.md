@@ -44,7 +44,12 @@ The vendor app uses the exact same design tokens as the admin app. A vendor and 
 - **No vendor column** — data is pre-filtered to logged-in vendor
 - **No Group By toggle** — no need to group by vendor when you're one vendor
 - **No vendor filter dropdown**
-- **Columns:** Shipment (DO #) 10% | Customer 13% | Service 7% | Route 35% | Pickup 10% | Status 11% | Cost 10%
+- **Columns:** Shipment (DO #) 10% | Customer 13% | Service 7% | Where 35% | Pickup 10% | Status 11% | Cost 10%
+- **"Where" column** (renamed from "Route"): shows service-contextual content with sub-lines (HMW-V04):
+  - FM: origin → destination + driver/vehicle sub-line (HMW-V03)
+  - EC/CS: location + MAWB sub-line
+  - OH: location + bag count + weight sub-line
+  - CR: location + bag count sub-line
 - **Status pills:** Active | Completed | Verified | Cancelled | All (note: Cancelled gets its own pill, not grouped into Active like admin)
 - **Export CSV button** in filter bar (right-aligned)
 - **Stats bar:** Same pattern, vendor-scoped counts
@@ -94,9 +99,13 @@ No dispatch assignment (not applicable to non-FM). No origin→destination (sing
 - Explanatory text below: struck-through fees note
 - **Read-only** — vendor cannot toggle or edit
 
-**Proof of Service:**
-- File list with icon (doc/image), name, upload timestamp
-- Upload zone: dashed border (2px dashed `#e5e7eb`), "Drop files here or browse"
+**Proof of Service (multi-file):**
+- `<input multiple>` + drag-and-drop zone. Select/drop multiple files in one action.
+- Each file = separate ProofDocument entry
+- File list: simple rows (icon + name + timestamp), not cards
+- Activity log: one entry per upload batch ("Uploaded 3 files: pod-front.jpg, pod-back.jpg, stamp.pdf")
+- Camera button on tablet/mobile: uses `capture="environment"` for on-site photo capture
+- Upload zone: dashed border (1.5px dashed rgba(21,44,255,0.25)), "Drop files here or browse", "📷 Take Photo" button
 - Upload available in Pending and In Progress only
 - Hidden/disabled in Completed, Verified, Cancelled
 
@@ -104,6 +113,35 @@ No dispatch assignment (not applicable to non-FM). No origin→destination (sing
 - Same format as admin: timestamp (mono 9px) + action + user
 - Shows both vendor and admin actions
 - Reverse chronological
+
+### Dispatch Assignment (FM Trucking only)
+Appears on Job Detail page between Status Action Bar and Pickup/Delivery Timeline. Only for FM service type.
+
+- **Driver dropdown:** from vendor's driver list (name + phone). Filterable.
+- **Vehicle dropdown:** from vendor's vehicle list, filtered by compatible truck type. Shows plate + type.
+- **Truck type badge:** auto-displayed from the job's truck type.
+- Assigning a driver does NOT auto-start the job. Assignment = dispatch-time, Start Job = execution-time.
+- Can reassign while Pending or In Progress. Locked after Completed/Verified/Cancelled.
+- Activity log: "Assigned Driver Zhang Wei + 粤B·12345"
+- Background: `rgba(21,44,255,0.02)` with `rgba(21,44,255,0.1)` border. 6px radius.
+
+### Fleet Management Page
+New nav item. Nav becomes: **My Jobs | Fleet**
+
+**Two tabs:** Drivers | Vehicles
+
+**Drivers table:**
+- Columns: Name | Phone | WeChat ID | Default Vehicle | Status (Active/Inactive)
+- Dense CRUD table matching admin master data style (8px 12px cells, 6px 12px headers)
+- "+ Add Driver" button (blue, bottom-right)
+- Default vehicle shows plate + truck type badge
+
+**Vehicles table:**
+- Columns: Plate Number | Truck Type | Capacity | Status (Active/Inactive)
+- Truck type shown as badge (same styling as service tags)
+- "+ Add Vehicle" button
+
+**Stats bar:** `5 drivers · 8 vehicles` (same pattern as My Jobs stats bar)
 
 ### Responsive Breakpoints
 Unlike the admin app (desktop-only, min 1200px), the vendor app targets 768px+.
@@ -138,10 +176,12 @@ Unlike the admin app (desktop-only, min 1200px), the vendor app targets 768px+.
 | 2026-03-30 | FM assignment above fees (design review) | For FM jobs only, Driver & Vehicle Assignment section sits between Status Action Bar and Fee Breakdown. Dispatcher's first question is "who's driving?" not "are the fees right?" Non-FM services skip this section. |
 | 2026-03-30 | Assignment ≠ Start Job (design review) | Assigning a driver is dispatch-time (morning). Starting the job is execution-time (driver arrives at pickup). Separate actions, separate moments. |
 | 2026-03-30 | Driver sub-line under Route (HMW-V03) | Driver name + vehicle plate shown as sub-line under route text in job list. Blue for assigned, faint gray "No driver assigned" for unassigned FM jobs. Non-FM shows nothing. Route column has most width (35%) and strongest semantic link. |
+| 2026-03-30 | Rename "Route" → "Where" + service sub-lines (HMW-V04) | Same 7-column table, rename column. Sub-lines per service: FM=driver+vehicle, EC/CS=MAWB, OH/CR=bags+weight. Option C (compact two-line rows) rejected as overcomplicating the smart spreadsheet. |
+| 2026-03-30 | Service-adaptive job detail | Same skeleton (header → status → [adaptive] → fees → proofs → log), but middle section changes per service. FM gets Dispatch + Timeline. Non-FM gets single Location. One generic layout serves neither well. |
+| 2026-03-30 | Multi-file proof upload | `<input multiple>` + drag-and-drop + camera button for tablet. Batch activity log entry. Simple file rows, not card boxes. |
+| 2026-03-30 | Fleet page (My Jobs &#124; Fleet) | Drivers + Vehicles as vendor-scoped master data. Dense CRUD tables. Separate page, not crammed into job detail. |
+| 2026-03-30 | Pickup/Delivery Timeline for FM | Two-point layout with big mono times. The single most important data for FM dispatchers. Non-FM services show single Location row instead. |
 
 ## Preview
-Open `vendor/design-preview.html` in a browser to see the proposed screens:
-1. My Jobs page (flat table with filters)
-2. Job Detail (full page with all sections)
-3. Status Action Bar in all 5 states
-4. Admin vs Vendor comparison
+Open `vendor/design-preview.html` in a browser to see the proposed screens.
+Also see `/tmp/vendor-ux-preview.html` for the service-adaptive UX mockup (FM vs generic comparison).

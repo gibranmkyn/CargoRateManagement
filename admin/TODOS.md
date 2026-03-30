@@ -54,24 +54,20 @@ JobCard: hover shadow → bg color change. JobTable: popover shadow removed. Ser
 ### ~~TODO-042: Replace emoji status icons in JobSlideOut (admin)~~ ✅
 Removed emoji icon field from STATUS_LABELS — slide-out already uses colored dots consistently.
 
-### TODO-044: Vendor multi-file proof upload
-- **What:** Vendor proof upload currently accepts one file at a time. Allow selecting/dropping multiple files in a single action. Each file becomes a separate ProofDocument entry. Activity log should record all filenames in one entry (e.g., "Uploaded 3 files: pod-front.jpg, pod-back.jpg, customs-stamp.pdf").
-- **Files:** `vendor/src/pages/JobDetailPage.tsx` (upload zone + file input), also consider `admin/src/components/trips/JobSlideOut.tsx` for consistency
+### ~~TODO-044: Vendor multi-file proof upload~~ ✅
+Implemented: `<input multiple>` on both vendor JobDetailPage and admin JobSlideOut. Batch activity log entry ("Uploaded 3 files: ..."). Camera button on vendor upload zone.
 
-### TODO-046: Design brainstorm — service-specific vendor job views
-- **What:** The vendor Job Detail page currently shows the same layout for all 5 service types. But vendor workflows differ significantly by service:
-  - **FM Trucking** — route-based (origin → destination), pickup/delivery dates critical, truck type matters
-  - **EC Export Customs** — single location, document-heavy, customs declaration numbers matter
-  - **CS Cargo Submission** — single location (airport terminal), x-ray/screening focus
-  - **CR Cargo Retrieval** — single location, pickup registration, bag-level tracking
-  - **OH Origin Handling** — single location (warehouse), multiple sub-tasks (weighing, palletizing, labeling)
-- **Questions to explore:** Should the detail page adapt per service type? Different sections, different data emphasis, different proof upload prompts? Or is a generic view sufficient? What does each vendor type actually need to see to do their job and reconcile fees?
-- **Action:** Run HMW design brainstorm before implementing. Consider vendor operator daily workflow per service type.
-- **Files:** `vendor/src/pages/JobDetailPage.tsx`, potentially `vendor/src/pages/MyJobsPage.tsx` (column relevance per service)
+### ~~TODO-045: Vendor job detail — show pickup/delivery dates for FM Trucking~~ ✅
+Implemented: Service-adaptive layout. FM jobs show Pickup/Delivery Timeline with big mono times. Non-FM shows single Location row.
 
-### TODO-045: Vendor job detail — show pickup and delivery dates for FM Trucking
-- **What:** On the vendor Job Detail page, the Route section should display origin date (pickup) and destination date (delivery) prominently. Currently the route card shows locations but dates may not be visible or prominent enough, especially for FM Trucking where the vendor needs to know exactly when to pick up and deliver.
-- **Files:** `vendor/src/pages/JobDetailPage.tsx` (Route section)
+### ~~TODO-046: Service-adaptive vendor job views~~ ✅
+Implemented: FM Trucking layout = Dispatch Assignment + Pickup/Delivery Timeline + Cargo. Non-FM layout = single Location + Cargo. Same skeleton, adaptive middle section.
+
+### ~~TODO-047: Vendor fleet master data (Drivers & Vehicles)~~ ✅
+Implemented: New FleetPage.tsx with Drivers/Vehicles tabs, dense CRUD tables, inline add/edit, active toggle. Nav updated: My Jobs | Fleet. Driver/Vehicle types in shared/types.ts. Seed data for HaleSun + The Lorry.
+
+### ~~TODO-048: Assign driver + vehicle to FM Trucking jobs~~ ✅
+Implemented: Dispatch Assignment section on vendor JobDetailPage for FM jobs only. Driver + vehicle dropdowns from fleet data. Auto-fills default vehicle from driver. Locked after Completed. Activity log on assignment.
 
 ### ~~TODO-043: Tighten vendor padding (minor)~~ ✅
 Login form 32→20px. Upload zone 20→12px. Fee table header fontSize 8→9px.

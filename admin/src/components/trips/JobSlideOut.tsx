@@ -56,8 +56,11 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
   const ps = STATUS_LABELS[job.status] ?? STATUS_LABELS.Pending;
 
   function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (f) onUploadProof(f);
+    const files = e.target.files;
+    if (!files) return;
+    for (let i = 0; i < files.length; i++) {
+      onUploadProof(files[i]);
+    }
     if (fileRef.current) fileRef.current.value = '';
   }
 
@@ -214,7 +217,7 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
             marginBottom: 8,
           }}>
             <Upload size={12} /> Upload proof document
-            <input ref={fileRef} type="file" accept="image/*,.pdf" style={{ display: 'none' }} onChange={handleUpload} />
+            <input ref={fileRef} type="file" accept="image/*,.pdf" multiple style={{ display: 'none' }} onChange={handleUpload} />
           </label>
         )}
 

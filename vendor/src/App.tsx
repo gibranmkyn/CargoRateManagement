@@ -6,6 +6,7 @@ import Navbar from './components/Navbar';
 import LoginPage from './pages/LoginPage';
 import MyJobsPage from './pages/MyJobsPage';
 import JobDetailPage from './pages/JobDetailPage';
+import FleetPage from './pages/FleetPage';
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { vendorCode } = useVendorAuth();
@@ -24,6 +25,7 @@ function AppShell() {
       <Routes>
         <Route path="/jobs" element={<MyJobsPage />} />
         <Route path="/jobs/:tripId/:jobId" element={<JobDetailPage />} />
+        <Route path="/fleet" element={<FleetPage />} />
         <Route path="*" element={<Navigate to="/jobs" replace />} />
       </Routes>
     </div>

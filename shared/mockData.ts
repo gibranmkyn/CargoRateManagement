@@ -16,6 +16,9 @@ import type {
   FtlRateLog,
   Currency,
   RateUnit,
+  Driver,
+  Vehicle,
+  TruckType,
 } from './types';
 
 // Re-export types so consumers can import from mockData as before
@@ -36,6 +39,9 @@ export type {
   FtlRateLog,
   Currency,
   RateUnit,
+  Driver,
+  Vehicle,
+  TruckType,
 };
 
 // Re-export everything from types so admin can keep importing from mockData
@@ -78,6 +84,30 @@ export const customers = [
   { code: 'CUST-003', name: 'Shein' },
   { code: 'CUST-004', name: 'AliExpress' },
   { code: 'CUST-005', name: 'Temu' },
+];
+
+// --- Fleet Seed Data (vendor-scoped drivers & vehicles) ---
+
+export const seedDrivers: Driver[] = [
+  // HaleSun drivers
+  { id: 'DRV-001', vendorCode: 'V-001', name: 'Zhang Wei', phone: '138-1234-5678', wechatId: 'zhangwei_driver', defaultVehicleId: 'VEH-001', isActive: true },
+  { id: 'DRV-002', vendorCode: 'V-001', name: 'Li Ming', phone: '139-8765-4321', wechatId: 'liming88', defaultVehicleId: 'VEH-002', isActive: true },
+  { id: 'DRV-003', vendorCode: 'V-001', name: 'Wang Jun', phone: '137-5555-1234', wechatId: 'wangjun_sz', defaultVehicleId: 'VEH-004', isActive: false },
+  // The Lorry drivers
+  { id: 'DRV-004', vendorCode: 'V-005', name: 'Chen Da', phone: '136-9999-8888', wechatId: 'chenda_lorry', defaultVehicleId: 'VEH-005', isActive: true },
+  { id: 'DRV-005', vendorCode: 'V-005', name: 'Liu Qiang', phone: '135-6666-7777', wechatId: 'liuqiang_tlr', defaultVehicleId: 'VEH-006', isActive: true },
+];
+
+export const seedVehicles: Vehicle[] = [
+  // HaleSun vehicles
+  { id: 'VEH-001', vendorCode: 'V-001', plateNumber: '粤B·12345', truckType: '5T', maxKg: 4500, maxCbm: 30, isActive: true },
+  { id: 'VEH-002', vendorCode: 'V-001', plateNumber: '粤B·67890', truckType: '3T', maxKg: 2500, maxCbm: 18, isActive: true },
+  { id: 'VEH-003', vendorCode: 'V-001', plateNumber: '粤B·11111', truckType: '8T', maxKg: 7500, maxCbm: 43, isActive: true },
+  { id: 'VEH-004', vendorCode: 'V-001', plateNumber: '粤B·22222', truckType: '10T', maxKg: 10000, maxCbm: 50, isActive: false },
+  // The Lorry vehicles
+  { id: 'VEH-005', vendorCode: 'V-005', plateNumber: '粤A·88888', truckType: '5T', maxKg: 4500, maxCbm: 30, isActive: true },
+  { id: 'VEH-006', vendorCode: 'V-005', plateNumber: '粤A·99999', truckType: '12T', maxKg: 12000, maxCbm: 60, isActive: true },
+  { id: 'VEH-007', vendorCode: 'V-005', plateNumber: '粤A·77777', truckType: '40HQ', maxKg: 20000, maxCbm: 96, isActive: true },
 ];
 
 export const serviceTypes: ServiceType[] = [

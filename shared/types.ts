@@ -85,6 +85,9 @@ export interface Job {
   jobBags?: number;      // defaults from order, editable per job
   jobWeight?: number;    // defaults from order, editable per job
   jobVolume?: number;    // CBM, editable per job
+  // Fleet assignment (FM Trucking only)
+  driverAssignment?: { driverId: string; name: string; phone: string };
+  vehicleAssignment?: { vehicleId: string; plateNumber: string; truckType: TruckType };
 }
 
 export interface FeeLineItem {
@@ -171,6 +174,28 @@ export interface BagPackage {
   destination: string;
   weightKg: number;
   assignedTripId?: string;
+}
+
+// --- Fleet Management (Vendor-scoped) ---
+
+export interface Driver {
+  id: string;
+  vendorCode: string;
+  name: string;
+  phone: string;
+  wechatId?: string;
+  defaultVehicleId?: string;
+  isActive: boolean;
+}
+
+export interface Vehicle {
+  id: string;
+  vendorCode: string;
+  plateNumber: string;
+  truckType: TruckType;
+  maxKg: number;
+  maxCbm: number;
+  isActive: boolean;
 }
 
 export interface TripTemplate {

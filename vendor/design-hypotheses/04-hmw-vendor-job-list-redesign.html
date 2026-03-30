@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-V04: Vendor Job List — Service-Aware Redesign</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.page { max-width: 1400px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+/* Nav */
+.mock-nav { height: 40px; padding: 0 12px; background: #111827; display: flex; align-items: center; gap: 8px; }
+.mock-nav .logo { width: 18px; height: 18px; background: #152CFF; border-radius: 4px; }
+.mock-nav .lt { font-weight: 700; font-size: 12px; color: #fff; }
+.mock-nav .ll { font-size: 9px; color: rgba(255,255,255,0.35); }
+.mock-nav .na { font-size: 11px; padding: 3px 8px; border-radius: 3px; color: #fff; background: rgba(255,255,255,0.1); font-weight: 600; }
+.mock-nav .ni { font-size: 11px; padding: 3px 8px; border-radius: 3px; color: rgba(255,255,255,0.5); }
+.mock-nav .vn { margin-left: auto; font-size: 10px; color: rgba(255,255,255,0.6); font-weight: 600; }
+
+/* Filters */
+.fb { padding: 6px 12px; border-bottom: 1px solid #e5e7eb; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.pl { font-size: 10px; padding: 2px 8px; border-radius: 3px; border: 1px solid #e5e7eb; color: #6b7280; font-weight: 500; cursor: pointer; }
+.pl.a { background: #111827; color: #fff; border-color: #111827; font-weight: 600; }
+.pl .c { font-family: 'JetBrains Mono', monospace; font-size: 9px; opacity: 0.6; margin-left: 3px; }
+.sp { font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 99px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF; font-family: 'JetBrains Mono', monospace; cursor: pointer; }
+.sp.a { background: #152CFF; color: #fff; border-color: #152CFF; }
+.sep { width: 1px; height: 20px; background: #e5e7eb; }
+
+/* Stats */
+.sb { padding: 6px 12px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 10px; color: #6b7280; display: flex; gap: 6px; }
+.sb .sn { font-weight: 700; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+
+/* Table */
+table.t { width: 100%; border-collapse: collapse; font-size: 11px; }
+table.t thead th { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #f9fafb; padding: 5px 10px; text-align: left; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+table.t tbody td { padding: 7px 10px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: top; }
+table.t tbody tr:hover { background: #f9fafb; cursor: pointer; }
+
+/* Tokens */
+.ch { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; white-space: nowrap; }
+.ch .d { width: 4px; height: 4px; border-radius: 50%; }
+.ch-p { background: #f9fafb; border: 1px solid #e5e7eb; color: #9ca3af; }
+.ch-p .d { background: #9ca3af; }
+.ch-ip { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); color: #152CFF; }
+.ch-ip .d { background: #152CFF; }
+.ch-c { background: #fefce8; border: 1px solid #fde68a; color: #a16207; }
+.ch-c .d { background: #a16207; }
+.ch-v { background: #f0fdf4; border: 1px solid #a7f3d0; color: #059669; }
+.ch-v .d { background: #059669; }
+
+.sv { font-size: 8px; font-weight: 600; padding: 1px 4px; border-radius: 99px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF; font-family: 'JetBrains Mono', monospace; }
+.b { font-weight: 600; color: #111827; }
+.f { color: #9ca3af; }
+.m { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; }
+.co { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: #111827; text-align: right; }
+.sub { font-size: 9px; margin-top: 2px; }
+.blue { color: #152CFF; }
+.person { display: inline-block; width: 8px; height: 8px; vertical-align: middle; margin-right: 2px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-V04: Vendor Job List Redesign</h1>
+<div class="hmw">How might we redesign the vendor's My Jobs table so that each service type shows the information that matters most to that vendor's workflow, instead of forcing all 5 services into the same generic columns?</div>
+
+<div class="context">
+<strong>The problem:</strong> The current table has 7 columns: Shipment | Customer | Service | Route | Pickup | Status | Cost. "Route" makes sense for FM Trucking (origin→destination) but is misleading for EC/CS/CR/OH (single location, not a route). Different services need different secondary info at a glance: FM needs driver+vehicle, EC needs MAWB, OH needs bag count+weight. The current design forces everyone into the same columns, so nobody gets exactly what they need.
+<br><br>
+<strong>Research:</strong> Uber Freight shows load-specific info per card (rate/mile, distance, deadhead). Flexport filters by mode/service type. Enterprise table UX recommends adaptive columns based on workflow context. The pattern: <strong>what you show should match what the user needs to decide.</strong>
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION A: Service-Aware Context Column -->
+<!-- ============================================ -->
+<h2>Option A: Service-Aware "Context" Column</h2>
+<span class="label" style="background: #dbeafe; color: #1e40af;">Minimal Change</span>
+
+<div class="rationale">
+Rename "Route" to a neutral column. Its content adapts per service type:
+<br>• FM: origin → destination + driver sub-line
+<br>• EC/CS: location + MAWB sub-line
+<br>• OH: location + bags/weight sub-line
+<br>• CR: location + bag count sub-line
+<br><br>
+Same 7 columns. Same table structure. Just smarter content in one column.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Minimal code change, same table structure<br>
+• Each service gets its most important secondary info<br>
+• No disorientation when switching service filters<br>
+• Consistent column widths across all views</div>
+<div class="cons"><strong>Cons</strong><br>
+• Column header is vague ("Details"? "Where"? blank?)<br>
+• Still has Shipment + Customer + Service as separate columns, eating width<br>
+• Doesn't solve the deeper issue: the vendor doesn't think in "Shipment IDs"</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="mock-nav">
+<div class="logo"></div><span class="lt">Teleport OS</span><span class="ll">Vendor</span>
+<span class="na">My Jobs</span><span class="ni">Fleet</span><span class="vn">HaleSun</span>
+</div>
+<div class="sb">
+<span class="sn" style="color:#111827">12</span> jobs ·
+<span class="sn" style="color:#9ca3af">3</span> pending ·
+<span class="sn" style="color:#152CFF">4</span> in progress ·
+<span class="sn" style="color:#a16207">2</span> completed ·
+<span class="sn" style="color:#059669">3</span> verified
+</div>
+<div class="fb">
+<span class="pl a">Active <span class="c">7</span></span>
+<span class="pl">Completed <span class="c">2</span></span>
+<span class="pl">Verified <span class="c">3</span></span>
+<span class="pl">All <span class="c">12</span></span>
+<span class="sep"></span>
+<span class="sp">FM</span><span class="sp">EC</span><span class="sp">OH</span><span class="sp">CR</span>
+</div>
+<table class="t">
+<thead><tr>
+<th style="width:9%">Shipment</th>
+<th style="width:11%">Customer</th>
+<th style="width:6%">Svc</th>
+<th style="width:35%">Details</th>
+<th style="width:10%">When</th>
+<th style="width:12%">Status</th>
+<th style="width:10%;text-align:right">Cost</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><span class="m">DO-2603-001</span></td>
+<td class="b">TikTok</td>
+<td><span class="sv">FM</span></td>
+<td>
+<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">TikTok WH, Shenzhen → SZX Airport</div>
+<div class="sub blue" style="font-weight:500">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="person" style="color:#152CFF"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Zhang Wei · <span class="m" style="font-size:8px;color:#152CFF">粤B·12345</span>
+</div>
+</td>
+<td><span class="m">30 Mar</span><br><span class="m">08:00</span></td>
+<td><span class="ch ch-p"><span class="d"></span>Pending</span></td>
+<td class="co">MYR 310</td>
+</tr>
+<tr>
+<td><span class="m">DO-2603-002</span></td>
+<td class="b">Shopee</td>
+<td><span class="sv">EC</span></td>
+<td>
+<div>Huanggang Port</div>
+<div class="sub f"><span class="m" style="font-size:9px;color:#6b7280">MAWB 160-33121632</span></div>
+</td>
+<td><span class="m">30 Mar</span><br><span class="m">13:00</span></td>
+<td><span class="ch ch-ip"><span class="d"></span>In Progress</span></td>
+<td class="co">CNY 580</td>
+</tr>
+<tr>
+<td><span class="m">DO-2603-003</span></td>
+<td class="b">Shopee</td>
+<td><span class="sv">FM</span></td>
+<td>
+<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Yantian Port → Shenzhen Airport</div>
+<div class="sub f">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="person" style="color:#d1d5db"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span style="color:#d1d5db">No driver assigned</span>
+</div>
+</td>
+<td><span class="m">30 Mar</span><br><span class="m">10:00</span></td>
+<td><span class="ch ch-p"><span class="d"></span>Pending</span></td>
+<td class="co">MYR 520</td>
+</tr>
+<tr>
+<td><span class="m">DO-2603-005</span></td>
+<td class="b">Shein</td>
+<td><span class="sv">OH</span></td>
+<td>
+<div>SZX Airport Cargo Terminal</div>
+<div class="sub f"><span class="m" style="font-size:9px;color:#6b7280">24 bags · 1,280 kg</span></div>
+</td>
+<td><span class="m">30 Mar</span><br><span class="m">14:00</span></td>
+<td><span class="ch ch-ip"><span class="d"></span>In Progress</span></td>
+<td class="co">MYR 338</td>
+</tr>
+<tr>
+<td><span class="m">DO-2603-008</span></td>
+<td class="b">Temu</td>
+<td><span class="sv">CR</span></td>
+<td>
+<div>Yantian Port</div>
+<div class="sub f"><span class="m" style="font-size:9px;color:#6b7280">16 bags</span></div>
+</td>
+<td><span class="m">30 Mar</span><br><span class="m">09:00</span></td>
+<td><span class="ch ch-p"><span class="d"></span>Pending</span></td>
+<td class="co">CNY 400</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION B: Adaptive Columns per Service -->
+<!-- ============================================ -->
+<h2>Option B: Columns Change Per Service Filter</h2>
+<span class="label" style="background: #fef3c7; color: #92400e;">Maximal Info</span>
+
+<div class="rationale">
+When the vendor selects a service filter (FM, EC, OH, etc.), the table columns change to show service-relevant data. Default "All" view uses generic columns. Each service gets exactly the columns its operators need.
+<br><br>
+• FM selected: Customer | Route | Pickup | Driver | Vehicle | Status | Cost
+<br>• EC selected: Customer | Location | MAWB | Deadline | Status | Cost
+<br>• OH selected: Customer | Location | Bags | Weight | Status | Cost
+<br>• All/default: Customer | Service | Location/Route | When | Status | Cost
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Each service gets exactly the columns it needs<br>
+• Maximum information density per service<br>
+• FM dispatchers see driver + vehicle without squinting at sub-lines<br>
+• EC brokers see MAWB prominently</div>
+<div class="cons"><strong>Cons</strong><br>
+• Table structure changes when switching filters. Disorienting.<br>
+• More complex to build (5 different table schemas)<br>
+• "Where did the MAWB column go?" when switching from EC to All<br>
+• Breaks mental model of "the table is stable, the data changes"</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="mock-nav">
+<div class="logo"></div><span class="lt">Teleport OS</span><span class="ll">Vendor</span>
+<span class="na">My Jobs</span><span class="ni">Fleet</span><span class="vn">HaleSun</span>
+</div>
+<div class="sb">
+<span class="sn" style="color:#111827">5</span> FM jobs ·
+<span class="sn" style="color:#9ca3af">2</span> pending ·
+<span class="sn" style="color:#152CFF">2</span> in progress ·
+<span class="sn" style="color:#059669">1</span> verified
+</div>
+<div class="fb">
+<span class="pl a">Active <span class="c">4</span></span>
+<span class="pl">Completed</span>
+<span class="pl">Verified <span class="c">1</span></span>
+<span class="pl">All <span class="c">5</span></span>
+<span class="sep"></span>
+<span class="sp a">FM</span><span class="sp">EC</span><span class="sp">OH</span><span class="sp">CR</span>
+<span style="margin-left:8px;font-size:9px;color:#152CFF;font-weight:600;">← columns adapted for FM</span>
+</div>
+<table class="t">
+<thead><tr>
+<th style="width:13%">Customer</th>
+<th style="width:30%">Route</th>
+<th style="width:10%">Pickup</th>
+<th style="width:14%">Driver</th>
+<th style="width:10%">Vehicle</th>
+<th style="width:10%">Status</th>
+<th style="width:9%;text-align:right">Cost</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+<div class="b">TikTok</div>
+<div class="m">DO-2603-001</div>
+</td>
+<td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">TikTok WH, Shenzhen → SZX Airport</td>
+<td><span class="m">30 Mar</span><br><span class="m">08:00</span></td>
+<td class="blue" style="font-size:11px;font-weight:500;">Zhang Wei</td>
+<td><span class="m" style="font-size:9px;color:#374151">粤B·12345</span><br><span class="m" style="font-size:8px">5T</span></td>
+<td><span class="ch ch-p"><span class="d"></span>Pending</span></td>
+<td class="co">MYR 310</td>
+</tr>
+<tr>
+<td>
+<div class="b">Shopee</div>
+<div class="m">DO-2603-003</div>
+</td>
+<td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Yantian Port → Shenzhen Airport</td>
+<td><span class="m">30 Mar</span><br><span class="m">10:00</span></td>
+<td style="color:#d1d5db;font-size:10px;">Unassigned</td>
+<td style="color:#d1d5db;">—</td>
+<td><span class="ch ch-p"><span class="d"></span>Pending</span></td>
+<td class="co">MYR 520</td>
+</tr>
+<tr>
+<td>
+<div class="b">Temu</div>
+<div class="m">DO-2603-007</div>
+</td>
+<td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Qianhai FTZ → Huanggang Port</td>
+<td><span class="m">30 Mar</span><br><span class="m">15:00</span></td>
+<td class="blue" style="font-size:11px;font-weight:500;">Li Ming</td>
+<td><span class="m" style="font-size:9px;color:#374151">粤B·67890</span><br><span class="m" style="font-size:8px">8T</span></td>
+<td><span class="ch ch-ip"><span class="d"></span>In Progress</span></td>
+<td class="co">MYR 480</td>
+</tr>
+<tr>
+<td>
+<div class="b">AliExpress</div>
+<div class="m">DO-2603-010</div>
+</td>
+<td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Dongguan WH → SZX Airport</td>
+<td><span class="m">30 Mar</span><br><span class="m">07:00</span></td>
+<td class="blue" style="font-size:11px;font-weight:500;">Wang Jun</td>
+<td><span class="m" style="font-size:9px;color:#374151">粤B��33456</span><br><span class="m" style="font-size:8px">10T</span></td>
+<td><span class="ch ch-ip"><span class="d"></span>In Progress</span></td>
+<td class="co">MYR 780</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION C: Compact Two-Line Rows -->
+<!-- ============================================ -->
+<h2>Option C: Compact Two-Line Rows</h2>
+<span class="label" style="background: #f0fdf4; color: #059669;">Recommended</span>
+
+<div class="rationale">
+Rethink the column set from the vendor's perspective. The vendor doesn't think in "Shipment IDs." They think: "what service, for which customer, at what location, when, what's the status?"
+<br><br>
+New columns: <strong>Job (service+customer+ref) | Where + Context | When | Status | Cost</strong>
+<br><br>
+Each row has two lines: Line 1 is the primary data. Line 2 is the service-specific context:
+<br>• FM: route on line 1, driver + vehicle on line 2
+<br>• EC: location on line 1, MAWB on line 2
+<br>• OH: location on line 1, bag count + weight on line 2
+<br>• CR: location on line 1, bag count on line 2
+<br><br>
+The "Job" column merges Service tag + Customer + Shipment ref into one cell (service tag on left, customer bold, shipment mono below). This saves two columns worth of width.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• 5 columns instead of 7. More breathing room, especially at 768px.<br>
+• Each service gets its context info naturally via sub-lines<br>
+• "Job" column answers "what is this?" in one glance (service + customer + ref)<br>
+• Stable table structure whether you're on All, FM, or EC filter<br>
+• "Where" column adapts content but keeps the same position and width<br>
+• Works well on tablet — fewer columns to fit</div>
+<div class="cons"><strong>Cons</strong><br>
+• Two-line rows are taller than single-line rows. ~25% fewer rows visible.<br>
+• "Job" column packs a lot (service tag, customer name, ref number)<br>
+• Breaks from admin Jobs page column pattern (different column set)</div>
+</div>
+</div>
+
+<div class="screen">
+<div class="mock-nav">
+<div class="logo"></div><span class="lt">Teleport OS</span><span class="ll">Vendor</span>
+<span class="na">My Jobs</span><span class="ni">Fleet</span><span class="vn">HaleSun</span>
+</div>
+<div class="sb">
+<span class="sn" style="color:#111827">12</span> jobs ·
+<span class="sn" style="color:#9ca3af">3</span> pending ·
+<span class="sn" style="color:#152CFF">4</span> in progress ·
+<span class="sn" style="color:#a16207">2</span> completed ·
+<span class="sn" style="color:#059669">3</span> verified
+</div>
+<div class="fb">
+<span class="pl a">Active <span class="c">7</span></span>
+<span class="pl">Completed <span class="c">2</span></span>
+<span class="pl">Verified <span class="c">3</span></span>
+<span class="pl">Cancelled <span class="c">1</span></span>
+<span class="pl">All <span class="c">12</span></span>
+<span class="sep"></span>
+<span class="sp">FM</span><span class="sp">EC</span><span class="sp">OH</span><span class="sp">CR</span>
+</div>
+<table class="t">
+<thead><tr>
+<th style="width:22%">Job</th>
+<th style="width:38%">Where</th>
+<th style="width:10%">When</th>
+<th style="width:14%">Status</th>
+<th style="width:10%;text-align:right">Cost</th>
+</tr></thead>
+<tbody>
+<!-- FM job: assigned -->
+<tr>
+<td>
+<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">
+<span class="sv">FM</span>
+<span class="b" style="font-size:11px;">TikTok</span>
+</div>
+<div class="m">DO-2603-001</div>
+</td>
+<td>
+<div style="font-size:11px;color:#374151;">TikTok WH, Shenzhen → SZX Airport</div>
+<div class="sub blue" style="font-weight:500;font-size:9px;">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="person" style="color:#152CFF"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Zhang Wei · <span class="m" style="font-size:8px;color:#152CFF">粤B·12345 5T</span>
+</div>
+</td>
+<td><span class="m">30 Mar</span><br><span class="m">08:00</span></td>
+<td><span class="ch ch-p"><span class="d"></span>Pending</span></td>
+<td class="co">MYR 310</td>
+</tr>
+
+<!-- EC job: with MAWB -->
+<tr>
+<td>
+<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">
+<span class="sv">EC</span>
+<span class="b" style="font-size:11px;">Shopee</span>
+</div>
+<div class="m">DO-2603-002</div>
+</td>
+<td>
+<div style="font-size:11px;color:#374151;">Huanggang Port</div>
+<div class="sub"><span class="m" style="font-size:9px;color:#6b7280">MAWB 160-33121632</span></div>
+</td>
+<td><span class="m">30 Mar</span><br><span class="m">13:00</span></td>
+<td><span class="ch ch-ip"><span class="d"></span>In Progress</span></td>
+<td class="co">CNY 580</td>
+</tr>
+
+<!-- FM job: unassigned -->
+<tr>
+<td>
+<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">
+<span class="sv">FM</span>
+<span class="b" style="font-size:11px;">Shopee</span>
+</div>
+<div class="m">DO-2603-003</div>
+</td>
+<td>
+<div style="font-size:11px;color:#374151;">Yantian Port → Shenzhen Airport</div>
+<div class="sub">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="person" style="color:#d1d5db"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span style="color:#d1d5db;font-size:9px">No driver assigned</span>
+</div>
+</td>
+<td><span class="m">30 Mar</span><br><span class="m">10:00</span></td>
+<td><span class="ch ch-p"><span class="d"></span>Pending</span></td>
+<td class="co">MYR 520</td>
+</tr>
+
+<!-- OH job: bags + weight -->
+<tr>
+<td>
+<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">
+<span class="sv">OH</span>
+<span class="b" style="font-size:11px;">Shein</span>
+</div>
+<div class="m">DO-2603-005</div>
+</td>
+<td>
+<div style="font-size:11px;color:#374151;">SZX Airport Cargo Terminal</div>
+<div class="sub"><span class="m" style="font-size:9px;color:#6b7280">24 bags · 1,280 kg</span></div>
+</td>
+<td><span class="m">30 Mar</span><br><span class="m">14:00</span></td>
+<td><span class="ch ch-ip"><span class="d"></span>In Progress</span></td>
+<td class="co">MYR 338</td>
+</tr>
+
+<!-- CR job: bag count -->
+<tr>
+<td>
+<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">
+<span class="sv">CR</span>
+<span class="b" style="font-size:11px;">Temu</span>
+</div>
+<div class="m">DO-2603-008</div>
+</td>
+<td>
+<div style="font-size:11px;color:#374151;">Yantian Port</div>
+<div class="sub"><span class="m" style="font-size:9px;color:#6b7280">16 bags to retrieve</span></div>
+</td>
+<td><span class="m">30 Mar</span><br><span class="m">09:00</span></td>
+<td><span class="ch ch-p"><span class="d"></span>Pending</span></td>
+<td class="co">CNY 400</td>
+</tr>
+
+<!-- FM job: in progress, completed -->
+<tr>
+<td>
+<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">
+<span class="sv">FM</span>
+<span class="b" style="font-size:11px;">AliExpress</span>
+</div>
+<div class="m">DO-2603-010</div>
+</td>
+<td>
+<div style="font-size:11px;color:#374151;">Dongguan WH → SZX Airport</div>
+<div class="sub blue" style="font-weight:500;font-size:9px;">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="person" style="color:#152CFF"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Wang Jun · <span class="m" style="font-size:8px;color:#152CFF">粤B·33456 10T</span>
+</div>
+</td>
+<td><span class="m">30 Mar</span><br><span class="m">07:00</span></td>
+<td><span class="ch ch-c"><span class="d"></span>Completed</span></td>
+<td class="co">MYR 780</td>
+</tr>
+
+<!-- EC job: completed -->
+<tr>
+<td>
+<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">
+<span class="sv">EC</span>
+<span class="b" style="font-size:11px;">TikTok</span>
+</div>
+<div class="m">DO-2603-001</div>
+</td>
+<td>
+<div style="font-size:11px;color:#374151;">SZX Airport Customs</div>
+<div class="sub"><span class="m" style="font-size:9px;color:#6b7280">MAWB 160-84329871</span></div>
+</td>
+<td><span class="m">29 Mar</span><br><span class="m">15:00</span></td>
+<td><span class="ch ch-v"><span class="d"></span>Verified</span></td>
+<td class="co">MYR 190</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<!-- ============================================ -->
+<!-- VERDICT -->
+<!-- ============================================ -->
+<div class="verdict">
+<h3>Recommendation: Option C — Compact Two-Line Rows</h3>
+<p style="font-size: 12px; line-height: 1.6; color: #374151;">
+Option C is the strongest because it solves two problems at once: it gives each service its contextual info AND it reduces from 7 columns to 5, making the table work better at every viewport width.
+<br><br>
+The "Job" column (service tag + customer + ref) is a key insight. The vendor already knows their own company. They need to know: what type of work (service tag), for whom (customer), and which shipment (ref). Packing this into one cell saves two columns worth of space that the old design wasted on Shipment and Service as separate columns.
+<br><br>
+The "Where" column is the real win. It shows the location/route on line 1 (the physical answer to "where am I going?") and the service-specific context on line 2 (driver for FM, MAWB for EC, bags for OH). Same column position, same width, always stable. The content adapts to what matters for that job type.
+<br><br>
+Option A is too timid. It fixes the column name but doesn't solve the width problem. Option B is powerful but disorienting, and complex to build. Option C hits the sweet spot: stable table structure, adaptive content, fewer columns, better tablet experience.
+<br><br>
+<strong>The 5-column set: Job | Where | When | Status | Cost</strong> — this is what the vendor actually needs to make decisions.
+</p>
+</div>
+
+</div>
+</body>
+</html>
