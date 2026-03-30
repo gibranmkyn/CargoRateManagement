@@ -360,21 +360,21 @@ Both Admin and Vendor apps should display:
 - Replacement chain indicator: "→ J05" link next to cancelled jobs
 - Follow-up indicator: "← J01" link on follow-up jobs
 
-#### Implementation Checklist
-- [ ] Add `completionRemark`, `replacedByJobId`, `replacesJobId` fields to Job interface
-- [ ] Make `cancelReason` mandatory for Cancelled status (model + UI validation)
-- [ ] Remove vendor reassignment on cancelled jobs (slide-out + RejectedTab)
-- [ ] "Cancel Job" button on slide-out for Pending/In Progress (red outline, bottom)
-- [ ] Inline cancel form: reason textarea + "Create replacement" checkbox + vendor picker
-- [ ] "Cancel & Replace" atomic action: cancel original + create new job + link both
-- [ ] "Cancel Only" action: cancel with reason, no replacement
-- [ ] Cancelled state in slide-out: immutable reason display + replacement link
-- [ ] "Complete with Remark" option on slide-out (completion remark textarea)
-- [ ] "Create Follow-up Job" button on Completed jobs
-- [ ] Replacement/follow-up link cards (navigable) in slide-out
-- [ ] Display cancel reason + replacement links in vendor job detail
-- [ ] Update vendor My Jobs to show completion remarks
-- [ ] Activity log entries for all cancellation/replacement/follow-up events
+#### Implementation Checklist (completed 2026-03-30)
+- [x] Add `completionRemark`, `replacedByJobId`, `replacesJobId` fields to Job interface
+- [x] Make `cancelReason` mandatory for Cancelled status (model + UI validation)
+- [x] Remove vendor reassignment on cancelled jobs (slide-out + RejectedTab)
+- [x] "Cancel Job" button on slide-out for Pending/In Progress (red outline, bottom)
+- [x] Inline cancel form: reason textarea + "Create replacement" checkbox + vendor picker
+- [x] "Cancel & Replace" atomic action: cancel original + create new job + link both
+- [x] "Cancel Only" action: cancel with reason, no replacement
+- [x] Cancelled state in slide-out: immutable reason display + replacement link
+- [x] "Complete with Remark" option on slide-out (completion remark textarea)
+- [x] "Create Follow-up Job" button on Completed jobs
+- [x] Replacement/follow-up link cards (navigable) in slide-out
+- [x] Display cancel reason + replacement links in vendor job detail
+- [x] Update vendor My Jobs to show completion remarks
+- [x] Activity log entries for all cancellation/replacement/follow-up events
 
 ### Known Scaling Limitations (address in Phase 3)
 - **Vendor selector pills** — works for 5-8 vendors but breaks at 30+. Needs to become a searchable dropdown or sidebar list.

@@ -41,7 +41,11 @@ type TripAction =
   | { type: 'UPDATE_JOB_QTY'; payload: { tripId: string; jobId: string; jobBags?: number; jobWeight?: number; jobVolume?: number } }
   | { type: 'TOGGLE_FEE'; payload: { tripId: string; jobId: string; feeId: string } }
   | { type: 'START_JOB'; payload: { tripId: string; jobId: string } }
-  | { type: 'VERIFY_JOB'; payload: { tripId: string; jobId: string } };
+  | { type: 'VERIFY_JOB'; payload: { tripId: string; jobId: string } }
+  | { type: 'CANCEL_JOB'; payload: { tripId: string; jobId: string; cancelReason: string } }
+  | { type: 'CANCEL_AND_REPLACE'; payload: { tripId: string; jobId: string; cancelReason: string; newJob: Job } }
+  | { type: 'CREATE_FOLLOWUP'; payload: { tripId: string; jobId: string; newJob: Job } }
+  | { type: 'SET_COMPLETION_REMARK'; payload: { tripId: string; jobId: string; remark: string } };
 
 // --- Reducer ---
 
@@ -289,6 +293,84 @@ function tripReducer(state: TripState, action: TripAction): TripState {
         ),
       };
 
+    case 'CANCEL_JOB': {
+      const { tripId, jobId, cancelReason } = action.payload;
+      const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+      return {
+        ...state,
+        trips: state.trips.map((t) =>
+          t.id === tripId
+            ? { ...t, jobs: t.jobs.map((j) => j.id === jobId ? {
+                ...j,
+                status: 'Cancelled' as const,
+                cancelReason,
+                activityLog: [...j.activityLog, { id: `log-${Date.now()}`, timestamp: now, action: `Cancelled`, user: 'Ops Admin', details: cancelReason }],
+              } : j) }
+            : t
+        ),
+      };
+    }
+
+    case 'CANCEL_AND_REPLACE': {
+      const { tripId, jobId, cancelReason, newJob } = action.payload;
+      const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+      return {
+        ...state,
+        trips: state.trips.map((t) =>
+          t.id === tripId
+            ? {
+                ...t,
+                jobs: [
+                  ...t.jobs.map((j) => j.id === jobId ? {
+                    ...j,
+                    status: 'Cancelled' as const,
+                    cancelReason,
+                    replacedByJobId: newJob.id,
+                    activityLog: [...j.activityLog, { id: `log-${Date.now()}`, timestamp: now, action: `Cancelled — replaced by ${newJob.id} (${newJob.vendor.name})`, user: 'Ops Admin', details: cancelReason }],
+                  } : j),
+                  newJob,
+                ],
+              }
+            : t
+        ),
+      };
+    }
+
+    case 'CREATE_FOLLOWUP': {
+      const { tripId, jobId, newJob } = action.payload;
+      const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+      return {
+        ...state,
+        trips: state.trips.map((t) =>
+          t.id === tripId
+            ? {
+                ...t,
+                jobs: [
+                  ...t.jobs.map((j) => j.id === jobId ? {
+                    ...j,
+                    replacedByJobId: newJob.id,
+                    activityLog: [...j.activityLog, { id: `log-${Date.now()}`, timestamp: now, action: `Follow-up created — ${newJob.id}`, user: 'Ops Admin' }],
+                  } : j),
+                  newJob,
+                ],
+              }
+            : t
+        ),
+      };
+    }
+
+    case 'SET_COMPLETION_REMARK': {
+      const { tripId, jobId, remark } = action.payload;
+      return {
+        ...state,
+        trips: state.trips.map((t) =>
+          t.id === tripId
+            ? { ...t, jobs: t.jobs.map((j) => j.id === jobId ? { ...j, completionRemark: remark } : j) }
+            : t
+        ),
+      };
+    }
+
     default:
       return state;
   }
@@ -334,6 +416,10 @@ interface TripContextValue {
   updateJobQty: (tripId: string, jobId: string, qtys: { jobBags?: number; jobWeight?: number; jobVolume?: number }) => void;
   startJob: (tripId: string, jobId: string) => void;
   verifyJob: (tripId: string, jobId: string) => void;
+  cancelJob: (tripId: string, jobId: string, cancelReason: string) => void;
+  cancelAndReplace: (tripId: string, jobId: string, cancelReason: string, newJob: Job) => void;
+  createFollowup: (tripId: string, jobId: string, newJob: Job) => void;
+  setCompletionRemark: (tripId: string, jobId: string, remark: string) => void;
 }
 
 const TripContext = createContext<TripContextValue | null>(null);
@@ -347,7 +433,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
 
   // Hydrate from localStorage on mount
   // Version key: bump this to force reseed when seed data changes
-  const SEED_VERSION = 'v10-vendor-app';
+  const SEED_VERSION = 'v11-cancellation';
 
   useEffect(() => {
     try {
@@ -396,6 +482,10 @@ export function TripProvider({ children }: { children: ReactNode }) {
   const updateJobQty = useCallback((tripId: string, jobId: string, qtys: { jobBags?: number; jobWeight?: number; jobVolume?: number }) => dispatch({ type: 'UPDATE_JOB_QTY', payload: { tripId, jobId, ...qtys } }), []);
   const startJob = useCallback((tripId: string, jobId: string) => dispatch({ type: 'START_JOB', payload: { tripId, jobId } }), []);
   const verifyJob = useCallback((tripId: string, jobId: string) => dispatch({ type: 'VERIFY_JOB', payload: { tripId, jobId } }), []);
+  const cancelJob = useCallback((tripId: string, jobId: string, cancelReason: string) => dispatch({ type: 'CANCEL_JOB', payload: { tripId, jobId, cancelReason } }), []);
+  const cancelAndReplace = useCallback((tripId: string, jobId: string, cancelReason: string, newJob: Job) => dispatch({ type: 'CANCEL_AND_REPLACE', payload: { tripId, jobId, cancelReason, newJob } }), []);
+  const createFollowup = useCallback((tripId: string, jobId: string, newJob: Job) => dispatch({ type: 'CREATE_FOLLOWUP', payload: { tripId, jobId, newJob } }), []);
+  const setCompletionRemark = useCallback((tripId: string, jobId: string, remark: string) => dispatch({ type: 'SET_COMPLETION_REMARK', payload: { tripId, jobId, remark } }), []);
 
   const value: TripContextValue = {
     trips: state.trips,
@@ -408,6 +498,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
     setJobInvoice, bulkApplyAgreedRates,
     addFee, removeFee, updateFeeQty, toggleFee, updateJobQty,
     startJob, verifyJob,
+    cancelJob, cancelAndReplace, createFollowup, setCompletionRemark,
   };
 
   return <TripContext.Provider value={value}>{children}</TripContext.Provider>;

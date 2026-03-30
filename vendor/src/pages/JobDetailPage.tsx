@@ -210,6 +210,28 @@ export default function JobDetailPage() {
         </div>
       </div>
 
+      {/* ===== CANCEL REASON (Cancelled jobs) ===== */}
+      {job.status === 'Cancelled' && job.cancelReason && (() => {
+        const cancelEntry = log.find((e) => e.action.toLowerCase().includes('cancel'));
+        return (
+          <div style={{ padding: '8px 10px', background: '#fff', border: '1px solid #fecaca', borderRadius: 6, marginBottom: 20 }}>
+            <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#dc2626', marginBottom: 4 }}>Cancellation Reason</div>
+            <div style={{ fontSize: 11, color: '#374151' }}>{job.cancelReason}</div>
+            {cancelEntry && (
+              <div style={{ ...mono, fontSize: 9, color: '#9ca3af', marginTop: 4 }}>{fmtDateTime(cancelEntry.timestamp)}</div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ===== COMPLETION REMARK (Completed jobs with remark) ===== */}
+      {(job.status === 'Completed' || job.status === 'Verified') && job.completionRemark && (
+        <div style={{ padding: '8px 10px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, marginBottom: 20 }}>
+          <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#a16207', marginBottom: 4 }}>Completion Remark</div>
+          <div style={{ fontSize: 11, color: '#374151' }}>{job.completionRemark}</div>
+        </div>
+      )}
+
       {/* Hidden file input — multi-file */}
       <input ref={fileRef} type="file" accept="image/*,.pdf" multiple style={{ display: 'none' }} onChange={handleUpload} />
 

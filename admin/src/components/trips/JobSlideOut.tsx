@@ -1,8 +1,7 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { ArrowRight, MapPin, Upload, FileText, Image, X, Clock, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Job, Trip, ProofDocument } from '@shared/mockData';
-// ProofStatus removed — unified status lifecycle (TODO-020)
 import { formatCurrency, vendors } from '@shared/mockData';
 import ServiceTag from './ServiceTag';
 
@@ -22,7 +21,6 @@ function fmtDateShort(dt: string) {
 
 const sectionTitle: React.CSSProperties = { fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 10 };
 
-// Status-based labels (unified lifecycle — TODO-020)
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; border: string }> = {
   Pending: { label: 'Pending', color: '#9ca3af', bg: '#f3f4f6', border: '#e5e7eb' },
   'In Progress': { label: 'In Progress', color: '#152CFF', bg: 'rgba(21,44,255,0.04)', border: 'rgba(21,44,255,0.15)' },
@@ -37,7 +35,11 @@ interface Props {
   onRemoveProof: (docId: string) => void;
   onVerify?: () => void;
   onStartJob?: () => void;
-  onReassign?: (vendorCode: string) => void;
+  onCancelJob?: (reason: string) => void;
+  onCancelAndReplace?: (reason: string, newVendorCode: string) => void;
+  onCreateFollowup?: (vendorCode: string) => void;
+  onSetCompletionRemark?: (remark: string) => void;
+  onOpenJob?: (tripId: string, jobId: string) => void;
   onUpdateFeeQty?: (feeId: string, quantity: number) => void;
   onToggleFee?: (feeId: string) => void;
   onUpdateJobQty?: (qtys: { jobBags?: number; jobWeight?: number; jobVolume?: number }) => void;
@@ -47,13 +49,28 @@ function docIcon(doc: ProofDocument) {
   return doc.type.startsWith('image/') ? <Image size={12} style={{ color: '#152CFF' }} /> : <FileText size={12} style={{ color: '#152CFF' }} />;
 }
 
-export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemoveProof, onVerify, onStartJob, onReassign, onUpdateFeeQty, onToggleFee, onUpdateJobQty }: Props) {
+export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemoveProof, onVerify, onStartJob, onCancelJob, onCancelAndReplace, onCreateFollowup, onSetCompletionRemark, onOpenJob, onUpdateFeeQty, onToggleFee, onUpdateJobQty }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const log = job.activityLog ?? [];
   const proofs = job.proofDocuments ?? [];
   const fees = job.fees ?? [];
   const isVerified = job.status === 'Verified';
+  const isCancelled = job.status === 'Cancelled';
   const ps = STATUS_LABELS[job.status] ?? STATUS_LABELS.Pending;
+
+  // Cancel form state
+  const [showCancelForm, setShowCancelForm] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [createReplacement, setCreateReplacement] = useState(true);
+  const [replacementVendor, setReplacementVendor] = useState('');
+
+  // Completion remark state
+  const [showRemarkForm, setShowRemarkForm] = useState(false);
+  const [remarkText, setRemarkText] = useState(job.completionRemark ?? '');
+
+  // Follow-up state
+  const [showFollowupForm, setShowFollowupForm] = useState(false);
+  const [followupVendor, setFollowupVendor] = useState(job.vendor.code);
 
   function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -71,6 +88,10 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
 
   const inputStyle: React.CSSProperties = { fontSize: 10, padding: '3px 6px', border: '1px solid #e5e7eb', borderRadius: 3, outline: 'none', fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 };
 
+  // Find linked jobs
+  const replacedByJob = job.replacedByJobId ? trip.jobs.find((j) => j.id === job.replacedByJobId) : null;
+  const replacesJob = job.replacesJobId ? trip.jobs.find((j) => j.id === job.replacesJobId) : null;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Header */}
@@ -80,7 +101,7 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
             J{String(jobIndex + 1).padStart(2, '0')}/{trip.jobs.length}
           </span>
         </div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginTop: 6 }}>{job.vendor.name} · {job.service.label}</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: isCancelled ? '#9ca3af' : '#111827', marginTop: 6, textDecoration: isCancelled ? 'line-through' : 'none' }}>{job.vendor.name} · {job.service.label}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#9ca3af', marginTop: 4 }}>
           <span>{trip.customer.name}</span>
           <span style={{ color: '#d1d5db' }}>&middot;</span>
@@ -88,40 +109,61 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
         </div>
       </div>
 
-      {/* Status Action Bar */}
-      {job.status === 'Cancelled' && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 6, padding: '10px 12px', borderRadius: 6, background: '#fef2f2', border: '1px solid #fecaca' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {/* Status Action Bar — Cancelled state (immutable) */}
+      {isCancelled && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 6, background: '#fef2f2', border: '1px solid #fecaca' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 4, fontSize: 10, fontWeight: 700, background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626' }}>
               <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#dc2626', display: 'inline-block' }} /> Cancelled
             </span>
           </div>
+          {/* Cancel reason — read-only, prominent */}
           {job.cancelReason && (
-            <div style={{ fontSize: 10, color: '#dc2626', padding: '6px 8px', background: '#fff', borderRadius: 4, border: '1px solid #fecaca' }}>
-              {job.cancelReason}
+            <div style={{ padding: '8px 10px', background: '#fff', border: '1px solid #fecaca', borderRadius: 6 }}>
+              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#dc2626', marginBottom: 4 }}>Cancellation Reason</div>
+              <div style={{ fontSize: 11, color: '#374151', lineHeight: 1.5 }}>{job.cancelReason}</div>
             </div>
           )}
         </div>
       )}
 
-      {/* Reassign Vendor — only for rejected jobs */}
-      {job.status === 'Cancelled' && onReassign && (
-        <div>
-          <div style={sectionTitle}>Reassign Vendor</div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <select id="reassign-vendor" style={{ flex: 1, fontSize: 11, padding: '6px 8px', border: '1px solid #e5e7eb', borderRadius: 4, fontFamily: 'inherit' }}>
-              <option value="">Select new vendor...</option>
-              {vendors.filter(v => v.code !== job.vendor.code).map(v => (
-                <option key={v.code} value={v.code}>{v.name}</option>
-              ))}
-            </select>
-            <button onClick={() => { const sel = document.getElementById('reassign-vendor') as HTMLSelectElement; if (sel?.value) onReassign(sel.value); }} style={{ padding: '6px 14px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: '#152CFF', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Reassign</button>
+      {/* Replacement link — "Replaced By" on cancelled/partial jobs */}
+      {replacedByJob && (
+        <div style={{ padding: '8px 10px', background: 'rgba(21,44,255,0.02)', border: '1px solid rgba(21,44,255,0.1)', borderRadius: 6 }}>
+          <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#152CFF', marginBottom: 4 }}>
+            {isCancelled ? 'Replaced By' : 'Follow-up'}
           </div>
-          <div style={{ fontSize: 9, color: '#9ca3af', marginTop: 4 }}>Status will reset to Pending with new vendor</div>
+          <div onClick={() => onOpenJob?.(trip.id, replacedByJob.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', borderRadius: 4, background: 'rgba(21,44,255,0.04)', border: '1px solid rgba(21,44,255,0.12)', fontSize: 10, fontWeight: 600, color: '#152CFF', cursor: 'pointer' }}>
+            <span style={{ fontFamily: 'var(--font-mono)' }}>{replacedByJob.id}</span>
+            <span>&middot;</span>
+            <span>{replacedByJob.vendor.name} &middot; {replacedByJob.service.label}</span>
+            <span style={{ marginLeft: 'auto' }}>&rarr;</span>
+          </div>
         </div>
       )}
 
-      {job.status !== 'Cancelled' && (
+      {/* "Replaces" link on replacement/follow-up jobs */}
+      {replacesJob && (
+        <div style={{ padding: '6px 8px', background: 'rgba(21,44,255,0.02)', border: '1px solid rgba(21,44,255,0.08)', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' }}>
+            {replacesJob.status === 'Cancelled' ? 'Replaces' : 'Follows'}
+          </span>
+          <div onClick={() => onOpenJob?.(trip.id, replacesJob.id)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 6px', borderRadius: 4, background: 'rgba(21,44,255,0.04)', border: '1px solid rgba(21,44,255,0.12)', fontSize: 9, fontWeight: 600, color: '#152CFF', cursor: 'pointer' }}>
+            <span style={{ fontFamily: 'var(--font-mono)' }}>{replacesJob.id}</span> &middot; {replacesJob.vendor.name} ({replacesJob.status === 'Cancelled' ? 'cancelled' : 'partial'}) &rarr;
+          </div>
+        </div>
+      )}
+
+      {/* Completion remark — amber box (on Completed jobs with remark) */}
+      {job.status === 'Completed' && job.completionRemark && (
+        <div style={{ padding: '8px 10px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6 }}>
+          <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#a16207', marginBottom: 4 }}>Completion Remark</div>
+          <div style={{ fontSize: 11, color: '#374151', lineHeight: 1.5 }}>{job.completionRemark}</div>
+        </div>
+      )}
+
+      {/* Status Action Bar — non-Cancelled states */}
+      {!isCancelled && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 6,
           ...(job.status === 'Pending' ? { background: '#f9fafb', border: '1px solid #e5e7eb' } :
@@ -145,7 +187,6 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
             {job.status === 'Verified' ? '✓ Verified' : ps.label}
           </span>
 
-          {/* Right side: action or hint */}
           {job.status === 'Pending' && (
             <button onClick={() => onStartJob?.()} style={{ marginLeft: 'auto', padding: '6px 14px', borderRadius: 6, fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4, background: '#152CFF', color: '#fff' }}>
               Start Job →
@@ -182,7 +223,7 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
         <ServiceTag service={job.service} />
       </div>
 
-      {/* === PROOF OF SERVICE — THE PRIMARY ACTION === */}
+      {/* Proof of Service */}
       <div>
         <div style={sectionTitle}>Proof of Service</div>
         {proofs.length > 0 ? (
@@ -194,7 +235,7 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
                   <div style={{ fontSize: 11, fontWeight: 500, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.name}</div>
                   <div style={{ fontSize: 9, color: '#9ca3af' }}>{fmtDateTime(doc.uploadedAt)}</div>
                 </div>
-                {!isVerified && (
+                {!isVerified && !isCancelled && (
                   <button onClick={() => onRemoveProof(doc.id)} style={{ padding: 2, color: '#d1d5db', background: 'none', border: 'none', cursor: 'pointer' }}>
                     <X size={10} />
                   </button>
@@ -208,51 +249,50 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
           </div>
         )}
 
-        {/* Upload button */}
-        {!isVerified && (
+        {!isVerified && !isCancelled && (
           <label style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '8px 10px',
             fontSize: 11, fontWeight: 600, color: '#152CFF', background: 'rgba(21,44,255,0.04)',
-            borderRadius: 6, cursor: 'pointer', border: '1px solid rgba(21,44,255,0.12)',
-            marginBottom: 8,
+            borderRadius: 6, cursor: 'pointer', border: '1px solid rgba(21,44,255,0.12)', marginBottom: 8,
           }}>
             <Upload size={12} /> Upload proof document
             <input ref={fileRef} type="file" accept="image/*,.pdf" multiple style={{ display: 'none' }} onChange={handleUpload} />
           </label>
         )}
-
       </div>
 
       {/* Quantities (editable until verified) */}
-      <div>
-        <div style={sectionTitle}>
-          Quantities
-          {!isVerified && <span style={{ fontSize: 8, fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: '#b45309', marginLeft: 4 }}>(editable until verified)</span>}
+      {!isCancelled && (
+        <div>
+          <div style={sectionTitle}>
+            Quantities
+            {!isVerified && <span style={{ fontSize: 8, fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: '#b45309', marginLeft: 4 }}>(editable until verified)</span>}
+          </div>
+          <div style={{ display: 'flex', gap: 8, padding: '8px 10px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 6 }}>
+            <div>
+              <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Bags</div>
+              {isVerified
+                ? <div style={{ ...inputStyle, border: 'none', padding: 0, background: 'none' }}>{job.jobBags ?? trip.bags}</div>
+                : <input type="number" value={job.jobBags ?? trip.bags} onChange={(e) => onUpdateJobQty?.({ jobBags: Number(e.target.value) || 0 })} style={{ ...inputStyle, width: 50 }} />
+              }
+            </div>
+            <div>
+              <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Weight (kg)</div>
+              {isVerified
+                ? <div style={{ ...inputStyle, border: 'none', padding: 0, background: 'none' }}>{job.jobWeight ?? trip.weight}</div>
+                : <input type="number" value={job.jobWeight ?? trip.weight} onChange={(e) => onUpdateJobQty?.({ jobWeight: Number(e.target.value) || 0 })} style={{ ...inputStyle, width: 70 }} />
+              }
+            </div>
+            <div>
+              <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Volume (CBM)</div>
+              {isVerified
+                ? <div style={{ ...inputStyle, border: 'none', padding: 0, background: 'none' }}>{job.jobVolume ?? 0}</div>
+                : <input type="number" step="0.1" value={job.jobVolume ?? 0} onChange={(e) => onUpdateJobQty?.({ jobVolume: Number(e.target.value) || 0 })} style={{ ...inputStyle, width: 60 }} />
+              }
+            </div>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, padding: '8px 10px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 6 }}>
-          <div>
-            <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Bags</div>
-            {isVerified
-              ? <div style={{ ...inputStyle, border: 'none', padding: 0, background: 'none' }}>{job.jobBags ?? trip.bags}</div>
-              : <input type="number" value={job.jobBags ?? trip.bags} onChange={(e) => onUpdateJobQty?.({ jobBags: Number(e.target.value) || 0 })} style={{ ...inputStyle, width: 50 }} />
-            }
-          </div>
-          <div>
-            <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Weight (kg)</div>
-            {isVerified
-              ? <div style={{ ...inputStyle, border: 'none', padding: 0, background: 'none' }}>{job.jobWeight ?? trip.weight}</div>
-              : <input type="number" value={job.jobWeight ?? trip.weight} onChange={(e) => onUpdateJobQty?.({ jobWeight: Number(e.target.value) || 0 })} style={{ ...inputStyle, width: 70 }} />
-            }
-          </div>
-          <div>
-            <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Volume (CBM)</div>
-            {isVerified
-              ? <div style={{ ...inputStyle, border: 'none', padding: 0, background: 'none' }}>{job.jobVolume ?? 0}</div>
-              : <input type="number" step="0.1" value={job.jobVolume ?? 0} onChange={(e) => onUpdateJobQty?.({ jobVolume: Number(e.target.value) || 0 })} style={{ ...inputStyle, width: 60 }} />
-            }
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Fee Breakdown — subtractive model (HMW-43) */}
       <div>
@@ -279,7 +319,7 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
                   return (
                     <tr key={fee.id} style={{ opacity: isActive ? 1 : 0.4 }}>
                       <td style={{ padding: '4px 4px', textAlign: 'center', borderBottom: '1px solid #f3f4f6' }}>
-                        {!isVerified && (
+                        {!isVerified && !isCancelled && (
                           <button onClick={() => onToggleFee?.(fee.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, fontSize: 12, color: isActive ? '#152CFF' : '#d1d5db' }}>
                             {isActive ? '✓' : '+'}
                           </button>
@@ -287,13 +327,11 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
                       </td>
                       <td style={{ padding: '4px 8px', fontSize: 10, borderBottom: '1px solid #f3f4f6', color: isActive ? '#374151' : '#9ca3af', textDecoration: isActive ? 'none' : 'line-through' }}>
                         <div>{fee.name}</div>
-                        <div style={{ fontSize: 8, color: '#9ca3af' }}>
-                          {formatCurrency(fee.currency, fee.rate)} /{fee.unit === 'flat' ? 'trip' : fee.unit.replace('per-', '')}
-                        </div>
+                        <div style={{ fontSize: 8, color: '#9ca3af' }}>{formatCurrency(fee.currency, fee.rate)} /{fee.unit === 'flat' ? 'trip' : fee.unit.replace('per-', '')}</div>
                       </td>
                       <td style={{ padding: '4px 8px', textAlign: 'center', borderBottom: '1px solid #f3f4f6' }}>
                         {isActive ? (
-                          isVerified
+                          isVerified || isCancelled
                             ? <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10 }}>{fee.quantity}</span>
                             : <input type="number" value={fee.quantity} onChange={(e) => onUpdateFeeQty?.(fee.id, Number(e.target.value) || 0)} style={{ ...inputStyle, width: 40, textAlign: 'center' }} />
                         ) : <span style={{ color: '#d1d5db' }}>—</span>}
@@ -323,10 +361,54 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
           </div>
         )}
 
-        <div style={{ fontSize: 10, color: '#9ca3af', textAlign: 'center', padding: '6px', border: '1px dashed #e5e7eb', borderRadius: 4 }}>
-          Fees are configured in <Link to="/rates" style={{ color: '#152CFF', textDecoration: 'none', fontWeight: 600 }}>Rates →</Link>
-        </div>
+        {!isCancelled && (
+          <div style={{ fontSize: 10, color: '#9ca3af', textAlign: 'center', padding: '6px', border: '1px dashed #e5e7eb', borderRadius: 4 }}>
+            Fees are configured in <Link to="/rates" style={{ color: '#152CFF', textDecoration: 'none', fontWeight: 600 }}>Rates →</Link>
+          </div>
+        )}
       </div>
+
+      {/* Completion Remark — add/edit (Completed jobs only) */}
+      {job.status === 'Completed' && !job.completionRemark && onSetCompletionRemark && (
+        <div>
+          {showRemarkForm ? (
+            <div style={{ padding: '10px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#a16207', marginBottom: 6 }}>ADD COMPLETION REMARK</div>
+              <textarea value={remarkText} onChange={(e) => setRemarkText(e.target.value)} placeholder="e.g., Pickup not ready — driver waited 45 min, returned empty" style={{ width: '100%', border: '1px solid #fde68a', borderRadius: 4, fontFamily: 'inherit', fontSize: 11, padding: '6px 8px', resize: 'vertical', minHeight: 48 }} />
+              <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                <button onClick={() => { onSetCompletionRemark(remarkText); setShowRemarkForm(false); }} disabled={!remarkText.trim()} style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 700, border: 'none', cursor: remarkText.trim() ? 'pointer' : 'not-allowed', background: remarkText.trim() ? '#a16207' : '#e5e7eb', color: remarkText.trim() ? '#fff' : '#9ca3af', fontFamily: 'inherit' }}>Save Remark</button>
+                <button onClick={() => setShowRemarkForm(false)} style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: 'none', color: '#9ca3af', border: '1px solid #e5e7eb', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setShowRemarkForm(true)} style={{ width: '100%', padding: '6px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#fff', color: '#a16207', border: '1px solid #fde68a', cursor: 'pointer', fontFamily: 'inherit' }}>+ Add Completion Remark</button>
+          )}
+        </div>
+      )}
+
+      {/* Create Follow-up Job — on Completed jobs */}
+      {job.status === 'Completed' && onCreateFollowup && !job.replacedByJobId && (
+        <div>
+          {showFollowupForm ? (
+            <div style={{ padding: '10px', background: 'rgba(21,44,255,0.02)', border: '1px solid rgba(21,44,255,0.1)', borderRadius: 6 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#152CFF', marginBottom: 6 }}>CREATE FOLLOW-UP JOB</div>
+              <div style={{ fontSize: 10, color: '#9ca3af', marginBottom: 8 }}>Same service ({job.service.code} {job.service.label}) and location. New billing event.</div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span style={{ fontSize: 9, color: '#9ca3af', whiteSpace: 'nowrap' }}>Vendor:</span>
+                <select value={followupVendor} onChange={(e) => setFollowupVendor(e.target.value)} style={{ flex: 1, fontSize: 11, padding: '4px 8px', border: '1px solid #e5e7eb', borderRadius: 4, fontFamily: 'inherit' }}>
+                  {vendors.map((v) => <option key={v.code} value={v.code}>{v.name}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                <button onClick={() => { onCreateFollowup(followupVendor); setShowFollowupForm(false); }} style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer', background: '#152CFF', color: '#fff', fontFamily: 'inherit' }}>Create Follow-up</button>
+                <button onClick={() => setShowFollowupForm(false)} style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: 'none', color: '#9ca3af', border: '1px solid #e5e7eb', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setShowFollowupForm(true)} style={{ width: '100%', padding: '6px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#fff', color: '#152CFF', border: '1px solid rgba(21,44,255,0.2)', cursor: 'pointer', fontFamily: 'inherit' }}>+ Create Follow-up Job</button>
+          )}
+        </div>
+      )}
 
       {/* Activity Log */}
       <div>
@@ -361,6 +443,50 @@ export default function JobSlideOut({ job, trip, jobIndex, onUploadProof, onRemo
           </div>
         )}
       </div>
+
+      {/* Cancel Job — inline form (Pending / In Progress only) */}
+      {(job.status === 'Pending' || job.status === 'In Progress') && onCancelJob && (
+        <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 12 }}>
+          {showCancelForm ? (
+            <div style={{ padding: '10px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#dc2626', marginBottom: 6 }}>CANCEL JOB</div>
+              <div style={{ fontSize: 10, color: '#92400e', marginBottom: 8 }}>This action is permanent. The vendor will see the cancellation reason.</div>
+              <textarea value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} placeholder="Reason for cancellation (required)..." style={{ width: '100%', border: '1px solid #fecaca', borderRadius: 4, fontFamily: 'inherit', fontSize: 11, padding: '6px 8px', resize: 'vertical', minHeight: 48 }} />
+
+              {/* Create replacement checkbox + vendor picker */}
+              <div style={{ marginTop: 10, padding: '8px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 4 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={createReplacement} onChange={(e) => setCreateReplacement(e.target.checked)} style={{ accentColor: '#152CFF' }} />
+                  <span style={{ fontSize: 10, fontWeight: 600, color: '#374151' }}>Create replacement job</span>
+                </label>
+                {createReplacement && (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6, marginLeft: 22 }}>
+                    <span style={{ fontSize: 9, color: '#9ca3af', whiteSpace: 'nowrap' }}>New vendor:</span>
+                    <select value={replacementVendor} onChange={(e) => setReplacementVendor(e.target.value)} style={{ flex: 1, fontSize: 11, padding: '4px 8px', border: '1px solid #152CFF', borderRadius: 4, color: '#152CFF', fontWeight: 600, fontFamily: 'inherit', background: 'rgba(21,44,255,0.03)' }}>
+                      <option value="">Select vendor...</option>
+                      {vendors.map((v) => <option key={v.code} value={v.code}>{v.name}</option>)}
+                    </select>
+                  </div>
+                )}
+                {createReplacement && (
+                  <div style={{ fontSize: 9, color: '#9ca3af', marginTop: 4, marginLeft: 22 }}>New job will inherit: {job.service.code} {job.service.label} · {job.origin.location}</div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                {createReplacement ? (
+                  <button onClick={() => { if (cancelReason.trim() && replacementVendor) { onCancelAndReplace?.(cancelReason, replacementVendor); setShowCancelForm(false); setCancelReason(''); } }} disabled={!cancelReason.trim() || !replacementVendor} style={{ flex: 1, padding: '6px 14px', borderRadius: 6, fontSize: 11, fontWeight: 700, border: 'none', cursor: cancelReason.trim() && replacementVendor ? 'pointer' : 'not-allowed', background: cancelReason.trim() && replacementVendor ? '#dc2626' : '#e5e7eb', color: cancelReason.trim() && replacementVendor ? '#fff' : '#9ca3af', fontFamily: 'inherit' }}>Cancel & Replace</button>
+                ) : (
+                  <button onClick={() => { if (cancelReason.trim()) { onCancelJob(cancelReason); setShowCancelForm(false); setCancelReason(''); } }} disabled={!cancelReason.trim()} style={{ flex: 1, padding: '6px 14px', borderRadius: 6, fontSize: 11, fontWeight: 700, border: 'none', cursor: cancelReason.trim() ? 'pointer' : 'not-allowed', background: cancelReason.trim() ? '#dc2626' : '#e5e7eb', color: cancelReason.trim() ? '#fff' : '#9ca3af', fontFamily: 'inherit' }}>Cancel Only</button>
+                )}
+                <button onClick={() => { setShowCancelForm(false); setCancelReason(''); }} style={{ padding: '6px 14px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: 'none', color: '#9ca3af', border: '1px solid #e5e7eb', cursor: 'pointer', fontFamily: 'inherit' }}>Back</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setShowCancelForm(true)} style={{ width: '100%', padding: '6px 14px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#fff', color: '#dc2626', border: '1px solid #fecaca', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel Job</button>
+          )}
+        </div>
+      )}
 
       {/* Full detail link */}
       <div style={{ paddingTop: 10, borderTop: '1px solid #e5e7eb' }}>

@@ -88,6 +88,10 @@ export interface Job {
   // Fleet assignment (FM Trucking only)
   driverAssignment?: { driverId: string; name: string; phone: string };
   vehicleAssignment?: { vehicleId: string; plateNumber: string; truckType: TruckType };
+  // Cancellation & linkage (Iteration 11)
+  completionRemark?: string;      // free text for partial completion or any completion note
+  replacedByJobId?: string;       // "This job was replaced by job X"
+  replacesJobId?: string;         // "This job replaces job Y"
 }
 
 export interface FeeLineItem {

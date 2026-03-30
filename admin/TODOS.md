@@ -1,8 +1,8 @@
 # TODOS — Teleport OS Platform
 
-## PRIORITY: Vendor FM Trucking — Driver & Vehicle Assignment
+## ~~PRIORITY: Vendor FM Trucking — Driver & Vehicle Assignment~~ (completed)
 
-### TODO-047: Vendor master data — Drivers and Vehicles
+### ~~TODO-047: Vendor master data — Drivers and Vehicles~~ ✅
 - **What:** Vendors need to manage their own fleet data within Teleport OS Vendor:
   - **Drivers:** name, phone number, WeChat ID, license plate (if fixed), active/inactive
   - **Vehicles:** plate number, truck type (1.5T/3T/5T/8T/10T/12T/40HQ/45HQ), capacity, active/inactive
@@ -10,7 +10,7 @@
 - **Data model:** `Driver` and `Vehicle` types in shared/types.ts. Vendor-scoped — each vendor manages their own. Stored in localStorage (prototype).
 - **Files:** `shared/types.ts`, `vendor/src/pages/FleetPage.tsx` (new), `vendor/src/components/Navbar.tsx` (add nav item)
 
-### TODO-048: Assign driver + vehicle to FM Trucking jobs
+### ~~TODO-048: Assign driver + vehicle to FM Trucking jobs~~ ✅
 - **What:** On vendor Job Detail page for FM Trucking jobs, vendor can assign a driver and vehicle from their fleet master data:
   - Driver dropdown (from vendor's driver list)
   - Vehicle dropdown (from vendor's vehicle list, filtered by compatible truck type)
@@ -133,74 +133,34 @@ Implemented: Renamed across all 11 source files. `cancelReason` replaces `reject
 ### ~~TODO-027: Jobs page column widths + page consistency~~ ✅
 Implemented: Percentage-based columns, 1400px max-width matching DO page, Route ellipsis truncation.
 
-## Iteration 11 — Cancellation, Reassignment & Partial Completion
+## Iteration 11 — Cancellation, Reassignment & Partial Completion (completed)
 
-### TODO-028: Data model — add cancellation & linkage fields
-- **What:** Add `completionRemark?: string`, `replacedByJobId?: string`, `replacesJobId?: string` to Job interface. Make `cancelReason` mandatory when status = Cancelled.
-- **Why:** Current model has no linkage between cancelled/replacement jobs, no completion remarks, and optional cancel reason. See PRD Iteration 11.
-- **Files:** `shared/types.ts` (or `mockData.ts`)
+### ~~TODO-028: Data model — add cancellation & linkage fields~~ ✅
+Added `completionRemark`, `replacedByJobId`, `replacesJobId` to Job interface in shared/types.ts.
 
-### TODO-029: Remove vendor reassignment on cancelled jobs
-- **What:** Remove the "Reassign Vendor" dropdown from JobSlideOut cancelled state and RejectedTab. Cancelled jobs become immutable — no vendor swap, no status reset.
-- **Why:** Reassignment erases vendor A's history. New model: cancel + create new job instead.
-- **Files:** `admin/src/components/trips/JobSlideOut.tsx`, `admin/src/components/trips/RejectedTab.tsx`
+### ~~TODO-029: Remove vendor reassignment on cancelled jobs~~ ✅
+Removed "Reassign Vendor" dropdown from JobSlideOut and RejectedTab. Cancelled jobs are now immutable. RejectedTab shows read-only cancel reason + replacement link.
 
-### TODO-030: Cancel Job action — inline form in slide-out (HMW-51)
-- **What:** Add red outline "Cancel Job" button at bottom of slide-out for Pending/In Progress jobs. Clicking expands inline cancel form with:
-  - Mandatory reason textarea (button disabled until filled)
-  - "Create replacement job" checkbox + vendor picker
-  - "Cancel & Replace" (red) and "Cancel Only" buttons
-- **Why:** Ops needs to cancel and replace in one flow (80% case). HMW-51 Option A.
-- **Files:** `admin/src/components/trips/JobSlideOut.tsx`
+### ~~TODO-030: Cancel Job action — inline form in slide-out (HMW-51)~~ ✅
+Red outline "Cancel Job" button at bottom of slide-out for Pending/In Progress. Expands inline: mandatory reason + "Create replacement" checkbox + vendor picker + "Cancel & Replace" / "Cancel Only" buttons.
 
-### TODO-031: Cancel & Replace atomic action
-- **What:** Implement the "Cancel & Replace" action that atomically:
-  1. Sets original job status → Cancelled with mandatory cancelReason
-  2. Creates a new job on the same shipment (same service, same location, new vendor)
-  3. Links them: original.replacedByJobId = new.id, new.replacesJobId = original.id
-  4. Adds activity log entries to both jobs
-- **Why:** Replacement must be atomic with bidirectional linkage for audit trail.
-- **Files:** `shared/TripContext.tsx`, `admin/src/components/trips/JobSlideOut.tsx`
+### ~~TODO-031: Cancel & Replace atomic action~~ ✅
+CANCEL_AND_REPLACE action in TripContext: atomically cancels original (with reason + replacedByJobId) and creates new job (with replacesJobId + activity log). Wired in both TripsPage and JobsPage.
 
-### TODO-032: Cancelled state — immutable display + replacement link
-- **What:** Update slide-out Cancelled state:
-  - Red status bar (read-only)
-  - Cancel reason in white box with red border + timestamp/author
-  - "Replaced By" card with navigable link to replacement job (if exists)
-  - No edit capability — everything read-only
-- **Why:** Cancelled jobs are permanent records. Both admin and vendor must see the full history.
-- **Files:** `admin/src/components/trips/JobSlideOut.tsx`
+### ~~TODO-032: Cancelled state — immutable display + replacement link~~ ✅
+Cancelled slide-out: red status bar (read-only), cancel reason in white/red box, "Replaced By" navigable link card. Header text strikethrough. No edit controls.
 
-### TODO-033: Completion remark field + UI
-- **What:** Add "Complete with Remark" option in slide-out. When completing a job (or after completion), admin can add a completion remark. Displayed as amber box below status bar.
-- **Why:** Partial completion (pickup not ready) needs a remark explaining why fees are adjusted. Also useful for any completion note.
-- **Files:** `admin/src/components/trips/JobSlideOut.tsx`
+### ~~TODO-033: Completion remark field + UI~~ ✅
+"+ Add Completion Remark" button on Completed jobs. Expands amber form with textarea. SET_COMPLETION_REMARK action in TripContext. Saved remark shows as amber box.
 
-### TODO-034: Create Follow-up Job action
-- **What:** Add "Create Follow-up Job" blue outline button on Completed jobs. Creates a new job (same service, same location, same or different vendor) linked via replacesJobId/replacedByJobId. Shows "Follow-up" / "Follows" labels instead of "Replaced By" / "Replaces."
-- **Why:** Partial completion + retry (e.g., pickup not ready → 2nd attempt) needs a linked follow-up as a separate billing event.
-- **Files:** `admin/src/components/trips/JobSlideOut.tsx`, `shared/TripContext.tsx`
+### ~~TODO-034: Create Follow-up Job action~~ ✅
+"+ Create Follow-up Job" button on Completed jobs (no existing follow-up). CREATE_FOLLOWUP action in TripContext. Vendor picker defaults to same vendor. Linked via replacesJobId.
 
-### TODO-035: Replacement/follow-up link cards in slide-out
-- **What:** Display navigable link cards in slide-out for both directions:
-  - On cancelled/partial job: "Replaced By J05" or "Follow-up J06" → click opens that job
-  - On replacement/follow-up job: "Replaces J02" or "Follows J01" → click opens original
-- **Why:** Admin needs to trace the full chain. Navigable links prevent context-switching.
-- **Files:** `admin/src/components/trips/JobSlideOut.tsx`
+### ~~TODO-035: Replacement/follow-up link cards in slide-out~~ ✅
+Bidirectional navigable cards: "Replaced By J05" / "Replaces J02" on cancelled jobs. "Follow-up J06" / "Follows J01" on partial completions. Click opens linked job in slide-out.
 
-### TODO-036: Vendor app — cancel reason + completion remark visibility
-- **What:** Update vendor job detail page to display:
-  - Cancel reason (red box) for cancelled jobs
-  - Completion remark (amber box) for completed jobs
-  - No replacement/follow-up links (vendor doesn't need to see other vendors' jobs)
-- **Why:** Vendors must see why their job was cancelled and understand partial completion adjustments.
-- **Files:** `vendor/src/pages/JobDetailPage.tsx`
+### ~~TODO-036: Vendor app — cancel reason + completion remark visibility~~ ✅
+Cancel reason (red box) and completion remark (amber box) display on vendor JobDetailPage between status bar and adaptive section.
 
-### TODO-037: Activity log entries for cancellation/replacement/follow-up
-- **What:** Auto-create activity log entries for:
-  - "Cancelled — [reason]" (on cancelled job)
-  - "Cancelled — replaced by J05 (HaleSun)" (on cancelled job when replacement created)
-  - "Job created — replaces J02 (Gonda, cancelled)" (on replacement job)
-  - "Job created — follows J01 (pickup not ready)" (on follow-up job)
-- **Why:** Complete audit trail for billing reconciliation.
-- **Files:** `shared/TripContext.tsx`
+### ~~TODO-037: Activity log entries for cancellation/replacement/follow-up~~ ✅
+Auto-logged in TripContext reducers: "Cancelled — replaced by J05 (HaleSun)", "Job created — replaces J02 (Gonda, cancelled)", "Follow-up created — J06", "Job created — follows J01 (partial)".

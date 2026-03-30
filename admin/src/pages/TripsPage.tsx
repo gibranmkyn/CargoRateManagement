@@ -2,8 +2,8 @@ import { useState, useCallback } from 'react';
 import { Search, Download, Plus, Ship, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { customers, vendors, formatCurrency } from '@shared/mockData';
-import type { Trip, JobStatus } from '@shared/mockData';
-import { useTrips } from '@shared/TripContext';
+import type { Trip, Job, JobStatus } from '@shared/mockData';
+import { useTrips, generateJobId } from '@shared/TripContext';
 import { useToast } from '@shared/Toast';
 import SlideOutPanel from '../components/SlideOutPanel';
 import JobSlideOut from '../components/trips/JobSlideOut';
@@ -33,7 +33,7 @@ function getStatusColors(status: JobStatus): { border: string; bg: string; text:
 export default function TripsPage() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { trips, updateJobStatus, addProofDocument, removeProofDocument, addActivityLog, updateJob, updateFeeQty, toggleFee, updateJobQty, startJob, verifyJob } = useTrips();
+  const { trips, updateJobStatus, addProofDocument, removeProofDocument, addActivityLog, updateJob, updateFeeQty, toggleFee, updateJobQty, startJob, verifyJob, cancelJob, cancelAndReplace, createFollowup, setCompletionRemark } = useTrips();
   const [statusFilter, setStatusFilter] = useState<'active' | 'all' | 'completed'>('active');
   const [datePeriod, setDatePeriod] = useState<'today' | 'week' | 'month' | 'last-month' | 'all-time'>('month');
   const [page, setPage] = useState(1);
@@ -121,14 +121,57 @@ export default function TripsPage() {
     removeProofDocument(tripId, jobId, docId);
   }, [removeProofDocument]);
 
-  const onReassign = useCallback((tripId: string, jobId: string, vendorCode: string) => {
-    const v = vendors.find((x) => x.code === vendorCode);
-    if (!v) return;
-    updateJob(tripId, jobId, { vendor: { code: v.code, name: v.name }, status: 'Pending', cancelReason: undefined });
-    addActivityLog(tripId, jobId, { id: `l${Date.now()}`, timestamp: new Date().toISOString().replace('T',' ').slice(0,16), action: `Reassigned \u2192 ${v.name}`, user: 'Ops Admin' });
-    toast.success(`Reassigned to ${v.name}`);
+  function makeReplacementJob(tripId: string, sourceJob: Job, newVendorCode: string): Job {
+    const v = vendors.find((x) => x.code === newVendorCode)!;
+    const trip = trips.find((t) => t.id === tripId)!;
+    const newId = generateJobId(tripId, trip.jobs);
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    return {
+      id: newId, vendor: { code: v.code, name: v.name },
+      origin: { ...sourceJob.origin }, destination: { ...sourceJob.destination },
+      service: { ...sourceJob.service }, status: 'Pending', duration: null, execution: null,
+      activityLog: [{ id: `log-${Date.now()}`, timestamp: now, action: `Job created — replaces ${sourceJob.id} (${sourceJob.vendor.name}, cancelled)`, user: 'Ops Admin' }],
+      proofDocuments: [], fees: sourceJob.fees.map((f) => ({ ...f, id: `F-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, active: true })),
+      replacesJobId: sourceJob.id,
+      jobBags: sourceJob.jobBags, jobWeight: sourceJob.jobWeight, jobVolume: sourceJob.jobVolume,
+    };
+  }
+
+  const onCancelJob = useCallback((tripId: string, jobId: string, reason: string) => {
+    cancelJob(tripId, jobId, reason);
+    toast.success('Job cancelled');
+  }, [cancelJob, toast]);
+
+  const onCancelAndReplace = useCallback((tripId: string, jobId: string, reason: string, newVendorCode: string) => {
+    const trip = trips.find((t) => t.id === tripId);
+    const job = trip?.jobs.find((j) => j.id === jobId);
+    if (!trip || !job) return;
+    const newJob = makeReplacementJob(tripId, job, newVendorCode);
+    cancelAndReplace(tripId, jobId, reason, newJob);
+    const v = vendors.find((x) => x.code === newVendorCode);
+    toast.success(`Cancelled & replaced with ${v?.name}`);
     setPanelIds(null);
-  }, [updateJob, addActivityLog, toast]);
+  }, [trips, cancelAndReplace, toast]);
+
+  const onCreateFollowup = useCallback((tripId: string, jobId: string, vendorCode: string) => {
+    const trip = trips.find((t) => t.id === tripId);
+    const job = trip?.jobs.find((j) => j.id === jobId);
+    if (!trip || !job) return;
+    const v = vendors.find((x) => x.code === vendorCode)!;
+    const newId = generateJobId(tripId, trip.jobs);
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    const newJob: Job = {
+      id: newId, vendor: { code: v.code, name: v.name },
+      origin: { ...job.origin }, destination: { ...job.destination },
+      service: { ...job.service }, status: 'Pending', duration: null, execution: null,
+      activityLog: [{ id: `log-${Date.now()}`, timestamp: now, action: `Job created — follows ${job.id} (${job.completionRemark || 'partial'})`, user: 'Ops Admin' }],
+      proofDocuments: [], fees: job.fees.map((f) => ({ ...f, id: `F-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, active: true })),
+      replacesJobId: job.id,
+      jobBags: job.jobBags, jobWeight: job.jobWeight, jobVolume: job.jobVolume,
+    };
+    createFollowup(tripId, jobId, newJob);
+    toast.success(`Follow-up created — ${newId}`);
+  }, [trips, createFollowup, toast]);
 
   // -- Stats --
   const allJobs = trips.flatMap((t) => t.jobs);
@@ -469,7 +512,11 @@ export default function TripsPage() {
             onRemoveProof={(d) => onRemoveProof(panelTrip.id, panelJob.id, d)}
             onVerify={() => { verifyJob(panelTrip.id, panelJob.id); toast.success('Job verified — ready for payment'); }}
             onStartJob={() => { startJob(panelTrip.id, panelJob.id); toast.success('Job started — status is now In Progress'); }}
-            onReassign={(vendorCode) => onReassign(panelTrip.id, panelJob.id, vendorCode)}
+            onCancelJob={(reason) => onCancelJob(panelTrip.id, panelJob.id, reason)}
+            onCancelAndReplace={(reason, vendorCode) => onCancelAndReplace(panelTrip.id, panelJob.id, reason, vendorCode)}
+            onCreateFollowup={(vendorCode) => onCreateFollowup(panelTrip.id, panelJob.id, vendorCode)}
+            onSetCompletionRemark={(remark) => { setCompletionRemark(panelTrip.id, panelJob.id, remark); toast.success('Remark saved'); }}
+            onOpenJob={(tId, jId) => setPanelIds({ tripId: tId, jobId: jId })}
             onUpdateFeeQty={(feeId, qty) => updateFeeQty(panelTrip.id, panelJob.id, feeId, qty)}
             onToggleFee={(feeId) => toggleFee(panelTrip.id, panelJob.id, feeId)}
             onUpdateJobQty={(qtys) => updateJobQty(panelTrip.id, panelJob.id, qtys)}
