@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Download, Ship } from 'lucide-react';
 import { formatCurrency } from '../../../shared/mockData';
 import type { Trip, Job, JobStatus, Currency } from '../../../shared/mockData';
+import DateRangePopover from '../components/DateRangePopover';
 import { useTrips } from '../../../shared/TripContext';
 import { useVendorAuth } from '../context/VendorAuthContext';
 
 // -- Types --
 
 type StatusFilter = 'active' | 'completed' | 'verified' | 'cancelled' | 'all';
-type DatePeriod = 'week' | 'month' | 'last-month' | 'all-time';
 
 interface FlatJob extends Job {
   trip: Trip;
@@ -48,36 +48,6 @@ function parsePickupDate(dateStr: string): Date {
   return new Date(dateStr.replace(' ', 'T'));
 }
 
-function isInDateRange(job: FlatJob, period: DatePeriod): boolean {
-  const dateStr = job.origin.date;
-  if (!dateStr) return true;
-  const d = parsePickupDate(dateStr);
-  const now = new Date();
-
-  switch (period) {
-    case 'week': {
-      const start = new Date(now);
-      start.setDate(start.getDate() - start.getDay());
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(start);
-      end.setDate(end.getDate() + 7);
-      return d >= start && d < end;
-    }
-    case 'month': {
-      const start = new Date(now.getFullYear(), now.getMonth(), 1);
-      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-      return d >= start && d <= end;
-    }
-    case 'last-month': {
-      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
-      return d >= start && d <= end;
-    }
-    case 'all-time':
-    default:
-      return true;
-  }
-}
 
 function sortActiveJobs(a: FlatJob, b: FlatJob): number {
   const orderA = STATUS_ORDER[a.status] ?? 5;
@@ -110,7 +80,7 @@ function exportCSV(jobs: FlatJob[]) {
       costStr,
     ];
   });
-  const csv = [header, ...rows].map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
+  const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -128,7 +98,8 @@ export default function MyJobsPage() {
   const { vendorCode } = useVendorAuth();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
   const [serviceFilters, setServiceFilters] = useState<Set<string>>(new Set());
-  const [datePeriod, setDatePeriod] = useState<DatePeriod>('all-time');
+  const [dateStart, setDateStart] = useState<string | null>(null);
+  const [dateEnd, setDateEnd] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 50;
 
@@ -175,9 +146,15 @@ export default function MyJobsPage() {
       jobs = jobs.filter((j) => serviceFilters.has(j.service.code));
     }
 
-    // Date filter (only for completed/verified/cancelled/all)
-    if (statusFilter !== 'active' && datePeriod !== 'all-time') {
-      jobs = jobs.filter((j) => isInDateRange(j, datePeriod));
+    // Date filter — by pickup date, works on all tabs
+    if (dateStart || dateEnd) {
+      jobs = jobs.filter((j) => {
+        const d = j.origin.date ? j.origin.date.slice(0, 10) : null;
+        if (!d) return false;
+        if (dateStart && d < dateStart) return false;
+        if (dateEnd && d > dateEnd) return false;
+        return true;
+      });
     }
 
     // Sort
@@ -188,14 +165,20 @@ export default function MyJobsPage() {
     }
 
     return jobs;
-  }, [allJobs, statusFilter, serviceFilters, datePeriod]);
+  }, [allJobs, statusFilter, serviceFilters, dateStart, dateEnd]);
 
   // Status pill counts (from allJobs filtered only by service/date, NOT status)
   const pillCounts = useMemo(() => {
     let jobs = allJobs;
     if (serviceFilters.size > 0) jobs = jobs.filter((j) => serviceFilters.has(j.service.code));
-    if (statusFilter !== 'active' && datePeriod !== 'all-time') {
-      jobs = jobs.filter((j) => isInDateRange(j, datePeriod));
+    if (dateStart || dateEnd) {
+      jobs = jobs.filter((j) => {
+        const d = j.origin.date ? j.origin.date.slice(0, 10) : null;
+        if (!d) return false;
+        if (dateStart && d < dateStart) return false;
+        if (dateEnd && d > dateEnd) return false;
+        return true;
+      });
     }
     return {
       active: jobs.filter((j) => j.status === 'Pending' || j.status === 'In Progress').length,
@@ -204,7 +187,7 @@ export default function MyJobsPage() {
       cancelled: jobs.filter((j) => j.status === 'Cancelled').length,
       all: jobs.length,
     };
-  }, [allJobs, serviceFilters, datePeriod, statusFilter]);
+  }, [allJobs, serviceFilters, dateStart, dateEnd]);
 
   // Pagination
   const totalFiltered = filtered.length;
@@ -222,8 +205,6 @@ export default function MyJobsPage() {
     setPage(1);
   }
 
-  // Show date picker for non-active filters
-  const showDatePicker = statusFilter !== 'active';
 
   // -- Styles --
 
@@ -495,35 +476,12 @@ export default function MyJobsPage() {
           );
         })}
 
-        {/* Date period picker — shown for completed/verified/cancelled/all */}
-        {showDatePicker && (
-          <>
-            <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
-            <span style={{ fontSize: 10, color: '#9ca3af' }}>Period</span>
-            {([
-              ['week', 'This week'] as const,
-              ['month', 'This month'] as const,
-              ['last-month', 'Last month'] as const,
-              ['all-time', 'All time'] as const,
-            ]).map(([key, label]) => {
-              const isOn = datePeriod === key;
-              return (
-                <button
-                  key={key}
-                  onClick={() => { setDatePeriod(key); setPage(1); }}
-                  style={{
-                    padding: '2px 8px', borderRadius: 99, fontSize: 10, fontWeight: isOn ? 600 : 400, cursor: 'pointer', fontFamily: 'inherit',
-                    border: isOn ? '1px solid #374151' : '1px solid #e5e7eb',
-                    background: isOn ? '#f9fafb' : '#fff',
-                    color: isOn ? '#374151' : '#9ca3af',
-                  }}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </>
-        )}
+        <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
+        <DateRangePopover
+          startDate={dateStart}
+          endDate={dateEnd}
+          onChange={(s, e) => { setDateStart(s); setDateEnd(e); setPage(1); }}
+        />
 
         {/* Right count */}
         <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 11, color: '#9ca3af', whiteSpace: 'nowrap' }}>

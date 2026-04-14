@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-53: How might we let ops planners edit trip details and job assignments after creation?</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; }
+
+  /* -- Layout -- */
+  .hmw-header { background: #111827; color: #fff; padding: 20px 32px; }
+  .hmw-header h1 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .hmw-header p { font-size: 11px; color: rgba(255,255,255,0.5); }
+  .hmw-header .hmw-tag { display: inline-block; background: #152CFF; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px; margin-right: 6px; letter-spacing: 0.05em; }
+
+  .screen { max-width: 1400px; margin: 24px auto; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+  .screen-header { padding: 16px 20px 12px; border-bottom: 1px solid #e5e7eb; }
+  .screen-header h2 { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+  .screen-header .thesis { font-size: 11px; color: #6b7280; line-height: 1.5; }
+  .screen-header .option-tag { display: inline-block; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px; margin-right: 6px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .screen-header .option-tag.a { background: rgba(21,44,255,0.08); color: #152CFF; }
+  .screen-header .option-tag.b { background: #fefce8; color: #a16207; }
+  .screen-header .option-tag.c { background: #f0fdf4; color: #059669; }
+
+  .screen-body { padding: 16px 20px 24px; }
+
+  /* -- Shared Table Styles -- */
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; padding: 6px 12px; text-align: left; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+  .muted { color: #6b7280; }
+  .faint { color: #9ca3af; }
+  .ink { color: #111827; }
+
+  /* -- Status chips -- */
+  .chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+  .chip .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .chip-pending { background: #f9fafb; border: 1px solid #e5e7eb; color: #9ca3af; }
+  .chip-pending .dot { background: #9ca3af; }
+  .chip-progress { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); color: #152CFF; }
+  .chip-progress .dot { background: #152CFF; }
+  .chip-completed { background: #fefce8; border: 1px solid #fde68a; color: #a16207; }
+  .chip-completed .dot { background: #a16207; }
+  .chip-verified { background: #f0fdf4; border: 1px solid #a7f3d0; color: #059669; }
+  .chip-verified .dot { background: #059669; }
+
+  /* -- Service pills -- */
+  .svc { display: inline-block; font-size: 9px; font-weight: 600; padding: 1px 6px; border-radius: 99px; background: rgba(21,44,255,0.06); color: #152CFF; }
+
+  /* -- Buttons -- */
+  .btn { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: none; cursor: pointer; font-family: inherit; }
+  .btn-primary { background: #152CFF; color: #fff; }
+  .btn-primary:hover { background: #1024CC; }
+  .btn-secondary { background: #fff; color: #374151; border: 1px solid #e5e7eb; }
+  .btn-secondary:hover { background: #f9fafb; }
+  .btn-ghost { background: none; color: #6b7280; padding: 4px 6px; }
+  .btn-ghost:hover { color: #111827; background: #f3f4f6; border-radius: 4px; }
+  .btn-sm { padding: 3px 8px; font-size: 10px; }
+  .btn-save { background: #059669; color: #fff; }
+  .btn-save:hover { background: #047857; }
+  .btn-cancel-action { background: #fff; color: #6b7280; border: 1px solid #e5e7eb; }
+
+  /* -- Form inputs -- */
+  .input { font-family: inherit; font-size: 11px; padding: 4px 8px; border: 1px solid #e5e7eb; border-radius: 4px; background: #fff; color: #111827; outline: none; }
+  .input:focus { border-color: #152CFF; box-shadow: 0 0 0 2px rgba(21,44,255,0.08); }
+  .input-mono { font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+  select.input { padding-right: 20px; }
+
+  /* -- Labels -- */
+  .label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 3px; display: block; }
+
+  /* -- Icons (inline SVG placeholders) -- */
+  .icon-edit { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; color: #9ca3af; cursor: pointer; border-radius: 3px; }
+  .icon-edit:hover { color: #152CFF; background: rgba(21,44,255,0.06); }
+  .icon-edit svg { width: 12px; height: 12px; }
+
+  /* -- Pros/Cons -- */
+  .tradeoffs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; padding: 12px 16px; background: #f9fafb; border-radius: 6px; border: 1px solid #f3f4f6; }
+  .tradeoffs h4 { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .tradeoffs .pro h4 { color: #059669; }
+  .tradeoffs .con h4 { color: #dc2626; }
+  .tradeoffs ul { list-style: none; font-size: 11px; line-height: 1.6; color: #374151; }
+  .tradeoffs ul li::before { content: "–"; margin-right: 6px; color: #9ca3af; }
+
+  /* -- Verdict -- */
+  .verdict { max-width: 1400px; margin: 32px auto; padding: 20px 24px; background: #111827; color: #fff; border-radius: 6px; }
+  .verdict h2 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+  .verdict p { font-size: 12px; line-height: 1.6; color: rgba(255,255,255,0.75); }
+  .verdict strong { color: #fff; }
+  .verdict .verdict-tag { display: inline-block; background: #152CFF; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px; margin-bottom: 8px; letter-spacing: 0.05em; }
+
+  /* -- Option A specific -- */
+  .edit-row { background: #f9fafb; border: 1px solid rgba(21,44,255,0.12); }
+  .edit-row td { padding: 10px 12px; }
+  .edit-form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-top: 6px; }
+  .edit-form-grid .field { display: flex; flex-direction: column; gap: 2px; }
+  .edit-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: 10px; }
+
+  /* -- Option B specific -- */
+  .edit-page { background: #f3f4f6; padding: 16px 20px; border-radius: 6px; margin-top: 12px; }
+  .edit-page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .edit-page-header h3 { font-size: 14px; font-weight: 700; }
+  .form-section { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px 16px; margin-bottom: 12px; }
+  .form-section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #374151; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .form-section-title .step { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; background: #152CFF; color: #fff; font-size: 9px; font-weight: 700; }
+  .form-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .form-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .form-grid .field { display: flex; flex-direction: column; gap: 2px; }
+  .form-grid .field.span-2 { grid-column: span 2; }
+  .job-row { display: grid; grid-template-columns: 40px 1fr 1fr 1fr 1fr 1fr 36px; gap: 8px; align-items: end; padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
+  .job-row .job-label { font-size: 11px; font-weight: 700; color: #152CFF; align-self: center; }
+  .job-row .remove-btn { align-self: center; cursor: pointer; color: #9ca3af; font-size: 14px; text-align: center; }
+  .job-row .remove-btn:hover { color: #dc2626; }
+
+  /* -- Option C specific -- */
+  .slideout { width: 380px; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+  .slideout-header { padding: 10px 16px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+  .slideout-header h3 { font-size: 13px; font-weight: 700; }
+  .slideout-section { padding: 12px 16px; border-bottom: 1px solid #f3f4f6; }
+  .slideout-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .slideout-section-header h4 { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #374151; }
+  .section-edit-form { background: #f9fafb; border: 1px solid #f3f4f6; border-radius: 4px; padding: 10px; margin-top: 8px; }
+  .section-edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .section-edit-grid .field { display: flex; flex-direction: column; gap: 2px; }
+  .section-edit-grid .field.full { grid-column: 1 / -1; }
+
+  /* -- Expanded trip edit bar (Option A) -- */
+  .trip-edit-bar { background: #f9fafb; border-top: 1px solid rgba(21,44,255,0.12); border-bottom: 1px solid rgba(21,44,255,0.12); padding: 12px 20px; }
+  .trip-edit-bar .edit-grid { display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr 0.7fr 0.7fr 1.2fr; gap: 8px; align-items: end; }
+  .trip-edit-bar .field { display: flex; flex-direction: column; gap: 2px; }
+
+  /* -- Annotation -- */
+  .annotation { font-size: 10px; color: #152CFF; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; }
+  .annotation::before { content: "→"; }
+
+  /* -- Comparison layout -- */
+  .side-by-side { display: grid; grid-template-columns: 1fr 380px; gap: 20px; align-items: start; }
+
+  /* -- Separator -- */
+  .sep { height: 1px; background: #e5e7eb; margin: 16px 0; }
+
+  /* highlight rows */
+  tr.highlight td { background: rgba(21,44,255,0.02); }
+  .edit-indicator { display: inline-flex; align-items: center; gap: 3px; font-size: 9px; font-weight: 600; color: #152CFF; background: rgba(21,44,255,0.06); padding: 1px 5px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ============ HEADER ============ -->
+<div class="hmw-header">
+  <div><span class="hmw-tag">HMW-53</span></div>
+  <h1 style="margin-top: 8px;">How might we let ops planners edit trip details and job assignments after creation without disrupting their scan-and-act workflow?</h1>
+  <p style="margin-top: 4px;">Current gap: After creation, trip-level fields (customer, MAWB, dates, route, cargo) and job-level fields (vendor, service, route) are immutable. The only recourse is cancel &amp; recreate. Ops planners need to fix mistakes and update changing plans without losing audit trail.</p>
+</div>
+
+<!-- ============ OPTION A: INLINE ROW EDIT ============ -->
+<div class="screen">
+  <div class="screen-header">
+    <div><span class="option-tag a">Option A</span></div>
+    <h2>Inline Row Edit — "Edit where you see"</h2>
+    <div class="thesis">Click the pencil icon on any trip row → an edit bar expands below the row with all trip fields as inputs. Save or cancel inline. Job fields become editable in the slide-out panel via a similar toggle. Fastest for single-field corrections.</div>
+  </div>
+  <div class="screen-body">
+    <div style="font-size: 10px; font-weight: 600; color: #374151; margin-bottom: 8px;">TRIPS TABLE — with inline edit expanded on TRP-002</div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 3%;"></th>
+          <th style="width: 10%;">Trip</th>
+          <th style="width: 12%;">Customer</th>
+          <th style="width: 9%;">Pickup</th>
+          <th style="width: 9%;">Delivery</th>
+          <th style="width: 10%;">MAWB</th>
+          <th style="width: 24%;">Route</th>
+          <th style="width: 8%;">Cargo</th>
+          <th style="width: 8%;">Status</th>
+          <th style="width: 5%;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Normal row -->
+        <tr>
+          <td style="color: #9ca3af; font-size: 10px;">▶</td>
+          <td><span class="mono" style="font-weight: 600; color: #152CFF;">TRP-001</span></td>
+          <td><span style="font-weight: 600; font-size: 12px;">TikTok</span></td>
+          <td><span class="mono">08 Mar</span></td>
+          <td><span class="mono">08 Mar</span></td>
+          <td><span class="mono">160-12345670</span></td>
+          <td class="muted">TikTok WH, Shenzhen → SZX Airport</td>
+          <td class="mono">48 bags · 1,200 kg</td>
+          <td><span class="chip chip-progress"><span class="dot"></span>Active</span></td>
+          <td>
+            <span class="icon-edit" title="Edit trip">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </span>
+          </td>
+        </tr>
+
+        <!-- Editing row — highlighted -->
+        <tr class="highlight">
+          <td style="color: #152CFF; font-size: 10px;">▼</td>
+          <td><span class="mono" style="font-weight: 600; color: #152CFF;">TRP-002</span> <span class="edit-indicator">Editing</span></td>
+          <td><span style="font-weight: 600; font-size: 12px;">Shopee</span></td>
+          <td><span class="mono">09 Mar</span></td>
+          <td><span class="mono">09 Mar</span></td>
+          <td><span class="mono">160-12345671</span></td>
+          <td class="muted">Shopee WH, Guangzhou → CAN Airport</td>
+          <td class="mono">32 bags · 800 kg</td>
+          <td><span class="chip chip-pending"><span class="dot"></span>Active</span></td>
+          <td>
+            <span class="icon-edit" style="color: #152CFF;">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </span>
+          </td>
+        </tr>
+
+        <!-- Inline edit bar -->
+        <tr>
+          <td colspan="10" style="padding: 0; background: #f9fafb; border-top: 1px solid rgba(21,44,255,0.08); border-bottom: 1px solid rgba(21,44,255,0.08);">
+            <div style="padding: 12px 20px;">
+              <div style="display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr 0.8fr 0.8fr 1.5fr; gap: 8px; align-items: end;">
+                <div class="field">
+                  <span class="label">Customer</span>
+                  <select class="input" style="width: 100%;">
+                    <option selected>Shopee</option>
+                    <option>TikTok</option>
+                    <option>Shein</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <span class="label">Pickup Date</span>
+                  <input type="date" class="input input-mono" value="2026-03-09" style="width: 100%;">
+                </div>
+                <div class="field">
+                  <span class="label">Delivery Date</span>
+                  <input type="date" class="input input-mono" value="2026-03-09" style="width: 100%;">
+                </div>
+                <div class="field">
+                  <span class="label">MAWB</span>
+                  <input type="text" class="input input-mono" value="160-12345671" style="width: 100%;">
+                </div>
+                <div class="field">
+                  <span class="label">Bags</span>
+                  <input type="number" class="input input-mono" value="32" style="width: 100%;">
+                </div>
+                <div class="field">
+                  <span class="label">Weight (kg)</span>
+                  <input type="number" class="input input-mono" value="800" style="width: 100%;">
+                </div>
+                <div class="field">
+                  <span class="label">Remarks</span>
+                  <input type="text" class="input" value="Priority pickup before 10am" style="width: 100%;">
+                </div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 8px; align-items: end;">
+                <div class="field">
+                  <span class="label">Origin</span>
+                  <select class="input" style="width: 100%;">
+                    <option selected>Shopee WH, Guangzhou</option>
+                    <option>TikTok WH, Shenzhen</option>
+                    <option>Shein WH, Foshan</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <span class="label">Destination</span>
+                  <select class="input" style="width: 100%;">
+                    <option selected>CAN Airport</option>
+                    <option>SZX Airport</option>
+                    <option>HKG Airport</option>
+                  </select>
+                </div>
+                <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                  <button class="btn btn-cancel-action btn-sm">Cancel</button>
+                  <button class="btn btn-save btn-sm">Save Changes</button>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Normal row -->
+        <tr>
+          <td style="color: #9ca3af; font-size: 10px;">▶</td>
+          <td><span class="mono" style="font-weight: 600; color: #152CFF;">TRP-003</span></td>
+          <td><span style="font-weight: 600; font-size: 12px;">Shein</span></td>
+          <td><span class="mono">10 Mar</span></td>
+          <td><span class="mono">10 Mar</span></td>
+          <td><span class="mono">160-12345672</span></td>
+          <td class="muted">Shein WH, Foshan → CAN Airport</td>
+          <td class="mono">64 bags · 1,600 kg</td>
+          <td><span class="chip chip-verified"><span class="dot"></span>Completed</span></td>
+          <td>
+            <span class="icon-edit" title="Edit trip">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="annotation" style="margin-top: 10px;">Job editing: pencil icon in the slide-out header toggles route/vendor/dates to editable inputs. Same pattern.</div>
+
+    <div class="tradeoffs">
+      <div class="pro">
+        <h4>Pros</h4>
+        <ul>
+          <li>Fastest for single-field corrections — no navigation, no page change</li>
+          <li>Spreadsheet-native — ops planners already think in rows and cells</li>
+          <li>Maintains scanning context — other rows stay visible while editing</li>
+        </ul>
+      </div>
+      <div class="con">
+        <h4>Cons</h4>
+        <ul>
+          <li>Cramped for trips with many fields — 10 inputs in a narrow bar</li>
+          <li>Can't add or remove jobs from the inline edit — only trip-level fields</li>
+          <li>Two different edit surfaces (row for trip, slide-out for job) — split mental model</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ OPTION B: EDIT PAGE ============ -->
+<div class="screen">
+  <div class="screen-header">
+    <div><span class="option-tag b">Option B</span></div>
+    <h2>Edit Page — "Reuse the creation form"</h2>
+    <div class="thesis">Click "Edit" on a trip → navigate to <span class="mono">/trips/:id/edit</span> which reuses the same 2-step form layout as Create Trip, pre-filled with existing data. Edit all trip fields + add/remove/modify jobs in one view. Maximum power, full context switch.</div>
+  </div>
+  <div class="screen-body">
+    <div style="font-size: 10px; font-weight: 600; color: #374151; margin-bottom: 8px;">EDIT TRIP — /trips/TRP-002/edit (same form as create, pre-filled)</div>
+
+    <div class="edit-page">
+      <div class="edit-page-header">
+        <div>
+          <h3>Edit Trip <span class="mono" style="color: #152CFF; font-size: 12px;">TRP-002</span></h3>
+          <div class="faint" style="font-size: 10px; margin-top: 2px;">Created 09 Mar 2026 · Last modified 09 Mar 2026, 14:32</div>
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button class="btn btn-secondary">Cancel</button>
+          <button class="btn btn-primary">Save Trip</button>
+        </div>
+      </div>
+
+      <!-- Step 1: Trip Details -->
+      <div class="form-section">
+        <div class="form-section-title"><span class="step">1</span> Trip Details</div>
+        <div class="form-grid">
+          <div class="field">
+            <span class="label">Customer</span>
+            <select class="input" style="width: 100%;"><option selected>Shopee</option><option>TikTok</option><option>Shein</option></select>
+          </div>
+          <div class="field">
+            <span class="label">MAWB</span>
+            <input type="text" class="input input-mono" value="160-12345671" style="width: 100%;">
+          </div>
+          <div class="field">
+            <span class="label">Pickup Date</span>
+            <input type="date" class="input input-mono" value="2026-03-09" style="width: 100%;">
+          </div>
+          <div class="field">
+            <span class="label">Delivery Date</span>
+            <input type="date" class="input input-mono" value="2026-03-09" style="width: 100%;">
+          </div>
+          <div class="field">
+            <span class="label">Origin</span>
+            <select class="input" style="width: 100%;"><option selected>Shopee WH, Guangzhou</option><option>TikTok WH, Shenzhen</option></select>
+          </div>
+          <div class="field">
+            <span class="label">Destination</span>
+            <select class="input" style="width: 100%;"><option selected>CAN Airport</option><option>SZX Airport</option></select>
+          </div>
+          <div class="field">
+            <span class="label">Bags</span>
+            <input type="number" class="input input-mono" value="32" style="width: 100%;">
+          </div>
+          <div class="field">
+            <span class="label">Weight (kg)</span>
+            <input type="number" class="input input-mono" value="800" style="width: 100%;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Jobs -->
+      <div class="form-section">
+        <div class="form-section-title"><span class="step">2</span> Jobs</div>
+
+        <!-- Quick-add service bar -->
+        <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+          <button class="btn btn-secondary btn-sm"><span class="svc" style="font-size: 8px;">FM</span> Add FM</button>
+          <button class="btn btn-secondary btn-sm"><span class="svc" style="font-size: 8px;">EC</span> Add EC</button>
+          <button class="btn btn-secondary btn-sm"><span class="svc" style="font-size: 8px;">CS</span> Add CS</button>
+          <button class="btn btn-secondary btn-sm"><span class="svc" style="font-size: 8px;">CR</span> Add CR</button>
+          <button class="btn btn-secondary btn-sm"><span class="svc" style="font-size: 8px;">OH</span> Add OH</button>
+          <div style="border-left: 1px solid #e5e7eb; margin: 0 4px;"></div>
+          <button class="btn btn-secondary btn-sm" style="font-weight: 600;">+ All</button>
+        </div>
+
+        <!-- Existing jobs -->
+        <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; padding: 4px 0; display: grid; grid-template-columns: 40px 1fr 1fr 1fr 1fr 1fr 36px; gap: 8px;">
+          <span></span><span>Service</span><span>Vendor</span><span>Origin</span><span>Destination</span><span>Status</span><span></span>
+        </div>
+
+        <div class="job-row">
+          <span class="job-label">J01</span>
+          <div><span class="svc">FM</span></div>
+          <div><select class="input" style="width: 100%;"><option selected>HaleSun Logistics</option><option>SevenSeas</option></select></div>
+          <div><select class="input" style="width: 100%;"><option selected>Shopee WH, GZ</option></select></div>
+          <div><select class="input" style="width: 100%;"><option selected>CAN Airport</option></select></div>
+          <div><span class="chip chip-pending" style="font-size: 9px;"><span class="dot"></span>Pending</span></div>
+          <div class="remove-btn" title="Remove job">×</div>
+        </div>
+
+        <div class="job-row">
+          <span class="job-label">J02</span>
+          <div><span class="svc">EC</span></div>
+          <div><select class="input" style="width: 100%;"><option selected>Gonda Logistics</option><option>SevenSeas</option></select></div>
+          <div class="field"><select class="input" style="width: 100%;"><option selected>CAN Airport</option></select></div>
+          <div class="faint" style="align-self: center; font-size: 10px;">—</div>
+          <div><span class="chip chip-progress" style="font-size: 9px;"><span class="dot"></span>In Progress</span></div>
+          <div class="remove-btn" title="Remove job">×</div>
+        </div>
+
+        <div class="job-row">
+          <span class="job-label">J03</span>
+          <div><span class="svc">OH</span></div>
+          <div><select class="input" style="width: 100%;"><option selected>ThaiKee Aviation</option><option>SevenSeas</option></select></div>
+          <div class="field"><select class="input" style="width: 100%;"><option selected>CAN Airport</option></select></div>
+          <div class="faint" style="align-self: center; font-size: 10px;">—</div>
+          <div><span class="chip chip-pending" style="font-size: 9px;"><span class="dot"></span>Pending</span></div>
+          <div class="remove-btn" title="Remove job">×</div>
+        </div>
+
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e5e7eb;">
+          <div style="font-size: 10px; color: #6b7280; display: flex; align-items: center; gap: 4px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+            Editing a job's vendor or service will recalculate fees from the vendor fee schedule. Verified jobs cannot be edited.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tradeoffs">
+      <div class="pro">
+        <h4>Pros</h4>
+        <ul>
+          <li>Maximum power — can edit everything: trip fields + add/remove/modify jobs in one view</li>
+          <li>Reuses existing CreateTrip form — minimal new UI code, familiar mental model</li>
+          <li>Clear save/cancel boundary — explicit "Save Trip" action, easy to discard changes</li>
+        </ul>
+      </div>
+      <div class="con">
+        <h4>Cons</h4>
+        <ul>
+          <li>Full page navigation — loses scanning context, heavyweight for a quick MAWB fix</li>
+          <li>Risk of accidental edits on in-progress jobs — need guard rails for status-locked fields</li>
+          <li>Two separate pages (create vs edit) that must stay in sync as the form evolves</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ OPTION C: SECTION EDIT TOGGLES ============ -->
+<div class="screen">
+  <div class="screen-header">
+    <div><span class="option-tag c">Option C</span></div>
+    <h2>Section Edit Toggles — "Pencil icon per section"</h2>
+    <div class="thesis">Each section (trip header, job route, job vendor) gets its own pencil icon. Click it → just that section becomes editable. Save per section. Most granular, stays within existing UI surfaces (expanded row for trip, slide-out for job). No page navigation.</div>
+  </div>
+  <div class="screen-body">
+    <div class="side-by-side">
+      <!-- Left: Trip table with expanded edit sections -->
+      <div>
+        <div style="font-size: 10px; font-weight: 600; color: #374151; margin-bottom: 8px;">TRIPS TABLE — TRP-002 expanded, trip header editable</div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 3%;"></th>
+              <th style="width: 11%;">Trip</th>
+              <th style="width: 13%;">Customer</th>
+              <th style="width: 10%;">Pickup</th>
+              <th style="width: 10%;">MAWB</th>
+              <th style="width: 26%;">Route</th>
+              <th style="width: 10%;">Cargo</th>
+              <th style="width: 10%;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="highlight">
+              <td style="color: #152CFF; font-size: 10px;">▼</td>
+              <td><span class="mono" style="font-weight: 600; color: #152CFF;">TRP-002</span></td>
+              <td><span style="font-weight: 600; font-size: 12px;">Shopee</span></td>
+              <td><span class="mono">09 Mar</span></td>
+              <td><span class="mono">160-12345671</span></td>
+              <td class="muted">Shopee WH, GZ → CAN Airport</td>
+              <td class="mono">32 bags · 800 kg</td>
+              <td><span class="chip chip-pending"><span class="dot"></span>Active</span></td>
+            </tr>
+
+            <!-- Trip-level edit section -->
+            <tr>
+              <td colspan="8" style="padding: 0; background: #f9fafb;">
+                <div style="padding: 10px 20px; border-bottom: 1px solid #e5e7eb;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #374151;">Trip Details</span>
+                    <div style="display: flex; gap: 4px; align-items: center;">
+                      <span class="edit-indicator">Editing</span>
+                      <button class="btn btn-cancel-action btn-sm" style="font-size: 9px;">Cancel</button>
+                      <button class="btn btn-save btn-sm" style="font-size: 9px;">Save</button>
+                    </div>
+                  </div>
+                  <div class="section-edit-grid" style="grid-template-columns: repeat(4, 1fr);">
+                    <div class="field">
+                      <span class="label">Customer</span>
+                      <select class="input" style="width: 100%;"><option selected>Shopee</option></select>
+                    </div>
+                    <div class="field">
+                      <span class="label">MAWB</span>
+                      <input class="input input-mono" value="160-12345671" style="width: 100%;">
+                    </div>
+                    <div class="field">
+                      <span class="label">Pickup</span>
+                      <input type="date" class="input input-mono" value="2026-03-09" style="width: 100%;">
+                    </div>
+                    <div class="field">
+                      <span class="label">Delivery</span>
+                      <input type="date" class="input input-mono" value="2026-03-09" style="width: 100%;">
+                    </div>
+                    <div class="field">
+                      <span class="label">Origin</span>
+                      <select class="input" style="width: 100%;"><option selected>Shopee WH, Guangzhou</option></select>
+                    </div>
+                    <div class="field">
+                      <span class="label">Destination</span>
+                      <select class="input" style="width: 100%;"><option selected>CAN Airport</option></select>
+                    </div>
+                    <div class="field">
+                      <span class="label">Bags</span>
+                      <input class="input input-mono" type="number" value="32" style="width: 100%;">
+                    </div>
+                    <div class="field">
+                      <span class="label">Weight (kg)</span>
+                      <input class="input input-mono" type="number" value="800" style="width: 100%;">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Sub-table (read-only, not in edit mode) -->
+                <div style="padding: 0 20px;">
+                  <table style="margin-left: 24px;">
+                    <thead>
+                      <tr>
+                        <th style="width: 8%;">Job</th>
+                        <th style="width: 20%;">Vendor</th>
+                        <th style="width: 10%;">Service</th>
+                        <th style="width: 30%;">Route</th>
+                        <th style="width: 12%;">Status</th>
+                        <th style="width: 12%;">Cost</th>
+                        <th style="width: 5%;"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><span style="font-weight: 600; color: #152CFF;">J01</span></td>
+                        <td>HaleSun Logistics</td>
+                        <td><span class="svc">FM</span></td>
+                        <td class="muted">Shopee WH, GZ → CAN Airport</td>
+                        <td><span class="chip chip-pending"><span class="dot"></span>Pending</span></td>
+                        <td class="mono">CNY 3,200</td>
+                        <td>
+                          <span class="icon-edit" title="Edit in slide-out">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          </span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><span style="font-weight: 600; color: #152CFF;">J02</span></td>
+                        <td>Gonda Logistics</td>
+                        <td><span class="svc">EC</span></td>
+                        <td class="muted">CAN Airport</td>
+                        <td><span class="chip chip-progress"><span class="dot"></span>In Progress</span></td>
+                        <td class="mono">CNY 850</td>
+                        <td>
+                          <span class="icon-edit" title="Edit in slide-out">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Right: Slide-out with section editing -->
+      <div>
+        <div style="font-size: 10px; font-weight: 600; color: #374151; margin-bottom: 8px;">SLIDE-OUT — J01 with Route section in edit mode</div>
+        <div class="slideout">
+          <div class="slideout-header">
+            <div>
+              <h3><span style="color: #152CFF;">J01</span> · HaleSun Logistics</h3>
+              <div class="faint" style="font-size: 10px;">FM Trucking · Shopee · TRP-002</div>
+            </div>
+            <span style="cursor: pointer; font-size: 16px; color: #9ca3af;">×</span>
+          </div>
+
+          <!-- Status bar -->
+          <div style="padding: 8px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+            <span class="chip chip-pending"><span class="dot"></span>Pending</span>
+            <button class="btn btn-primary btn-sm">Start Job →</button>
+          </div>
+
+          <!-- Vendor section (read-only) -->
+          <div class="slideout-section">
+            <div class="slideout-section-header">
+              <h4>Vendor</h4>
+              <span class="icon-edit" title="Edit vendor">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </span>
+            </div>
+            <div style="font-size: 12px; font-weight: 600;">HaleSun Logistics</div>
+            <div class="faint" style="font-size: 10px;">HALESUN · FM Trucking</div>
+          </div>
+
+          <!-- Route section (IN EDIT MODE) -->
+          <div class="slideout-section" style="background: rgba(21,44,255,0.02);">
+            <div class="slideout-section-header">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <h4>Route</h4>
+                <span class="edit-indicator">Editing</span>
+              </div>
+              <div style="display: flex; gap: 4px;">
+                <button class="btn btn-cancel-action btn-sm" style="font-size: 9px; padding: 2px 6px;">Cancel</button>
+                <button class="btn btn-save btn-sm" style="font-size: 9px; padding: 2px 6px;">Save</button>
+              </div>
+            </div>
+            <div class="section-edit-form">
+              <div class="section-edit-grid">
+                <div class="field">
+                  <span class="label">Origin</span>
+                  <select class="input" style="width: 100%; font-size: 10px;">
+                    <option selected>Shopee WH, GZ</option>
+                    <option>TikTok WH, SZ</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <span class="label">Destination</span>
+                  <select class="input" style="width: 100%; font-size: 10px;">
+                    <option selected>CAN Airport</option>
+                    <option>SZX Airport</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <span class="label">Pickup Date</span>
+                  <input type="date" class="input input-mono" value="2026-03-09" style="width: 100%; font-size: 10px;">
+                </div>
+                <div class="field">
+                  <span class="label">Delivery Date</span>
+                  <input type="date" class="input input-mono" value="2026-03-09" style="width: 100%; font-size: 10px;">
+                </div>
+              </div>
+              <div style="margin-top: 6px; font-size: 9px; color: #6b7280;">
+                Changing the route will recalculate FM trucking fees from the rate card.
+              </div>
+            </div>
+          </div>
+
+          <!-- Fees section (read-only, existing pattern) -->
+          <div class="slideout-section">
+            <div class="slideout-section-header">
+              <h4>Fees</h4>
+            </div>
+            <div style="font-size: 10px; color: #6b7280;">3 fee lines · <span class="mono">CNY 3,200</span> total</div>
+          </div>
+
+          <!-- Activity log -->
+          <div class="slideout-section">
+            <div class="slideout-section-header">
+              <h4>Activity Log</h4>
+            </div>
+            <div style="font-size: 10px; color: #6b7280; line-height: 1.8;">
+              <div><span class="mono faint">09 Mar, 09:00</span> · Job created by Ops Admin</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tradeoffs">
+      <div class="pro">
+        <h4>Pros</h4>
+        <ul>
+          <li>Most granular — edit just what you need (MAWB only, or route only) without touching other fields</li>
+          <li>No page navigation — stays within trips table and existing slide-out surface</li>
+          <li>Clear editability boundaries — each section independently toggles, with section-level save/cancel</li>
+        </ul>
+      </div>
+      <div class="con">
+        <h4>Cons</h4>
+        <ul>
+          <li>Many separate save buttons — if ops needs to change 3 sections, that's 3 save clicks</li>
+          <li>More complex UI state — tracking which sections are in edit mode, preventing conflicting saves</li>
+          <li>Cannot add or remove jobs from this surface — still need a separate action for structural changes</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ VERDICT ============ -->
+<div class="verdict">
+  <span class="verdict-tag">RECOMMENDATION</span>
+  <h2>Option A (Inline Row Edit) for trips + Option C (Section Toggles) for jobs in the slide-out</h2>
+  <p>
+    <strong>Rationale:</strong> The dominant edit case is quick corrections — fixing a MAWB, updating a pickup date, correcting bag count. These are 1-2 field changes, done 5-10x/day. Option A's inline row edit is the fastest path for trip-level changes: click pencil, fix the field, save. No navigation, no context loss. It matches the "smart spreadsheet" aesthetic — Excel users expect to click a cell and type.
+  </p>
+  <p style="margin-top: 8px;">
+    For <strong>job-level edits</strong> (vendor, route, dates), the slide-out already owns job detail — adding section-level edit toggles (Option C's pattern) is a natural extension. Each section gets a pencil icon; click it, edit that section, save. This avoids the split mental model problem of Option A's pure approach while keeping the granularity.
+  </p>
+  <p style="margin-top: 8px;">
+    <strong>Option B (Edit Page)</strong> is overkill for the 90% case and breaks scanning flow. However, it's the right answer for <strong>adding/removing jobs</strong> after creation — which is a rarer, more deliberate action. We could add a small "Manage Jobs" link in the expanded sub-table that navigates to the edit form <em>only for structural changes</em> (add/remove jobs), while trip field edits and job field edits stay inline.
+  </p>
+  <p style="margin-top: 8px;">
+    <strong>Editability rules:</strong> Trip fields editable anytime (customer, MAWB, dates, route, cargo, remarks). Job fields editable only when job is Pending or In Progress — Completed/Verified/Cancelled jobs are locked. Changing a job's vendor or route recalculates fees from the schedule. All edits logged in the activity log with field-level change details.
+  </p>
+</div>
+
+</body>
+</html>

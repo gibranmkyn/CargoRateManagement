@@ -319,3 +319,32 @@ export const CURRENCY_SYMBOLS: Record<Currency, string> = {
 export function formatCurrency(currency: Currency, amount: number): string {
   return `${CURRENCY_SYMBOLS[currency]} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
+
+// --- Trip-level status derivation (HMW-54) ---
+
+export type TripStatus = 'Active' | 'Completed' | 'Verified';
+
+/** Count verified vs total non-cancelled jobs for a trip */
+export function getTripVerification(trip: Trip): { verified: number; total: number } {
+  const nonCancelled = trip.jobs.filter((j) => j.status !== 'Cancelled');
+  return { verified: nonCancelled.filter((j) => j.status === 'Verified').length, total: nonCancelled.length };
+}
+
+/** Derive trip status: Active (any Pending/InProgress), Completed (all Completed or mixed, but not all Verified), Verified (all non-cancelled jobs are Verified) */
+export function deriveTripStatus(trip: Trip): TripStatus {
+  const nonCancelled = trip.jobs.filter((j) => j.status !== 'Cancelled');
+  if (nonCancelled.length === 0) return 'Verified';
+  if (nonCancelled.every((j) => j.status === 'Verified')) return 'Verified';
+  if (nonCancelled.some((j) => j.status === 'Pending' || j.status === 'In Progress')) return 'Active';
+  return 'Completed';
+}
+
+/** Get earliest pickup date across a trip's non-cancelled jobs (YYYY-MM-DD or null) */
+export function getTripPickupDate(trip: Trip): string | null {
+  const dates = trip.jobs
+    .filter((j) => j.status !== 'Cancelled' && j.origin.date)
+    .map((j) => j.origin.date.slice(0, 10));
+  if (dates.length === 0) return trip.pickupDate ?? null;
+  dates.sort();
+  return dates[0];
+}

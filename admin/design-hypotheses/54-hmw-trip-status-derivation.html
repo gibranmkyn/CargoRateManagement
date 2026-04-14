@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-54: How might we derive and display trip-level status from job statuses?</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; }
+
+  /* -- Layout -- */
+  .hmw-header { background: #111827; color: #fff; padding: 20px 32px; }
+  .hmw-header h1 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .hmw-header p { font-size: 11px; color: rgba(255,255,255,0.5); }
+  .hmw-header .hmw-tag { display: inline-block; background: #152CFF; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px; margin-right: 6px; letter-spacing: 0.05em; }
+
+  .screen { max-width: 1400px; margin: 24px auto; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+  .screen-header { padding: 16px 20px 12px; border-bottom: 1px solid #e5e7eb; }
+  .screen-header h2 { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+  .screen-header .thesis { font-size: 11px; color: #6b7280; line-height: 1.5; }
+  .screen-header .option-tag { display: inline-block; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px; margin-right: 6px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .screen-header .option-tag.a { background: rgba(21,44,255,0.08); color: #152CFF; }
+  .screen-header .option-tag.b { background: #fefce8; color: #a16207; }
+  .screen-header .option-tag.c { background: #f0fdf4; color: #059669; }
+
+  .screen-body { padding: 16px 20px 24px; }
+
+  /* -- Table -- */
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; padding: 6px 12px; text-align: left; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+  .muted { color: #6b7280; }
+  .faint { color: #9ca3af; }
+  .ink { color: #111827; }
+
+  /* -- Status chips (5-color) -- */
+  .chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+  .chip .dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+  .chip-pending { background: #f9fafb; border: 1px solid #e5e7eb; color: #9ca3af; }
+  .chip-pending .dot { background: #9ca3af; }
+  .chip-progress { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); color: #152CFF; }
+  .chip-progress .dot { background: #152CFF; }
+  .chip-completed { background: #fefce8; border: 1px solid #fde68a; color: #a16207; }
+  .chip-completed .dot { background: #a16207; }
+  .chip-verified { background: #f0fdf4; border: 1px solid #a7f3d0; color: #059669; }
+  .chip-verified .dot { background: #059669; }
+  .chip-cancelled { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
+  .chip-cancelled .dot { background: #dc2626; }
+
+  /* -- Service pills -- */
+  .svc { display: inline-block; font-size: 9px; font-weight: 600; padding: 1px 6px; border-radius: 99px; background: rgba(21,44,255,0.06); color: #152CFF; }
+
+  /* -- Pros/Cons -- */
+  .tradeoffs { display: flex; gap: 24px; margin-top: 12px; padding: 12px 16px; background: #f9fafb; border-radius: 6px; }
+  .tradeoffs .col { flex: 1; }
+  .tradeoffs h4 { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .tradeoffs .pro h4 { color: #059669; }
+  .tradeoffs .con h4 { color: #dc2626; }
+  .tradeoffs li { font-size: 10px; color: #374151; line-height: 1.5; margin-bottom: 2px; list-style: none; }
+  .tradeoffs .pro li::before { content: "+ "; color: #059669; font-weight: 700; }
+  .tradeoffs .con li::before { content: "- "; color: #dc2626; font-weight: 700; }
+
+  /* -- Verdict -- */
+  .verdict { max-width: 1400px; margin: 24px auto; background: #111827; color: #fff; border-radius: 6px; padding: 20px 24px; }
+  .verdict h2 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+  .verdict p { font-size: 11px; color: rgba(255,255,255,0.7); line-height: 1.6; }
+  .verdict .rec { color: #34d399; font-weight: 700; }
+  .verdict code { background: rgba(255,255,255,0.1); padding: 1px 4px; border-radius: 3px; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+
+  /* -- Sub-table -- */
+  .sub-table { background: #f9fafb; }
+  .sub-table th { font-size: 8px; background: transparent; border-bottom: 1px solid #e5e7eb; padding: 4px 10px; }
+  .sub-table td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 10px; }
+
+  /* -- Derivation rule -- */
+  .rule-box { margin-top: 12px; padding: 10px 14px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; }
+  .rule-box h4 { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #6b7280; margin-bottom: 6px; }
+  .rule-box code { font-family: 'JetBrains Mono', monospace; font-size: 10px; display: block; color: #374151; line-height: 1.8; }
+
+  /* -- Status summary dots -- */
+  .status-summary { display: inline-flex; align-items: center; gap: 6px; }
+  .status-count { display: inline-flex; align-items: center; gap: 2px; font-size: 10px; font-weight: 600; }
+  .status-count .sdot { width: 6px; height: 6px; border-radius: 50%; }
+
+  /* -- Progress bar -- */
+  .progress-wrap { display: flex; align-items: center; gap: 6px; }
+  .progress-bar { width: 60px; height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 2px; }
+  .progress-label { font-size: 10px; font-weight: 600; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<!-- ======== HEADER ======== -->
+<div class="hmw-header">
+  <div><span class="hmw-tag">HMW-54</span></div>
+  <h1>How might we derive and display trip-level status from job statuses so ops planners can instantly see trip progress without expanding?</h1>
+  <p style="margin-top: 6px;">Client feedback: "Trip status should only be verified when all jobs are verified." Currently trips have no status column — status is implicit in Active/Completed filter tabs.</p>
+</div>
+
+<!-- ======== DERIVATION RULES (shared logic) ======== -->
+<div style="max-width: 1400px; margin: 20px auto 0; padding: 0 20px;">
+  <div class="rule-box">
+    <h4>Derivation Logic (all options use this)</h4>
+    <code>
+      if ALL non-cancelled jobs are Verified → Trip = <span style="color: #059669; font-weight: 700;">Verified</span><br>
+      if ANY job is Completed &amp; none Pending/In Progress → Trip = <span style="color: #a16207; font-weight: 700;">Completed</span><br>
+      if ANY job is In Progress → Trip = <span style="color: #152CFF; font-weight: 700;">In Progress</span><br>
+      if ANY job is Pending → Trip = <span style="color: #9ca3af; font-weight: 700;">Pending</span><br>
+      if ALL jobs are Cancelled → Trip = <span style="color: #dc2626; font-weight: 700;">Cancelled</span>
+    </code>
+  </div>
+</div>
+
+<!-- ======== OPTION A: Status Chip ======== -->
+<div class="screen">
+  <div class="screen-header">
+    <div><span class="option-tag a">Option A</span></div>
+    <h2>Trip Status Chip (worst-status derivation)</h2>
+    <div class="thesis">Add a Status column to the trip row. Trip inherits the lowest-progress non-cancelled job status. Same 5-color chip system as jobs. Consistent visual language across trips and jobs.</div>
+  </div>
+  <div class="screen-body">
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 24px; padding: 6px 8px;"></th>
+          <th>Trip</th>
+          <th>Customer</th>
+          <th>Pickup</th>
+          <th>MAWB</th>
+          <th>Route</th>
+          <th>Cargo</th>
+          <th style="width: 110px;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Trip 1: All verified → trip verified -->
+        <tr style="background: #fff;">
+          <td style="padding: 8px 4px 8px 12px; color: #d1d5db;">&#9656;</td>
+          <td><span class="mono" style="font-weight: 600; color: #152CFF;">T00001</span></td>
+          <td style="font-weight: 600;">TikTok</td>
+          <td class="mono" style="color: #374151;">14 Apr</td>
+          <td class="mono" style="color: #374151;">160-12345678</td>
+          <td style="color: #374151;">TikTok WH, Shenzhen → SZX Airport</td>
+          <td class="faint">120 bags</td>
+          <td><span class="chip chip-verified"><span class="dot"></span>Verified</span></td>
+        </tr>
+        <!-- Trip 2: 3 jobs — 2 verified, 1 completed → trip is Completed -->
+        <tr style="background: #fff;">
+          <td style="padding: 8px 4px 8px 12px; color: #d1d5db;">&#9656;</td>
+          <td><span class="mono" style="font-weight: 600; color: #152CFF;">T00002</span></td>
+          <td style="font-weight: 600;">Shopee</td>
+          <td class="mono" style="color: #374151;">14 Apr</td>
+          <td class="mono" style="color: #374151;">160-23456789</td>
+          <td style="color: #374151;">Shopee DC, Guangzhou → CAN Airport</td>
+          <td class="faint">85 bags</td>
+          <td><span class="chip chip-completed"><span class="dot"></span>Completed</span></td>
+        </tr>
+        <!-- Trip 3: 4 jobs — 1 in progress, 1 pending, 2 completed → trip is Pending -->
+        <tr style="background: #fff;">
+          <td style="padding: 8px 4px 8px 12px; color: #d1d5db;">&#9656;</td>
+          <td><span class="mono" style="font-weight: 600; color: #152CFF;">T00003</span></td>
+          <td style="font-weight: 600;">Shein</td>
+          <td class="mono" style="color: #374151;">15 Apr</td>
+          <td class="mono" style="color: #374151;">160-34567890</td>
+          <td style="color: #374151;">Shein WH, Foshan → SZX Airport</td>
+          <td class="faint">200 bags</td>
+          <td><span class="chip chip-pending"><span class="dot"></span>Pending</span></td>
+        </tr>
+        <!-- Trip 4: 2 jobs — both in progress → trip is In Progress -->
+        <tr style="background: #fff;">
+          <td style="padding: 8px 4px 8px 12px; color: #d1d5db;">&#9656;</td>
+          <td><span class="mono" style="font-weight: 600; color: #152CFF;">T00004</span></td>
+          <td style="font-weight: 600;">AliExpress</td>
+          <td class="mono" style="color: #374151;">15 Apr</td>
+          <td class="mono" style="color: #374151;">160-45678901</td>
+          <td style="color: #374151;">AliExpress WH, Dongguan → SZX Airport</td>
+          <td class="faint">65 bags</td>
+          <td><span class="chip chip-progress"><span class="dot"></span>In Progress</span></td>
+        </tr>
+        <!-- Trip 5: Expanded — show sub-table to demonstrate derivation -->
+        <tr style="background: #f9fafb;">
+          <td style="padding: 8px 4px 8px 12px; color: #152CFF; font-weight: 700;">&#9662;</td>
+          <td><span class="mono" style="font-weight: 600; color: #152CFF;">T00005</span></td>
+          <td style="font-weight: 600;">Temu</td>
+          <td class="mono" style="color: #374151;">13 Apr</td>
+          <td class="mono" style="color: #374151;">160-56789012</td>
+          <td style="color: #374151;">Temu WH, Shenzhen → SZX Airport</td>
+          <td class="faint">150 bags</td>
+          <td><span class="chip chip-completed"><span class="dot"></span>Completed</span></td>
+        </tr>
+        <!-- Sub-table for Trip 5 -->
+        <tr class="sub-table">
+          <td colspan="8" style="padding: 0; border-bottom: 1px solid #e5e7eb;">
+            <div style="padding: 4px 12px 10px 40px;">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 50px;">Job</th>
+                    <th>Vendor</th>
+                    <th>Service</th>
+                    <th>Route</th>
+                    <th style="width: 100px;">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="font-weight: 600; color: #152CFF;">J01</td>
+                    <td style="font-weight: 600;">HaleSun</td>
+                    <td><span class="svc">FM</span></td>
+                    <td>Temu WH → SZX Airport</td>
+                    <td><span class="chip chip-verified"><span class="dot"></span>Verified</span></td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 600; color: #152CFF;">J02</td>
+                    <td style="font-weight: 600;">SevenSeas</td>
+                    <td><span class="svc">EC</span></td>
+                    <td>SZX Airport</td>
+                    <td><span class="chip chip-verified"><span class="dot"></span>Verified</span></td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 600; color: #152CFF;">J03</td>
+                    <td style="font-weight: 600;">Gonda</td>
+                    <td><span class="svc">OH</span></td>
+                    <td>SZX Airport</td>
+                    <td><span class="chip chip-completed"><span class="dot"></span>Completed</span></td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 600; color: #152CFF;">J04</td>
+                    <td style="font-weight: 600;">Gonda</td>
+                    <td><span class="svc">CS</span></td>
+                    <td>SZX Airport</td>
+                    <td><span class="chip chip-verified"><span class="dot"></span>Verified</span></td>
+                  </tr>
+                </tbody>
+              </table>
+              <div style="margin-top: 8px; padding: 6px 10px; background: #fefce8; border: 1px solid #fde68a; border-radius: 4px; font-size: 10px; color: #a16207;">
+                Trip is <strong>Completed</strong> because J03 (OH, Gonda) is still awaiting verification. Trip becomes Verified only when all jobs are Verified.
+              </div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="tradeoffs">
+      <div class="col pro">
+        <h4>Pros</h4>
+        <ul>
+          <li>Same visual language as job-level status — consistent 5-color system</li>
+          <li>Instantly scannable — one chip tells you where the trip stands</li>
+          <li>Filter tabs (Active/Completed/Verified) align directly with chip colors</li>
+        </ul>
+      </div>
+      <div class="col con">
+        <h4>Cons</h4>
+        <ul>
+          <li>Single chip hides distribution (trip with 4 Verified + 1 Pending shows as Pending)</li>
+          <li>Might feel reductive for trips with many jobs in different stages</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== OPTION B: Status Summary (micro-counts) ======== -->
+<div class="screen">
+  <div class="screen-header">
+    <div><span class="option-tag b">Option B</span></div>
+    <h2>Job Status Summary (colored dot counts)</h2>
+    <div class="thesis">Show inline colored dots with counts on the trip row. Ops sees the full job status distribution at a glance without expanding. More information density, but denser to parse.</div>
+  </div>
+  <div class="screen-body">
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 24px; padding: 6px 8px;"></th>
+          <th>Trip</th>
+          <th>Customer</th>
+          <th>Pickup</th>
+          <th>MAWB</th>
+          <th>Route</th>
+          <th>Cargo</th>
+          <th style="width: 150px;">Jobs</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Trip 1: All verified -->
+        <tr>
+          <td style="padding: 8px 4px 8px 12px; color: #d1d5db;">&#9656;</td>
+          <td><span class="mono" style="font-weight: 600; color: #152CFF;">T00001</span></td>
+          <td style="font-weight: 600;">TikTok</td>
+          <td class="mono" style="color: #374151;">14 Apr</td>
+          <td class="mono" style="color: #374151;">160-12345678</td>
+          <td style="color: #374151;">TikTok WH → SZX Airport</td>
+          <td class="faint">120 bags</td>
+          <td>
+            <span class="status-summary">
+              <span class="status-count" style="color: #059669;"><span class="sdot" style="background: #059669;"></span>5</span>
+            </span>
+          </td>
+        </tr>
+        <!-- Trip 2: 2 verified + 1 completed -->
+        <tr>
+          <td style="padding: 8px 4px 8px 12px; color: #d1d5db;">&#9656;</td>
+          <td><span class="mono" style="font-weight: 600; color: #152CFF;">T00002</span></td>
+          <td style="font-weight: 600;">Shopee</td>
+          <td class="mono" style="color: #374151;">14 Apr</td>
+          <td class="mono" style="color: #374151;">160-23456789</td>
+          <td style="color: #374151;">Shopee DC → CAN Airport</td>
+          <td class="faint">85 bags</td>
+          <td>
+            <span class="status-summary">
+              <span class="status-count" style="color: #a16207;"><span class="sdot" style="background: #a16207;"></span>1</span>
+              <span class="status-count" style="color: #059669;"><span class="sdot" style="background: #059669;"></span>2</span>
+            </span>
+          </td>
+        </tr>
+        <!-- Trip 3: 1 pending + 1 in progress + 2 completed -->
+        <tr>
+          <td style="padding: 8px 4px 8px 12px; color: #d1d5db;">&#9656;</td>
+          <td><span class="mono" style="font-weight: 600; color: #152CFF;">T00003</span></td>
+          <td style="font-weight: 600;">Shein</td>
+          <td class="mono" style="color: #374151;">15 Apr</td>
+          <td class="mono" style="color: #374151;">160-34567890</td>
+          <td style="color: #374151;">Shein WH → SZX Airport</td>
+          <td class="faint">200 bags</td>
+          <td>
+            <span class="status-summary">
+              <span class="status-count" style="color: #9ca3af;"><span class="sdot" style="background: #9ca3af;"></span>1</span>
+              <span class="status-count" style="color: #152CFF;"><span class="sdot" style="background: #152CFF;"></span>1</span>
+              <span class="status-count" style="color: #a16207;"><span class="sdot" style="background: #a16207;"></span>2</span>
+            </span>
+          </td>
+        </tr>
+        <!-- Trip 4: 2 in progress -->
+        <tr>
+          <td style="padding: 8px 4px 8px 12px; color: #d1d5db;">&#9656;</td>
+          <td><span class="mono" style="font-weight: 600; color: #152CFF;">T00004</span></td>
+          <td style="font-weight: 600;">AliExpress</td>
+          <td class="mono" style="color: #374151;">15 Apr</td>
+          <td class="mono" style="color: #374151;">160-45678901</td>
+          <td style="color: #374151;">AliExpress WH → SZX Airport</td>
+          <td class="faint">65 bags</td>
+          <td>
+            <span class="status-summary">
+              <span class="status-count" style="color: #152CFF;"><span class="sdot" style="background: #152CFF;"></span>2</span>
+            </span>
+          </td>
+        </tr>
+        <!-- Trip 5: expanded — 3 verified + 1 completed -->
+        <tr style="background: #f9fafb;">
+          <td style="padding: 8px 4px 8px 12px; color: #152CFF; font-weight: 700;">&#9662;</td>
+          <td><span class="mono" style="font-weight: 600; color: #152CFF;">T00005</span></td>
+          <td style="font-weight: 600;">Temu</td>
+          <td class="mono" style="color: #374151;">13 Apr</td>
+          <td class="mono" style="color: #374151;">160-56789012</td>
+          <td style="color: #374151;">Temu WH → SZX Airport</td>
+          <td class="faint">150 bags</td>
+          <td>
+            <span class="status-summary">
+              <span class="status-count" style="color: #a16207;"><span class="sdot" style="background: #a16207;"></span>1</span>
+              <span class="status-count" style="color: #059669;"><span class="sdot" style="background: #059669;"></span>3</span>
+            </span>
+          </td>
+        </tr>
+        <tr class="sub-table">
+          <td colspan="8" style="padding: 0; border-bottom: 1px solid #e5e7eb;">
+            <div style="padding: 4px 12px 10px 40px;">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 50px;">Job</th>
+                    <th>Vendor</th>
+                    <th>Service</th>
+                    <th>Route</th>
+                    <th style="width: 100px;">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="font-weight: 600; color: #152CFF;">J01</td>
+                    <td style="font-weight: 600;">HaleSun</td>
+                    <td><span class="svc">FM</span></td>
+                    <td>Temu WH → SZX Airport</td>
+                    <td><span class="chip chip-verified"><span class="dot"></span>Verified</span></td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 600; color: #152CFF;">J02</td>
+                    <td style="font-weight: 600;">SevenSeas</td>
+                    <td><span class="svc">EC</span></td>
+                    <td>SZX Airport</td>
+                    <td><span class="chip chip-verified"><span class="dot"></span>Verified</span></td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 600; color: #152CFF;">J03</td>
+                    <td style="font-weight: 600;">Gonda</td>
+                    <td><span class="svc">OH</span></td>
+                    <td>SZX Airport</td>
+                    <td><span class="chip chip-completed"><span class="dot"></span>Completed</span></td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 600; color: #152CFF;">J04</td>
+                    <td style="font-weight: 600;">Gonda</td>
+                    <td><span class="svc">CS</span></td>
+                    <td>SZX Airport</td>
+                    <td><span class="chip chip-verified"><span class="dot"></span>Verified</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="tradeoffs">
+      <div class="col pro">
+        <h4>Pros</h4>
+        <ul>
+          <li>Full distribution visible — ops sees exactly how many jobs are in each stage</li>
+          <li>Answers "how far along is this trip?" and "what's blocking?" simultaneously</li>
+          <li>Trips with one straggler job are visually obvious (e.g., ●1 gray among ●4 green)</li>
+        </ul>
+      </div>
+      <div class="col con">
+        <h4>Cons</h4>
+        <ul>
+          <li>Harder to scan at speed — requires parsing multiple dots/numbers vs. single chip</li>
+          <li>Doesn't give a single "trip status" answer — ops must derive it mentally</li>
+          <li>Column gets wide with 4-5 different status groups</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== OPTION C: Progress Fraction ======== -->
+<div class="screen">
+  <div class="screen-header">
+    <div><span class="option-tag c">Option C</span></div>
+    <h2>Verification Progress (fraction + bar)</h2>
+    <div class="thesis">Show "N/M verified" text with a thin progress bar. Answers the core question — "is this trip ready for billing?" — as a completion percentage. Optimized for the verification workflow.</div>
+  </div>
+  <div class="screen-body">
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 24px; padding: 6px 8px;"></th>
+          <th>Trip</th>
+          <th>Customer</th>
+          <th>Pickup</th>
+          <th>MAWB</th>
+          <th>Route</th>
+          <th>Cargo</th>
+          <th style="width: 130px;">Verification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Trip 1: 5/5 verified -->
+        <tr>
+          <td style="padding: 8px 4px 8px 12px; color: #d1d5db;">&#9656;</td>
+          <td><span class="mono" style="font-weight: 600; color: #152CFF;">T00001</span></td>
+          <td style="font-weight: 600;">TikTok</td>
+          <td class="mono" style="color: #374151;">14 Apr</td>
+          <td class="mono" style="color: #374151;">160-12345678</td>
+          <td style="color: #374151;">TikTok WH → SZX Airport</td>
+          <td class="faint">120 bags</td>
+          <td>
+            <div class="progress-wrap">
+              <div class="progress-bar"><div class="progress-fill" style="width: 100%; background: #059669;"></div></div>
+              <span class="progress-label" style="color: #059669;">5/5 verified</span>
+            </div>
+          </td>
+        </tr>
+        <!-- Trip 2: 2/3 verified -->
+        <tr>
+          <td style="padding: 8px 4px 8px 12px; color: #d1d5db;">&#9656;</td>
+          <td><span class="mono" style="font-weight: 600; color: #152CFF;">T00002</span></td>
+          <td style="font-weight: 600;">Shopee</td>
+          <td class="mono" style="color: #374151;">14 Apr</td>
+          <td class="mono" style="color: #374151;">160-23456789</td>
+          <td style="color: #374151;">Shopee DC → CAN Airport</td>
+          <td class="faint">85 bags</td>
+          <td>
+            <div class="progress-wrap">
+              <div class="progress-bar"><div class="progress-fill" style="width: 66%; background: #a16207;"></div></div>
+              <span class="progress-label" style="color: #a16207;">2/3 verified</span>
+            </div>
+          </td>
+        </tr>
+        <!-- Trip 3: 0/4 verified -->
+        <tr>
+          <td style="padding: 8px 4px 8px 12px; color: #d1d5db;">&#9656;</td>
+          <td><span class="mono" style="font-weight: 600; color: #152CFF;">T00003</span></td>
+          <td style="font-weight: 600;">Shein</td>
+          <td class="mono" style="color: #374151;">15 Apr</td>
+          <td class="mono" style="color: #374151;">160-34567890</td>
+          <td style="color: #374151;">Shein WH → SZX Airport</td>
+          <td class="faint">200 bags</td>
+          <td>
+            <div class="progress-wrap">
+              <div class="progress-bar"><div class="progress-fill" style="width: 0%; background: #9ca3af;"></div></div>
+              <span class="progress-label" style="color: #9ca3af;">0/4 verified</span>
+            </div>
+          </td>
+        </tr>
+        <!-- Trip 4: 0/2 verified (in progress) -->
+        <tr>
+          <td style="padding: 8px 4px 8px 12px; color: #d1d5db;">&#9656;</td>
+          <td><span class="mono" style="font-weight: 600; color: #152CFF;">T00004</span></td>
+          <td style="font-weight: 600;">AliExpress</td>
+          <td class="mono" style="color: #374151;">15 Apr</td>
+          <td class="mono" style="color: #374151;">160-45678901</td>
+          <td style="color: #374151;">AliExpress WH → SZX Airport</td>
+          <td class="faint">65 bags</td>
+          <td>
+            <div class="progress-wrap">
+              <div class="progress-bar"><div class="progress-fill" style="width: 0%; background: #9ca3af;"></div></div>
+              <span class="progress-label" style="color: #9ca3af;">0/2 verified</span>
+            </div>
+          </td>
+        </tr>
+        <!-- Trip 5: 3/4 verified -->
+        <tr>
+          <td style="padding: 8px 4px 8px 12px; color: #d1d5db;">&#9656;</td>
+          <td><span class="mono" style="font-weight: 600; color: #152CFF;">T00005</span></td>
+          <td style="font-weight: 600;">Temu</td>
+          <td class="mono" style="color: #374151;">13 Apr</td>
+          <td class="mono" style="color: #374151;">160-56789012</td>
+          <td style="color: #374151;">Temu WH → SZX Airport</td>
+          <td class="faint">150 bags</td>
+          <td>
+            <div class="progress-wrap">
+              <div class="progress-bar"><div class="progress-fill" style="width: 75%; background: #a16207;"></div></div>
+              <span class="progress-label" style="color: #a16207;">3/4 verified</span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="tradeoffs">
+      <div class="col pro">
+        <h4>Pros</h4>
+        <ul>
+          <li>Directly answers the client's core question: "is this trip fully verified?"</li>
+          <li>Visual progress bar makes near-complete trips pop (3/4 vs 0/4 is obvious)</li>
+          <li>Compact — fraction + bar fits in narrow column</li>
+        </ul>
+      </div>
+      <div class="col con">
+        <h4>Cons</h4>
+        <ul>
+          <li>Only tracks verification — hides whether jobs are Pending vs In Progress vs Completed</li>
+          <li>0/4 could mean "all pending" or "all in progress" — no distinction</li>
+          <li>Progress bar is a new visual pattern not used elsewhere in the design system</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== VERDICT ======== -->
+<div class="verdict">
+  <h2>Recommendation</h2>
+  <p>
+    <span class="rec">Option A — Trip Status Chip</span> is the strongest choice. It uses the existing 5-color status system (no new visual patterns), is instantly scannable at speed, and directly satisfies the client's request: trip shows as Verified <strong>only</strong> when all jobs are Verified.
+  </p>
+  <p style="margin-top: 8px;">
+    Option B's micro-counts are more informative but violate the design principle of "every element should be parseable at a glance." Ops managing 30+ trips doesn't want to mentally sum <code>●1 ●2 ●1</code> — they want "is this trip done or not?" Option C is verification-centric but hides the Pending/In Progress/Completed distinction, which matters for daily ops (not just billing).
+  </p>
+  <p style="margin-top: 8px;">
+    The derivation logic is simple: <code>Trip status = worst(non-cancelled job statuses)</code>. Ordering: Pending &lt; In Progress &lt; Completed &lt; Verified. If all cancelled, trip is Cancelled. This also updates the filter tabs — the existing Active/Completed split should evolve to match: <strong>Active</strong> (Pending + In Progress), <strong>Completed</strong> (all Completed or mixed Completed/Verified), <strong>Verified</strong> (all Verified).
+  </p>
+</div>
+
+</body>
+</html>

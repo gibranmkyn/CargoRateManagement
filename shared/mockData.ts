@@ -19,6 +19,7 @@ import type {
   Driver,
   Vehicle,
   TruckType,
+  TripStatus,
 } from './types';
 
 // Re-export types so consumers can import from mockData as before
@@ -42,6 +43,7 @@ export type {
   Driver,
   Vehicle,
   TruckType,
+  TripStatus,
 };
 
 // Re-export everything from types so admin can keep importing from mockData
@@ -56,6 +58,9 @@ export {
   formatCurrency,
   calcFeeAmount,
   calcJobTotal,
+  getTripVerification,
+  deriveTripStatus,
+  getTripPickupDate,
 } from './types';
 
 export type {

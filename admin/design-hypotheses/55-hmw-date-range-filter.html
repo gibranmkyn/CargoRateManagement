@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-55: How might we let ops planners filter trips and jobs by a specific date range?</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; }
+
+  /* -- Layout -- */
+  .hmw-header { background: #111827; color: #fff; padding: 20px 32px; }
+  .hmw-header h1 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .hmw-header p { font-size: 11px; color: rgba(255,255,255,0.5); }
+  .hmw-header .hmw-tag { display: inline-block; background: #152CFF; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px; margin-right: 6px; letter-spacing: 0.05em; }
+
+  .screen { max-width: 1400px; margin: 24px auto; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+  .screen-header { padding: 16px 20px 12px; border-bottom: 1px solid #e5e7eb; }
+  .screen-header h2 { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+  .screen-header .thesis { font-size: 11px; color: #6b7280; line-height: 1.5; }
+  .screen-header .option-tag { display: inline-block; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px; margin-right: 6px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .screen-header .option-tag.a { background: rgba(21,44,255,0.08); color: #152CFF; }
+  .screen-header .option-tag.b { background: #fefce8; color: #a16207; }
+  .screen-header .option-tag.c { background: #f0fdf4; color: #059669; }
+
+  .screen-body { padding: 16px 20px 24px; }
+
+  /* -- Table -- */
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; padding: 6px 12px; text-align: left; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+  .muted { color: #6b7280; }
+  .faint { color: #9ca3af; }
+  .ink { color: #111827; }
+
+  /* -- Status chips -- */
+  .chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+  .chip .dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+  .chip-pending { background: #f9fafb; border: 1px solid #e5e7eb; color: #9ca3af; }
+  .chip-pending .dot { background: #9ca3af; }
+  .chip-progress { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); color: #152CFF; }
+  .chip-progress .dot { background: #152CFF; }
+  .chip-completed { background: #fefce8; border: 1px solid #fde68a; color: #a16207; }
+  .chip-completed .dot { background: #a16207; }
+  .chip-verified { background: #f0fdf4; border: 1px solid #a7f3d0; color: #059669; }
+  .chip-verified .dot { background: #059669; }
+
+  /* -- Filter bar -- */
+  .filter-bar { display: flex; align-items: center; gap: 10px; padding: 6px 16px; border-bottom: 1px solid #e5e7eb; flex-wrap: wrap; }
+  .filter-pill { padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 600; cursor: pointer; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; font-family: inherit; }
+  .filter-pill.active { border-color: #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; }
+  .filter-label { font-size: 10px; color: #9ca3af; }
+  .filter-sep { width: 1px; height: 16px; background: #e5e7eb; }
+  .filter-input { font-family: inherit; font-size: 11px; padding: 4px 8px; border: 1px solid #e5e7eb; border-radius: 4px; outline: none; color: #111827; }
+  .filter-input:focus { border-color: #152CFF; box-shadow: 0 0 0 2px rgba(21,44,255,0.08); }
+  .filter-input-mono { font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+  .filter-select { font-family: inherit; font-size: 11px; padding: 4px 8px; border: 1px solid #e5e7eb; border-radius: 4px; color: #374151; }
+  .date-input { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 4px; color: #374151; width: 110px; }
+  .date-input:focus { border-color: #152CFF; box-shadow: 0 0 0 2px rgba(21,44,255,0.08); }
+
+  /* -- Buttons -- */
+  .btn { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: none; cursor: pointer; font-family: inherit; }
+  .btn-secondary { background: #fff; color: #374151; border: 1px solid #e5e7eb; }
+  .btn-primary { background: #152CFF; color: #fff; }
+
+  /* -- Service pills -- */
+  .svc { display: inline-block; font-size: 9px; font-weight: 600; padding: 1px 6px; border-radius: 99px; background: rgba(21,44,255,0.06); color: #152CFF; }
+
+  /* -- Pros/Cons -- */
+  .tradeoffs { display: flex; gap: 24px; margin-top: 12px; padding: 12px 16px; background: #f9fafb; border-radius: 6px; }
+  .tradeoffs .col { flex: 1; }
+  .tradeoffs h4 { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .tradeoffs .pro h4 { color: #059669; }
+  .tradeoffs .con h4 { color: #dc2626; }
+  .tradeoffs li { font-size: 10px; color: #374151; line-height: 1.5; margin-bottom: 2px; list-style: none; }
+  .tradeoffs .pro li::before { content: "+ "; color: #059669; font-weight: 700; }
+  .tradeoffs .con li::before { content: "- "; color: #dc2626; font-weight: 700; }
+
+  /* -- Verdict -- */
+  .verdict { max-width: 1400px; margin: 24px auto; background: #111827; color: #fff; border-radius: 6px; padding: 20px 24px; }
+  .verdict h2 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+  .verdict p { font-size: 11px; color: rgba(255,255,255,0.7); line-height: 1.6; }
+  .verdict .rec { color: #34d399; font-weight: 700; }
+  .verdict code { background: rgba(255,255,255,0.1); padding: 1px 4px; border-radius: 3px; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+
+  /* -- Page header -- */
+  .page-header { display: flex; align-items: flex-end; justify-content: space-between; padding: 12px 16px 0; }
+  .page-header h1 { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; }
+  .page-header .subtitle { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+  /* -- Stats bar -- */
+  .stats-bar { display: flex; align-items: center; padding: 8px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 12px; gap: 0; }
+  .stats-bar .stat { font-weight: 600; }
+  .stats-bar .stat-sep { width: 1px; height: 14px; background: #e5e7eb; margin: 0 12px; }
+
+  /* -- Context note -- */
+  .context-note { max-width: 1400px; margin: 20px auto 0; padding: 10px 16px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 10px; color: #6b7280; line-height: 1.5; }
+  .context-note strong { color: #374151; }
+
+  /* -- Calendar popover -- */
+  .calendar-popover { position: absolute; top: 100%; left: 0; margin-top: 4px; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); z-index: 10; width: 280px; }
+  .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .cal-header span { font-size: 11px; font-weight: 700; color: #111827; }
+  .cal-nav { background: none; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-size: 10px; color: #6b7280; cursor: pointer; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+  .cal-day-header { font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; padding: 4px 0; }
+  .cal-day { font-size: 10px; padding: 4px 0; border-radius: 3px; cursor: pointer; color: #374151; }
+  .cal-day:hover { background: #f3f4f6; }
+  .cal-day.selected { background: #152CFF; color: #fff; }
+  .cal-day.in-range { background: rgba(21,44,255,0.06); color: #152CFF; }
+  .cal-day.muted { color: #d1d5db; }
+  .cal-day.today { font-weight: 700; }
+  .cal-actions { display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end; }
+</style>
+</head>
+<body>
+
+<!-- ======== HEADER ======== -->
+<div class="hmw-header">
+  <div><span class="hmw-tag">HMW-55</span></div>
+  <h1>How might we let ops planners filter trips and jobs by a specific date range?</h1>
+  <p style="margin-top: 6px;">Client feedback: "Add date range filter." Currently: preset period chips (Today / This week / This month / Last month / All time) only appear on All/Completed views. Active view has no date filter.</p>
+</div>
+
+<div class="context-note">
+  <strong>Current behavior:</strong> Active trips show all (no date filter). All/Completed views have preset period chips filtering by <code>createdAt</code>. Client wants explicit date range picking — likely filtering by pickup date, which is operationally more relevant than creation date.
+</div>
+
+<!-- ======== OPTION A: Date Range Inputs (replace presets) ======== -->
+<div class="screen">
+  <div class="screen-header">
+    <div><span class="option-tag a">Option A</span></div>
+    <h2>Date Range Inputs (replace presets)</h2>
+    <div class="thesis">Replace preset period chips with two date inputs (From / To) in the filter bar. Always visible regardless of status tab. Simple, precise, no ambiguity about what "This week" means.</div>
+  </div>
+  <div class="screen-body">
+    <!-- Page header -->
+    <div class="page-header">
+      <div>
+        <h1>Trips</h1>
+        <div class="subtitle">Monitor and manage trips across vendors</div>
+      </div>
+      <div style="display: flex; gap: 6px;">
+        <button class="btn btn-secondary">Export</button>
+        <button class="btn btn-primary">+ New Trip</button>
+      </div>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar" style="margin-top: 12px;">
+      <button class="filter-pill active">Active (8)</button>
+      <button class="filter-pill">Completed (3)</button>
+      <button class="filter-pill">Verified (5)</button>
+      <button class="filter-pill">All (16)</button>
+
+      <span class="filter-sep"></span>
+
+      <label style="display: flex; align-items: center; gap: 4px;">
+        <span class="filter-label">From</span>
+        <input type="date" class="date-input" value="2026-04-01">
+      </label>
+      <span style="color: #d1d5db; font-size: 10px;">—</span>
+      <label style="display: flex; align-items: center; gap: 4px;">
+        <span class="filter-label">To</span>
+        <input type="date" class="date-input" value="2026-04-14">
+      </label>
+
+      <span class="filter-sep"></span>
+
+      <label style="display: flex; align-items: center; gap: 4px;">
+        <span class="filter-label">Customer</span>
+        <select class="filter-select"><option>All</option></select>
+      </label>
+      <label style="display: flex; align-items: center; gap: 4px;">
+        <span class="filter-label">Vendor</span>
+        <select class="filter-select"><option>All</option></select>
+      </label>
+
+      <span style="margin-left: auto;" class="mono faint">8 trips</span>
+    </div>
+
+    <!-- Sample table (just headers + 2 rows to show context) -->
+    <table style="margin-top: 8px;">
+      <thead>
+        <tr>
+          <th style="width: 24px;"></th>
+          <th>Trip</th>
+          <th>Customer</th>
+          <th>Pickup</th>
+          <th>MAWB</th>
+          <th>Route</th>
+          <th>Cargo</th>
+          <th style="width: 100px;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="color: #d1d5db;">&#9656;</td>
+          <td><span class="mono" style="font-weight: 600; color: #152CFF;">T00012</span></td>
+          <td style="font-weight: 600;">TikTok</td>
+          <td class="mono" style="color: #374151;">14 Apr</td>
+          <td class="mono" style="color: #374151;">160-12345678</td>
+          <td style="color: #374151;">TikTok WH → SZX Airport</td>
+          <td class="faint">120 bags</td>
+          <td><span class="chip chip-progress"><span class="dot"></span>In Progress</span></td>
+        </tr>
+        <tr>
+          <td style="color: #d1d5db;">&#9656;</td>
+          <td><span class="mono" style="font-weight: 600; color: #152CFF;">T00011</span></td>
+          <td style="font-weight: 600;">Shopee</td>
+          <td class="mono" style="color: #374151;">12 Apr</td>
+          <td class="mono" style="color: #374151;">160-23456789</td>
+          <td style="color: #374151;">Shopee DC → CAN Airport</td>
+          <td class="faint">85 bags</td>
+          <td><span class="chip chip-completed"><span class="dot"></span>Completed</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="tradeoffs">
+      <div class="col pro">
+        <h4>Pros</h4>
+        <ul>
+          <li>Always visible — no hidden state behind a "Custom" toggle</li>
+          <li>Precise — pick exact dates, no ambiguity about what "This week" means</li>
+          <li>Works on all tabs (Active/Completed/Verified/All) consistently</li>
+        </ul>
+      </div>
+      <div class="col con">
+        <h4>Cons</h4>
+        <ul>
+          <li>Loses quick-select convenience — "This week" is 2 clicks vs. calculating dates</li>
+          <li>Native date inputs are ugly on some browsers and don't match design system</li>
+          <li>Filter bar gets wider — date inputs + customer + vendor is dense</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== OPTION B: Presets + Custom ======== -->
+<div class="screen">
+  <div class="screen-header">
+    <div><span class="option-tag b">Option B</span></div>
+    <h2>Presets + Custom Date Range</h2>
+    <div class="thesis">Keep existing preset chips (Today / This week / This month / Last month / All time). Add a "Custom" chip that reveals From/To date inputs. Best of both worlds — quick access for common ranges, precise control when needed.</div>
+  </div>
+  <div class="screen-body">
+    <!-- State 1: Preset selected -->
+    <div style="margin-bottom: 20px;">
+      <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px;">State 1: Preset selected (default)</div>
+      <div class="filter-bar" style="border: 1px solid #e5e7eb; border-radius: 6px;">
+        <button class="filter-pill">Active (8)</button>
+        <button class="filter-pill active">All (16)</button>
+        <button class="filter-pill">Completed (3)</button>
+        <button class="filter-pill">Verified (5)</button>
+
+        <span class="filter-sep"></span>
+
+        <span class="filter-label">Period:</span>
+        <button class="filter-pill" style="font-size: 9px; padding: 2px 8px;">Today</button>
+        <button class="filter-pill active" style="font-size: 9px; padding: 2px 8px;">This week</button>
+        <button class="filter-pill" style="font-size: 9px; padding: 2px 8px;">This month</button>
+        <button class="filter-pill" style="font-size: 9px; padding: 2px 8px;">Last month</button>
+        <button class="filter-pill" style="font-size: 9px; padding: 2px 8px;">All time</button>
+        <button class="filter-pill" style="font-size: 9px; padding: 2px 8px; border-style: dashed;">Custom</button>
+
+        <span class="filter-sep"></span>
+
+        <label style="display: flex; align-items: center; gap: 4px;">
+          <span class="filter-label">Customer</span>
+          <select class="filter-select"><option>All</option></select>
+        </label>
+        <label style="display: flex; align-items: center; gap: 4px;">
+          <span class="filter-label">Vendor</span>
+          <select class="filter-select"><option>All</option></select>
+        </label>
+
+        <span style="margin-left: auto;" class="mono faint">16 trips</span>
+      </div>
+    </div>
+
+    <!-- State 2: Custom selected -->
+    <div>
+      <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px;">State 2: "Custom" selected — date inputs revealed</div>
+      <div class="filter-bar" style="border: 1px solid #e5e7eb; border-radius: 6px;">
+        <button class="filter-pill">Active (8)</button>
+        <button class="filter-pill active">All (16)</button>
+        <button class="filter-pill">Completed (3)</button>
+        <button class="filter-pill">Verified (5)</button>
+
+        <span class="filter-sep"></span>
+
+        <span class="filter-label">Period:</span>
+        <button class="filter-pill" style="font-size: 9px; padding: 2px 8px;">Today</button>
+        <button class="filter-pill" style="font-size: 9px; padding: 2px 8px;">This week</button>
+        <button class="filter-pill" style="font-size: 9px; padding: 2px 8px;">This month</button>
+        <button class="filter-pill" style="font-size: 9px; padding: 2px 8px;">Last month</button>
+        <button class="filter-pill" style="font-size: 9px; padding: 2px 8px;">All time</button>
+        <button class="filter-pill active" style="font-size: 9px; padding: 2px 8px;">Custom</button>
+        <input type="date" class="date-input" value="2026-03-15" style="margin-left: 4px;">
+        <span style="color: #d1d5db; font-size: 10px;">—</span>
+        <input type="date" class="date-input" value="2026-04-14">
+
+        <span class="filter-sep"></span>
+
+        <label style="display: flex; align-items: center; gap: 4px;">
+          <span class="filter-label">Customer</span>
+          <select class="filter-select"><option>All</option></select>
+        </label>
+
+        <span style="margin-left: auto;" class="mono faint">12 trips</span>
+      </div>
+    </div>
+
+    <div class="tradeoffs" style="margin-top: 16px;">
+      <div class="col pro">
+        <h4>Pros</h4>
+        <ul>
+          <li>Quick presets survive — "This week" is still one click</li>
+          <li>Custom range available when needed — no information loss</li>
+          <li>Familiar pattern — same filter bar, progressive disclosure</li>
+        </ul>
+      </div>
+      <div class="col con">
+        <h4>Cons</h4>
+        <ul>
+          <li>Filter bar gets very wide when Custom is active — may wrap on smaller screens</li>
+          <li>7 period options + Custom is a lot of pills — visual clutter</li>
+          <li>Two mental models (preset vs. custom) — ops has to decide which to use</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== OPTION C: Calendar Popover ======== -->
+<div class="screen">
+  <div class="screen-header">
+    <div><span class="option-tag c">Option C</span></div>
+    <h2>Date Range Button + Calendar Popover</h2>
+    <div class="thesis">Single "Date Range" button in the filter bar. Click opens a calendar popover with range selection + preset shortcuts. Cleanest filter bar, most capable date selection. Familiar from analytics tools (GA, Mixpanel).</div>
+  </div>
+  <div class="screen-body">
+    <!-- Filter bar with date button -->
+    <div style="margin-bottom: 20px;">
+      <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px;">Filter bar — compact, single date button</div>
+      <div class="filter-bar" style="border: 1px solid #e5e7eb; border-radius: 6px;">
+        <button class="filter-pill active">Active (8)</button>
+        <button class="filter-pill">Completed (3)</button>
+        <button class="filter-pill">Verified (5)</button>
+        <button class="filter-pill">All (16)</button>
+
+        <span class="filter-sep"></span>
+
+        <!-- Date range button -->
+        <div style="position: relative;">
+          <button class="filter-pill active" style="display: inline-flex; align-items: center; gap: 4px;">
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3"/></svg>
+            <span class="mono" style="font-size: 9px;">01 Apr — 14 Apr</span>
+          </button>
+        </div>
+
+        <span class="filter-sep"></span>
+
+        <label style="display: flex; align-items: center; gap: 4px;">
+          <span class="filter-label">Trip / MAWB</span>
+          <input type="text" class="filter-input filter-input-mono" placeholder="T00001 or MAWB" style="width: 140px;">
+        </label>
+        <label style="display: flex; align-items: center; gap: 4px;">
+          <span class="filter-label">Customer</span>
+          <select class="filter-select"><option>All</option></select>
+        </label>
+        <label style="display: flex; align-items: center; gap: 4px;">
+          <span class="filter-label">Vendor</span>
+          <select class="filter-select"><option>All</option></select>
+        </label>
+
+        <span style="margin-left: auto;" class="mono faint">8 trips</span>
+      </div>
+    </div>
+
+    <!-- Calendar popover mockup -->
+    <div style="margin-bottom: 16px;">
+      <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px;">Popover — opened on click</div>
+      <div style="display: flex; gap: 16px;">
+        <!-- Calendar -->
+        <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); width: 260px;">
+          <!-- Preset shortcuts -->
+          <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #f3f4f6;">
+            <button class="filter-pill" style="font-size: 9px; padding: 2px 7px;">Today</button>
+            <button class="filter-pill" style="font-size: 9px; padding: 2px 7px;">This week</button>
+            <button class="filter-pill active" style="font-size: 9px; padding: 2px 7px;">This month</button>
+            <button class="filter-pill" style="font-size: 9px; padding: 2px 7px;">Last month</button>
+            <button class="filter-pill" style="font-size: 9px; padding: 2px 7px;">All time</button>
+          </div>
+          <!-- Month header -->
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <button class="cal-nav">&lsaquo;</button>
+            <span style="font-size: 11px; font-weight: 700;">April 2026</span>
+            <button class="cal-nav">&rsaquo;</button>
+          </div>
+          <!-- Day grid -->
+          <div class="cal-grid">
+            <div class="cal-day-header">Mo</div>
+            <div class="cal-day-header">Tu</div>
+            <div class="cal-day-header">We</div>
+            <div class="cal-day-header">Th</div>
+            <div class="cal-day-header">Fr</div>
+            <div class="cal-day-header">Sa</div>
+            <div class="cal-day-header">Su</div>
+
+            <div class="cal-day muted">30</div>
+            <div class="cal-day muted">31</div>
+            <div class="cal-day selected">1</div>
+            <div class="cal-day in-range">2</div>
+            <div class="cal-day in-range">3</div>
+            <div class="cal-day in-range">4</div>
+            <div class="cal-day in-range">5</div>
+
+            <div class="cal-day in-range">6</div>
+            <div class="cal-day in-range">7</div>
+            <div class="cal-day in-range">8</div>
+            <div class="cal-day in-range">9</div>
+            <div class="cal-day in-range">10</div>
+            <div class="cal-day in-range">11</div>
+            <div class="cal-day in-range">12</div>
+
+            <div class="cal-day in-range">13</div>
+            <div class="cal-day selected today">14</div>
+            <div class="cal-day">15</div>
+            <div class="cal-day">16</div>
+            <div class="cal-day">17</div>
+            <div class="cal-day">18</div>
+            <div class="cal-day">19</div>
+
+            <div class="cal-day">20</div>
+            <div class="cal-day">21</div>
+            <div class="cal-day">22</div>
+            <div class="cal-day">23</div>
+            <div class="cal-day">24</div>
+            <div class="cal-day">25</div>
+            <div class="cal-day">26</div>
+
+            <div class="cal-day">27</div>
+            <div class="cal-day">28</div>
+            <div class="cal-day">29</div>
+            <div class="cal-day">30</div>
+            <div class="cal-day muted">1</div>
+            <div class="cal-day muted">2</div>
+            <div class="cal-day muted">3</div>
+          </div>
+          <!-- Date summary -->
+          <div style="display: flex; align-items: center; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f3f4f6;">
+            <input type="date" class="date-input" value="2026-04-01" style="flex: 1;">
+            <span style="color: #d1d5db; font-size: 10px;">—</span>
+            <input type="date" class="date-input" value="2026-04-14" style="flex: 1;">
+          </div>
+          <div class="cal-actions">
+            <button class="btn btn-secondary" style="font-size: 10px; padding: 3px 10px;">Clear</button>
+            <button class="btn btn-primary" style="font-size: 10px; padding: 3px 10px;">Apply</button>
+          </div>
+        </div>
+
+        <!-- Annotation -->
+        <div style="flex: 1; padding: 12px; background: #f9fafb; border-radius: 6px;">
+          <div style="font-size: 10px; font-weight: 600; color: #374151; margin-bottom: 8px;">How it works:</div>
+          <ul style="font-size: 10px; color: #6b7280; line-height: 1.8; list-style: none;">
+            <li>1. Click date button in filter bar</li>
+            <li>2. Popover opens with preset shortcuts at top</li>
+            <li>3. Click preset — immediately applies and closes</li>
+            <li>4. Or click two dates on calendar for custom range</li>
+            <li>5. Click "Apply" to confirm custom range</li>
+            <li>6. Button label updates to show selected range</li>
+          </ul>
+          <div style="margin-top: 12px; padding: 8px 10px; background: #fff; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 10px; color: #374151;">
+            <strong>Date field:</strong> Filter by pickup date (operationally relevant), not creation date. Shows trips where any job's pickup date falls within the selected range.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tradeoffs">
+      <div class="col pro">
+        <h4>Pros</h4>
+        <ul>
+          <li>Cleanest filter bar — single button replaces 6 preset chips</li>
+          <li>Presets still available inside popover — no convenience loss</li>
+          <li>Calendar visual makes range selection intuitive (click start, click end)</li>
+        </ul>
+      </div>
+      <div class="col con">
+        <h4>Cons</h4>
+        <ul>
+          <li>One extra click to see/change date range (open popover first)</li>
+          <li>Calendar popover is a new component — more implementation effort</li>
+          <li>Popover may feel heavyweight for an ops tool that values speed</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== VERDICT ======== -->
+<div class="verdict">
+  <h2>Recommendation</h2>
+  <p>
+    <span class="rec">Option A — Date Range Inputs</span> is the strongest choice for this ops tool. Two always-visible date inputs are the simplest, most direct solution. Ops planners think in dates ("show me April 1-14"), not in relative periods ("this month"). The inputs are always there — no click to reveal, no popover to navigate.
+  </p>
+  <p style="margin-top: 8px;">
+    Option B's preset + custom hybrid adds complexity for marginal benefit — if the user is already typing dates, the presets become redundant. Option C's calendar popover is elegant for analytics tools but adds an extra click that feels heavy in a dense ops workflow where date filtering happens 20+ times a day.
+  </p>
+  <p style="margin-top: 8px;">
+    <strong>Key change:</strong> Filter by <strong>pickup date</strong> (not creation date). Ops schedules around pickups. The date range should appear on <strong>all tabs</strong> (Active/Completed/Verified/All) — the current limitation of "date filter only on All/Completed" should be removed. Also update the filter tab split to <code>Active</code> | <code>Completed</code> | <code>Verified</code> | <code>All</code> to match HMW-54's trip-level status derivation.
+  </p>
+</div>
+
+</body>
+</html>

@@ -1,13 +1,14 @@
 import { useState, useCallback } from 'react';
-import { Search, Download, Plus, Ship, Copy } from 'lucide-react';
+import { Search, Download, Plus, Ship, Copy, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { customers, vendors, formatCurrency } from '@shared/mockData';
-import type { Trip, Job, JobStatus } from '@shared/mockData';
+import { customers, vendors, formatCurrency, getTripVerification, deriveTripStatus, getTripPickupDate } from '@shared/mockData';
+import type { Trip, Job, JobStatus, Currency } from '@shared/mockData';
 import { useTrips, generateJobId } from '@shared/TripContext';
 import { useToast } from '@shared/Toast';
 import SlideOutPanel from '../components/SlideOutPanel';
 import JobSlideOut from '../components/trips/JobSlideOut';
 import ServiceTag from '../components/trips/ServiceTag';
+import DateRangePopover from '../components/shared/DateRangePopover';
 
 // -- Helpers --
 
@@ -28,14 +29,43 @@ function getStatusColors(status: JobStatus): { border: string; bg: string; text:
   }
 }
 
+function exportTripsCSV(trips: Trip[]) {
+  const header = ['Trip ID', 'Customer', 'MAWB', 'Origin', 'Destination', 'Pickup Date', 'Verification', 'Status', 'Jobs', 'Total Cost'];
+  const rows = trips.map((t) => {
+    const pickup = getTripPickupDate(t) || '-';
+    const { verified, total } = getTripVerification(t);
+    const verificationStr = total > 0 ? `${verified}/${total}` : '-';
+    const status = deriveTripStatus(t);
+    const costMap = new Map<string, number>();
+    t.jobs.forEach((j) => {
+      (j.fees ?? []).filter((f) => f.active !== false).forEach((f) => {
+        costMap.set(f.currency, (costMap.get(f.currency) ?? 0) + f.amount);
+      });
+    });
+    const costStr = costMap.size > 0
+      ? Array.from(costMap.entries()).map(([c, total]) => formatCurrency(c as Currency, total)).join(' + ')
+      : '-';
+    return [t.id, t.customer.name, t.mawb, t.origin, t.destination, pickup, verificationStr, status, String(t.jobs.length), costStr];
+  });
+  const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `trips-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // -- Component --
 
 export default function TripsPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const { trips, updateJobStatus, addProofDocument, removeProofDocument, addActivityLog, updateJob, updateFeeQty, toggleFee, updateJobQty, startJob, verifyJob, cancelJob, cancelAndReplace, createFollowup, setCompletionRemark } = useTrips();
-  const [statusFilter, setStatusFilter] = useState<'active' | 'all' | 'completed'>('active');
-  const [datePeriod, setDatePeriod] = useState<'today' | 'week' | 'month' | 'last-month' | 'all-time'>('month');
+  const [statusFilter, setStatusFilter] = useState<'active' | 'completed' | 'verified' | 'all'>('active');
+  const [dateStart, setDateStart] = useState<string | null>(null);
+  const [dateEnd, setDateEnd] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [mawbSearch, setMawbSearch] = useState('');
   const [customerFilter, setCustomerFilter] = useState('');
@@ -49,42 +79,27 @@ export default function TripsPage() {
   const panelJob = panelTrip ? panelTrip.jobs.find((j) => j.id === panelIds.jobId) : null;
   const panelJobIdx = panelTrip && panelJob ? panelTrip.jobs.indexOf(panelJob) : -1;
 
-  // Status counts — active = any job NOT verified and NOT cancelled; completed = ALL verified
-  const isOrderActive = (t: Trip) => t.jobs.some((j) => j.status !== 'Verified' && j.status !== 'Cancelled');
-  const activeCount = trips.filter(isOrderActive).length;
-  const completedCount = trips.filter((t) => !isOrderActive(t)).length;
-  const showDatePicker = statusFilter !== 'active';
-
-  // Date range helper
-  function getDateRange(): { start: Date; end: Date } | null {
-    if (statusFilter === 'active') return null; // Active never date-filtered
-    const now = new Date();
-    switch (datePeriod) {
-      case 'today': { const s = new Date(now); s.setHours(0,0,0,0); return { start: s, end: now }; }
-      case 'week': { const s = new Date(now); s.setDate(s.getDate() - s.getDay()); s.setHours(0,0,0,0); return { start: s, end: now }; }
-      case 'month': { const s = new Date(now.getFullYear(), now.getMonth(), 1); return { start: s, end: now }; }
-      case 'last-month': { const s = new Date(now.getFullYear(), now.getMonth() - 1, 1); const e = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59); return { start: s, end: e }; }
-      default: return null;
-    }
-  }
-
-  function parseCreatedAt(ca: string): Date {
-    // Format: "08 Mar 2026, 09:00"
-    return new Date(ca.replace(',', ''));
-  }
-
-  const dateRange = getDateRange();
+  // Status counts — derived from trip status
+  const activeCount = trips.filter((t) => deriveTripStatus(t) === 'Active').length;
+  const completedCount = trips.filter((t) => deriveTripStatus(t) === 'Completed').length;
+  const verifiedCount = trips.filter((t) => deriveTripStatus(t) === 'Verified').length;
 
   const filtered = trips.filter((t) => {
     // Status filter
-    if (statusFilter === 'active' && !isOrderActive(t)) return false;
-    if (statusFilter === 'completed' && isOrderActive(t)) return false;
-    // Date filter (only for All/Completed)
-    if (dateRange) {
-      const created = parseCreatedAt(t.createdAt);
-      if (created < dateRange.start || created > dateRange.end) return false;
+    if (statusFilter !== 'all') {
+      const tripStatus = deriveTripStatus(t);
+      if (statusFilter === 'active' && tripStatus !== 'Active') return false;
+      if (statusFilter === 'completed' && tripStatus !== 'Completed') return false;
+      if (statusFilter === 'verified' && tripStatus !== 'Verified') return false;
     }
-    // Existing filters
+    // Date filter — by pickup date, works on all tabs
+    if (dateStart || dateEnd) {
+      const pickupDate = getTripPickupDate(t);
+      if (!pickupDate) return false;
+      if (dateStart && pickupDate < dateStart) return false;
+      if (dateEnd && pickupDate > dateEnd) return false;
+    }
+    // Text / dropdown filters
     if (mawbSearch && !t.mawb.toLowerCase().includes(mawbSearch.toLowerCase()) && !t.id.toLowerCase().includes(mawbSearch.toLowerCase())) return false;
     if (customerFilter && t.customer.code !== customerFilter) return false;
     if (vendorFilter && !t.jobs.some((j) => j.vendor.code === vendorFilter)) return false;
@@ -100,8 +115,8 @@ export default function TripsPage() {
     return bDate.localeCompare(aDate); // newest first
   });
 
-  // Paginate (only for All/Completed — Active shows everything)
-  const paginatedFiltered = statusFilter === 'active' ? filtered : filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  // Paginate uniformly across all tabs
+  const paginatedFiltered = totalFiltered > PAGE_SIZE ? filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : filtered;
 
   // -- Handlers --
 
@@ -205,6 +220,8 @@ export default function TripsPage() {
           <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
           <span style={{ color: '#dc2626', fontWeight: 600 }}>{stats.cancelled} cancelled</span>
         </>)}
+        <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
+        <span style={{ color: '#059669', fontWeight: 600 }}>{verifiedCount} trips verified</span>
       </div>
 
       {/* -- Page header -- */}
@@ -214,7 +231,7 @@ export default function TripsPage() {
           <p style={{ fontSize: 11, color: '#9ca3af', margin: '2px 0 0 0' }}>Monitor and manage trips across vendors</p>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#fff', color: '#374151', border: '1px solid #e5e7eb', cursor: 'pointer', fontFamily: 'inherit' }}>
+          <button onClick={() => exportTripsCSV(filtered)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#fff', color: '#374151', border: '1px solid #e5e7eb', cursor: 'pointer', fontFamily: 'inherit' }}>
             <Download size={12} /> Export
           </button>
           <button
@@ -228,29 +245,39 @@ export default function TripsPage() {
 
       {/* -- Filter bar -- */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 16px', borderBottom: '1px solid #e5e7eb' }}>
-        {/* Status filter chips */}
-        {([['active', `Active (${activeCount})`], ['all', `All (${trips.length})`], ['completed', `Completed (${completedCount})`]] as const).map(([key, label]) => (
-          <button key={key} onClick={() => { setStatusFilter(key as any); setPage(1); }} style={{
-            padding: '3px 10px', borderRadius: 99, fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-            border: statusFilter === key ? '1px solid #152CFF' : '1px solid #e5e7eb',
-            background: statusFilter === key ? 'rgba(21,44,255,0.06)' : '#fff',
-            color: statusFilter === key ? '#152CFF' : '#6b7280',
-          }}>{label}</button>
-        ))}
+        {/* Status filter chips — 4-way */}
+        {([
+          ['active', 'Active', activeCount, '#152CFF', 'rgba(21,44,255,0.06)', 'rgba(21,44,255,0.15)'],
+          ['completed', 'Completed', completedCount, '#a16207', '#fefce8', '#fde68a'],
+          ['verified', 'Verified', verifiedCount, '#059669', '#f0fdf4', '#a7f3d0'],
+          ['all', 'All', trips.length, '#152CFF', 'rgba(21,44,255,0.06)', 'rgba(21,44,255,0.15)'],
+        ] as const).map(([key, label, count, activeColor, activeBg, activeBorder]) => {
+          const isOn = statusFilter === key;
+          return (
+            <button key={key} onClick={() => { setStatusFilter(key); setPage(1); }} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '3px 10px', borderRadius: 99, fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+              border: isOn ? `1px solid ${activeBorder}` : '1px solid #e5e7eb',
+              background: isOn ? activeBg : '#fff',
+              color: isOn ? activeColor : '#6b7280',
+            }}>
+              {label}
+              <span style={{
+                fontSize: 9, padding: '0 5px', borderRadius: 99, fontWeight: 700, minWidth: 16, textAlign: 'center',
+                background: isOn ? activeBg : '#f3f4f6',
+                border: `1px solid ${isOn ? activeBorder : '#e5e7eb'}`,
+                color: isOn ? activeColor : '#9ca3af',
+              }}>{count}</span>
+            </button>
+          );
+        })}
 
-        {/* Date period picker — only for All/Completed */}
-        {showDatePicker && <>
-          <span style={{ width: 1, height: 16, background: '#e5e7eb', margin: '0 2px' }} />
-          <span style={{ fontSize: 10, color: '#9ca3af' }}>Period:</span>
-          {([['today', 'Today'], ['week', 'This week'], ['month', 'This month'], ['last-month', 'Last month'], ['all-time', 'All time']] as const).map(([key, label]) => (
-            <button key={key} onClick={() => { setDatePeriod(key as any); setPage(1); }} style={{
-              padding: '2px 8px', borderRadius: 99, fontSize: 9, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-              border: datePeriod === key ? '1px solid #152CFF' : '1px solid #e5e7eb',
-              background: datePeriod === key ? 'rgba(21,44,255,0.06)' : '#fff',
-              color: datePeriod === key ? '#152CFF' : '#9ca3af',
-            }}>{label}</button>
-          ))}
-        </>}
+        <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
+        <DateRangePopover
+          startDate={dateStart}
+          endDate={dateEnd}
+          onChange={(s, e) => { setDateStart(s); setDateEnd(e); setPage(1); }}
+        />
 
         <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
         <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#9ca3af' }}>
@@ -292,7 +319,8 @@ export default function TripsPage() {
               <th style={th}>MAWB</th>
               <th style={th}>Route</th>
               <th style={th}>Cargo</th>
-              <th style={{ ...th, width: 40 }} />
+              <th style={{ ...th, width: 110 }}>Verification</th>
+              <th style={{ ...th, width: 60 }} />
             </tr>
           </thead>
           <tbody>
@@ -346,15 +374,43 @@ export default function TripsPage() {
                   <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
                     <span style={{ fontSize: 11, color: '#9ca3af' }}>{trip.bags} bags &middot; {trip.weight} kg</span>
                   </td>
+                  <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
+                    {(() => {
+                      const { verified, total } = getTripVerification(trip);
+                      if (total === 0) return <span style={{ fontSize: 10, color: '#d1d5db' }}>—</span>;
+                      const pct = (verified / total) * 100;
+                      const color = verified === total ? '#059669' : verified > 0 ? '#a16207' : '#9ca3af';
+                      return (
+                        <div>
+                          <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 600, color, marginBottom: 3 }}>
+                            {verified}/{total} <span style={{ fontWeight: 400, fontSize: 9, color }}>verified</span>
+                          </div>
+                          <div style={{ height: 4, background: '#e5e7eb', borderRadius: 2, overflow: 'hidden', width: 60 }}>
+                            <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 2 }} />
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </td>
                   <td style={{ padding: '8px 4px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6', textAlign: 'center' }}>
-                    <span
-                      onClick={(e) => { e.stopPropagation(); navigate(`/create-trip?duplicate=${trip.id}`); }}
-                      onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.3'; }}
-                      style={{ color: '#9ca3af', cursor: 'pointer', opacity: 0.3, transition: 'opacity 0.15s', display: 'inline-flex' }}
-                    >
-                      <Copy size={12} />
-                    </span>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <span
+                        onClick={(e) => { e.stopPropagation(); navigate(`/trips/${trip.id}/edit`); }}
+                        onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.3'; }}
+                        style={{ color: '#9ca3af', cursor: 'pointer', opacity: 0.3, transition: 'opacity 0.15s', display: 'inline-flex' }}
+                      >
+                        <Pencil size={12} />
+                      </span>
+                      <span
+                        onClick={(e) => { e.stopPropagation(); navigate(`/create-trip?duplicate=${trip.id}`); }}
+                        onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.3'; }}
+                        style={{ color: '#9ca3af', cursor: 'pointer', opacity: 0.3, transition: 'opacity 0.15s', display: 'inline-flex' }}
+                      >
+                        <Copy size={12} />
+                      </span>
+                    </div>
                   </td>
                 </tr>
               ];
@@ -363,7 +419,7 @@ export default function TripsPage() {
                 const subTh: React.CSSProperties = { textAlign: 'left', padding: '4px 10px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' };
                 rows.push(
                   <tr key={`${trip.id}-exp`} style={{ background: '#f9fafb' }} onClick={(e) => e.stopPropagation()}>
-                    <td colSpan={9} style={{ padding: 0, borderBottom: '1px solid #e5e7eb' }}>
+                    <td colSpan={10} style={{ padding: 0, borderBottom: '1px solid #e5e7eb' }}>
                       <div style={{ paddingLeft: 40, paddingRight: 12, paddingTop: 4, paddingBottom: 10 }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                           <thead>
@@ -439,7 +495,7 @@ export default function TripsPage() {
               return rows;
             }) : (
               <tr>
-                <td colSpan={9} style={{ padding: '60px 12px', textAlign: 'center' }}>
+                <td colSpan={10} style={{ padding: '60px 12px', textAlign: 'center' }}>
                   <div style={{ width: 40, height: 40, borderRadius: 6, background: 'rgba(21,44,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
                     <Ship size={18} style={{ color: '#152CFF' }} />
                   </div>
@@ -464,8 +520,8 @@ export default function TripsPage() {
         </table>
       </div>
 
-      {/* -- Pagination (only for All/Completed) -- */}
-      {showDatePicker && totalPages > 1 && (
+      {/* -- Pagination -- */}
+      {totalPages > 1 && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderTop: '1px solid #e5e7eb' }}>
           <span style={{ fontSize: 10, color: '#9ca3af' }}>Page {page} of {totalPages} · {totalFiltered} trips</span>
           <div style={{ display: 'flex', gap: 4 }}>

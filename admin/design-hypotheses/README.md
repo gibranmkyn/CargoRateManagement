@@ -225,6 +225,21 @@ Every design decision starts with a **"How Might We"** question. We generate 2-3
 **Decision:** Option A — Trip ID leads, Jobs column removed. Expandable sub-row already provides full job detail on click. Column order: Trip → Customer → Pickup → Delivery → MAWB → Route → Cargo.
 **File:** `52-hmw-trips-table-columns.html`
 
+### HMW-53: How might we let ops planners edit trip details and job assignments after creation without disrupting their scan-and-act workflow?
+**Options:** A) Inline Row Edit — pencil on trip row expands edit bar, B) Edit Page — navigate to /trips/:id/edit reusing CreateTrip form, C) Section Edit Toggles — pencil per section in existing surfaces
+**Decision:** Option B — Full-page edit form at /trips/:id/edit. Reuses CreateTrip 2-step layout pre-filled with existing data. Can edit all trip fields + add/remove/modify jobs. Clear save/cancel boundary. Editability rules: trip fields always editable, job fields editable until Completed/Verified/Cancelled. Vendor/route changes recalculate fees.
+**File:** `53-hmw-edit-trips-and-jobs.html`
+
+### HMW-54: How might we derive and display trip-level status from job statuses so ops planners can instantly see trip progress without expanding?
+**Options:** A) Trip Status Chip (worst-status derivation), B) Job Status Summary (colored dot counts), C) Verification Progress (fraction + bar)
+**Decision:** Option C — "N/M verified" fraction with thin progress bar. Directly answers "is this trip ready for billing?" as a completion percentage. Trip is only Verified when all non-cancelled jobs are Verified. Derivation: count verified jobs / total non-cancelled jobs. Color: green at 100%, amber at partial, gray at zero.
+**File:** `54-hmw-trip-status-derivation.html`
+
+### HMW-55: How might we let ops planners filter trips and jobs by a specific date range?
+**Options:** A) Date Range Inputs (replace presets), B) Presets + Custom Date Range, C) Date Range Button + Calendar Popover
+**Decision:** Option C — Single "Date Range" button in filter bar opens calendar popover with preset shortcuts + range selection. Cleanest filter bar, presets still accessible inside popover. Filter by pickup date (not creation date). Available on all tabs including Active.
+**File:** `55-hmw-date-range-filter.html`
+
 ### HMW-10: How might we structure navigation so it scales as the app grows (validation, master data, reports) without cluttering the daily trip management workflow?
 **Options to explore:**
 - A) Top nav (current — simple, max vertical workspace)
