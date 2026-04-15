@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-56: Facility → District Linking</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Instrument Sans', sans-serif; background: #f3f4f6; color: #111827; padding: 32px; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* Layout */
+  .hmw-header { max-width: 1100px; margin: 0 auto 32px; }
+  .hmw-header h1 { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; margin-bottom: 4px; }
+  .hmw-header .question { font-size: 13px; color: #6b7280; line-height: 1.5; max-width: 800px; }
+  .hmw-header .context { font-size: 11px; color: #9ca3af; margin-top: 8px; line-height: 1.6; }
+
+  .screen { max-width: 1100px; margin: 0 auto 40px; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+  .screen-label { padding: 10px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; align-items: baseline; gap: 10px; }
+  .screen-label h2 { font-size: 13px; font-weight: 700; }
+  .screen-label .thesis { font-size: 11px; color: #6b7280; }
+  .screen-label .tag { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .tag-rec { background: #f0fdf4; color: #059669; border: 1px solid #a7f3d0; }
+  .tag-alt { background: #f9fafb; color: #6b7280; border: 1px solid #e5e7eb; }
+  .screen-body { padding: 16px; }
+
+  .pros-cons { display: flex; gap: 24px; padding: 12px 16px; background: #f9fafb; border-top: 1px solid #e5e7eb; }
+  .pros-cons > div { flex: 1; }
+  .pros-cons h4 { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 6px; }
+  .pros-cons ul { list-style: none; font-size: 11px; color: #374151; line-height: 1.7; }
+  .pros-cons li::before { content: ''; display: inline-block; width: 5px; height: 5px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .pros li::before { background: #059669; }
+  .cons li::before { background: #dc2626; }
+
+  /* Shared table styles */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 6px 12px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 8px 12px; font-size: 11px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+  .add-row { background: rgba(21,44,255,0.04); }
+  .add-row td { border-bottom: 1px solid rgba(21,44,255,0.08); }
+
+  /* Form inputs */
+  .input { font-family: 'Instrument Sans', sans-serif; font-size: 11px; padding: 4px 8px; border: 1px solid #e5e7eb; border-radius: 4px; outline: none; width: 100%; }
+  .input:focus { border-color: #152CFF; box-shadow: 0 0 0 2px rgba(21,44,255,0.08); }
+  .input-active { border-color: #152CFF; box-shadow: 0 0 0 2px rgba(21,44,255,0.08); }
+  select.input { appearance: none; background: #fff url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L4 4L7 1' stroke='%239ca3af' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E") right 8px center no-repeat; padding-right: 24px; }
+
+  /* Type badge */
+  .type-badge { padding: 1px 5px; border-radius: 4px; font-size: 9px; font-weight: 600; color: #6b7280; background: #f3f4f6; border: 1px solid #e5e7eb; }
+
+  /* Action buttons */
+  .btn-check { border: none; background: none; cursor: pointer; color: #059669; padding: 2px; }
+  .btn-cancel { border: none; background: none; cursor: pointer; color: #dc2626; padding: 2px; margin-left: 4px; }
+  .btn-blue { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 6px; border: none; background: #152CFF; color: #fff; font-size: 11px; font-weight: 600; cursor: pointer; font-family: 'Instrument Sans', sans-serif; }
+
+  /* District dropdown overlay */
+  .district-dropdown { position: absolute; top: 100%; left: 0; right: 0; margin-top: 2px; background: #fff; border: 1px solid #e5e7eb; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); z-index: 50; max-height: 220px; overflow-y: auto; }
+  .dd-group-label { padding: 6px 8px 2px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; }
+  .dd-item { padding: 5px 8px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+  .dd-item:hover, .dd-item.focused { background: #f9fafb; }
+  .dd-item .dd-trail { font-size: 10px; color: #9ca3af; }
+  .dd-code { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #d1d5db; }
+
+  /* Cascading selects */
+  .cascade-row { display: flex; gap: 6px; align-items: center; }
+  .cascade-row .cascade-label { font-size: 9px; color: #9ca3af; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+  .cascade-row select.input { min-width: 0; flex: 1; }
+  .cascade-arrow { color: #d1d5db; font-size: 10px; }
+
+  /* Resolved pill */
+  .resolved-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; color: #059669; background: #f0fdf4; border: 1px solid #a7f3d0; }
+
+  /* Verdict */
+  .verdict { max-width: 1100px; margin: 40px auto 0; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+  .verdict .screen-label { background: #111827; border-bottom: none; }
+  .verdict .screen-label h2 { color: #fff; }
+  .verdict-body { padding: 16px; font-size: 12px; color: #374151; line-height: 1.7; }
+  .verdict-body strong { color: #111827; }
+  .verdict-body .pick { font-size: 14px; font-weight: 700; color: #152CFF; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="hmw-header">
+  <h1>HMW-56: Facility &rarr; District Linking</h1>
+  <div class="question">How might we let ops planners link a facility to a specific GB/T 2260 district (3,056 districts across 342 cities, 31 provinces) during facility creation, so the geographic hierarchy is captured for export and reporting?</div>
+  <div class="context">
+    Current gap: Location type has <code>city</code>, <code>district</code>, <code>districtCode</code> fields but the add/edit form only captures name, code, zone, type.
+    Regions tab has full hierarchy (chinaRegions.ts) but nothing links it into facility creation.
+    The form is inline in a table row &mdash; dense ops UI, not a modal.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- OPTION A: Single search-ahead dropdown -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="screen">
+  <div class="screen-label">
+    <h2>A) District Search Dropdown</h2>
+    <span class="thesis">&mdash; Type to search 3,056 districts. Selection auto-fills city + code.</span>
+    <span class="tag tag-rec">Recommended</span>
+  </div>
+  <div class="screen-body">
+    <!-- Table with add row -->
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th style="width:70px">Code</th>
+          <th style="width:90px">Zone</th>
+          <th style="width:80px">Type</th>
+          <th style="width:150px">District</th>
+          <th style="width:90px">City</th>
+          <th style="width:42px;text-align:center">Jobs</th>
+          <th style="width:60px;text-align:center">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- ADD ROW — district field active with dropdown -->
+        <tr class="add-row">
+          <td>
+            <input class="input" value="Shenzhen Bay Cargo Hub" placeholder="Location name" />
+          </td>
+          <td>
+            <input class="input" value="SZ-BCH" placeholder="Auto" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af" />
+          </td>
+          <td>
+            <input class="input" value="Shenzhen" placeholder="Zone" />
+          </td>
+          <td>
+            <select class="input"><option>Hub</option></select>
+          </td>
+          <td style="position:relative">
+            <input class="input input-active" value="Bao'an" placeholder="Search district..." />
+            <!-- Dropdown overlay -->
+            <div class="district-dropdown">
+              <div class="dd-group-label">Guangdong &middot; Shenzhen (深圳市)</div>
+              <div class="dd-item focused">
+                <span><strong style="font-weight:600;color:#111827">宝安区</strong> <span style="color:#6b7280">Bao'an District</span></span>
+                <span class="dd-code">440306</span>
+              </div>
+              <div class="dd-item">
+                <span><strong style="font-weight:600;color:#374151">南山区</strong> <span style="color:#6b7280">Nanshan District</span></span>
+                <span class="dd-code">440305</span>
+              </div>
+              <div class="dd-group-label">Guangdong &middot; Guangzhou (广州市)</div>
+              <div class="dd-item">
+                <span><strong style="font-weight:600;color:#374151">白云区</strong> <span style="color:#6b7280">Baiyun District</span></span>
+                <span class="dd-code">440111</span>
+              </div>
+              <div class="dd-item">
+                <span><strong style="font-weight:600;color:#374151">黄埔区</strong> <span style="color:#6b7280">Huangpu District</span></span>
+                <span class="dd-code">440112</span>
+              </div>
+            </div>
+          </td>
+          <td>
+            <span style="font-size:11px;color:#9ca3af;font-style:italic">auto</span>
+          </td>
+          <td style="text-align:center">&mdash;</td>
+          <td style="text-align:center">
+            <button class="btn-check" title="Save">&#10003;</button>
+            <button class="btn-cancel" title="Cancel">&#10005;</button>
+          </td>
+        </tr>
+
+        <!-- After selection — city auto-resolved -->
+        <tr style="background:rgba(21,44,255,0.02)">
+          <td style="font-weight:600;color:#111827">Shenzhen Bay Cargo Hub</td>
+          <td><span class="mono" style="font-size:10px;color:#9ca3af">SZ-BCH</span></td>
+          <td>Shenzhen</td>
+          <td><span class="type-badge">Hub</span></td>
+          <td><span style="font-size:11px">Bao'an District</span> <span class="dd-code" style="margin-left:2px">440306</span></td>
+          <td style="color:#6b7280">Shenzhen</td>
+          <td style="text-align:center;font-size:10px;color:#6b7280">&mdash;</td>
+          <td style="text-align:center">
+            <button class="btn-check" title="Save">&#10003;</button>
+            <button class="btn-cancel" title="Cancel">&#10005;</button>
+          </td>
+        </tr>
+
+        <!-- Existing data rows -->
+        <tr>
+          <td style="font-weight:600;color:#111827">TikTok WH, Shenzhen</td>
+          <td><span class="mono" style="font-size:10px;color:#9ca3af">SZ-TTWH</span></td>
+          <td>Shenzhen</td>
+          <td><span class="type-badge">Warehouse</span></td>
+          <td>Bao'an District <span class="dd-code">440306</span></td>
+          <td style="color:#6b7280">Shenzhen</td>
+          <td style="text-align:center;font-size:10px;color:#6b7280">4</td>
+          <td style="text-align:center"><span style="color:#9ca3af;cursor:pointer">&#9998; &#128465;</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600;color:#111827">SZX Airport Cargo Terminal</td>
+          <td><span class="mono" style="font-size:10px;color:#9ca3af">SZX-CT</span></td>
+          <td>Shenzhen</td>
+          <td><span class="type-badge">Airport</span></td>
+          <td>Bao'an District <span class="dd-code">440306</span></td>
+          <td style="color:#6b7280">Shenzhen</td>
+          <td style="text-align:center;font-size:10px;color:#6b7280">8</td>
+          <td style="text-align:center"><span style="color:#9ca3af;cursor:pointer">&#9998; &#128465;</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600;color:#111827">Guangzhou Baiyun Airport</td>
+          <td><span class="mono" style="font-size:10px;color:#9ca3af">CAN-BY</span></td>
+          <td>Guangzhou</td>
+          <td><span class="type-badge">Airport</span></td>
+          <td>Baiyun District <span class="dd-code">440111</span></td>
+          <td style="color:#6b7280">Guangzhou</td>
+          <td style="text-align:center;font-size:10px;color:#6b7280">2</td>
+          <td style="text-align:center"><span style="color:#9ca3af;cursor:pointer">&#9998; &#128465;</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Pros</h4>
+      <ul>
+        <li>One field to interact with &mdash; minimal inline space needed</li>
+        <li>Searching "bao" instantly filters to Bao'an across all cities</li>
+        <li>City auto-resolves &mdash; zero extra input needed from user</li>
+        <li>Grouped results show province &middot; city context so user can disambiguate</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Cons</h4>
+      <ul>
+        <li>User must know the district name (or part of it) to start searching</li>
+        <li>Dropdown overlay may clip inside inline table row if near bottom</li>
+        <li>Chinese-only district names need English search fallback for non-Chinese speakers</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- OPTION B: Three cascading selects (Province → City → District) -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="screen">
+  <div class="screen-label">
+    <h2>B) Cascading Province &rarr; City &rarr; District Selects</h2>
+    <span class="thesis">&mdash; Three dropdowns narrow from 31 provinces to the target district.</span>
+    <span class="tag tag-alt">Alternative</span>
+  </div>
+  <div class="screen-body">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th style="width:70px">Code</th>
+          <th style="width:90px">Zone</th>
+          <th style="width:80px">Type</th>
+          <th style="width:300px">District (Province &rarr; City &rarr; District)</th>
+          <th style="width:42px;text-align:center">Jobs</th>
+          <th style="width:60px;text-align:center">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- ADD ROW — cascading selects -->
+        <tr class="add-row">
+          <td>
+            <input class="input" value="Shenzhen Bay Cargo Hub" />
+          </td>
+          <td>
+            <input class="input" value="SZ-BCH" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af" />
+          </td>
+          <td>
+            <input class="input" value="Shenzhen" />
+          </td>
+          <td>
+            <select class="input"><option>Hub</option></select>
+          </td>
+          <td>
+            <div class="cascade-row">
+              <select class="input" style="flex:1.2">
+                <option>广东省 Guangdong</option>
+              </select>
+              <span class="cascade-arrow">&rarr;</span>
+              <select class="input" style="flex:1">
+                <option>深圳市 Shenzhen</option>
+              </select>
+              <span class="cascade-arrow">&rarr;</span>
+              <select class="input input-active" style="flex:1">
+                <option>宝安区 Bao'an</option>
+                <option>南山区 Nanshan</option>
+                <option>福田区 Futian</option>
+                <option>盐田区 Yantian</option>
+              </select>
+            </div>
+          </td>
+          <td style="text-align:center">&mdash;</td>
+          <td style="text-align:center">
+            <button class="btn-check" title="Save">&#10003;</button>
+            <button class="btn-cancel" title="Cancel">&#10005;</button>
+          </td>
+        </tr>
+
+        <!-- Existing data rows — show resolved district + city -->
+        <tr>
+          <td style="font-weight:600;color:#111827">TikTok WH, Shenzhen</td>
+          <td><span class="mono" style="font-size:10px;color:#9ca3af">SZ-TTWH</span></td>
+          <td>Shenzhen</td>
+          <td><span class="type-badge">Warehouse</span></td>
+          <td>
+            <span style="font-size:11px">Bao'an District, Shenzhen</span>
+            <span class="dd-code" style="margin-left:4px">440306</span>
+          </td>
+          <td style="text-align:center;font-size:10px;color:#6b7280">4</td>
+          <td style="text-align:center"><span style="color:#9ca3af;cursor:pointer">&#9998; &#128465;</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600;color:#111827">SZX Airport Cargo Terminal</td>
+          <td><span class="mono" style="font-size:10px;color:#9ca3af">SZX-CT</span></td>
+          <td>Shenzhen</td>
+          <td><span class="type-badge">Airport</span></td>
+          <td>
+            <span style="font-size:11px">Bao'an District, Shenzhen</span>
+            <span class="dd-code" style="margin-left:4px">440306</span>
+          </td>
+          <td style="text-align:center;font-size:10px;color:#6b7280">8</td>
+          <td style="text-align:center"><span style="color:#9ca3af;cursor:pointer">&#9998; &#128465;</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600;color:#111827">Lantau Terminals</td>
+          <td><span class="mono" style="font-size:10px;color:#9ca3af">HK-LT</span></td>
+          <td>Hong Kong</td>
+          <td><span class="type-badge">Port</span></td>
+          <td>
+            <span style="font-size:11px">Islands District, Hong Kong</span>
+            <span class="dd-code" style="margin-left:4px">810118</span>
+          </td>
+          <td style="text-align:center;font-size:10px;color:#6b7280">2</td>
+          <td style="text-align:center"><span style="color:#9ca3af;cursor:pointer">&#9998; &#128465;</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Pros</h4>
+      <ul>
+        <li>Doesn't require knowing the district name upfront &mdash; browse the hierarchy</li>
+        <li>Zero ambiguity: province scopes city, city scopes district</li>
+        <li>Familiar pattern &mdash; same as any address form in China</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Cons</h4>
+      <ul>
+        <li>Three selects in an inline table row &mdash; extremely tight fit at ~300px</li>
+        <li>3 clicks minimum (province, city, district) vs 1 search in Option A</li>
+        <li>Province select is ~31 items, city select up to ~21 items &mdash; lots of scrolling for power users who already know the district</li>
+        <li>Display column merges district+city into one cell (or needs separate City column too)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- OPTION C: Search dropdown with hybrid cascade fallback -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="screen">
+  <div class="screen-label">
+    <h2>C) Search-First + Browse Fallback</h2>
+    <span class="thesis">&mdash; Option A's search by default, with a "Browse" link that opens cascade selects inside the dropdown.</span>
+    <span class="tag tag-alt">Alternative</span>
+  </div>
+  <div class="screen-body">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th style="width:70px">Code</th>
+          <th style="width:90px">Zone</th>
+          <th style="width:80px">Type</th>
+          <th style="width:150px">District</th>
+          <th style="width:90px">City</th>
+          <th style="width:42px;text-align:center">Jobs</th>
+          <th style="width:60px;text-align:center">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="add-row">
+          <td><input class="input" value="Dongguan Cross-dock #2" /></td>
+          <td><input class="input" value="" placeholder="Auto" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af" /></td>
+          <td><input class="input" value="Dongguan" /></td>
+          <td><select class="input"><option>Hub</option></select></td>
+          <td style="position:relative">
+            <input class="input input-active" value="" placeholder="Search district..." />
+            <div class="district-dropdown">
+              <!-- Search mode (default) -->
+              <div style="padding:6px 8px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:9px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Type to search</span>
+                <button style="border:none;background:none;color:#152CFF;font-size:10px;font-weight:600;cursor:pointer">Browse by Province &darr;</button>
+              </div>
+              <div style="padding:12px 8px;text-align:center;font-size:11px;color:#9ca3af">Start typing a district name...</div>
+
+              <!-- OR: Browse mode (after clicking "Browse by Province") shown below for illustration -->
+              <div style="border-top:2px solid #e5e7eb;padding:8px;background:#fafafa">
+                <div style="font-size:9px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">
+                  Browse mode
+                  <button style="border:none;background:none;color:#152CFF;font-size:10px;font-weight:600;cursor:pointer">&larr; Back to search</button>
+                </div>
+                <div class="cascade-row" style="margin-bottom:4px">
+                  <select class="input" style="font-size:10px">
+                    <option>广东省 Guangdong</option>
+                  </select>
+                </div>
+                <div class="cascade-row" style="margin-bottom:4px">
+                  <select class="input" style="font-size:10px">
+                    <option>东莞市 Dongguan</option>
+                  </select>
+                </div>
+                <div class="cascade-row">
+                  <select class="input" style="font-size:10px">
+                    <option>东莞市 (city-level)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td><span style="font-size:11px;color:#9ca3af;font-style:italic">auto</span></td>
+          <td style="text-align:center">&mdash;</td>
+          <td style="text-align:center">
+            <button class="btn-check">&#10003;</button>
+            <button class="btn-cancel">&#10005;</button>
+          </td>
+        </tr>
+
+        <!-- Existing rows -->
+        <tr>
+          <td style="font-weight:600;color:#111827">Dongguan Cross-dock</td>
+          <td><span class="mono" style="font-size:10px;color:#9ca3af">DG-CD</span></td>
+          <td>Dongguan</td>
+          <td><span class="type-badge">Hub</span></td>
+          <td>Dongguan City <span class="dd-code">441900</span></td>
+          <td style="color:#6b7280">Dongguan</td>
+          <td style="text-align:center;font-size:10px;color:#6b7280">1</td>
+          <td style="text-align:center"><span style="color:#9ca3af;cursor:pointer">&#9998; &#128465;</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600;color:#111827">Yiwu Warehouse</td>
+          <td><span class="mono" style="font-size:10px;color:#9ca3af">YW-WH</span></td>
+          <td>Yiwu</td>
+          <td><span class="type-badge">Warehouse</span></td>
+          <td>Yiwu City <span class="dd-code">330782</span></td>
+          <td style="color:#6b7280">Yiwu</td>
+          <td style="text-align:center;font-size:10px;color:#6b7280">0</td>
+          <td style="text-align:center"><span style="color:#9ca3af;cursor:pointer">&#9998; &#128465;</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Pros</h4>
+      <ul>
+        <li>Best of both: fast search for power users, browsable cascade for discovery</li>
+        <li>Same compact footprint as Option A (one cell)</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Cons</h4>
+      <ul>
+        <li>Two interaction modes = more complexity to build and maintain</li>
+        <li>Browse mode inside a dropdown inside a table row &mdash; tight vertical space</li>
+        <li>Over-engineered for a prototype &mdash; adds implementation cost for an edge-case flow</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- VERDICT -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="verdict">
+  <div class="screen-label">
+    <h2 style="color:#fff">Verdict</h2>
+  </div>
+  <div class="verdict-body">
+    <div class="pick">Recommend: A) District Search Dropdown</div>
+    <p>
+      <strong>Why A over B:</strong> Ops planners already know where their facilities are &mdash; they don't need to browse provinces. A single search field fits the inline table row without width pressure. Three cascading selects (B) demand ~300px and 3 clicks for something these users can type in 2 keystrokes. The inline-row form is already tight at 6 columns; adding 3 selects makes it unworkable.
+    </p>
+    <p style="margin-top:8px">
+      <strong>Why A over C:</strong> C's browse fallback adds real implementation cost for a scenario that barely happens. If a user genuinely doesn't know the district name, the Regions tab is one click away. Shipping two interaction modes in one dropdown for a prototype is over-engineering.
+    </p>
+    <p style="margin-top:8px">
+      <strong>Implementation notes for Option A:</strong>
+    </p>
+    <ul style="margin-top:4px;margin-left:16px;font-size:11px;line-height:1.8">
+      <li>Search matches Chinese name (<code>宝安区</code>) AND English name (<code>Bao'an District</code>) from the Location seed data's <code>district</code> field &mdash; no Chinese reading ability required</li>
+      <li>Results grouped by Province &middot; City for disambiguation (e.g., two <code>朝阳区</code> exist: one in Beijing, one in Changchun)</li>
+      <li>Selection auto-fills: <code>district</code> = English name, <code>districtCode</code> = GB/T code, <code>city</code> = parent city name</li>
+      <li>City column in table is <strong>read-only / auto-resolved</strong> &mdash; not a separate input</li>
+      <li>Existing seed data already has correct <code>districtCode</code> values &mdash; renders immediately in the table</li>
+      <li>Same search dropdown should also be added to the LocationDropdown inline "Add new location" form</li>
+    </ul>
+  </div>
+</div>
+
+</body>
+</html>

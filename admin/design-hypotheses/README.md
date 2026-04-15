@@ -188,6 +188,20 @@ Every design decision starts with a **"How Might We"** question. We generate 2-3
 **Decision:** Option A — inline cancel form in slide-out with mandatory reason + optional "Create replacement" checkbox + vendor picker. Same pattern for "Create Follow-up" on partial completions. Cancelled jobs are immutable.
 **File:** `51-hmw-cancellation-reassignment-flow.html`
 
+### HMW-57: How might we make the China GB/T 2260 hierarchy browser readable and useful for ops admins?
+**Options:** A) Slim 3-Column Table, B) Province-as-Section-Header, C) Column Explorer (Finder-style)
+**Decision:** No change — current implementation kept as-is. A was preferred if changes were needed.
+**File:** `57-hmw-regions-masterdata-redesign.html`
+
+### HMW-58: How might we let ops planners capture L2 subservices per job, so trip data can be exported at the subservice level?
+**Decision:** Scrollable checklist — fixed-height (~80px) scrollable box with checkboxes below each job row. All unchecked by default (opt-in). Scales to 10+ L2s. Export = 1 CSV row per job × checked L2. Data model: `l2CostIds: string[]` on Job, empty by default.
+**File:** `58-hmw-subservices-per-job.html`
+
+### HMW-59: How might we simplify Trips and Jobs tables to reduce visual noise so ops can scan at a glance?
+**Options:** A) Column consolidation (merge Origin+Dest → Route, Trip+Job → combined cell, MAWB under Trip ID, remove Stats bar), B) Ultra-minimal (4-5 columns only), C) Typography fix only (same columns, better visual hierarchy)
+**Decision:** PENDING
+**File:** `59-hmw-table-simplification.html`
+
 ## Open (backlog)
 
 ### HMW-03: How might we make the "assign vendors to services" step feel natural instead of like filling a form?
@@ -239,6 +253,11 @@ Every design decision starts with a **"How Might We"** question. We generate 2-3
 **Options:** A) Date Range Inputs (replace presets), B) Presets + Custom Date Range, C) Date Range Button + Calendar Popover
 **Decision:** Option C — Single "Date Range" button in filter bar opens calendar popover with preset shortcuts + range selection. Cleanest filter bar, presets still accessible inside popover. Filter by pickup date (not creation date). Available on all tabs including Active.
 **File:** `55-hmw-date-range-filter.html`
+
+### HMW-56: How might we let ops planners link a facility to a specific GB/T 2260 district during creation, so geographic hierarchy is captured for export and reporting?
+**Options:** A) District Search Dropdown (type-ahead, auto-fills city), B) Cascading Province → City → District Selects, C) Search-First + Browse Fallback
+**Decision:** Option A — District Search Dropdown. Single type-ahead field searches Chinese + English district names, grouped by Province · City. Selection auto-fills district, city, districtCode. City column is read-only/auto-resolved. Same search added to LocationDropdown inline add form.
+**File:** `56-hmw-facility-district-linking.html`
 
 ### HMW-10: How might we structure navigation so it scales as the app grows (validation, master data, reports) without cluttering the daily trip management workflow?
 **Options to explore:**

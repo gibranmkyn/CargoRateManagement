@@ -3,6 +3,7 @@ import { ChevronDown, Plus, Check, X, MapPin } from 'lucide-react';
 import { useLocations, generateLocationId } from '../../context/LocationContext';
 import { useToast } from '@shared/Toast';
 import type { LocationType } from '@shared/mockData';
+import DistrictSearchDropdown from './DistrictSearchDropdown';
 
 const LOCATION_TYPES: LocationType[] = ['warehouse', 'airport', 'port', 'checkpoint', 'hub'];
 const TYPE_LABEL: Record<LocationType, string> = { warehouse: 'Warehouse', airport: 'Airport', port: 'Port', checkpoint: 'Checkpoint', hub: 'Hub' };
@@ -24,6 +25,9 @@ export default function LocationDropdown({ value, onChange, placeholder = 'Selec
   const [newName, setNewName] = useState('');
   const [newZone, setNewZone] = useState('');
   const [newType, setNewType] = useState<LocationType>('warehouse');
+  const [newDistrict, setNewDistrict] = useState('');
+  const [newDistrictCode, setNewDistrictCode] = useState('');
+  const [newCity, setNewCity] = useState('');
   const [addError, setAddError] = useState('');
   const [focusedIndex, setFocusedIndex] = useState(-1);
 
@@ -99,10 +103,11 @@ export default function LocationDropdown({ value, onChange, placeholder = 'Selec
 
     const id = generateLocationId();
     const code = newName.trim().substring(0, 6).toUpperCase().replace(/\s/g, '-');
-    addLocation({ id, name: newName.trim(), code, zone: newZone.trim(), type: newType });
+    addLocation({ id, name: newName.trim(), code, zone: newZone.trim(), type: newType, district: newDistrict, districtCode: newDistrictCode, city: newCity });
     toast.success(`Location added: ${newName.trim()}`);
     onChange(id); // Auto-select
     setNewName(''); setNewZone(''); setNewType('warehouse');
+    setNewDistrict(''); setNewDistrictCode(''); setNewCity('');
     setShowAddForm(false);
     setOpen(false);
   }
@@ -142,16 +147,30 @@ export default function LocationDropdown({ value, onChange, placeholder = 'Selec
           <div style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#152CFF', marginBottom: 6 }}>Add new location</div>
           <input ref={nameRef} type="text" placeholder="Name" value={newName} onChange={(e) => setNewName(e.target.value)} style={{ width: '100%', fontSize: 11, padding: '4px 6px', border: '1px solid #e5e7eb', borderRadius: 4, marginBottom: 4, outline: 'none' }} />
           {addError && <div style={{ fontSize: 10, color: '#dc2626', marginBottom: 4 }}>{addError}</div>}
-          <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+          <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
             <input type="text" list="ld-zones" placeholder="Zone" value={newZone} onChange={(e) => setNewZone(e.target.value)} style={{ flex: 1, fontSize: 11, padding: '4px 6px', border: '1px solid #e5e7eb', borderRadius: 4, outline: 'none' }} />
             <datalist id="ld-zones">{zones.map((z) => <option key={z} value={z} />)}</datalist>
             <select value={newType} onChange={(e) => setNewType(e.target.value as LocationType)} style={{ flex: 1, fontSize: 11, padding: '4px 6px', border: '1px solid #e5e7eb', borderRadius: 4, outline: 'none' }}>
               {LOCATION_TYPES.map((t) => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}
             </select>
           </div>
+          <div style={{ marginBottom: 6 }}>
+            <DistrictSearchDropdown
+              value={newDistrict}
+              onSelect={({ district, districtCode, city, zone }) => {
+                setNewDistrict(district);
+                setNewDistrictCode(districtCode);
+                setNewCity(city);
+                if (!newZone) setNewZone(zone); // auto-fill zone if not set
+              }}
+              placeholder="Type Shenzhen, 宝安, or 440306…"
+              extraStyle={{ fontSize: 11, padding: '4px 6px' }}
+            />
+            {newCity && <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>City: {newCity}</div>}
+          </div>
           <div style={{ display: 'flex', gap: 4 }}>
             <button onClick={handleAddLocation} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '4px 8px', borderRadius: 4, border: 'none', background: '#152CFF', color: '#fff', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}><Check size={10} /> Add</button>
-            <button onClick={() => { setShowAddForm(false); setAddError(''); }} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '4px 8px', borderRadius: 4, border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}><X size={10} /> Cancel</button>
+            <button onClick={() => { setShowAddForm(false); setAddError(''); setNewDistrict(''); setNewDistrictCode(''); setNewCity(''); }} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '4px 8px', borderRadius: 4, border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}><X size={10} /> Cancel</button>
           </div>
         </div>
       )}

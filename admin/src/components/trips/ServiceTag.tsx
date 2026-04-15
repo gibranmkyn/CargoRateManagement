@@ -4,9 +4,7 @@ export default function ServiceTag({ service }: { service: ServiceType }) {
   return (
     <span
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 3,
+        display: 'inline-block',
         padding: '1px 5px',
         borderRadius: 99,
         fontSize: 9,
@@ -23,7 +21,6 @@ export default function ServiceTag({ service }: { service: ServiceType }) {
       >
         {service.code}
       </span>
-      <span style={{ color: '#374151' }}>{service.label}</span>
     </span>
   );
 }

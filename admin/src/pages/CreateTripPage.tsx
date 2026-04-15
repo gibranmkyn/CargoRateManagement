@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, ArrowRight, ArrowLeft, Package } from 'lucide-react';
-import { customers, vendors, serviceTypes, formatCurrency, TRUCK_TYPES, seedBagPackages, seedFtlRates, seedVendorFees } from '@shared/mockData';
-import type { Job, Trip, ServiceType, Currency, FeeLineItem, TruckType } from '@shared/mockData';
+import { customers, vendors, serviceTypes, TRUCK_TYPES, seedBagPackages, seedFtlRates, getL1ByCode } from '@shared/mockData';
+import type { Job, Trip, ServiceType, TruckType } from '@shared/mockData';
 import { useTrips, generateTripId, generateJobId } from '@shared/TripContext';
 import { useLocations } from '../context/LocationContext';
 import { useToast } from '@shared/Toast';
@@ -20,6 +20,8 @@ interface JobDraft {
   truckType: TruckType | '';
   // Other services: facility-based
   locationId: string;
+  // L2 subservices (HMW-58)
+  l2CostIds: string[];
 }
 
 const SVC_COLOR = '#152CFF';
@@ -98,6 +100,7 @@ export default function CreateTripPage() {
       destDistrictCode: '',
       truckType: '',
       locationId: '',
+      l2CostIds: [],
       ...defaults,
     }]);
   }
@@ -111,6 +114,7 @@ export default function CreateTripPage() {
       destDistrictCode: '',
       truckType: '' as TruckType | '',
       locationId: '',
+      l2CostIds: [],
       ...getJobDefaults(svc.code),
     }));
     setJobs((prev) => [...prev, ...newJobs]);
@@ -124,60 +128,14 @@ export default function CreateTripPage() {
     setJobs((prev) => prev.filter((j) => j.key !== key));
   }
 
-  // FM: FTL rate lookup
-  function getFtlRate(job: JobDraft) {
-    if (job.serviceCode !== 'FM' || !job.vendorCode || !job.originDistrictCode || !job.destDistrictCode || !job.truckType) return null;
-    const match = seedFtlRates.find((r) =>
+  // FM: check if rate exists for truck type (for visual feedback only — no fee auto-pop)
+  function hasFtlRate(job: JobDraft, truckType: TruckType): boolean {
+    if (!job.vendorCode || !job.originDistrictCode || !job.destDistrictCode) return false;
+    return seedFtlRates.some((r) =>
       r.vendorCode === job.vendorCode && r.isActive &&
-      r.originCode === job.originDistrictCode && r.destCode === job.destDistrictCode
+      r.originCode === job.originDistrictCode && r.destCode === job.destDistrictCode &&
+      r.rates[truckType] !== undefined
     );
-    if (!match) return null;
-    const amount = match.rates[job.truckType as TruckType];
-    if (!amount) return null;
-    return { rate: match, amount, currency: match.currency };
-  }
-
-  // Services: vendor fee lookup
-  function getVendorJobFees(job: JobDraft) {
-    if (job.serviceCode === 'FM' || !job.vendorCode || !job.locationId) return [];
-    return seedVendorFees.filter((f) =>
-      f.vendorCode === job.vendorCode && f.serviceCode === job.serviceCode &&
-      f.locationId === job.locationId && f.isActive
-    );
-  }
-
-  // Calculate job cost
-  function calcJobCost(job: JobDraft): { currency: Currency; amount: number } | null {
-    const isFM = job.serviceCode === 'FM';
-    if (isFM) {
-      const ftl = getFtlRate(job);
-      return ftl ? { currency: ftl.currency, amount: ftl.amount } : null;
-    } else {
-      const fees = getVendorJobFees(job);
-      if (fees.length === 0) return null;
-      const orderBags = Number(bags) || 0;
-      const orderWeight = Number(weight) || 0;
-      let total = 0;
-      const curr = fees[0].currency;
-      for (const f of fees) {
-        let qty = 1;
-        if (f.unit === 'per-kg') qty = orderWeight;
-        else if (f.unit === 'per-bag') qty = orderBags;
-        const amt = f.rate * qty;
-        total += f.minCharge ? Math.max(amt, f.minCharge) : amt;
-      }
-      return { currency: curr, amount: total };
-    }
-  }
-
-  // Order totals
-  function orderTotals(): Map<Currency, number> {
-    const totals = new Map<Currency, number>();
-    for (const job of jobs) {
-      const cost = calcJobCost(job);
-      if (cost) totals.set(cost.currency, (totals.get(cost.currency) ?? 0) + cost.amount);
-    }
-    return totals;
   }
 
   // District name helper
@@ -204,6 +162,7 @@ export default function CreateTripPage() {
       } else {
         if (!job.locationId) errs.push(`${label}: select location`);
       }
+      if (job.l2CostIds.length === 0) errs.push(`${label}: select at least 1 subservice`);
     });
     return errs;
   }
@@ -218,9 +177,6 @@ export default function CreateTripPage() {
     const now = new Date();
     const createdAt = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
       + ', ' + now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-    const orderBags = Number(bags) || 0;
-    const orderWeight = Number(weight) || 0;
-
     const tripJobs: Job[] = jobs.map((draft, i) => {
       const vendor = vendors.find((v) => v.code === draft.vendorCode)!;
       const svc = serviceTypes.find((s) => s.code === draft.serviceCode)!;
@@ -228,54 +184,15 @@ export default function CreateTripPage() {
 
       let originName = '';
       let destName = '';
-      const fees: FeeLineItem[] = [];
 
       if (isFM) {
         originName = districtLabel(draft.originDistrictCode);
         destName = districtLabel(draft.destDistrictCode);
-        // FTL: single fee from truck type rate
-        const ftl = getFtlRate(draft);
-        if (ftl) {
-          fees.push({
-            id: `F-${Date.now()}-${i}-0`,
-            name: `FTL ${draft.truckType}`,
-            feeId: ftl.rate.id,
-            currency: ftl.currency,
-            rate: ftl.amount,
-            unit: 'flat',
-            quantity: 1,
-            amount: ftl.amount,
-            active: true,
-          });
-        }
       } else {
         const loc = getLocationById(draft.locationId);
         originName = loc?.name ?? draft.locationId;
         destName = originName;
-        // Services: all vendor fees auto-populate
-        const vFees = getVendorJobFees(draft);
-        vFees.forEach((f, fi) => {
-          let qty = 1;
-          if (f.unit === 'per-kg') qty = orderWeight;
-          else if (f.unit === 'per-bag') qty = orderBags;
-          const amt = f.rate * qty;
-          fees.push({
-            id: `F-${Date.now()}-${i}-${fi}`,
-            name: f.name,
-            feeId: f.id,
-            currency: f.currency,
-            rate: f.rate,
-            unit: f.unit,
-            quantity: qty,
-            amount: f.minCharge ? Math.max(amt, f.minCharge) : amt,
-            minCharge: f.minCharge,
-            active: true,
-          });
-        });
       }
-
-      const feeTotal = fees.filter((f) => f.active).reduce((sum, f) => sum + f.amount, 0);
-      const primaryCurrency = fees[0]?.currency ?? 'MYR';
 
       return {
         id: generateJobId(tripId, jobs.slice(0, i).map((_, idx) => ({ id: `${tripId}-J${String(idx + 1).padStart(2, '0')}` }))),
@@ -288,10 +205,8 @@ export default function CreateTripPage() {
         execution: null,
         activityLog: [{ id: `log-${Date.now()}-${i}`, timestamp: now.toISOString().replace('T', ' ').slice(0, 16), action: 'Job created', user: 'Ops Admin', details: `Assigned to ${vendor.name}` }],
         proofDocuments: [],
-        fees,
-        agreedCost: feeTotal > 0 ? { currency: primaryCurrency, amount: feeTotal } : undefined,
-        jobBags: orderBags,
-        jobWeight: orderWeight,
+        fees: [],
+        l2CostIds: draft.l2CostIds,
       };
     });
 
@@ -322,8 +237,6 @@ export default function CreateTripPage() {
   const labelStyle: React.CSSProperties = { display: 'block', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 6 };
   const svcCounts: Record<string, number> = {};
   jobs.forEach((j) => { svcCounts[j.serviceCode] = (svcCounts[j.serviceCode] || 0) + 1; });
-  const totals = orderTotals();
-  const jobsMissingRate = jobs.filter((j) => !calcJobCost(j)).length;
 
   return (
     <div style={{ padding: '24px', maxWidth: 900, margin: '0 auto' }}>
@@ -538,53 +451,45 @@ export default function CreateTripPage() {
                       </div>
                     )}
 
-                    {/* Rate/fee display */}
-                    {hasVendor && (isFM ? (job.originDistrictCode && job.destDistrictCode && job.truckType) : job.locationId) && (
-                      <div style={{ marginTop: 4 }}>
-                        {(() => {
-                          if (isFM) {
-                            const ftl = getFtlRate(job);
-                            if (ftl) return (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <span style={{ fontSize: 10, fontWeight: 600, color: '#152CFF' }}>FTL {job.truckType}</span>
-                                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700, color: '#111827' }}>{formatCurrency(ftl.currency, ftl.amount)}</span>
-                              </div>
-                            );
-                            return <span style={{ fontSize: 10, fontWeight: 600, color: '#b45309', padding: '1px 6px', background: '#fefce8', borderRadius: 4, border: '1px solid #fde68a' }}>No FTL pricing for this route + truck type</span>;
-                          } else {
-                            const vFees = getVendorJobFees(job);
-                            if (vFees.length > 0) {
-                              const totalCost = calcJobCost(job);
+                    {/* L2 Subservices checklist */}
+                    {(() => {
+                      const l1 = getL1ByCode(job.serviceCode);
+                      if (!l1 || l1.l2Services.length === 0) return null;
+                      return (
+                        <div>
+                          <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 4, fontWeight: 600 }}>Subservices</div>
+                          <div style={{ maxHeight: 80, overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: 4, background: '#fff', padding: '4px 0' }}>
+                            {l1.l2Services.map((l2) => {
+                              const checked = job.l2CostIds.includes(l2.costId);
                               return (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  <span style={{ fontSize: 10, fontWeight: 600, color: '#152CFF' }}>{vFees.length} fees from vendor schedule</span>
-                                  {totalCost && <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700, color: '#111827' }}>{formatCurrency(totalCost.currency, totalCost.amount)}</span>}
-                                </div>
+                                <label key={l2.costId} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', fontSize: 10, color: checked ? '#374151' : '#9ca3af', cursor: 'pointer' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() => {
+                                      const next = checked
+                                        ? job.l2CostIds.filter((id) => id !== l2.costId)
+                                        : [...job.l2CostIds, l2.costId];
+                                      updateJob(job.key, { l2CostIds: next });
+                                    }}
+                                    style={{ accentColor: '#152CFF', width: 12, height: 12, margin: 0, cursor: 'pointer', flexShrink: 0 }}
+                                  />
+                                  {l2.name}
+                                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, color: '#9ca3af', marginLeft: 'auto' }}>{l2.costId}</span>
+                                </label>
                               );
-                            }
-                            return <span style={{ fontSize: 10, fontWeight: 600, color: '#b45309', padding: '1px 6px', background: '#fefce8', borderRadius: 4, border: '1px solid #fde68a' }}>No fees configured for this vendor/service/location</span>;
-                          }
-                        })()}
-                      </div>
-                    )}
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                   </div>
                 );
               })}
             </div>
           )}
 
-          {/* Shipment totals */}
-          {jobs.length > 0 && totals.size > 0 && (
-            <div style={{ marginTop: 12, padding: '8px 12px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' }}>Trip Total</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {Array.from(totals.entries()).map(([curr, total]) => (
-                  <span key={curr} style={{ fontSize: 12, fontWeight: 700, color: '#111827', fontFamily: "'JetBrains Mono', monospace" }}>{formatCurrency(curr, total)}</span>
-                ))}
-                {jobsMissingRate > 0 && <span style={{ fontSize: 10, color: '#b45309' }}>*{jobsMissingRate} job{jobsMissingRate > 1 ? 's' : ''} missing pricing</span>}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Submit */}

@@ -66,7 +66,7 @@ interface LocationContextValue {
 const LocationContext = createContext<LocationContextValue | null>(null);
 
 const STORAGE_KEY = 'tripmanager_locations';
-const SEED_VERSION = 'v1';
+const SEED_VERSION = 'v3';
 
 // --- Provider ---
 
@@ -81,18 +81,6 @@ export function LocationProvider({ children }: { children: ReactNode }) {
       if (stored && storedVersion === SEED_VERSION) {
         dispatch({ type: 'LOAD_STATE', payload: JSON.parse(stored) });
       } else {
-        // Migrate: try reading locations from old tripmanager_rates key
-        const oldRates = localStorage.getItem('tripmanager_rates');
-        if (oldRates) {
-          try {
-            const parsed = JSON.parse(oldRates);
-            if (Array.isArray(parsed.locations) && parsed.locations.length > 0) {
-              localStorage.setItem(STORAGE_KEY + '_version', SEED_VERSION);
-              dispatch({ type: 'LOAD_STATE', payload: parsed.locations });
-              return;
-            }
-          } catch { /* fall through to seed */ }
-        }
         localStorage.removeItem(STORAGE_KEY);
         localStorage.setItem(STORAGE_KEY + '_version', SEED_VERSION);
         dispatch({ type: 'LOAD_STATE', payload: seedLocations });

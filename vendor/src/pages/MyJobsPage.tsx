@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Download, Ship } from 'lucide-react';
-import { formatCurrency } from '../../../shared/mockData';
-import type { Trip, Job, JobStatus, Currency } from '../../../shared/mockData';
+import { seedLocations } from '../../../shared/mockData';
+import type { Trip, Job, JobStatus } from '../../../shared/mockData';
 import DateRangePopover from '../components/DateRangePopover';
 import { useTrips } from '../../../shared/TripContext';
 import { useVendorAuth } from '../context/VendorAuthContext';
+import { getStatusChipStyle, parsePickupDate } from '../../../shared/statusStyles';
 
 // -- Types --
 
@@ -25,30 +26,6 @@ const STATUS_ORDER: Record<string, number> = {
   Cancelled: 4,
 };
 
-function getStatusChipStyle(status: JobStatus): { bg: string; border: string; text: string; dot: string } {
-  switch (status) {
-    case 'Pending': return { bg: '#f9fafb', border: '#e5e7eb', text: '#9ca3af', dot: '#9ca3af' };
-    case 'In Progress': return { bg: 'rgba(21,44,255,0.04)', border: 'rgba(21,44,255,0.15)', text: '#152CFF', dot: '#152CFF' };
-    case 'Completed': return { bg: '#fefce8', border: '#fde68a', text: '#a16207', dot: '#a16207' };
-    case 'Verified': return { bg: '#f0fdf4', border: '#a7f3d0', text: '#059669', dot: '#059669' };
-    case 'Cancelled': return { bg: '#fef2f2', border: '#fecaca', text: '#dc2626', dot: '#dc2626' };
-    default: return { bg: '#f9fafb', border: '#e5e7eb', text: '#9ca3af', dot: '#9ca3af' };
-  }
-}
-
-function getJobCostMap(job: Job): Map<string, number> {
-  const fees = (job.fees ?? []).filter((f) => f.active !== false);
-  const costMap = new Map<string, number>();
-  fees.forEach((f) => costMap.set(f.currency, (costMap.get(f.currency) ?? 0) + f.amount));
-  return costMap;
-}
-
-function parsePickupDate(dateStr: string): Date {
-  if (!dateStr) return new Date(0);
-  return new Date(dateStr.replace(' ', 'T'));
-}
-
-
 function sortActiveJobs(a: FlatJob, b: FlatJob): number {
   const orderA = STATUS_ORDER[a.status] ?? 5;
   const orderB = STATUS_ORDER[b.status] ?? 5;
@@ -64,20 +41,50 @@ function sortDefaultJobs(a: FlatJob, b: FlatJob): number {
   return dateA.localeCompare(dateB);
 }
 
+type LocationEntry = { code: string; city: string; district: string };
+
+function buildLocationMap(): Map<string, LocationEntry> {
+  const map = new Map<string, LocationEntry>();
+  for (const l of seedLocations) {
+    map.set(l.name, { code: l.code ?? '', city: l.city ?? '', district: l.district ?? '' });
+  }
+  try {
+    const stored = localStorage.getItem('tripmanager_locations');
+    if (stored) {
+      const locs = JSON.parse(stored) as Array<{ name: string; code?: string; city?: string; district?: string }>;
+      for (const l of locs) {
+        map.set(l.name, { code: l.code ?? '', city: l.city ?? '', district: l.district ?? '' });
+      }
+    }
+  } catch { /* ignore */ }
+  return map;
+}
+
 function exportCSV(jobs: FlatJob[]) {
-  const header = ['Trip', 'Customer', 'Service', 'Origin', 'Destination', 'Pickup', 'Status', 'Cost'];
+  const locationMap = buildLocationMap();
+  const header = [
+    'Trip', 'Customer', 'Service',
+    'Origin Code', 'Origin', 'Origin District', 'Origin City',
+    'Dest Code', 'Destination', 'Dest District', 'Dest City',
+    'Pickup', 'Status',
+  ];
   const rows = jobs.map((j) => {
-    const costMap = getJobCostMap(j);
-    const costStr = Array.from(costMap.entries()).map(([c, t]) => formatCurrency(c as Currency, t)).join(' + ') || '-';
+    const orig = locationMap.get(j.origin.location);
+    const dest = locationMap.get(j.destination.location);
     return [
       j.trip.id,
       j.trip.customer.name,
       j.service.code,
+      orig?.code ?? '',
       j.origin.location,
+      orig?.district ?? '',
+      orig?.city ?? '',
+      dest?.code ?? '',
       j.destination.location,
+      dest?.district ?? '',
+      dest?.city ?? '',
       j.origin.date || '-',
       j.status,
-      costStr,
     ];
   });
   const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -236,18 +243,6 @@ export default function MyJobsPage() {
     );
   }
 
-  function renderCost(job: Job) {
-    const costMap = getJobCostMap(job);
-    if (costMap.size === 0) return <span style={{ color: '#9ca3af' }}>&mdash;</span>;
-    return (
-      <>
-        {Array.from(costMap.entries()).map(([curr, total]) => (
-          <div key={curr}>{formatCurrency(curr as Currency, total)}</div>
-        ))}
-      </>
-    );
-  }
-
   function renderServiceTag(service: { code: string; label: string }) {
     return (
       <span
@@ -345,10 +340,6 @@ export default function MyJobsPage() {
           {renderStatusChip(job.status)}
         </td>
 
-        {/* Cost */}
-        <td style={{ padding: '7px 12px', borderBottom: '1px solid #f3f4f6', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 600, color: '#111827', verticalAlign: 'middle' }}>
-          {renderCost(job)}
-        </td>
       </tr>
     );
   }
@@ -499,14 +490,13 @@ export default function MyJobsPage() {
               <th style={{ ...th, width: '7%' }}>Service</th>
               <th style={{ ...th, width: '35%' }}>Where</th>
               <th style={{ ...th, width: '10%' }}>Pickup</th>
-              <th style={{ ...th, width: '11%' }}>Status</th>
-              <th style={{ ...th, width: '10%', textAlign: 'right' }}>Cost</th>
+              <th style={{ ...th, width: '21%' }}>Status</th>
             </tr>
           </thead>
           <tbody>
             {paginatedJobs.length > 0 ? paginatedJobs.map((job) => renderJobRow(job)) : (
               <tr>
-                <td colSpan={7} style={{ padding: '60px 12px', textAlign: 'center' }}>
+                <td colSpan={6} style={{ padding: '60px 12px', textAlign: 'center' }}>
                   <div style={{ width: 40, height: 40, borderRadius: 6, background: 'rgba(21,44,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
                     <Ship size={18} style={{ color: '#152CFF' }} />
                   </div>

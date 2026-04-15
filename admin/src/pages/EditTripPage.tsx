@@ -1,14 +1,15 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { X, ArrowRight, ArrowLeft, Package, Lock } from 'lucide-react';
-import { customers, vendors, serviceTypes, formatCurrency, TRUCK_TYPES, seedBagPackages, seedFtlRates, seedVendorFees } from '@shared/mockData';
-import type { Job, ServiceType, Currency, FeeLineItem, TruckType } from '@shared/mockData';
+import { customers, vendors, serviceTypes, TRUCK_TYPES, seedBagPackages, seedFtlRates, getL1ByCode } from '@shared/mockData';
+import type { Job, ServiceType, TruckType } from '@shared/mockData';
 import { useTrips, generateJobId } from '@shared/TripContext';
 import { useLocations } from '../context/LocationContext';
 import { useToast } from '@shared/Toast';
 import LocationDropdown from '../components/shared/LocationDropdown';
 import SelectBagsModal from '../components/trips/SelectBagsModal';
 import { ALL_CITIES, ALL_DISTRICTS } from '../data/chinaRegions';
+import { getStatusChipStyle } from '@shared/statusStyles';
 
 interface JobDraft {
   key: string;
@@ -21,6 +22,7 @@ interface JobDraft {
   destDistrictCode: string;
   truckType: TruckType | '';
   locationId: string;
+  l2CostIds: string[];
 }
 
 const LOCKED_STATUSES = new Set(['Completed', 'Verified', 'Cancelled']);
@@ -37,17 +39,6 @@ function districtCodeFromLabel(label: string): string {
 function truckTypeFromFees(job: Job): TruckType | '' {
   const fee = job.fees.find((f) => f.name.startsWith('FTL '));
   return fee ? (fee.name.slice(4) as TruckType) : '';
-}
-
-function getStatusColors(status: string): { bg: string; border: string; color: string } {
-  switch (status) {
-    case 'Pending': return { bg: '#f9fafb', border: '#e5e7eb', color: '#9ca3af' };
-    case 'In Progress': return { bg: 'rgba(21,44,255,0.04)', border: 'rgba(21,44,255,0.15)', color: '#152CFF' };
-    case 'Completed': return { bg: '#fefce8', border: '#fde68a', color: '#a16207' };
-    case 'Verified': return { bg: '#f0fdf4', border: '#a7f3d0', color: '#059669' };
-    case 'Cancelled': return { bg: '#fef2f2', border: '#fecaca', color: '#dc2626' };
-    default: return { bg: '#f9fafb', border: '#e5e7eb', color: '#9ca3af' };
-  }
 }
 
 const SVC_COLOR = '#152CFF';
@@ -96,6 +87,7 @@ export default function EditTripPage() {
         destDistrictCode: isFM ? districtCodeFromLabel(job.destination.location) : '',
         truckType: isFM ? truckTypeFromFees(job) : '',
         locationId: !isFM ? (getLocationByName(job.origin.location)?.id ?? '') : '',
+        l2CostIds: job.l2CostIds ?? [],
       };
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -148,6 +140,7 @@ export default function EditTripPage() {
       destDistrictCode: '',
       truckType: '',
       locationId: '',
+      l2CostIds: [],
       ...defaults,
     }]);
   }
@@ -158,58 +151,6 @@ export default function EditTripPage() {
 
   function removeDraft(key: string) {
     setJobs((prev) => prev.filter((j) => j.key !== key));
-  }
-
-  function getFtlRate(job: JobDraft) {
-    if (job.serviceCode !== 'FM' || !job.vendorCode || !job.originDistrictCode || !job.destDistrictCode || !job.truckType) return null;
-    const match = seedFtlRates.find((r) =>
-      r.vendorCode === job.vendorCode && r.isActive &&
-      r.originCode === job.originDistrictCode && r.destCode === job.destDistrictCode
-    );
-    if (!match) return null;
-    const amount = match.rates[job.truckType as TruckType];
-    if (!amount) return null;
-    return { rate: match, amount, currency: match.currency };
-  }
-
-  function getVendorJobFees(job: JobDraft) {
-    if (job.serviceCode === 'FM' || !job.vendorCode || !job.locationId) return [];
-    return seedVendorFees.filter((f) =>
-      f.vendorCode === job.vendorCode && f.serviceCode === job.serviceCode &&
-      f.locationId === job.locationId && f.isActive
-    );
-  }
-
-  function calcJobCost(job: JobDraft): { currency: Currency; amount: number } | null {
-    const isFM = job.serviceCode === 'FM';
-    if (isFM) {
-      const ftl = getFtlRate(job);
-      return ftl ? { currency: ftl.currency, amount: ftl.amount } : null;
-    }
-    const fees = getVendorJobFees(job);
-    if (fees.length === 0) return null;
-    const orderBags = Number(bags) || 0;
-    const orderWeight = Number(weight) || 0;
-    let total = 0;
-    const curr = fees[0].currency;
-    for (const f of fees) {
-      let qty = 1;
-      if (f.unit === 'per-kg') qty = orderWeight;
-      else if (f.unit === 'per-bag') qty = orderBags;
-      const amt = f.rate * qty;
-      total += f.minCharge ? Math.max(amt, f.minCharge) : amt;
-    }
-    return { currency: curr, amount: total };
-  }
-
-  function orderTotals(): Map<Currency, number> {
-    const totals = new Map<Currency, number>();
-    for (const job of jobs) {
-      if (job.isLocked) continue;
-      const cost = calcJobCost(job);
-      if (cost) totals.set(cost.currency, (totals.get(cost.currency) ?? 0) + cost.amount);
-    }
-    return totals;
   }
 
   function districtLabel(code: string): string {
@@ -236,52 +177,9 @@ export default function EditTripPage() {
       } else {
         if (!job.locationId) errs.push(`${label}: select location`);
       }
+      if (job.l2CostIds.length === 0) errs.push(`${label}: select at least 1 subservice`);
     });
     return errs;
-  }
-
-  function buildJobFees(draft: JobDraft): FeeLineItem[] {
-    const isFM = draft.serviceCode === 'FM';
-    const orderBags = Number(bags) || 0;
-    const orderWeight = Number(weight) || 0;
-    const fees: FeeLineItem[] = [];
-    if (isFM) {
-      const ftl = getFtlRate(draft);
-      if (ftl) {
-        fees.push({
-          id: `F-${Date.now()}-0`,
-          name: `FTL ${draft.truckType}`,
-          feeId: ftl.rate.id,
-          currency: ftl.currency,
-          rate: ftl.amount,
-          unit: 'flat',
-          quantity: 1,
-          amount: ftl.amount,
-          active: true,
-        });
-      }
-    } else {
-      const vFees = getVendorJobFees(draft);
-      vFees.forEach((f, fi) => {
-        let qty = 1;
-        if (f.unit === 'per-kg') qty = orderWeight;
-        else if (f.unit === 'per-bag') qty = orderBags;
-        const amt = f.rate * qty;
-        fees.push({
-          id: `F-${Date.now()}-${fi}`,
-          name: f.name,
-          feeId: f.id,
-          currency: f.currency,
-          rate: f.rate,
-          unit: f.unit,
-          quantity: qty,
-          amount: f.minCharge ? Math.max(amt, f.minCharge) : amt,
-          minCharge: f.minCharge,
-          active: true,
-        });
-      });
-    }
-    return fees;
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -294,8 +192,6 @@ export default function EditTripPage() {
     const destL = getLocationById(destinationLocationId);
     const customer = customers.find((c) => c.code === customerCode)!;
     const now = new Date();
-    const orderBags = Number(bags) || 0;
-    const orderWeight = Number(weight) || 0;
 
     // 1. Update trip fields
     updateTrip(trip.id, {
@@ -303,8 +199,8 @@ export default function EditTripPage() {
       mawb,
       origin: originL?.name ?? trip.origin,
       destination: destL?.name ?? trip.destination,
-      bags: orderBags,
-      weight: orderWeight,
+      bags: Number(bags) || 0,
+      weight: Number(weight) || 0,
       remarks,
       pickupDate: pickupDate || undefined,
       deliveryDate: deliveryDate || undefined,
@@ -338,21 +234,14 @@ export default function EditTripPage() {
         destName = originName;
       }
 
-      const fees = buildJobFees(draft);
-      const feeTotal = fees.filter((f) => f.active).reduce((sum, f) => sum + f.amount, 0);
-      const primaryCurrency = fees[0]?.currency ?? 'MYR';
-
       if (draft.jobId) {
-        // Update existing job — keep status/logs/proofs, update assignment + fees
+        // Update existing job — keep status/logs/proofs, update assignment
         updateJob(trip.id, draft.jobId, {
           vendor: { code: vendor.code, name: vendor.name },
           origin: { ...trip.jobs.find((j) => j.id === draft.jobId)!.origin, location: originName },
           destination: { ...trip.jobs.find((j) => j.id === draft.jobId)!.destination, location: destName },
           service: svc,
-          fees,
-          agreedCost: feeTotal > 0 ? { currency: primaryCurrency, amount: feeTotal } : undefined,
-          jobBags: orderBags,
-          jobWeight: orderWeight,
+          l2CostIds: draft.l2CostIds,
         });
       } else {
         // Add new job
@@ -369,10 +258,8 @@ export default function EditTripPage() {
           execution: null,
           activityLog: [{ id: `log-${Date.now()}`, timestamp: now.toISOString().replace('T', ' ').slice(0, 16), action: 'Job created', user: 'Ops Admin', details: `Assigned to ${vendor.name}` }],
           proofDocuments: [],
-          fees,
-          agreedCost: feeTotal > 0 ? { currency: primaryCurrency, amount: feeTotal } : undefined,
-          jobBags: orderBags,
-          jobWeight: orderWeight,
+          fees: [],
+          l2CostIds: draft.l2CostIds,
         };
         addJob(trip.id, newJob);
       }
@@ -395,8 +282,6 @@ export default function EditTripPage() {
   const editableJobs = jobs.filter((j) => !j.isLocked);
   const svcCounts: Record<string, number> = {};
   editableJobs.forEach((j) => { svcCounts[j.serviceCode] = (svcCounts[j.serviceCode] || 0) + 1; });
-  const totals = orderTotals();
-  const jobsMissingRate = editableJobs.filter((j) => !calcJobCost(j)).length;
 
   return (
     <div style={{ padding: '24px', maxWidth: 900, margin: '0 auto' }}>
@@ -529,10 +414,11 @@ export default function EditTripPage() {
 
                 // Locked job (Completed/Verified/Cancelled)
                 if (job.isLocked && job.existingJob) {
-                  const sc = getStatusColors(job.existingJob.status);
+                  const sc = getStatusChipStyle(job.existingJob.status);
+                  const lockedL1 = getL1ByCode(job.serviceCode);
                   return (
                     <div key={job.key} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 6, padding: 12, opacity: 0.75 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: lockedL1 && lockedL1.l2Services.length > 0 ? 8 : 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af' }}>J{String(i + 1).padStart(2, '0')}</span>
                           <span style={{ padding: '1px 6px', borderRadius: 99, fontSize: 9, fontWeight: 700, background: `${SVC_COLOR}12`, border: `1px solid ${SVC_COLOR}25`, color: SVC_COLOR }}>{svc?.code} {svc?.label}</span>
@@ -541,13 +427,30 @@ export default function EditTripPage() {
                           <span style={{ fontSize: 10, color: '#9ca3af' }}>{job.existingJob.origin.location}{job.existingJob.origin.location !== job.existingJob.destination.location ? ` → ${job.existingJob.destination.location}` : ''}</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 4, fontSize: 9, fontWeight: 600, background: sc.bg, border: `1px solid ${sc.border}`, color: sc.color }}>
-                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: sc.color, display: 'inline-block' }} />
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 4, fontSize: 9, fontWeight: 600, background: sc.bg, border: `1px solid ${sc.border}`, color: sc.text }}>
+                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: sc.text, display: 'inline-block' }} />
                             {job.existingJob.status}
                           </span>
                           <Lock size={11} style={{ color: '#d1d5db' }} />
                         </div>
                       </div>
+                      {lockedL1 && lockedL1.l2Services.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 4, fontWeight: 600 }}>Subservices</div>
+                          <div style={{ maxHeight: 80, overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: 4, background: '#fff', padding: '4px 0' }}>
+                            {lockedL1.l2Services.map((l2) => {
+                              const checked = job.l2CostIds.includes(l2.costId);
+                              return (
+                                <label key={l2.costId} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', fontSize: 10, color: checked ? '#374151' : '#d1d5db', cursor: 'not-allowed' }}>
+                                  <input type="checkbox" checked={checked} disabled style={{ accentColor: '#152CFF', width: 12, height: 12, margin: 0, flexShrink: 0 }} />
+                                  {l2.name}
+                                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, color: '#9ca3af', marginLeft: 'auto' }}>{l2.costId}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 }
@@ -632,52 +535,45 @@ export default function EditTripPage() {
                       </div>
                     )}
 
-                    {hasVendor && (isFM ? (job.originDistrictCode && job.destDistrictCode && job.truckType) : job.locationId) && (
-                      <div style={{ marginTop: 4 }}>
-                        {(() => {
-                          if (isFM) {
-                            const ftl = getFtlRate(job);
-                            if (ftl) return (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <span style={{ fontSize: 10, fontWeight: 600, color: '#152CFF' }}>FTL {job.truckType}</span>
-                                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700, color: '#111827' }}>{formatCurrency(ftl.currency, ftl.amount)}</span>
-                              </div>
-                            );
-                            return <span style={{ fontSize: 10, fontWeight: 600, color: '#b45309', padding: '1px 6px', background: '#fefce8', borderRadius: 4, border: '1px solid #fde68a' }}>No FTL pricing for this route + truck type</span>;
-                          } else {
-                            const vFees = getVendorJobFees(job);
-                            if (vFees.length > 0) {
-                              const totalCost = calcJobCost(job);
+                    {/* L2 Subservices checklist */}
+                    {(() => {
+                      const l1 = getL1ByCode(job.serviceCode);
+                      if (!l1 || l1.l2Services.length === 0) return null;
+                      return (
+                        <div>
+                          <div style={{ fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 4, fontWeight: 600 }}>Subservices</div>
+                          <div style={{ maxHeight: 80, overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: 4, background: '#fff', padding: '4px 0' }}>
+                            {l1.l2Services.map((l2) => {
+                              const checked = job.l2CostIds.includes(l2.costId);
                               return (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  <span style={{ fontSize: 10, fontWeight: 600, color: '#152CFF' }}>{vFees.length} fees from vendor schedule</span>
-                                  {totalCost && <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700, color: '#111827' }}>{formatCurrency(totalCost.currency, totalCost.amount)}</span>}
-                                </div>
+                                <label key={l2.costId} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', fontSize: 10, color: checked ? '#374151' : '#9ca3af', cursor: 'pointer' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() => {
+                                      const next = checked
+                                        ? job.l2CostIds.filter((id) => id !== l2.costId)
+                                        : [...job.l2CostIds, l2.costId];
+                                      updateDraft(job.key, { l2CostIds: next });
+                                    }}
+                                    style={{ accentColor: '#152CFF', width: 12, height: 12, margin: 0, cursor: 'pointer', flexShrink: 0 }}
+                                  />
+                                  {l2.name}
+                                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, color: '#9ca3af', marginLeft: 'auto' }}>{l2.costId}</span>
+                                </label>
                               );
-                            }
-                            return <span style={{ fontSize: 10, fontWeight: 600, color: '#b45309', padding: '1px 6px', background: '#fefce8', borderRadius: 4, border: '1px solid #fde68a' }}>No fees configured for this vendor/service/location</span>;
-                          }
-                        })()}
-                      </div>
-                    )}
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                   </div>
                 );
               })}
             </div>
           )}
 
-          {/* Trip total (editable jobs only) */}
-          {editableJobs.length > 0 && totals.size > 0 && (
-            <div style={{ marginTop: 12, padding: '8px 12px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' }}>Editable Jobs Total</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {Array.from(totals.entries()).map(([curr, total]) => (
-                  <span key={curr} style={{ fontSize: 12, fontWeight: 700, color: '#111827', fontFamily: "'JetBrains Mono', monospace" }}>{formatCurrency(curr, total)}</span>
-                ))}
-                {jobsMissingRate > 0 && <span style={{ fontSize: 10, color: '#b45309' }}>*{jobsMissingRate} job{jobsMissingRate > 1 ? 's' : ''} missing pricing</span>}
-              </div>
-            </div>
-          )}
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16, paddingTop: 16, borderTop: '1px solid #f3f4f6' }}>

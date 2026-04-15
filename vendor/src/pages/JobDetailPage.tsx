@@ -3,25 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, FileText, Image, Clock, MapPin, Camera, Truck, User, Phone } from 'lucide-react';
 import { useTrips } from '../../../shared/TripContext';
 import { useToast } from '../../../shared/Toast';
-import { formatCurrency, seedDrivers, seedVehicles } from '../../../shared/mockData';
+import { seedDrivers, seedVehicles } from '../../../shared/mockData';
 import type { ProofDocument } from '../../../shared/types';
 import { useVendorAuth } from '../context/VendorAuthContext';
+import { fmtDateTime, fmtTime, fmtDateShort } from '../../../shared/statusStyles';
 
 // --- Helpers ---
-
-function fmtDateTime(dt: string) {
-  if (!dt) return '\u2014';
-  const d = new Date(dt.replace(' ', 'T'));
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) + ' \u00b7 ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-}
-
-function fmtTime(dt: string) {
-  return new Date(dt.replace(' ', 'T')).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-}
-
-function fmtDateShort(dt: string) {
-  return new Date(dt.replace(' ', 'T')).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
-}
 
 function fmtDateMono(dt: string) {
   if (!dt) return '\u2014';
@@ -75,12 +62,8 @@ export default function JobDetailPage() {
 
   const isFM = job.service.code === 'FM';
   const isOH = job.service.code === 'OH';
-  const fees = job.fees ?? [];
   const proofs = job.proofDocuments ?? [];
   const log = job.activityLog ?? [];
-  const activeFees = fees.filter((f) => f.active !== false);
-  const feeTotals = new Map<string, number>();
-  activeFees.forEach((f) => feeTotals.set(f.currency, (feeTotals.get(f.currency) ?? 0) + f.amount));
   const canUpload = job.status === 'Pending' || job.status === 'In Progress';
   const canAssign = job.status === 'Pending' || job.status === 'In Progress';
 
@@ -217,63 +200,13 @@ export default function JobDetailPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
         <div>
           <div style={{ fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Bags</div>
-          <div style={{ ...mono, fontSize: 11, fontWeight: 600, color: '#111827' }}>{(job.jobBags ?? trip.bags).toLocaleString()}</div>
+          <div style={{ ...mono, fontSize: 11, fontWeight: 600, color: '#111827' }}>{trip.bags.toLocaleString()}</div>
         </div>
         <div>
           <div style={{ fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Weight</div>
-          <div style={{ ...mono, fontSize: 11, fontWeight: 600, color: '#111827' }}>{(job.jobWeight ?? trip.weight).toLocaleString()} kg</div>
+          <div style={{ ...mono, fontSize: 11, fontWeight: 600, color: '#111827' }}>{trip.weight.toLocaleString()} kg</div>
         </div>
-        {(job.jobVolume ?? 0) > 0 && (
-          <div>
-            <div style={{ fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Volume</div>
-            <div style={{ ...mono, fontSize: 11, fontWeight: 600, color: '#111827' }}>{(job.jobVolume ?? 0).toLocaleString()} CBM</div>
-          </div>
-        )}
       </div>
-    </div>
-  );
-
-  const renderFeeBreakdown = () => (
-    <div style={sectionWrap}>
-      <div style={sectionTitle}>Fee Breakdown</div>
-      {fees.length > 0 ? (
-        <div style={{ border: '1px solid #e5e7eb', borderRadius: 6, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb' }}>Fee</th>
-                <th style={{ textAlign: 'center', padding: '6px 8px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', width: 60 }}>Unit</th>
-                <th style={{ textAlign: 'right', padding: '6px 8px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', width: 70 }}>Rate</th>
-                <th style={{ textAlign: 'center', padding: '6px 8px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', width: 50 }}>Qty</th>
-                <th style={{ textAlign: 'right', padding: '6px 10px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', width: 90 }}>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {fees.map((fee) => {
-                const isActive = fee.active !== false;
-                return (
-                  <tr key={fee.id} style={{ opacity: isActive ? 1 : 0.4 }}>
-                    <td style={{ padding: '6px 10px', fontSize: 11, fontWeight: 500, color: '#111827', borderBottom: '1px solid #f3f4f6', textDecoration: isActive ? 'none' : 'line-through' }}>{fee.name}</td>
-                    <td style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid #f3f4f6', ...mono, fontSize: 10, color: '#374151', textDecoration: isActive ? 'none' : 'line-through' }}>{fee.unit === 'flat' ? 'trip' : fee.unit.replace('per-', '')}</td>
-                    <td style={{ padding: '6px 8px', textAlign: 'right', borderBottom: '1px solid #f3f4f6', ...mono, fontSize: 10, color: '#374151', textDecoration: isActive ? 'none' : 'line-through' }}>{formatCurrency(fee.currency, fee.rate)}</td>
-                    <td style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid #f3f4f6', ...mono, fontSize: 10, color: '#374151', textDecoration: isActive ? 'none' : 'line-through' }}>{isActive ? fee.quantity : '\u2014'}</td>
-                    <td style={{ padding: '6px 10px', textAlign: 'right', borderBottom: '1px solid #f3f4f6', ...mono, fontSize: 10, fontWeight: 600, color: isActive ? '#111827' : '#d1d5db' }}>{isActive ? formatCurrency(fee.currency, fee.amount) : '\u2014'}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          <div style={{ padding: '8px 10px', borderTop: '2px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f9fafb' }}>
-            <span style={{ fontSize: 10, fontWeight: 600, color: '#374151' }}>Total (active fees)</span>
-            <div>{Array.from(feeTotals.entries()).map(([curr, total]) => (<div key={curr} style={{ ...mono, fontSize: 11, fontWeight: 700, color: '#111827', textAlign: 'right' }}>{formatCurrency(curr as any, total)}</div>))}</div>
-          </div>
-        </div>
-      ) : (
-        <div style={{ padding: 16, textAlign: 'center', fontSize: 10, color: '#d1d5db', fontStyle: 'italic', border: '1px dashed #e5e7eb', borderRadius: 6 }}>No fees configured for this job</div>
-      )}
-      {fees.some((f) => f.active === false) && (
-        <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 6 }}>Struck-through fees have been removed by Teleport and will not appear on the settlement.</div>
-      )}
     </div>
   );
 
@@ -519,21 +452,17 @@ export default function JobDetailPage() {
       {/* ===== SERVICE-ADAPTIVE LAYOUT ===== */}
       {isFM ? (
         <>
-          {/* FM: Driver & Vehicle → Route → Cargo → Fee Breakdown → Proofs → Activity Log */}
           {renderDriverVehicle()}
           {renderRoute()}
           {renderCargo()}
-          {renderFeeBreakdown()}
           {renderProofs()}
           {renderActivityLog()}
         </>
       ) : (
         <>
-          {/* Non-FM: Location → [Hub Ops for OH] → Cargo → Fee Breakdown → Proofs → Activity Log */}
           {renderLocation()}
           {renderHubOpsProgress()}
           {renderCargo()}
-          {renderFeeBreakdown()}
           {renderProofs()}
           {renderActivityLog()}
         </>

@@ -1,51 +1,26 @@
 import { useState, useCallback } from 'react';
 import { Search, Download, Plus, Ship, Copy, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { customers, vendors, formatCurrency, getTripVerification, deriveTripStatus, getTripPickupDate } from '@shared/mockData';
-import type { Trip, Job, JobStatus, Currency } from '@shared/mockData';
+import { vendors, getTripVerification, deriveTripStatus, getTripPickupDate } from '@shared/mockData';
+import type { Trip, Job, JobStatus } from '@shared/mockData';
 import { useTrips, generateJobId } from '@shared/TripContext';
 import { useToast } from '@shared/Toast';
 import SlideOutPanel from '../components/SlideOutPanel';
 import JobSlideOut from '../components/trips/JobSlideOut';
 import ServiceTag from '../components/trips/ServiceTag';
 import DateRangePopover from '../components/shared/DateRangePopover';
+import { getStatusChipStyle } from '@shared/statusStyles';
 
 // -- Helpers --
 
-function buildRoute(trip: Trip): string {
-  if (trip.origin === trip.destination) return trip.origin;
-  return `${trip.origin} → ${trip.destination}`;
-}
-
-function getStatusColors(status: JobStatus): { border: string; bg: string; text: string; dot: string } {
-  switch (status) {
-    case 'In Progress': return { border: 'rgba(21,44,255,0.15)', bg: 'rgba(21,44,255,0.04)', text: '#152CFF', dot: '#152CFF' };
-    case 'Completed':   return { border: '#fde68a', bg: '#fefce8', text: '#a16207', dot: '#a16207' };
-    case 'Verified':    return { border: '#a7f3d0', bg: '#f0fdf4', text: '#059669', dot: '#059669' };
-    case 'Cancelled':    return { border: '#fecaca', bg: '#fef2f2', text: '#dc2626', dot: '#dc2626' };
-    case 'Cancelled':
-    case 'Pending':
-    default:            return { border: '#e5e7eb', bg: '#f9fafb', text: '#9ca3af', dot: '#9ca3af' };
-  }
-}
-
 function exportTripsCSV(trips: Trip[]) {
-  const header = ['Trip ID', 'Customer', 'MAWB', 'Origin', 'Destination', 'Pickup Date', 'Verification', 'Status', 'Jobs', 'Total Cost'];
+  const header = ['Trip ID', 'Customer', 'MAWB', 'Origin', 'Destination', 'Pickup Date', 'Verification', 'Status', 'Jobs'];
   const rows = trips.map((t) => {
     const pickup = getTripPickupDate(t) || '-';
     const { verified, total } = getTripVerification(t);
     const verificationStr = total > 0 ? `${verified}/${total}` : '-';
     const status = deriveTripStatus(t);
-    const costMap = new Map<string, number>();
-    t.jobs.forEach((j) => {
-      (j.fees ?? []).filter((f) => f.active !== false).forEach((f) => {
-        costMap.set(f.currency, (costMap.get(f.currency) ?? 0) + f.amount);
-      });
-    });
-    const costStr = costMap.size > 0
-      ? Array.from(costMap.entries()).map(([c, total]) => formatCurrency(c as Currency, total)).join(' + ')
-      : '-';
-    return [t.id, t.customer.name, t.mawb, t.origin, t.destination, pickup, verificationStr, status, String(t.jobs.length), costStr];
+    return [t.id, t.customer.name, t.mawb, t.origin, t.destination, pickup, verificationStr, status, String(t.jobs.length)];
   });
   const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
@@ -62,7 +37,7 @@ function exportTripsCSV(trips: Trip[]) {
 export default function TripsPage() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { trips, updateJobStatus, addProofDocument, removeProofDocument, addActivityLog, updateJob, updateFeeQty, toggleFee, updateJobQty, startJob, verifyJob, cancelJob, cancelAndReplace, createFollowup, setCompletionRemark } = useTrips();
+  const { trips, updateJobStatus, addProofDocument, removeProofDocument, addActivityLog, updateJob, startJob, verifyJob, cancelJob, cancelAndReplace, createFollowup, setCompletionRemark } = useTrips();
   const [statusFilter, setStatusFilter] = useState<'active' | 'completed' | 'verified' | 'all'>('active');
   const [dateStart, setDateStart] = useState<string | null>(null);
   const [dateEnd, setDateEnd] = useState<string | null>(null);
@@ -101,8 +76,8 @@ export default function TripsPage() {
     }
     // Text / dropdown filters
     if (mawbSearch && !t.mawb.toLowerCase().includes(mawbSearch.toLowerCase()) && !t.id.toLowerCase().includes(mawbSearch.toLowerCase())) return false;
-    if (customerFilter && t.customer.code !== customerFilter) return false;
-    if (vendorFilter && !t.jobs.some((j) => j.vendor.code === vendorFilter)) return false;
+    if (customerFilter && !t.customer.name.toLowerCase().includes(customerFilter.toLowerCase())) return false;
+    if (vendorFilter && !t.jobs.some((j) => j.vendor.name.toLowerCase().includes(vendorFilter.toLowerCase()))) return false;
     return true;
   });
 
@@ -146,9 +121,8 @@ export default function TripsPage() {
       origin: { ...sourceJob.origin }, destination: { ...sourceJob.destination },
       service: { ...sourceJob.service }, status: 'Pending', duration: null, execution: null,
       activityLog: [{ id: `log-${Date.now()}`, timestamp: now, action: `Job created — replaces ${sourceJob.id} (${sourceJob.vendor.name}, cancelled)`, user: 'Ops Admin' }],
-      proofDocuments: [], fees: sourceJob.fees.map((f) => ({ ...f, id: `F-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, active: true })),
+      proofDocuments: [], fees: [],
       replacesJobId: sourceJob.id,
-      jobBags: sourceJob.jobBags, jobWeight: sourceJob.jobWeight, jobVolume: sourceJob.jobVolume,
     };
   }
 
@@ -180,27 +154,16 @@ export default function TripsPage() {
       origin: { ...job.origin }, destination: { ...job.destination },
       service: { ...job.service }, status: 'Pending', duration: null, execution: null,
       activityLog: [{ id: `log-${Date.now()}`, timestamp: now, action: `Job created — follows ${job.id} (${job.completionRemark || 'partial'})`, user: 'Ops Admin' }],
-      proofDocuments: [], fees: job.fees.map((f) => ({ ...f, id: `F-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, active: true })),
+      proofDocuments: [], fees: [],
       replacesJobId: job.id,
-      jobBags: job.jobBags, jobWeight: job.jobWeight, jobVolume: job.jobVolume,
     };
     createFollowup(tripId, jobId, newJob);
     toast.success(`Follow-up created — ${newId}`);
   }, [trips, createFollowup, toast]);
 
-  // -- Stats --
-  const allJobs = trips.flatMap((t) => t.jobs);
-  const stats = {
-    orders: trips.length,
-    pending: allJobs.filter((j) => j.status === 'Pending').length,
-    inProgress: allJobs.filter((j) => j.status === 'In Progress').length,
-    completed: allJobs.filter((j) => j.status === 'Completed').length,
-    verified: allJobs.filter((j) => j.status === 'Verified').length,
-    cancelled: allJobs.filter((j) => j.status === 'Cancelled').length,
-  };
 
   // -- Table header style --
-  const th: React.CSSProperties = { textAlign: 'left', padding: '6px 12px', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' };
+  const th: React.CSSProperties = { textAlign: 'left', padding: '6px 12px', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' };
 
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto' }}>
@@ -209,19 +172,11 @@ export default function TripsPage() {
       <div style={{ display: 'flex', alignItems: 'center', padding: '8px 16px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontSize: 12, gap: 0 }}>
         <span style={{ color: '#111827', fontWeight: 600 }}>{filtered.length} trips</span>
         <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-        <span style={{ color: '#9ca3af', fontWeight: 600 }}>{stats.pending} pending</span>
+        <span style={{ color: '#152CFF', fontWeight: 600 }}>{activeCount} active</span>
         <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-        <span style={{ color: '#152CFF', fontWeight: 600 }}>{stats.inProgress} in progress</span>
+        <span style={{ color: '#a16207', fontWeight: 600 }}>{completedCount} completed</span>
         <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-        <span style={{ color: '#a16207', fontWeight: 600 }}>{stats.completed} completed</span>
-        <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-        <span style={{ color: '#059669', fontWeight: 600 }}>{stats.verified} verified</span>
-        {stats.cancelled > 0 && (<>
-          <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-          <span style={{ color: '#dc2626', fontWeight: 600 }}>{stats.cancelled} cancelled</span>
-        </>)}
-        <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-        <span style={{ color: '#059669', fontWeight: 600 }}>{verifiedCount} trips verified</span>
+        <span style={{ color: '#059669', fontWeight: 600 }}>{verifiedCount} verified</span>
       </div>
 
       {/* -- Page header -- */}
@@ -244,7 +199,7 @@ export default function TripsPage() {
       </div>
 
       {/* -- Filter bar -- */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 16px', borderBottom: '1px solid #e5e7eb' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 16px', borderBottom: '1px solid #e5e7eb' }}>
         {/* Status filter chips — 4-way */}
         {([
           ['active', 'Active', activeCount, '#152CFF', 'rgba(21,44,255,0.06)', 'rgba(21,44,255,0.15)'],
@@ -253,6 +208,9 @@ export default function TripsPage() {
           ['all', 'All', trips.length, '#152CFF', 'rgba(21,44,255,0.06)', 'rgba(21,44,255,0.15)'],
         ] as const).map(([key, label, count, activeColor, activeBg, activeBorder]) => {
           const isOn = statusFilter === key;
+          const isBlue = key === 'active' || key === 'all';
+          const badgeBg = isOn ? (isBlue ? 'rgba(21,44,255,0.1)' : activeBg) : '#f3f4f6';
+          const badgeBorder = isOn ? (isBlue ? 'rgba(21,44,255,0.2)' : activeBorder) : '#e5e7eb';
           return (
             <button key={key} onClick={() => { setStatusFilter(key); setPage(1); }} style={{
               display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -264,8 +222,8 @@ export default function TripsPage() {
               {label}
               <span style={{
                 fontSize: 9, padding: '0 5px', borderRadius: 99, fontWeight: 700, minWidth: 16, textAlign: 'center',
-                background: isOn ? activeBg : '#f3f4f6',
-                border: `1px solid ${isOn ? activeBorder : '#e5e7eb'}`,
+                background: badgeBg,
+                border: `1px solid ${badgeBorder}`,
                 color: isOn ? activeColor : '#9ca3af',
               }}>{count}</span>
             </button>
@@ -280,27 +238,18 @@ export default function TripsPage() {
         />
 
         <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#9ca3af' }}>
-          Trip / MAWB
-          <div style={{ position: 'relative' }}>
-            <Search size={11} style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', color: '#d1d5db' }} />
-            <input type="text" placeholder="T00001 or MAWB" value={mawbSearch} onChange={(e) => setMawbSearch(e.target.value)} style={{ paddingLeft: 22, fontFamily: 'var(--font-mono)', fontSize: 11, borderRadius: 4, padding: '4px 8px 4px 22px', border: '1px solid #e5e7eb', outline: 'none', width: 160 }} />
-          </div>
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#9ca3af' }}>
-          Customer
-          <select value={customerFilter} onChange={(e) => setCustomerFilter(e.target.value)} style={{ fontSize: 11, borderRadius: 4, padding: '4px 8px', border: '1px solid #e5e7eb' }}>
-            <option value="">All</option>
-            {customers.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
-          </select>
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#9ca3af' }}>
-          Vendor
-          <select value={vendorFilter} onChange={(e) => setVendorFilter(e.target.value)} style={{ fontSize: 11, borderRadius: 4, padding: '4px 8px', border: '1px solid #e5e7eb' }}>
-            <option value="">All</option>
-            {vendors.map((v) => <option key={v.code} value={v.code}>{v.name}</option>)}
-          </select>
-        </label>
+        <div style={{ position: 'relative' }}>
+          <Search size={11} style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', color: '#d1d5db', pointerEvents: 'none' }} />
+          <input type="text" placeholder="Trip or MAWB" value={mawbSearch} onChange={(e) => { setMawbSearch(e.target.value); setPage(1); }} style={{ fontFamily: 'var(--font-mono)', fontSize: 11, borderRadius: 4, padding: '4px 8px 4px 22px', border: '1px solid #e5e7eb', outline: 'none', width: 130 }} />
+        </div>
+        <div style={{ position: 'relative' }}>
+          <Search size={11} style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', color: '#d1d5db', pointerEvents: 'none' }} />
+          <input type="text" placeholder="Customer" value={customerFilter} onChange={(e) => { setCustomerFilter(e.target.value); setPage(1); }} style={{ fontSize: 11, borderRadius: 4, padding: '4px 8px 4px 22px', border: '1px solid #e5e7eb', outline: 'none', width: 110 }} />
+        </div>
+        <div style={{ position: 'relative' }}>
+          <Search size={11} style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', color: '#d1d5db', pointerEvents: 'none' }} />
+          <input type="text" placeholder="Vendor" value={vendorFilter} onChange={(e) => { setVendorFilter(e.target.value); setPage(1); }} style={{ fontSize: 11, borderRadius: 4, padding: '4px 8px 4px 22px', border: '1px solid #e5e7eb', outline: 'none', width: 100 }} />
+        </div>
         <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 11, color: '#9ca3af' }}>
           {filtered.length} trips
         </span>
@@ -317,8 +266,9 @@ export default function TripsPage() {
               <th style={th}>Pickup</th>
               <th style={th}>Delivery</th>
               <th style={th}>MAWB</th>
-              <th style={th}>Route</th>
-              <th style={th}>Cargo</th>
+              <th style={th}>Origin</th>
+              <th style={th}>Destination</th>
+              <th style={th}>Load</th>
               <th style={{ ...th, width: 110 }}>Verification</th>
               <th style={{ ...th, width: 60 }} />
             </tr>
@@ -326,7 +276,6 @@ export default function TripsPage() {
           <tbody>
             {paginatedFiltered.length > 0 ? paginatedFiltered.flatMap((trip) => {
               const isExpanded = expandedId === trip.id;
-              const route = buildRoute(trip);
 
               const rows = [
                 <tr
@@ -336,16 +285,16 @@ export default function TripsPage() {
                   onMouseEnter={(e) => { if (!isExpanded) e.currentTarget.style.background = '#f9fafb'; }}
                   onMouseLeave={(e) => { if (!isExpanded) e.currentTarget.style.background = ''; }}
                 >
-                  <td style={{ padding: '8px 4px 8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6', color: isExpanded ? '#152CFF' : '#d1d5db', fontSize: 12, fontWeight: isExpanded ? 700 : 400 }}>
+                  <td style={{ padding: '8px 4px 8px 12px', verticalAlign: 'middle', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6', color: isExpanded ? '#152CFF' : '#d1d5db', fontSize: 12, fontWeight: isExpanded ? 700 : 400 }}>
                     {isExpanded ? '\u25be' : '\u25b8'}
                   </td>
-                  <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
+                  <td style={{ padding: '8px 12px', verticalAlign: 'middle', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, color: '#152CFF' }}>{trip.id}</span>
                   </td>
-                  <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
+                  <td style={{ padding: '8px 12px', verticalAlign: 'middle', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
                     <span style={{ fontSize: 11, fontWeight: 600, color: '#111827' }}>{trip.customer.name}</span>
                   </td>
-                  <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
+                  <td style={{ padding: '8px 12px', verticalAlign: 'middle', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
                     {(() => {
                       const firstDate = trip.jobs[0]?.origin.date;
                       if (!firstDate) return <span style={{ fontSize: 11, color: '#d1d5db' }}>—</span>;
@@ -359,22 +308,25 @@ export default function TripsPage() {
                       );
                     })()}
                   </td>
-                  <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
+                  <td style={{ padding: '8px 12px', verticalAlign: 'middle', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
                     {trip.deliveryDate ? (() => {
                       const d = new Date(trip.deliveryDate + 'T00:00:00');
                       return <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#374151' }}>{d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</div>;
                     })() : <span style={{ fontSize: 11, color: '#d1d5db' }}>—</span>}
                   </td>
-                  <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
+                  <td style={{ padding: '8px 12px', verticalAlign: 'middle', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#374151' }}>{trip.mawb}</div>
                   </td>
-                  <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
-                    <span style={{ fontSize: 11, color: '#374151' }}>{route}</span>
+                  <td style={{ padding: '8px 12px', verticalAlign: 'middle', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
+                    <span style={{ fontSize: 11, color: '#374151' }}>{trip.origin}</span>
                   </td>
-                  <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
+                  <td style={{ padding: '8px 12px', verticalAlign: 'middle', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
+                    <span style={{ fontSize: 11, color: '#374151' }}>{trip.destination}</span>
+                  </td>
+                  <td style={{ padding: '8px 12px', verticalAlign: 'middle', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
                     <span style={{ fontSize: 11, color: '#9ca3af' }}>{trip.bags} bags &middot; {trip.weight} kg</span>
                   </td>
-                  <td style={{ padding: '8px 12px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
+                  <td style={{ padding: '8px 12px', verticalAlign: 'middle', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
                     {(() => {
                       const { verified, total } = getTripVerification(trip);
                       if (total === 0) return <span style={{ fontSize: 10, color: '#d1d5db' }}>—</span>;
@@ -392,7 +344,7 @@ export default function TripsPage() {
                       );
                     })()}
                   </td>
-                  <td style={{ padding: '8px 4px', verticalAlign: 'top', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6', textAlign: 'center' }}>
+                  <td style={{ padding: '8px 4px', verticalAlign: 'middle', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6', textAlign: 'center' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       <span
                         onClick={(e) => { e.stopPropagation(); navigate(`/trips/${trip.id}/edit`); }}
@@ -419,7 +371,7 @@ export default function TripsPage() {
                 const subTh: React.CSSProperties = { textAlign: 'left', padding: '4px 10px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' };
                 rows.push(
                   <tr key={`${trip.id}-exp`} style={{ background: '#f9fafb' }} onClick={(e) => e.stopPropagation()}>
-                    <td colSpan={10} style={{ padding: 0, borderBottom: '1px solid #e5e7eb' }}>
+                    <td colSpan={11} style={{ padding: 0, borderBottom: '1px solid #e5e7eb' }}>
                       <div style={{ paddingLeft: 40, paddingRight: 12, paddingTop: 4, paddingBottom: 10 }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                           <thead>
@@ -427,17 +379,13 @@ export default function TripsPage() {
                               <th style={{ ...subTh, width: 50 }}>Job</th>
                               <th style={subTh}>Vendor</th>
                               <th style={subTh}>Service</th>
-                              <th style={subTh}>Route</th>
-                              <th style={{ ...subTh, width: 100 }}>Total Cost</th>
+                              <th style={subTh}>Origin</th>
+                              <th style={subTh}>Destination</th>
                               <th style={{ ...subTh, width: 120 }}>Status</th>
                             </tr>
                           </thead>
                           <tbody>
                             {trip.jobs.map((job, i) => {
-                              const fees = job.fees ?? [];
-                              const costMap = new Map<string, number>();
-                              fees.forEach((f) => costMap.set(f.currency, (costMap.get(f.currency) ?? 0) + f.amount));
-
                               return (
                                 <tr
                                   key={job.id}
@@ -456,23 +404,18 @@ export default function TripsPage() {
                                     <ServiceTag service={job.service} />
                                   </td>
                                   <td style={{ padding: '6px 10px', fontSize: 10, color: '#374151' }}>
-                                    {job.origin.location === job.destination.location ? job.origin.location : `${job.origin.location} → ${job.destination.location}`}
+                                    {job.origin.location}
                                   </td>
-                                  <td style={{ padding: '6px 10px', fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 600, color: '#111827' }}>
-                                    {costMap.size > 0
-                                      ? Array.from(costMap.entries()).map(([curr, total]) => (
-                                          <div key={curr}>{formatCurrency(curr as any, total)}</div>
-                                        ))
-                                      : <span style={{ color: '#9ca3af', fontWeight: 400 }}>&mdash;</span>
-                                    }
+                                  <td style={{ padding: '6px 10px', fontSize: 10, color: '#374151' }}>
+                                    {job.destination.location}
                                   </td>
                                   <td style={{ padding: '6px 10px' }}>
                                     {(() => {
-                                      const sc = getStatusColors(job.status);
+                                      const sc = getStatusChipStyle(job.status);
                                       return (
                                         <span style={{
-                                          display: 'inline-flex', alignItems: 'center', gap: 5,
-                                          padding: '1px 7px', borderRadius: 4, fontSize: 10, fontWeight: 600,
+                                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                                          padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600,
                                           border: `1px solid ${sc.border}`, background: sc.bg, color: sc.text,
                                         }}>
                                           <span style={{ width: 5, height: 5, borderRadius: '50%', background: sc.dot, display: 'inline-block' }} />
@@ -495,7 +438,7 @@ export default function TripsPage() {
               return rows;
             }) : (
               <tr>
-                <td colSpan={10} style={{ padding: '60px 12px', textAlign: 'center' }}>
+                <td colSpan={11} style={{ padding: '60px 12px', textAlign: 'center' }}>
                   <div style={{ width: 40, height: 40, borderRadius: 6, background: 'rgba(21,44,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
                     <Ship size={18} style={{ color: '#152CFF' }} />
                   </div>
@@ -523,7 +466,7 @@ export default function TripsPage() {
       {/* -- Pagination -- */}
       {totalPages > 1 && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderTop: '1px solid #e5e7eb' }}>
-          <span style={{ fontSize: 10, color: '#9ca3af' }}>Page {page} of {totalPages} · {totalFiltered} trips</span>
+          <span style={{ fontSize: 10, color: '#9ca3af', fontFamily: 'var(--font-mono)' }}>Page {page} of {totalPages} · {totalFiltered} trips</span>
           <div style={{ display: 'flex', gap: 4 }}>
             <button disabled={page <= 1} onClick={() => setPage(page - 1)} style={{ padding: '3px 8px', borderRadius: 4, border: '1px solid #e5e7eb', background: '#fff', color: page <= 1 ? '#d1d5db' : '#6b7280', fontSize: 10, cursor: page <= 1 ? 'default' : 'pointer', fontFamily: 'inherit' }}>← Prev</button>
             {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((p) => (
@@ -555,9 +498,6 @@ export default function TripsPage() {
             onCreateFollowup={(vendorCode) => onCreateFollowup(panelTrip.id, panelJob.id, vendorCode)}
             onSetCompletionRemark={(remark) => { setCompletionRemark(panelTrip.id, panelJob.id, remark); toast.success('Remark saved'); }}
             onOpenJob={(tId, jId) => setPanelIds({ tripId: tId, jobId: jId })}
-            onUpdateFeeQty={(feeId, qty) => updateFeeQty(panelTrip.id, panelJob.id, feeId, qty)}
-            onToggleFee={(feeId) => toggleFee(panelTrip.id, panelJob.id, feeId)}
-            onUpdateJobQty={(qtys) => updateJobQty(panelTrip.id, panelJob.id, qtys)}
           />
         )}
       </SlideOutPanel>

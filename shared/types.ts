@@ -80,11 +80,8 @@ export interface Job {
   agreedRate?: { currency: Currency; amount: number; unit: RateUnit };
   agreedCost?: { currency: Currency; amount: number };
   invoiceAmount?: { currency: Currency; amount: number };
-  // Phase 2.5: Multi-fee model + per-job quantities
+  // Phase 2.5: Multi-fee model
   fees: FeeLineItem[];
-  jobBags?: number;      // defaults from order, editable per job
-  jobWeight?: number;    // defaults from order, editable per job
-  jobVolume?: number;    // CBM, editable per job
   // Fleet assignment (FM Trucking only)
   driverAssignment?: { driverId: string; name: string; phone: string };
   vehicleAssignment?: { vehicleId: string; plateNumber: string; truckType: TruckType };
@@ -92,6 +89,8 @@ export interface Job {
   completionRemark?: string;      // free text for partial completion or any completion note
   replacedByJobId?: string;       // "This job was replaced by job X"
   replacesJobId?: string;         // "This job replaces job Y"
+  // L2 subservices (HMW-58)
+  l2CostIds?: string[];           // checked L2 subservice cost IDs for export
 }
 
 export interface FeeLineItem {
@@ -228,6 +227,8 @@ export interface Location {
   code: string;
   zone: string;
   type: LocationType;
+  city: string;           // city name (e.g., "Shenzhen", "Guangzhou")
+  district: string;       // district name (e.g., "Bao'an District", "Nanshan District")
   districtCode?: string;  // GB/T 2260 code for auto-resolution to district
 }
 
@@ -244,7 +245,6 @@ export const SERVICE_CONFIG: Record<string, { rateType: RateType; label: string 
 export interface L2SubService {
   costId: string;       // e.g., "FM001"
   name: string;         // e.g., "Warehouse Transfer Fee"
-  unit: RateUnit;       // fixed per Cost ID (HMW-35)
   l1Code: string;       // parent L1 service code
 }
 
@@ -260,45 +260,45 @@ export const SERVICE_HIERARCHY: L1Service[] = [
   {
     code: 'CR', label: 'Cargo Retrieval', color: '#152CFF', rateType: 'location',
     l2Services: [
-      { costId: 'CR001', name: 'Registration Fee', unit: 'flat', l1Code: 'CR' },
-      { costId: 'CR002', name: 'Cargo Retrieval Pick Up Fee', unit: 'per-bag', l1Code: 'CR' },
+      { costId: 'CR001', name: 'Registration Fee', l1Code: 'CR' },
+      { costId: 'CR002', name: 'Cargo Retrieval Pick Up Fee', l1Code: 'CR' },
     ],
   },
   {
     code: 'CS', label: 'Cargo Submission', color: '#152CFF', rateType: 'location',
     l2Services: [
-      { costId: 'CS001', name: 'Express Center Ground Handling Fee', unit: 'flat', l1Code: 'CS' },
-      { costId: 'CS002', name: 'International Cargo Terminal Transit Fee', unit: 'flat', l1Code: 'CS' },
-      { costId: 'CS003', name: 'RA Agent Fee', unit: 'flat', l1Code: 'CS' },
-      { costId: 'CS004', name: 'Security X-Ray Screening Fee', unit: 'flat', l1Code: 'CS' },
-      { costId: 'CS005', name: 'Terminal Handling Charges', unit: 'per-kg', l1Code: 'CS' },
-      { costId: 'CS006', name: 'Ground Handling Fee', unit: 'flat', l1Code: 'CS' },
+      { costId: 'CS001', name: 'Express Center Ground Handling Fee', l1Code: 'CS' },
+      { costId: 'CS002', name: 'International Cargo Terminal Transit Fee', l1Code: 'CS' },
+      { costId: 'CS003', name: 'RA Agent Fee', l1Code: 'CS' },
+      { costId: 'CS004', name: 'Security X-Ray Screening Fee', l1Code: 'CS' },
+      { costId: 'CS005', name: 'Terminal Handling Charges', l1Code: 'CS' },
+      { costId: 'CS006', name: 'Ground Handling Fee', l1Code: 'CS' },
     ],
   },
   {
     code: 'EC', label: 'Export Custom Clearance', color: '#152CFF', rateType: 'location',
     l2Services: [
-      { costId: 'EC001', name: 'Customs Declaration Fee', unit: 'flat', l1Code: 'EC' },
-      { costId: 'EC002', name: 'Customs Inspection Fee', unit: 'flat', l1Code: 'EC' },
-      { costId: 'EC003', name: 'Customs Service Fee', unit: 'flat', l1Code: 'EC' },
+      { costId: 'EC001', name: 'Customs Declaration Fee', l1Code: 'EC' },
+      { costId: 'EC002', name: 'Customs Inspection Fee', l1Code: 'EC' },
+      { costId: 'EC003', name: 'Customs Service Fee', l1Code: 'EC' },
     ],
   },
   {
     code: 'FM', label: 'Trucking', color: '#152CFF', rateType: 'route',
     l2Services: [
-      { costId: 'FM001', name: 'Warehouse Transfer Fee', unit: 'flat', l1Code: 'FM' },
-      { costId: 'FM002', name: 'Pickup Fee', unit: 'flat', l1Code: 'FM' },
-      { costId: 'FM003', name: 'Cross-Border Handling Fee', unit: 'flat', l1Code: 'FM' },
+      { costId: 'FM001', name: 'Warehouse Transfer Fee', l1Code: 'FM' },
+      { costId: 'FM002', name: 'Pickup Fee', l1Code: 'FM' },
+      { costId: 'FM003', name: 'Cross-Border Handling Fee', l1Code: 'FM' },
     ],
   },
   {
     code: 'OH', label: 'Origin Handling', color: '#152CFF', rateType: 'location',
     l2Services: [
-      { costId: 'OH001', name: 'MAWB Fee', unit: 'flat', l1Code: 'OH' },
-      { costId: 'OH002', name: 'Loading and Unloading Fee', unit: 'per-kg', l1Code: 'OH' },
-      { costId: 'OH003', name: 'Handling Fee', unit: 'per-kg', l1Code: 'OH' },
-      { costId: 'OH004', name: 'Sorting Fee', unit: 'per-bag', l1Code: 'OH' },
-      { costId: 'OH005', name: 'Palletization / Build-Up Fee', unit: 'flat', l1Code: 'OH' },
+      { costId: 'OH001', name: 'MAWB Fee', l1Code: 'OH' },
+      { costId: 'OH002', name: 'Loading and Unloading Fee', l1Code: 'OH' },
+      { costId: 'OH003', name: 'Handling Fee', l1Code: 'OH' },
+      { costId: 'OH004', name: 'Sorting Fee', l1Code: 'OH' },
+      { costId: 'OH005', name: 'Palletization / Build-Up Fee', l1Code: 'OH' },
     ],
   },
 ];

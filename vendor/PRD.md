@@ -40,8 +40,8 @@ This is the read-heavy, action-light counterpart to Teleport OS Admin. Vendors s
 | Upload proof of service | Yes | Yes |
 | Verify job (Completed → Verified) | Yes | No (admin-only gate) |
 | Cancel job | Yes | No |
-| Edit fees / quantities | Yes (until Verified) | No (view only, can flag) |
-| View fee breakdown | Yes | Yes |
+| Edit fees / quantities | Deferred | Deferred |
+| View fee breakdown | Deferred | Deferred |
 | View activity log | Yes | Yes |
 | Manage rates | Deferred | No |
 | Manage master data | Yes | No |
@@ -60,8 +60,6 @@ The vendor app reads from the same data model as the admin app. No new entities 
 - **Pickup date** — when the work is expected
 - **Status** — Pending / In Progress / Completed / Verified / Cancelled
 - **Cancel reason** — if cancelled, why (visible to vendor)
-- **Fees** — full fee breakdown: fee name, unit, rate, quantity, amount, active/inactive
-- **Fee totals** — sum per currency
 - **Proof documents** — uploaded files with timestamps
 - **Activity log** — full history of status changes and uploads
 - **Cargo details** — bags, weight (kg), volume (CBM) at job level
@@ -92,7 +90,6 @@ The vendor's primary view. A flat table of all jobs assigned to them, similar to
 - Route (origin → destination)
 - Pickup Date
 - Status
-- Cost (total fees)
 
 **Sort (within Active):** Pending first (needs action), then In Progress (in flight). Cancelled jobs shown in Cancelled tab, not mixed into Active.
 
@@ -113,14 +110,9 @@ Full detail for a single job. Read-heavy with limited actions.
    - Columns: Bag Number | MAWB | Weight (kg) | Pickup Date | Origin | Destination
    - Read-only — vendor sees what bags are in the trip for verification
    - Helps vendor confirm they have the right cargo at pickup/delivery
-6. **Fees** — full fee breakdown table
-   - Columns: Fee Name | Unit | Rate | Qty | Amount | Status (active/removed)
-   - Vendor sees all fees including removed ones (grayed out)
-   - Totals per currency at bottom
-   - Read-only — vendor cannot edit fees
 6. **Proof of Service** — uploaded documents with thumbnails/names, upload timestamps
    - Upload button available when status is Pending or In Progress
-7. **Activity Log** — chronological list of all events (status changes, uploads, fee changes)
+7. **Activity Log** — chronological list of all events (status changes, uploads)
 
 ### F7: Fleet Management (Drivers & Vehicles)
 Vendors manage their own fleet data for FM Trucking dispatch.
@@ -196,30 +188,14 @@ Vendors upload proof-of-service documents (photos, PDFs) to demonstrate job comp
 - Accepted formats: JPEG, PNG, PDF
 - Vendor can see proofs uploaded by admin (ops planner) as well
 
-### F5: Fee Reconciliation View
-The core reconciliation feature. Vendors can review the fee breakdown Teleport has on record for each job.
-
-**Per job:**
-- Full fee table with rate × quantity = amount
-- Active vs removed fees clearly distinguished
-- Total cost per currency
-- Job-level quantities (bags, weight, volume) — what Teleport has on record
-
-**Reconciliation workflow (v1 — passive):**
-- Vendor reviews fees in job detail
-- If something looks wrong, vendor contacts ops via existing channels (WhatsApp/phone)
-- No in-app dispute mechanism in v1 — this is about **visibility**, not workflow
-
-**Future (v2):**
-- Flag fee discrepancy button → creates a note visible to admin
-- Batch reconciliation view: list of jobs with fee totals for a date range, exportable
+### ~~F5: Fee Reconciliation View~~ (deferred — 2026-04-14, client confirmed out of scope)
+~~Vendors review the fee breakdown Teleport has on record for each job.~~ Fee display removed from all views. `fees` field preserved on Job type for future use.
 
 ### F6: Export (CSV)
-Vendors can export their job data for reconciliation with their own systems.
+Vendors can export their job data for their own records.
 
 - Export filtered job list as CSV
-- Columns: DO #, Customer, Service, Route, Pickup Date, Status, Fee Total, Currency
-- Detailed export option: one row per fee line item (for invoice matching)
+- Columns: DO #, Customer, Service, Route, Pickup Date, Status
 - Date range scoped
 
 ## Authentication & Access Control
@@ -256,10 +232,10 @@ Vendors can export their job data for reconciliation with their own systems.
 - **VUS-022:** As a vendor operator, I want proof upload to automatically mark the job as Completed (even from Pending), so I don't have to manually change status after uploading.
 - **VUS-023:** As a vendor operator, I want to see that a job has been Verified by Teleport, so I know it's approved for billing.
 
-### Fee Reconciliation
-- **VUS-030:** As a vendor finance admin, I want to see the full fee breakdown for each job (fee name, rate, quantity, amount), so I can compare against our internal records.
-- **VUS-031:** As a vendor finance admin, I want to see which fees Teleport has marked as active vs removed, so I know what will appear on the final settlement.
-- **VUS-032:** As a vendor finance admin, I want to export my jobs with fee details as CSV, so I can import into our accounting system for reconciliation.
+### Fee Reconciliation (deferred — 2026-04-14, client confirmed out of scope)
+- ~~**VUS-030:** Fee breakdown per job~~
+- ~~**VUS-031:** Active vs removed fee visibility~~
+- ~~**VUS-032:** Export jobs with fee details as CSV~~
 - **VUS-033:** As a vendor finance admin, I want to see job-level quantities (bags, weight, volume) that Teleport has on record, so I can verify they match our measurements.
 
 ### Fleet Management
@@ -295,8 +271,8 @@ Future: `My Jobs | Fleet | Reconciliation | Settings`
 - Export CSV button in header
 
 ### Page: Job Detail (`/jobs/:tripId/:jobId`)
-- Full job detail with sections: header, status action bar, [driver assignment for FM], fees, route + cargo, proofs, activity log
-- For FM jobs: Driver & Vehicle Assignment section between Status Action Bar and Fee Breakdown
+- Full job detail with sections: header, status action bar, [driver assignment for FM], route + cargo, proofs, activity log
+- For FM jobs: Driver & Vehicle Assignment section between Status Action Bar and Route
 - Back navigation to job list
 - Status action bar with contextual actions (Start Job / Upload Proof / read-only states)
 

@@ -1,6 +1,6 @@
 # Teleport OS Admin — Shipment Management
 
-> **Terminology:** "Trip" in the codebase = "Shipment" in the UI. "Job" = a vendor assignment within a shipment.
+> **Terminology:** "Trip" in both UI and code. "Job" = a vendor assignment within a trip.
 
 ## Why "Shipment" (not "Delivery Order")
 
@@ -66,7 +66,7 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 ### Job Lifecycle (Unified Status: Pending → In Progress → Completed → Verified)
 - **US-005:** As an ops planner, I want to click "Start Job" in the slide-out panel to transition a job from Pending → In Progress, so vendor execution progress is tracked.
 - **US-005b:** As an ops planner, I want uploading a proof document to automatically transition a job to Completed (even from Pending, skipping In Progress), so completion is evidence-based.
-- **US-005c:** As an ops admin, I want to click "Verify" in the slide-out panel to transition a Completed job → Verified, locking all fees/quantities/proof, so there's a billing gate before vendor payment.
+- **US-005c:** As an ops admin, I want to click "Verify" in the slide-out panel to transition a Completed job → Verified, locking quantities and proof, so there's a billing gate before vendor payment.
 - **US-005d:** As an ops planner, I want the slide-out panel to show a Status Action Bar at the top that adapts per stage (Start Job / Upload hint / Verify / Ready for billing / Cancelled + reassign), so I always know what action to take next. (HMW-49)
 - **US-006:** As an ops planner, I want to deep-dive into a job detail page to see full route info, vendor details, and all associated documents.
 - **US-007:** As an ops planner, I want every status change to be automatically logged with timestamp and user, so there's an audit trail for billing.
@@ -121,10 +121,10 @@ Unlike a relay race, logistics services often happen simultaneously. Export cust
 2. **Dense data design:** 40px nav, stats bar (no dashboard cards), 8px table cells, 4-6px radius.
 3. **5-color status system:** Gray (pending), blue (in progress), amber (completed/needs verification), green (verified), red (cancelled).
 4. **Unified job status lifecycle:** Pending → In Progress → Completed (proof uploaded) → Verified (admin sign-off). Replaces old dual status + proofStatus fields. Researched Flexport, project44, Uber Freight, TAI TMS. (HMW-47)
-   - **Cancelled**: Admin cancels a job (mandatory reason) — terminal, immutable. Reassignment = cancel original + create new job for new vendor (linked). Partial completion = Completed with remark + adjusted fees + follow-up job. See Iteration 11.
+   - **Cancelled**: Admin cancels a job (mandatory reason) — terminal, immutable. Reassignment = cancel original + create new job for new vendor (linked). Partial completion = Completed with remark + follow-up job. See Iteration 11.
 5. **Two complementary views:** Trips (demand-side, grouped by client request) + Jobs (supply-side, flat table with vendor/service/status focus). (HMW-44→48)
 6. **Sub-table for expanded jobs:** Not cards. Expanded shipments show a nested table.
-7. **Slide-out panel for actions:** Proof upload + verification + fee management + activity log in one panel.
+7. **Slide-out panel for actions:** Proof upload + verification + activity log in one panel.
 8. **Activity log per job:** Every status change and document upload is auto-logged for billing audit trail.
 9. **Proof upload = Completed:** Document upload triggers status transition to Completed. No separate proof status field.
 10. **localStorage for Phase 1:** Browser-only persistence. Auto-migrates stale data formats.

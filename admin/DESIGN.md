@@ -86,8 +86,8 @@
 
 ### Stats Bar (replaces dashboard cards)
 - Single line, #f9fafb bg, 1px border-bottom
-- **Shipments page:** `5 shipments | 6 in progress | 2 completed | 1 rejected`
-- **Jobs page:** `82 jobs | 15 pending | 18 in progress | 9 completed | 37 verified | 2 rejected`
+- **Trips page:** `5 trips | 6 in progress | 2 completed | 1 cancelled`
+- **Jobs page:** `82 jobs | 15 pending | 18 in progress | 9 completed | 37 verified | 2 cancelled`
 - Each status count uses its status color (gray/blue/amber/green/red)
 
 ### Page Header
@@ -138,7 +138,7 @@
 
 ### Expanded View — Sub-Table (NOT cards)
 - Expanding a shipment shows a **nested table** (not cards)
-- Sub-table columns: Job, Vendor, Services, Route, Status, Total Cost
+- Sub-table columns: Job, Vendor, Services, Route, Status
 - Sub-table headers: 9px/600 uppercase
 - Sub-table rows: 6px 10px padding, indented 40px from left
 - Job label (J01, J02): Future Blue color, 600 weight
@@ -155,12 +155,12 @@
   - **Completed:** Amber bar + `[✓ Verify]` button (green)
   - **Verified:** Green bar + "Ready for billing" text. Everything read-only.
   - **Cancelled:** Red bar + cancel reason (read-only, immutable). "Replaced By" link if replacement exists. No vendor reassignment dropdown.
-- **Sections below bar:** Route, Proof of Service, Quantities, Fees, Activity Log
+- **Sections below bar:** Route, Proof of Service, Quantities, Activity Log
 - **Cancel Job button:** Red outline at bottom of slide-out, available on Pending/In Progress. Expands inline cancel form: mandatory reason + optional "Create replacement" checkbox + vendor picker. (HMW-51)
 - **Editability rules:**
-  - Pending through Completed: fees toggleable, quantities editable, proof upload available
-  - Verified: everything locked — no toggles, no inputs, no upload, no proof removal
-  - Cancelled: everything immutable — cancel reason, vendor, fees permanently recorded
+  - Pending through Completed: quantities editable, proof upload available
+  - Verified: everything locked — no inputs, no upload, no proof removal
+  - Cancelled: everything immutable — cancel reason, vendor permanently recorded
 - **Auto-transitions:**
   - Proof upload while Pending or In Progress → auto-transitions to Completed
   - Clicking Verify → transitions to Verified, locks everything
@@ -189,27 +189,27 @@
 ### Navigation
 `Trips | Jobs | Master Data`
 
-### Shipments (demand-side — client requests)
+### Trips (demand-side — client requests)
 - **Max-width:** 1400px (must match Jobs page for consistent navigation feel)
-- **Active/All/Completed** filter chips (default: Active)
-- **Date period picker** for All/Completed: Today / This week / This month / Last month / All time
+- **Active/All/Completed/Verified** filter chips (default: Active)
+- **Date range popover** (HMW-55): preset shortcuts + custom range, filters by pickup date, available on all tabs
 - **Pagination** at 50/page for historical views
-- **Sub-table columns:** Job | Vendor | Service | Route | Status | Total Cost
-- **Slide-out panel:** Upload proof → Verify → Fee breakdown → Quantities → Activity log
-- **Fee model (subtractive):** All fees auto-populate from vendor schedule, ops removes exceptions (HMW-43)
-- **Lock on verify:** fees, quantities, proof uploads all read-only after job Verified (billing gate)
+- **Sub-table columns:** Job | Vendor | Service | Route | Status
+- **Verification progress:** `N/M verified` fraction + thin progress bar per trip row (HMW-54). Trip = Verified only when all non-cancelled jobs are Verified.
+- **Slide-out panel:** Start Job → Upload proof → Verify → Activity log
+- **Lock on verify:** proof uploads all read-only after job Verified (billing gate)
 
 ### Jobs (supply-side — vendor execution) (HMW-48)
-- **Max-width:** 1400px (same as Shipments page — must match for consistent feel)
+- **Max-width:** 1400px (same as Trips page — must match for consistent feel)
 - **Status pills:** Active (Pending + In Progress + Cancelled) | Completed | Verified | All
 - **Service pills:** FM | EC | CS | CR | OH
 - **Vendor dropdown** with search (supports 30+ vendors)
 - **Group by toggle:** None (default) | Vendor | Service | Date
-- **Columns (percentage-based widths):** Shipment·Customer 11% | Vendor 10% | Service 6% | Route 38% | Pickup 8% | Status 10% | Cost 9%
+- **Columns (percentage-based widths):** Trip·Customer 11% | Vendor 10% | Service 6% | Route 38% | Pickup 8% | Status 17%
 - **Route cell:** `overflow: hidden; text-overflow: ellipsis; white-space: nowrap`
 - **Group by: Vendor** — collapsed headers sorted by most outstanding, status badges per vendor
 - **Default sort within Active:** Cancelled → In Progress → Pending (fires first)
-- Click job row → same slide-out panel. Click shipment link → Shipments view.
+- Click job row → same slide-out panel. Click trip link → Trips view.
 
 ### Unified Job Status Lifecycle
 Replaces old dual `status` + `proofStatus` model with single field:
@@ -224,16 +224,9 @@ Replaces old dual `status` + `proofStatus` model with single field:
 - **Customers** — coming soon
 
 ### Data Model (current)
-- `Job.status` — unified lifecycle: `'Pending' | 'In Progress' | 'Completed' | 'Verified' | 'Rejected' | 'Cancelled'`
-- `FeeLineItem` — job-level fee with `active` boolean for subtractive model
-
-### Currency
-- MYR, CNY, USD supported
-- Currency per-fee (per fee line item on jobs)
-- Display: `CNY 3,200` or `RM 450` — prefix before amount in JetBrains Mono
-
-### Remaining Implementation
-- **Iteration 11:** Cancellation, Reassignment & Partial Completion (HMW-51) — see PRD.md and TODOS.md
+- `Job.status` — unified lifecycle: `'Pending' | 'In Progress' | 'Completed' | 'Verified' | 'Cancelled'`
+- `FeeLineItem` — preserved on Job type for backward compatibility but not displayed (fees out of scope for this phase)
+- `completionRemark`, `replacedByJobId`, `replacesJobId` — cancellation + partial completion linkage (HMW-51)
 
 ## Global CSS Rules
 1. Body font: Instrument Sans via `--font-sans` CSS variable
@@ -322,6 +315,9 @@ Replaces old dual `status` + `proofStatus` model with single field:
 | 2026-03-30 | Immutable cancellation + Cancel & Replace (HMW-51) | Cancelled jobs are immutable — no vendor swap, no reason edit. Reassignment = cancel original (mandatory reason) + create new linked job. Inline cancel form in slide-out with optional "Create replacement" checkbox. |
 | 2026-03-30 | Completion remark for partial completion | Completed jobs can have `completionRemark` (e.g., "pickup not ready"). Admin adjusts fees to partial via existing fee editing. "Create Follow-up Job" button for retries. Linked via `replacedByJobId`/`replacesJobId`. |
 | 2026-03-30 | AI slop cleanup | Deleted unused DashboardCards. VendorViewTab: cards→dense section headers. Vendor JobDetailPage: route/cargo/proofs de-cardified. Shadows removed from JobCard/JobTable/ServiceMultiSelect. Emoji icons removed from STATUS_LABELS. Vendor padding tightened. |
-| 2026-04-14 | Edit Trip via full-page form (HMW-53) | Navigate to /trips/:id/edit — reuses CreateTrip 2-step layout pre-filled with existing data. Edit all trip fields + add/remove/modify jobs. Trip fields always editable. Job fields locked after Completed/Verified/Cancelled. Vendor/route changes recalculate fees. |
+| 2026-04-14 | Edit Trip via full-page form (HMW-53) | Navigate to /trips/:id/edit — reuses CreateTrip 2-step layout pre-filled with existing data. Edit all trip fields + add/remove/modify jobs. Trip fields always editable. Job fields locked after Completed/Verified/Cancelled. |
 | 2026-04-14 | Trip verification progress (HMW-54) | Trip row shows "N/M verified" fraction + thin progress bar. Trip = Verified only when ALL non-cancelled jobs are Verified. Green at 100%, amber at partial, gray at zero. No single trip-level status chip — progress fraction is more informative for billing workflow. |
 | 2026-04-14 | Date range calendar popover (HMW-55) | Single "Date Range" button in filter bar opens calendar popover with preset shortcuts (Today/This week/This month/Last month/All time) + custom range selection. Filter by pickup date, not creation date. Available on all tabs including Active. Replaces inline preset chips. |
+| 2026-04-14 | Fee display removed from all views | Client confirmed fees are out of scope for this project phase. All fee display removed: sub-table Total Cost column, slide-out Fee Breakdown section, Jobs Cost column, Create/Edit Trip fee previews, vendor fee breakdown and CSV cost column. `fees` field preserved on Job type for data model backward compatibility but not displayed. |
+| 2026-04-15 | Facility → District linking (HMW-56) | District search dropdown in Facilities add/edit form. Type-ahead searches 3,056 GB/T 2260 districts by Chinese + English name, grouped by Province · City. Auto-fills district, city, districtCode. City column read-only. Same picker in LocationDropdown inline add. |
+| 2026-04-15 | L2 Subservices per Job (HMW-58) | Scrollable checklist (max-height 80px) below each job's fields in create/edit trip. All unchecked by default — planner checks what applies. Stored as `l2CostIds: string[]` on Job. Displayed in slide-out between Route and Proof of Service. CSV export: 1 row per job × checked L2 (flatMap). Jobs with 0 checked → 0 export rows. `unit` removed from `L2SubService` — unit type no longer shown in master data Services tab. |

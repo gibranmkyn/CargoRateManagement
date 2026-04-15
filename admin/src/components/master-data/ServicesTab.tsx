@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { ChevronRight, ChevronDown, Layers } from 'lucide-react';
 import { SERVICE_HIERARCHY } from '@shared/mockData';
-import type { RateUnit } from '@shared/mockData';
 
 // --- Style helpers (matches LocationsTab pattern) ---
 
@@ -14,30 +13,6 @@ const th: React.CSSProperties = {
 const td: React.CSSProperties = {
   padding: '8px 12px', fontSize: 11, color: '#374151', borderBottom: '1px solid #f3f4f6',
 };
-
-const UNIT_BADGE_STYLES: Record<RateUnit, { color: string; bg: string; border: string }> = {
-  'flat':    { color: '#6b7280', bg: '#f3f4f6', border: '#e5e7eb' },
-  'per-kg':  { color: '#152CFF', bg: 'rgba(21,44,255,0.04)', border: 'rgba(21,44,255,0.15)' },
-  'per-bag': { color: '#152CFF', bg: 'rgba(21,44,255,0.04)', border: 'rgba(21,44,255,0.15)' },
-  'per-cbm': { color: '#152CFF', bg: 'rgba(21,44,255,0.04)', border: 'rgba(21,44,255,0.15)' },
-  'per-km':  { color: '#6b7280', bg: '#f3f4f6', border: '#e5e7eb' },
-};
-
-const UNIT_LABELS: Record<RateUnit, string> = {
-  'flat': 'flat', 'per-kg': '/kg', 'per-bag': '/bag', 'per-cbm': '/cbm', 'per-km': '/km',
-};
-
-function UnitBadge({ unit }: { unit: RateUnit }) {
-  const s = UNIT_BADGE_STYLES[unit];
-  return (
-    <span style={{
-      display: 'inline-block', padding: '1px 6px', borderRadius: 4, fontSize: 9,
-      fontWeight: 600, color: s.color, background: s.bg, border: `1px solid ${s.border}`,
-    }}>
-      {UNIT_LABELS[unit]}
-    </span>
-  );
-}
 
 function ServiceBadge({ code, color }: { code: string; color: string }) {
   return (
@@ -81,7 +56,6 @@ export default function ServicesTab() {
             <th style={{ ...th, width: 28, padding: '6px 4px' }} />
             <th style={{ ...th, width: 100 }}>Code / Cost ID</th>
             <th style={th}>Name</th>
-            <th style={{ ...th, width: 70 }}>Unit Type</th>
           </tr>
         </thead>
         <tbody>
@@ -98,7 +72,7 @@ export default function ServicesTab() {
           })}
           {SERVICE_HIERARCHY.length === 0 && (
             <tr>
-              <td colSpan={4} style={{ padding: '48px 16px', textAlign: 'center', color: '#9ca3af' }}>
+              <td colSpan={3} style={{ padding: '48px 16px', textAlign: 'center', color: '#9ca3af' }}>
                 <Layers size={20} style={{ color: '#152CFF', marginBottom: 8 }} />
                 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>No services configured</div>
                 <div style={{ fontSize: 11 }}>Service hierarchy is defined in code</div>
@@ -137,14 +111,11 @@ function L1Row({ l1, isOpen, onToggle }: L1RowProps) {
         <td style={{ ...td, borderBottom: isOpen ? '1px solid #e5e7eb' : td.borderBottom }}>
           <ServiceBadge code={l1.code} color={l1.color} />
         </td>
-        <td style={{ ...td, fontWeight: 600, color: '#111827', borderBottom: isOpen ? '1px solid #e5e7eb' : td.borderBottom }}>
+        <td colSpan={2} style={{ ...td, fontWeight: 600, color: '#111827', borderBottom: isOpen ? '1px solid #e5e7eb' : td.borderBottom }}>
           {l1.label}
           <span style={{ fontSize: 9, fontWeight: 400, color: '#9ca3af', marginLeft: 6 }}>
-            {l1.l2Services.length} L2
+            {l1.l2Services.length} L2 &middot; {l1.rateType}
           </span>
-        </td>
-        <td style={{ ...td, borderBottom: isOpen ? '1px solid #e5e7eb' : td.borderBottom }}>
-          <span style={{ fontSize: 9, color: '#9ca3af' }}>{l1.rateType}</span>
         </td>
       </tr>
 
@@ -160,11 +131,8 @@ function L1Row({ l1, isOpen, onToggle }: L1RowProps) {
             }}>
               {l2.costId}
             </td>
-            <td style={{ ...td, paddingLeft: 24, borderBottom: isLast ? '1px solid #e5e7eb' : td.borderBottom }}>
+            <td colSpan={2} style={{ ...td, paddingLeft: 24, borderBottom: isLast ? '1px solid #e5e7eb' : td.borderBottom }}>
               {l2.name}
-            </td>
-            <td style={{ ...td, borderBottom: isLast ? '1px solid #e5e7eb' : td.borderBottom }}>
-              <UnitBadge unit={l2.unit} />
             </td>
           </tr>
         );

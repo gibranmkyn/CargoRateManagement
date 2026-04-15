@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-57: Regions Master Data Visual Redesign</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.label-current { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+.label-rec { background: rgba(21,44,255,0.08); color: #152CFF; border: 1px solid rgba(21,44,255,0.2); }
+.label-radical { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: rgba(21,44,255,0.04); border: 2px solid rgba(21,44,255,0.2); border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #152CFF; font-size: 14px; margin-bottom: 8px; }
+
+/* Nav chrome */
+.nav { height: 40px; background: #111827; display: flex; align-items: center; padding: 0 16px; gap: 16px; }
+.nav-logo { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; flex-shrink: 0; }
+.nav-brand { font-weight: 700; font-size: 13px; color: #fff; }
+.nav-sub { font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.35); margin-left: 2px; }
+.nav-link { font-size: 12px; color: rgba(255,255,255,0.5); padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+.nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+.tab-bar { display: flex; align-items: center; gap: 0; padding: 0 16px; background: #fff; border-bottom: 1px solid #e5e7eb; }
+.tab { font-size: 11px; font-weight: 500; color: #6b7280; padding: 8px 14px; cursor: pointer; border-bottom: 2px solid transparent; }
+.tab.active { color: #152CFF; border-bottom-color: #152CFF; font-weight: 600; }
+.page-inner { padding: 16px; }
+</style>
+</head>
+<body>
+<div class="page">
+<h1>HMW-57: Regions Master Data Redesign</h1>
+<div class="hmw">How might we make the China GB/T 2260 hierarchy browser readable and useful for ops admins who look up district codes during facility setup — without the clutter, dead columns, and ugly indentation of the current table?</div>
+
+<div class="context">
+  <strong>Context:</strong> The Regions tab shows 33 provinces → 344 cities → 3,077 districts from the GB/T 2260 standard. It's a <em>reference</em> table — admins look things up, they don't create or edit. The current design has 4 pain points: (1) "English" column is empty for nearly all city/district rows; (2) "Level" column badges are redundant with indentation; (3) "Count" column has different meanings at each level; (4) chevron symbols ▾/▸ look dated and the indent is inconsistent across columns. Result: a table full of hollow cells that looks broken.
+</div>
+
+<!-- CURRENT STATE -->
+<h2>Current State — for reference</h2>
+<span class="label label-current">Current</span>
+<div class="screen">
+  <div class="nav">
+    <div class="nav-logo"></div>
+    <span class="nav-brand">Teleport OS<span class="nav-sub"> Admin</span></span>
+    <span class="nav-link">Trips</span>
+    <span class="nav-link">Jobs</span>
+    <span class="nav-link active">Master Data</span>
+  </div>
+  <div class="tab-bar">
+    <div class="tab">Facilities</div>
+    <div class="tab active">Regions</div>
+    <div class="tab">Services</div>
+  </div>
+  <div class="page-inner">
+    <!-- Current filter bar -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <input placeholder="Search city or district..." style="font-size:11px;padding:4px 8px;border:1px solid #e5e7eb;border-radius:4px;width:200px;font-family:inherit;color:#374151;outline:none;" readonly>
+      <div style="font-size:11px;color:#6b7280;margin-left:auto;"><strong style="color:#111827">33</strong> provinces · <strong style="color:#111827">344</strong> cities · <strong style="color:#111827">3,077</strong> districts <span style="font-size:9px;color:#9ca3af;margin-left:8px;">GB/T 2260</span></div>
+    </div>
+    <!-- Current table with all its problems -->
+    <table style="width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:6px;">
+      <thead>
+        <tr>
+          <th style="text-align:left;padding:6px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;width:30px;"></th>
+          <th style="text-align:left;padding:6px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;width:100px;">Code</th>
+          <th style="text-align:left;padding:6px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Name</th>
+          <th style="text-align:left;padding:6px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;width:80px;">English</th>
+          <th style="text-align:left;padding:6px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;width:60px;">Level</th>
+          <th style="text-align:left;padding:6px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;width:80px;">Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Province row -->
+        <tr style="background:#f9fafb;cursor:pointer;">
+          <td style="padding:6px 10px;font-size:11px;color:#152CFF;font-weight:600;border-bottom:1px solid #f3f4f6;">▾</td>
+          <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #f3f4f6;"><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">44</span></td>
+          <td style="padding:6px 10px;font-size:11px;font-weight:700;color:#111827;border-bottom:1px solid #f3f4f6;">广东省</td>
+          <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #f3f4f6;color:#374151;">Guangdong</td>
+          <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #f3f4f6;"><span style="font-size:9px;font-weight:600;color:#6b7280;padding:1px 5px;background:#f3f4f6;border-radius:3px;border:1px solid #e5e7eb;">Province</span></td>
+          <td style="padding:6px 10px;font-size:11px;color:#6b7280;border-bottom:1px solid #f3f4f6;">21 cities · 126</td>
+        </tr>
+        <!-- City row -->
+        <tr style="cursor:pointer;">
+          <td style="padding:6px 10px;padding-left:24px;font-size:11px;color:#9ca3af;font-weight:600;border-bottom:1px solid #f3f4f6;">▸</td>
+          <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #f3f4f6;"><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">4401</span></td>
+          <td style="padding:6px 10px;font-size:11px;font-weight:600;padding-left:24px;border-bottom:1px solid #f3f4f6;">广州市</td>
+          <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #f3f4f6;color:#d1d5db;">— &nbsp;<span style="font-size:10px;font-style:italic;color:#d1d5db;">(empty)</span></td>
+          <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #f3f4f6;"><span style="font-size:9px;font-weight:600;color:#152CFF;padding:1px 5px;background:rgba(21,44,255,0.06);border-radius:3px;border:1px solid rgba(21,44,255,0.12);">City</span></td>
+          <td style="padding:6px 10px;font-size:11px;color:#6b7280;border-bottom:1px solid #f3f4f6;">11</td>
+        </tr>
+        <!-- District rows -->
+        <tr>
+          <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #f3f4f6;"></td>
+          <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #f3f4f6;"><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">440103</span></td>
+          <td style="padding:6px 10px;font-size:11px;padding-left:44px;border-bottom:1px solid #f3f4f6;">荔湾区</td>
+          <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #f3f4f6;color:#d1d5db;">—&nbsp;<span style="font-size:10px;font-style:italic;color:#d1d5db;">(empty)</span></td>
+          <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #f3f4f6;"><span style="font-size:9px;font-weight:600;color:#6b7280;padding:1px 5px;background:#f3f4f6;border-radius:3px;border:1px solid #e5e7eb;">District</span></td>
+          <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #f3f4f6;color:#d1d5db;">—&nbsp;<span style="font-size:10px;font-style:italic;color:#d1d5db;">(empty)</span></td>
+        </tr>
+        <tr>
+          <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #f3f4f6;"></td>
+          <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #f3f4f6;"><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">440104</span></td>
+          <td style="padding:6px 10px;font-size:11px;padding-left:44px;border-bottom:1px solid #f3f4f6;">越秀区</td>
+          <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #f3f4f6;color:#d1d5db;">—&nbsp;<span style="font-size:10px;font-style:italic;color:#d1d5db;">(empty)</span></td>
+          <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #f3f4f6;"><span style="font-size:9px;font-weight:600;color:#6b7280;padding:1px 5px;background:#f3f4f6;border-radius:3px;border:1px solid #e5e7eb;">District</span></td>
+          <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #f3f4f6;color:#d1d5db;">—&nbsp;<span style="font-size:10px;font-style:italic;color:#d1d5db;">(empty)</span></td>
+        </tr>
+        <!-- Second province collapsed -->
+        <tr style="background:#f9fafb;cursor:pointer;">
+          <td style="padding:6px 10px;font-size:11px;color:#152CFF;font-weight:600;border-bottom:1px solid #f3f4f6;">▸</td>
+          <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #f3f4f6;"><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">11</span></td>
+          <td style="padding:6px 10px;font-size:11px;font-weight:700;color:#111827;border-bottom:1px solid #f3f4f6;">北京市</td>
+          <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #f3f4f6;color:#374151;">Beijing</td>
+          <td style="padding:6px 10px;font-size:11px;border-bottom:1px solid #f3f4f6;"><span style="font-size:9px;font-weight:600;color:#6b7280;padding:1px 5px;background:#f3f4f6;border-radius:3px;border:1px solid #e5e7eb;">Province</span></td>
+          <td style="padding:6px 10px;font-size:11px;color:#6b7280;border-bottom:1px solid #f3f4f6;">16 cities · 64</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:8px;font-size:10px;color:#dc2626;font-weight:600;">↑ Problems: "English" column empty for cities/districts. "Level" badges redundant. "Count" ambiguous. Chevrons ▸▾ look dated. Indent inconsistent across columns.</div>
+  </div>
+</div>
+
+<!-- OPTION A -->
+<h2>Option A — Slim 3-Column Table</h2>
+<span class="label label-rec">Recommended</span>
+<div class="rationale">
+  <strong>Approach:</strong> Drop the English and Level columns entirely. Merge everything into 3 columns: Name (with unified indent line), Code, and a smart Count that adapts per level. Province rows get a subtle left accent. Chevrons become a proper SVG icon inside the Name cell itself — no separate column. The hierarchy is expressed purely through indentation, weight, and color — not separate classification badges.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>
+    · Zero empty cells — every column has data at every level<br>
+    · Hierarchy instantly readable via weight + indent<br>
+    · Consistent with Facilities tab table structure<br>
+    · Clean monospace codes stand out clearly
+    </div>
+    <div class="cons"><strong>Cons</strong><br>
+    · No explicit "Level" label — must infer from visual hierarchy<br>
+    · Province code and district code look the same without context
+    </div>
+  </div>
+</div>
+<div class="screen">
+  <div class="nav">
+    <div class="nav-logo"></div>
+    <span class="nav-brand">Teleport OS<span class="nav-sub"> Admin</span></span>
+    <span class="nav-link">Trips</span>
+    <span class="nav-link">Jobs</span>
+    <span class="nav-link active">Master Data</span>
+  </div>
+  <div class="tab-bar">
+    <div class="tab">Facilities</div>
+    <div class="tab active">Regions</div>
+    <div class="tab">Services</div>
+  </div>
+  <div class="page-inner">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <input placeholder="Search city or district..." style="font-size:11px;padding:4px 8px;border:1px solid #e5e7eb;border-radius:4px;width:220px;font-family:inherit;color:#374151;outline:none;" readonly>
+      <div style="font-size:11px;color:#6b7280;margin-left:auto;"><strong style="color:#111827">33</strong> provinces · <strong style="color:#111827">344</strong> cities · <strong style="color:#111827">3,077</strong> districts <span style="font-size:9px;color:#9ca3af;font-family:'JetBrains Mono',monospace;margin-left:8px;">GB/T 2260</span></div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:6px;">
+      <thead>
+        <tr>
+          <th style="text-align:left;padding:6px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Name</th>
+          <th style="text-align:left;padding:6px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;width:110px;">GB/T Code</th>
+          <th style="text-align:right;padding:6px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;width:120px;">Cities / Districts</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- GUANGDONG — expanded province -->
+        <tr style="background:#f9fafb;cursor:pointer;" onmouseenter="this.style.background='#f3f4f6'" onmouseleave="this.style.background='#f9fafb'">
+          <td style="padding:7px 12px;font-size:11px;font-weight:700;color:#111827;border-bottom:1px solid #e5e7eb;border-left:2px solid #152CFF;">
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style="flex-shrink:0;color:#152CFF"><path d="M2 3.5L5 6.5L8 3.5" stroke="#152CFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              广东省
+            </span>
+          </td>
+          <td style="padding:7px 12px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#6b7280;border-bottom:1px solid #e5e7eb;">44</td>
+          <td style="padding:7px 12px;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;text-align:right;">21 cities · 126 districts</td>
+        </tr>
+
+        <!-- GUANGZHOU — expanded city -->
+        <tr style="cursor:pointer;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">
+          <td style="padding:6px 12px;font-size:11px;font-weight:600;color:#374151;border-bottom:1px solid #f3f4f6;padding-left:28px;">
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              <svg width="9" height="9" viewBox="0 0 10 10" fill="none" style="flex-shrink:0"><path d="M2 3.5L5 6.5L8 3.5" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              广州市
+            </span>
+          </td>
+          <td style="padding:6px 12px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#9ca3af;border-bottom:1px solid #f3f4f6;">4401</td>
+          <td style="padding:6px 12px;font-size:11px;color:#9ca3af;border-bottom:1px solid #f3f4f6;text-align:right;">11 districts</td>
+        </tr>
+        <!-- Districts of Guangzhou -->
+        <tr onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">
+          <td style="padding:5px 12px;font-size:11px;color:#374151;border-bottom:1px solid #f3f4f6;padding-left:52px;">荔湾区</td>
+          <td style="padding:5px 12px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#9ca3af;border-bottom:1px solid #f3f4f6;">440103</td>
+          <td style="padding:5px 12px;border-bottom:1px solid #f3f4f6;"></td>
+        </tr>
+        <tr onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">
+          <td style="padding:5px 12px;font-size:11px;color:#374151;border-bottom:1px solid #f3f4f6;padding-left:52px;">越秀区</td>
+          <td style="padding:5px 12px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#9ca3af;border-bottom:1px solid #f3f4f6;">440104</td>
+          <td style="padding:5px 12px;border-bottom:1px solid #f3f4f6;"></td>
+        </tr>
+        <tr onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">
+          <td style="padding:5px 12px;font-size:11px;color:#374151;border-bottom:1px solid #f3f4f6;padding-left:52px;">海珠区</td>
+          <td style="padding:5px 12px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#9ca3af;border-bottom:1px solid #f3f4f6;">440105</td>
+          <td style="padding:5px 12px;border-bottom:1px solid #f3f4f6;"></td>
+        </tr>
+        <tr onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">
+          <td style="padding:5px 12px;font-size:11px;color:#374151;border-bottom:1px solid #f3f4f6;padding-left:52px;">天河区</td>
+          <td style="padding:5px 12px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#9ca3af;border-bottom:1px solid #f3f4f6;">440106</td>
+          <td style="padding:5px 12px;border-bottom:1px solid #f3f4f6;"></td>
+        </tr>
+        <tr onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">
+          <td style="padding:5px 12px;font-size:11px;color:#9ca3af;border-bottom:1px solid #f3f4f6;padding-left:52px;font-style:italic;">+ 7 more districts</td>
+          <td style="padding:5px 12px;border-bottom:1px solid #f3f4f6;"></td>
+          <td style="padding:5px 12px;border-bottom:1px solid #f3f4f6;"></td>
+        </tr>
+
+        <!-- SHENZHEN — collapsed city -->
+        <tr style="cursor:pointer;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">
+          <td style="padding:6px 12px;font-size:11px;font-weight:600;color:#374151;border-bottom:1px solid #f3f4f6;padding-left:28px;">
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              <svg width="9" height="9" viewBox="0 0 10 10" fill="none" style="flex-shrink:0"><path d="M3.5 2L6.5 5L3.5 8" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              深圳市
+            </span>
+          </td>
+          <td style="padding:6px 12px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#9ca3af;border-bottom:1px solid #f3f4f6;">4403</td>
+          <td style="padding:6px 12px;font-size:11px;color:#9ca3af;border-bottom:1px solid #f3f4f6;text-align:right;">9 districts</td>
+        </tr>
+
+        <!-- DONGGUAN — collapsed city -->
+        <tr style="cursor:pointer;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">
+          <td style="padding:6px 12px;font-size:11px;font-weight:600;color:#374151;border-bottom:1px solid #f3f4f6;padding-left:28px;">
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              <svg width="9" height="9" viewBox="0 0 10 10" fill="none" style="flex-shrink:0"><path d="M3.5 2L6.5 5L3.5 8" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              东莞市
+            </span>
+          </td>
+          <td style="padding:6px 12px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#9ca3af;border-bottom:1px solid #f3f4f6;">4419</td>
+          <td style="padding:6px 12px;font-size:11px;color:#9ca3af;border-bottom:1px solid #f3f4f6;text-align:right;">4 sub-districts</td>
+        </tr>
+
+        <!-- Collapsed second province -->
+        <tr style="background:#f9fafb;cursor:pointer;" onmouseenter="this.style.background='#f3f4f6'" onmouseleave="this.style.background='#f9fafb'">
+          <td style="padding:7px 12px;font-size:11px;font-weight:700;color:#111827;border-bottom:1px solid #e5e7eb;border-left:2px solid transparent;">
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style="flex-shrink:0"><path d="M3.5 2L6.5 5L3.5 8" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              北京市
+            </span>
+          </td>
+          <td style="padding:7px 12px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#6b7280;border-bottom:1px solid #e5e7eb;">11</td>
+          <td style="padding:7px 12px;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;text-align:right;">16 cities · 64 districts</td>
+        </tr>
+
+        <tr style="background:#f9fafb;cursor:pointer;" onmouseenter="this.style.background='#f3f4f6'" onmouseleave="this.style.background='#f9fafb'">
+          <td style="padding:7px 12px;font-size:11px;font-weight:700;color:#111827;border-bottom:1px solid #e5e7eb;border-left:2px solid transparent;">
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style="flex-shrink:0"><path d="M3.5 2L6.5 5L3.5 8" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              上海市
+            </span>
+          </td>
+          <td style="padding:7px 12px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#6b7280;border-bottom:1px solid #e5e7eb;">31</td>
+          <td style="padding:7px 12px;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;text-align:right;">16 cities · 107 districts</td>
+        </tr>
+
+        <tr style="background:#f9fafb;cursor:pointer;" onmouseenter="this.style.background='#f3f4f6'" onmouseleave="this.style.background='#f9fafb'">
+          <td style="padding:7px 12px;font-size:11px;font-weight:700;color:#111827;border-bottom:1px solid #e5e7eb;border-left:2px solid transparent;">
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style="flex-shrink:0"><path d="M3.5 2L6.5 5L3.5 8" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              浙江省
+            </span>
+          </td>
+          <td style="padding:7px 12px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#6b7280;border-bottom:1px solid #e5e7eb;">33</td>
+          <td style="padding:7px 12px;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;text-align:right;">11 cities · 90 districts</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- OPTION B -->
+<h2>Option B — Province-as-Section-Header</h2>
+<span class="label label-rec">Strong Candidate</span>
+<div class="rationale">
+  <strong>Approach:</strong> Province rows become section dividers (not table rows) — full-width dark band with province name, code, and counts on one line. The table below each province only contains cities + their collapsible districts. This matches the Trips/Jobs page pattern where a parent row acts as a collapsible header for child rows. Level is now structurally obvious, not a badge.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>
+    · Province visually dominates — hierarchy unmistakable<br>
+    · City rows are the "real" table — clean columns, no indentation needed<br>
+    · Districts collapse cleanly as sub-rows, just like job sub-table<br>
+    · Consistent with patterns already in the app
+    </div>
+    <div class="cons"><strong>Cons</strong><br>
+    · Province header is outside the table — can't sort or filter by province column<br>
+    · Scrolling through 33 provinces with sections is verbose<br>
+    · Doesn't reduce the vertical height for expanded trees
+    </div>
+  </div>
+</div>
+<div class="screen">
+  <div class="nav">
+    <div class="nav-logo"></div>
+    <span class="nav-brand">Teleport OS<span class="nav-sub"> Admin</span></span>
+    <span class="nav-link">Trips</span>
+    <span class="nav-link">Jobs</span>
+    <span class="nav-link active">Master Data</span>
+  </div>
+  <div class="tab-bar">
+    <div class="tab">Facilities</div>
+    <div class="tab active">Regions</div>
+    <div class="tab">Services</div>
+  </div>
+  <div class="page-inner">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <input placeholder="Search city or district..." style="font-size:11px;padding:4px 8px;border:1px solid #e5e7eb;border-radius:4px;width:220px;font-family:inherit;color:#374151;outline:none;" readonly>
+      <div style="font-size:11px;color:#6b7280;margin-left:auto;"><strong style="color:#111827">33</strong> provinces · <strong style="color:#111827">344</strong> cities · <strong style="color:#111827">3,077</strong> districts <span style="font-size:9px;color:#9ca3af;font-family:'JetBrains Mono',monospace;margin-left:8px;">GB/T 2260</span></div>
+    </div>
+
+    <!-- Province section header -->
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 12px;background:#111827;border-radius:6px 6px 0 0;cursor:pointer;">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5L5 6.5L8 3.5" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span style="font-size:12px;font-weight:700;color:#fff;">广东省</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(255,255,255,0.35);margin-left:2px;">44</span>
+      <span style="font-size:10px;color:rgba(255,255,255,0.35);margin-left:auto;">21 cities · 126 districts</span>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-top:none;margin-bottom:8px;">
+      <thead>
+        <tr>
+          <th style="text-align:left;padding:5px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;">City</th>
+          <th style="text-align:left;padding:5px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;width:90px;">Code</th>
+          <th style="text-align:right;padding:5px 12px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;width:90px;">Districts</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Guangzhou — expanded city -->
+        <tr style="cursor:pointer;background:rgba(21,44,255,0.03);" onmouseenter="this.style.background='rgba(21,44,255,0.05)'" onmouseleave="this.style.background='rgba(21,44,255,0.03)'">
+          <td style="padding:6px 12px;font-size:11px;font-weight:600;color:#374151;border-bottom:1px solid #f3f4f6;">
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M2 3.5L5 6.5L8 3.5" stroke="#152CFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              广州市
+            </span>
+          </td>
+          <td style="padding:6px 12px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#9ca3af;border-bottom:1px solid #f3f4f6;">4401</td>
+          <td style="padding:6px 12px;font-size:11px;color:#9ca3af;border-bottom:1px solid #f3f4f6;text-align:right;">11</td>
+        </tr>
+        <!-- District rows (sub-level, indented) -->
+        <tr style="background:#f9fafb;" onmouseenter="this.style.background='#f3f4f6'" onmouseleave="this.style.background='#f9fafb'">
+          <td style="padding:5px 12px;font-size:11px;color:#374151;border-bottom:1px solid #f3f4f6;padding-left:32px;">荔湾区</td>
+          <td style="padding:5px 12px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#9ca3af;border-bottom:1px solid #f3f4f6;">440103</td>
+          <td style="padding:5px 12px;border-bottom:1px solid #f3f4f6;"></td>
+        </tr>
+        <tr style="background:#f9fafb;" onmouseenter="this.style.background='#f3f4f6'" onmouseleave="this.style.background='#f9fafb'">
+          <td style="padding:5px 12px;font-size:11px;color:#374151;border-bottom:1px solid #f3f4f6;padding-left:32px;">越秀区</td>
+          <td style="padding:5px 12px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#9ca3af;border-bottom:1px solid #f3f4f6;">440104</td>
+          <td style="padding:5px 12px;border-bottom:1px solid #f3f4f6;"></td>
+        </tr>
+        <tr style="background:#f9fafb;" onmouseenter="this.style.background='#f3f4f6'" onmouseleave="this.style.background='#f9fafb'">
+          <td style="padding:5px 12px;font-size:11px;color:#374151;border-bottom:1px solid #f3f4f6;padding-left:32px;">海珠区</td>
+          <td style="padding:5px 12px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#9ca3af;border-bottom:1px solid #f3f4f6;">440105</td>
+          <td style="padding:5px 12px;border-bottom:1px solid #f3f4f6;"></td>
+        </tr>
+        <tr style="background:#f9fafb;" onmouseenter="this.style.background='#f3f4f6'" onmouseleave="this.style.background='#f9fafb'">
+          <td style="padding:5px 12px;font-size:11px;color:#9ca3af;border-bottom:1px solid #f3f4f6;padding-left:32px;font-style:italic;">+ 8 more</td>
+          <td style="padding:5px 12px;border-bottom:1px solid #f3f4f6;"></td>
+          <td style="padding:5px 12px;border-bottom:1px solid #f3f4f6;"></td>
+        </tr>
+        <!-- Shenzhen — collapsed city -->
+        <tr style="cursor:pointer;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">
+          <td style="padding:6px 12px;font-size:11px;font-weight:600;color:#374151;border-bottom:1px solid #f3f4f6;">
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M3.5 2L6.5 5L3.5 8" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              深圳市
+            </span>
+          </td>
+          <td style="padding:6px 12px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#9ca3af;border-bottom:1px solid #f3f4f6;">4403</td>
+          <td style="padding:6px 12px;font-size:11px;color:#9ca3af;border-bottom:1px solid #f3f4f6;text-align:right;">9</td>
+        </tr>
+        <tr style="cursor:pointer;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">
+          <td style="padding:6px 12px;font-size:11px;font-weight:600;color:#374151;border-bottom:1px solid #f3f4f6;">
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M3.5 2L6.5 5L3.5 8" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              东莞市
+            </span>
+          </td>
+          <td style="padding:6px 12px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#9ca3af;border-bottom:1px solid #f3f4f6;">4419</td>
+          <td style="padding:6px 12px;font-size:11px;color:#9ca3af;border-bottom:1px solid #f3f4f6;text-align:right;">4</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Second province collapsed -->
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 12px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;margin-bottom:4px;">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3.5 2L6.5 5L3.5 8" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span style="font-size:12px;font-weight:700;color:#374151;">北京市</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;margin-left:2px;">11</span>
+      <span style="font-size:10px;color:#9ca3af;margin-left:auto;">16 cities · 64 districts</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 12px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;margin-bottom:4px;">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3.5 2L6.5 5L3.5 8" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span style="font-size:12px;font-weight:700;color:#374151;">上海市</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;margin-left:2px;">31</span>
+      <span style="font-size:10px;color:#9ca3af;margin-left:auto;">16 cities · 107 districts</span>
+    </div>
+  </div>
+</div>
+
+<!-- OPTION C -->
+<h2>Option C — Column Explorer (Finder-style)</h2>
+<span class="label label-radical">Radical</span>
+<div class="rationale">
+  <strong>Approach:</strong> Eliminate the tree table entirely. Replace with a 3-panel column browser (like macOS Finder): Province list on the left, Cities in the middle, Districts on the right. Clicking a province shows its cities. Clicking a city shows its districts. No expand/collapse — the hierarchy is spatially separated. Search filters all panels simultaneously.
+  <div class="pros-cons">
+    <div class="pros"><strong>Pros</strong><br>
+    · No nesting, no tree depth to manage<br>
+    · Province → City → District visible at once without scrolling<br>
+    · Immediate feedback: click province, instantly see its 20+ cities<br>
+    · District codes read clearly with full context visible
+    </div>
+    <div class="cons"><strong>Cons</strong><br>
+    · Three fixed panels require wide viewport (≥1200px)<br>
+    · Unfamiliar pattern — ops admins expect tables, not Finder<br>
+    · Hard to print/export visually as a table<br>
+    · Diverges furthest from the app's existing design language
+    </div>
+  </div>
+</div>
+<div class="screen">
+  <div class="nav">
+    <div class="nav-logo"></div>
+    <span class="nav-brand">Teleport OS<span class="nav-sub"> Admin</span></span>
+    <span class="nav-link">Trips</span>
+    <span class="nav-link">Jobs</span>
+    <span class="nav-link active">Master Data</span>
+  </div>
+  <div class="tab-bar">
+    <div class="tab">Facilities</div>
+    <div class="tab active">Regions</div>
+    <div class="tab">Services</div>
+  </div>
+  <div class="page-inner">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <input placeholder="Search provinces, cities, districts..." style="font-size:11px;padding:4px 8px;border:1px solid #e5e7eb;border-radius:4px;width:260px;font-family:inherit;color:#374151;outline:none;" readonly>
+      <div style="font-size:11px;color:#6b7280;margin-left:auto;"><strong style="color:#111827">33</strong> · <strong style="color:#111827">344</strong> · <strong style="color:#111827">3,077</strong> <span style="font-size:9px;color:#9ca3af;font-family:'JetBrains Mono',monospace;margin-left:4px;">GB/T 2260</span></div>
+    </div>
+    <div style="display:grid;grid-template-columns:200px 220px 1fr;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;height:320px;">
+      <!-- Province panel -->
+      <div style="border-right:1px solid #e5e7eb;overflow-y:auto;background:#fff;">
+        <div style="padding:5px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;position:sticky;top:0;">Province <span style="font-weight:400;font-size:9px;">33</span></div>
+        <div style="padding:6px 10px;font-size:11px;font-weight:700;color:#fff;background:#152CFF;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">广东省 <span style="font-family:'JetBrains Mono',monospace;font-size:9px;opacity:0.7;">44</span></div>
+        <div style="padding:6px 10px;font-size:11px;font-weight:600;color:#374151;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">北京市 <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;">11</span></div>
+        <div style="padding:6px 10px;font-size:11px;font-weight:600;color:#374151;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">上海市 <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;">31</span></div>
+        <div style="padding:6px 10px;font-size:11px;font-weight:600;color:#374151;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">浙江省 <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;">33</span></div>
+        <div style="padding:6px 10px;font-size:11px;font-weight:600;color:#374151;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">福建省 <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;">35</span></div>
+        <div style="padding:6px 10px;font-size:11px;font-weight:600;color:#374151;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">江苏省 <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;">32</span></div>
+        <div style="padding:6px 10px;font-size:11px;font-weight:600;color:#374151;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">四川省 <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;">51</span></div>
+        <div style="padding:6px 10px;font-size:11px;font-weight:600;color:#6b7280;border-bottom:1px solid #f3f4f6;font-style:italic;">+ 26 more...</div>
+      </div>
+      <!-- City panel -->
+      <div style="border-right:1px solid #e5e7eb;overflow-y:auto;background:#fff;">
+        <div style="padding:5px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;position:sticky;top:0;">广东省 · Cities <span style="font-weight:400;">21</span></div>
+        <div style="padding:6px 10px;font-size:11px;font-weight:600;color:#fff;background:#152CFF;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">广州市 <span style="font-family:'JetBrains Mono',monospace;font-size:9px;opacity:0.7;">4401</span></div>
+        <div style="padding:6px 10px;font-size:11px;font-weight:600;color:#374151;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">深圳市 <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;">4403</span></div>
+        <div style="padding:6px 10px;font-size:11px;font-weight:600;color:#374151;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">东莞市 <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;">4419</span></div>
+        <div style="padding:6px 10px;font-size:11px;font-weight:600;color:#374151;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">佛山市 <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;">4406</span></div>
+        <div style="padding:6px 10px;font-size:11px;font-weight:600;color:#374151;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">中山市 <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;">4420</span></div>
+        <div style="padding:6px 10px;font-size:11px;font-weight:600;color:#374151;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">珠海市 <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;">4404</span></div>
+        <div style="padding:6px 10px;font-size:11px;font-weight:600;color:#6b7280;border-bottom:1px solid #f3f4f6;font-style:italic;">+ 15 more...</div>
+      </div>
+      <!-- District panel -->
+      <div style="overflow-y:auto;background:#fff;">
+        <div style="padding:5px 10px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #e5e7eb;position:sticky;top:0;">广州市 · Districts <span style="font-weight:400;">11</span></div>
+        <div style="display:grid;grid-template-columns:1fr auto;padding:6px 12px;font-size:11px;border-bottom:1px solid #f3f4f6;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''"><span style="color:#374151;">荔湾区</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">440103</span></div>
+        <div style="display:grid;grid-template-columns:1fr auto;padding:6px 12px;font-size:11px;border-bottom:1px solid #f3f4f6;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''"><span style="color:#374151;">越秀区</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">440104</span></div>
+        <div style="display:grid;grid-template-columns:1fr auto;padding:6px 12px;font-size:11px;border-bottom:1px solid #f3f4f6;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''"><span style="color:#374151;">海珠区</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">440105</span></div>
+        <div style="display:grid;grid-template-columns:1fr auto;padding:6px 12px;font-size:11px;border-bottom:1px solid #f3f4f6;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''"><span style="color:#374151;">天河区</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">440106</span></div>
+        <div style="display:grid;grid-template-columns:1fr auto;padding:6px 12px;font-size:11px;border-bottom:1px solid #f3f4f6;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''"><span style="color:#374151;">白云区</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">440111</span></div>
+        <div style="display:grid;grid-template-columns:1fr auto;padding:6px 12px;font-size:11px;border-bottom:1px solid #f3f4f6;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''"><span style="color:#374151;">黄埔区</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">440112</span></div>
+        <div style="display:grid;grid-template-columns:1fr auto;padding:6px 12px;font-size:11px;border-bottom:1px solid #f3f4f6;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''"><span style="color:#374151;">番禺区</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">440113</span></div>
+        <div style="display:grid;grid-template-columns:1fr auto;padding:6px 12px;font-size:11px;border-bottom:1px solid #f3f4f6;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''"><span style="color:#374151;">花都区</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">440114</span></div>
+        <div style="display:grid;grid-template-columns:1fr auto;padding:6px 12px;font-size:11px;border-bottom:1px solid #f3f4f6;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''"><span style="color:#374151;">南沙区</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">440115</span></div>
+        <div style="display:grid;grid-template-columns:1fr auto;padding:6px 12px;font-size:11px;border-bottom:1px solid #f3f4f6;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''"><span style="color:#374151;">从化区</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">440117</span></div>
+        <div style="display:grid;grid-template-columns:1fr auto;padding:6px 12px;font-size:11px;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''"><span style="color:#374151;">增城区</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">440118</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VERDICT -->
+<div class="verdict">
+  <h3>Recommendation: Option A — Slim 3-Column Table</h3>
+  <p style="font-size:12px;color:#374151;line-height:1.6;margin-bottom:10px;">
+    Option A fixes every visual problem with the minimum code change. Drop the English column (mostly empty), drop the Level column (redundant with hierarchy), merge the chevron into the Name cell (consistent indent across all levels), and rename "Count" to "Cities / Districts" with right-aligned text. The result is zero hollow cells, clean monospace codes, and a left-border accent on expanded provinces.
+  </p>
+  <p style="font-size:12px;color:#374151;line-height:1.6;margin-bottom:10px;">
+    Option B (Section Headers) looks great and is consistent with the trips sub-table pattern, but breaks the table contract — provinces become div elements outside the table, making scroll and search behavior more complex to implement.
+  </p>
+  <p style="font-size:12px;color:#374151;line-height:1.6;">
+    Option C (Column Explorer) is elegant for browsing but departs from the app's table-first language, and 1200px minimum viewport makes it risky. Reserve for a future iteration if ops request it.
+  </p>
+  <p style="font-size:11px;color:#6b7280;margin-top:10px;"><strong>Changes required:</strong> Remove <code>English</code> column + <code>Level</code> column. Move chevron SVG inside Name cell. Rename column header. Align Count right. Add <code>border-left: 2px solid #152CFF</code> to expanded province rows. Zero behavior change.</p>
+</div>
+
+</div>
+</body>
+</html>

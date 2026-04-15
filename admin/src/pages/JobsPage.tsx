@@ -1,14 +1,16 @@
 import { useState, useCallback, useMemo } from 'react';
-import { Download, Ship } from 'lucide-react';
+import { Download, Search, Ship } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { vendors, formatCurrency } from '@shared/mockData';
-import type { Trip, Job, JobStatus, Currency } from '@shared/mockData';
+import { vendors, getL2ByCostId } from '@shared/mockData';
+import type { Trip, Job, JobStatus } from '@shared/mockData';
 import DateRangePopover from '../components/shared/DateRangePopover';
 import { useTrips, generateJobId } from '@shared/TripContext';
+import { useLocations } from '../context/LocationContext';
 import { useToast } from '@shared/Toast';
 import SlideOutPanel from '../components/SlideOutPanel';
 import JobSlideOut from '../components/trips/JobSlideOut';
 import ServiceTag from '../components/trips/ServiceTag';
+import { getStatusChipStyle, parsePickupDate } from '@shared/statusStyles';
 
 // -- Types --
 
@@ -30,29 +32,6 @@ const STATUS_ORDER: Record<string, number> = {
   Cancelled: 5,
 };
 
-function getStatusChipStyle(status: JobStatus): { bg: string; border: string; text: string; dot: string } {
-  switch (status) {
-    case 'Pending': return { bg: '#f9fafb', border: '#e5e7eb', text: '#9ca3af', dot: '#9ca3af' };
-    case 'In Progress': return { bg: 'rgba(21,44,255,0.04)', border: 'rgba(21,44,255,0.15)', text: '#152CFF', dot: '#152CFF' };
-    case 'Completed': return { bg: '#fefce8', border: '#fde68a', text: '#a16207', dot: '#a16207' };
-    case 'Verified': return { bg: '#f0fdf4', border: '#a7f3d0', text: '#059669', dot: '#059669' };
-    case 'Cancelled': return { bg: '#fef2f2', border: '#fecaca', text: '#dc2626', dot: '#dc2626' };
-    default: return { bg: '#f9fafb', border: '#e5e7eb', text: '#9ca3af', dot: '#9ca3af' };
-  }
-}
-
-function getJobCostMap(job: Job): Map<string, number> {
-  const fees = (job.fees ?? []).filter((f) => f.active !== false);
-  const costMap = new Map<string, number>();
-  fees.forEach((f) => costMap.set(f.currency, (costMap.get(f.currency) ?? 0) + f.amount));
-  return costMap;
-}
-
-function parsePickupDate(dateStr: string): Date {
-  if (!dateStr) return new Date(0);
-  return new Date(dateStr.replace(' ', 'T'));
-}
-
 
 function sortActiveJobs(a: FlatJob, b: FlatJob): number {
   const orderA = STATUS_ORDER[a.status] ?? 5;
@@ -71,25 +50,49 @@ function sortDefaultJobs(a: FlatJob, b: FlatJob): number {
   return dateA.localeCompare(dateB);
 }
 
-function exportJobsCSV(jobs: FlatJob[]) {
-  const header = ['Trip ID', 'MAWB', 'Customer', 'Vendor', 'Service', 'Origin', 'Destination', 'Pickup', 'Status', 'Cost'];
-  const rows = jobs.map((j) => {
-    const costMap = getJobCostMap(j);
-    const costStr = costMap.size > 0
-      ? Array.from(costMap.entries()).map(([c, t]) => formatCurrency(c as Currency, t)).join(' + ')
-      : '-';
-    return [
-      j.trip.id,
-      j.trip.mawb,
-      j.trip.customer.name,
-      j.vendor.name,
-      j.service.code,
-      j.origin.location,
-      j.destination.location,
-      j.origin.date || '-',
-      j.status,
-      costStr,
-    ];
+type LocationMap = Map<string, { code: string; city: string; district: string }>;
+
+function exportJobsCSV(jobs: FlatJob[], locationMap: LocationMap) {
+  const header = [
+    'Trip ID', 'MAWB', 'Bags', 'Weight (kg)', 'Pickup Date', 'Delivery Date', 'Remarks',
+    'Customer', 'Job ID', 'Vendor', 'Service (L1)',
+    'Cost ID', 'Subservice (L2)',
+    'Origin Code', 'Origin', 'Origin District', 'Origin City',
+    'Dest Code', 'Destination', 'Dest District', 'Dest City',
+    'Job Pickup', 'Status',
+  ];
+  const rows = jobs.flatMap((j) => {
+    const orig = locationMap.get(j.origin.location);
+    const dest = locationMap.get(j.destination.location);
+    const l2Ids = j.l2CostIds ?? [];
+    return l2Ids.map((costId) => {
+      const l2 = getL2ByCostId(costId);
+      return [
+        j.trip.id,
+        j.trip.mawb,
+        j.trip.bags,
+        j.trip.weight,
+        j.trip.pickupDate || '-',
+        j.trip.deliveryDate || '-',
+        j.trip.remarks || '-',
+        j.trip.customer.name,
+        j.id,
+        j.vendor.name,
+        j.service.code,
+        costId,
+        l2?.name ?? costId,
+        orig?.code ?? '',
+        j.origin.location,
+        orig?.district ?? '',
+        orig?.city ?? '',
+        dest?.code ?? '',
+        j.destination.location,
+        dest?.district ?? '',
+        dest?.city ?? '',
+        j.origin.date || '-',
+        j.status,
+      ];
+    });
   });
   const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
@@ -105,10 +108,12 @@ function exportJobsCSV(jobs: FlatJob[]) {
 
 export default function JobsPage() {
   const toast = useToast();
-  const { trips, updateJobStatus, addProofDocument, removeProofDocument, addActivityLog, updateJob, updateFeeQty, toggleFee, updateJobQty, startJob, verifyJob, cancelJob, cancelAndReplace, createFollowup, setCompletionRemark } = useTrips();
+  const { trips, updateJobStatus, addProofDocument, removeProofDocument, addActivityLog, updateJob, updateFeeQty, toggleFee, startJob, verifyJob, cancelJob, cancelAndReplace, createFollowup, setCompletionRemark } = useTrips();
+  const { locations } = useLocations();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
   const [serviceFilter, setServiceFilter] = useState<string | null>(null);
   const [vendorFilter, setVendorFilter] = useState('');
+  const [jobSearch, setJobSearch] = useState('');
   const [dateStart, setDateStart] = useState<string | null>(null);
   const [dateEnd, setDateEnd] = useState<string | null>(null);
   const [groupBy, setGroupBy] = useState<GroupBy>('none');
@@ -122,6 +127,15 @@ export default function JobsPage() {
     trips.flatMap((t) => t.jobs.map((j) => ({ ...j, trip: t }))),
     [trips]
   );
+
+  // Location lookup map for CSV export (includes user-created locations)
+  const locationMap: LocationMap = useMemo(() => {
+    const map = new Map<string, { code: string; city: string; district: string }>();
+    for (const l of locations) {
+      map.set(l.name, { code: l.code ?? '', city: l.city ?? '', district: l.district ?? '' });
+    }
+    return map;
+  }, [locations]);
 
   // Stats (computed from ALL jobs, not filtered)
   const stats = useMemo(() => ({
@@ -159,7 +173,17 @@ export default function JobsPage() {
 
     // Vendor filter
     if (vendorFilter) {
-      jobs = jobs.filter((j) => j.vendor.code === vendorFilter);
+      jobs = jobs.filter((j) => j.vendor.name.toLowerCase().includes(vendorFilter.toLowerCase()));
+    }
+
+    // Job search (trip ID, job ID, customer name)
+    if (jobSearch) {
+      const q = jobSearch.toLowerCase();
+      jobs = jobs.filter((j) =>
+        j.trip.id.toLowerCase().includes(q) ||
+        j.id.toLowerCase().includes(q) ||
+        j.trip.customer.name.toLowerCase().includes(q)
+      );
     }
 
     // Date filter — by pickup date
@@ -181,13 +205,21 @@ export default function JobsPage() {
     }
 
     return jobs;
-  }, [allJobs, statusFilter, serviceFilter, vendorFilter, dateStart, dateEnd]);
+  }, [allJobs, statusFilter, serviceFilter, vendorFilter, jobSearch, dateStart, dateEnd]);
 
   // Status pill counts (from allJobs filtered only by service/vendor/date, NOT status)
   const pillCounts = useMemo(() => {
     let jobs = allJobs;
     if (serviceFilter) jobs = jobs.filter((j) => j.service.code === serviceFilter);
-    if (vendorFilter) jobs = jobs.filter((j) => j.vendor.code === vendorFilter);
+    if (vendorFilter) jobs = jobs.filter((j) => j.vendor.name.toLowerCase().includes(vendorFilter.toLowerCase()));
+    if (jobSearch) {
+      const q = jobSearch.toLowerCase();
+      jobs = jobs.filter((j) =>
+        j.trip.id.toLowerCase().includes(q) ||
+        j.id.toLowerCase().includes(q) ||
+        j.trip.customer.name.toLowerCase().includes(q)
+      );
+    }
     if (dateStart || dateEnd) {
       jobs = jobs.filter((j) => {
         const d = j.origin.date ? j.origin.date.slice(0, 10) : null;
@@ -203,7 +235,7 @@ export default function JobsPage() {
       verified: jobs.filter((j) => j.status === 'Verified').length,
       all: jobs.length,
     };
-  }, [allJobs, serviceFilter, vendorFilter, dateStart, dateEnd]);
+  }, [allJobs, serviceFilter, vendorFilter, jobSearch, dateStart, dateEnd]);
 
   // Unique vendors in filtered results
   const activeVendorCount = useMemo(() => {
@@ -261,9 +293,8 @@ export default function JobsPage() {
       origin: { ...job.origin }, destination: { ...job.destination },
       service: { ...job.service }, status: 'Pending', duration: null, execution: null,
       activityLog: [{ id: `log-${Date.now()}`, timestamp: now, action: `Job created — replaces ${job.id} (${job.vendor.name}, cancelled)`, user: 'Ops Admin' }],
-      proofDocuments: [], fees: job.fees.map((f) => ({ ...f, id: `F-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, active: true })),
+      proofDocuments: [], fees: [],
       replacesJobId: job.id,
-      jobBags: job.jobBags, jobWeight: job.jobWeight, jobVolume: job.jobVolume,
     };
     cancelAndReplace(tripId, jobId, reason, newJob);
     toast.success(`Cancelled & replaced with ${v.name}`);
@@ -282,9 +313,8 @@ export default function JobsPage() {
       origin: { ...job.origin }, destination: { ...job.destination },
       service: { ...job.service }, status: 'Pending', duration: null, execution: null,
       activityLog: [{ id: `log-${Date.now()}`, timestamp: now, action: `Job created — follows ${job.id} (${job.completionRemark || 'partial'})`, user: 'Ops Admin' }],
-      proofDocuments: [], fees: job.fees.map((f) => ({ ...f, id: `F-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, active: true })),
+      proofDocuments: [], fees: [],
       replacesJobId: job.id,
-      jobBags: job.jobBags, jobWeight: job.jobWeight, jobVolume: job.jobVolume,
     };
     createFollowup(tripId, jobId, newJob);
     toast.success(`Follow-up created — ${newId}`);
@@ -390,7 +420,7 @@ export default function JobsPage() {
 
   // -- Styles --
 
-  const th: React.CSSProperties = { textAlign: 'left', padding: '6px 12px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' };
+  const th: React.CSSProperties = { textAlign: 'left', padding: '6px 12px', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' };
 
   // -- Render helpers --
 
@@ -404,18 +434,6 @@ export default function JobsPage() {
     );
   }
 
-  function renderCost(job: Job) {
-    const costMap = getJobCostMap(job);
-    if (costMap.size === 0) return <span style={{ color: '#9ca3af' }}>&mdash;</span>;
-    return (
-      <>
-        {Array.from(costMap.entries()).map(([curr, total]) => (
-          <div key={curr}>{formatCurrency(curr as Currency, total)}</div>
-        ))}
-      </>
-    );
-  }
-
   function renderJobRow(job: FlatJob, hideColumn?: 'vendor' | 'service' | 'pickup') {
     const isRejected = job.status === 'Cancelled';
     return (
@@ -426,8 +444,8 @@ export default function JobsPage() {
         onMouseEnter={(e) => { if (!isRejected) e.currentTarget.style.background = '#f9fafb'; }}
         onMouseLeave={(e) => { if (!isRejected) e.currentTarget.style.background = ''; }}
       >
-        {/* Shipment / Customer */}
-        <td style={{ padding: '7px 12px', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' }}>
+        {/* Trip ID */}
+        <td style={{ padding: '8px 12px', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' }}>
           <Link
             to="/trips"
             onClick={(e) => e.stopPropagation()}
@@ -435,33 +453,11 @@ export default function JobsPage() {
           >
             {job.trip.id}
           </Link>
-          <div style={{ fontSize: 10, color: '#6b7280', marginTop: 1 }}>{job.trip.customer.name}</div>
-        </td>
-
-        {/* Vendor */}
-        {hideColumn !== 'vendor' && (
-          <td style={{ padding: '7px 12px', borderBottom: '1px solid #f3f4f6', fontSize: 11, fontWeight: 600, color: '#111827', verticalAlign: 'middle' }}>
-            {job.vendor.name}
-          </td>
-        )}
-
-        {/* Service */}
-        {hideColumn !== 'service' && (
-          <td style={{ padding: '7px 12px', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' }}>
-            <ServiceTag service={job.service} />
-          </td>
-        )}
-
-        {/* Route */}
-        <td style={{ padding: '7px 12px', borderBottom: '1px solid #f3f4f6', fontSize: 10, color: '#374151', verticalAlign: 'middle', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {job.origin.location === job.destination.location
-            ? job.origin.location
-            : `${job.origin.location} \u2192 ${job.destination.location}`}
         </td>
 
         {/* Pickup */}
         {hideColumn !== 'pickup' && (
-          <td style={{ padding: '7px 12px', borderBottom: '1px solid #f3f4f6', fontFamily: 'var(--font-mono)', fontSize: 10, verticalAlign: 'middle' }}>
+          <td style={{ padding: '8px 12px', borderBottom: '1px solid #f3f4f6', fontFamily: 'var(--font-mono)', fontSize: 10, verticalAlign: 'middle' }}>
             {job.origin.date ? (() => {
               const d = parsePickupDate(job.origin.date);
               return (
@@ -474,15 +470,45 @@ export default function JobsPage() {
           </td>
         )}
 
+        {/* Job ID */}
+        <td style={{ padding: '8px 12px', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' }}>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#374151' }}>{job.id}</span>
+        </td>
+
+        {/* Customer */}
+        <td style={{ padding: '8px 12px', borderBottom: '1px solid #f3f4f6', fontSize: 11, fontWeight: 600, color: '#111827', verticalAlign: 'middle' }}>
+          {job.trip.customer.name}
+        </td>
+
+        {/* Vendor */}
+        {hideColumn !== 'vendor' && (
+          <td style={{ padding: '8px 12px', borderBottom: '1px solid #f3f4f6', fontSize: 11, fontWeight: 600, color: '#111827', verticalAlign: 'middle' }}>
+            {job.vendor.name}
+          </td>
+        )}
+
+        {/* Service */}
+        {hideColumn !== 'service' && (
+          <td style={{ padding: '8px 12px', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' }}>
+            <ServiceTag service={job.service} />
+          </td>
+        )}
+
+        {/* Origin */}
+        <td style={{ padding: '8px 12px', borderBottom: '1px solid #f3f4f6', fontSize: 10, color: '#374151', verticalAlign: 'middle', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 0 }}>
+          {job.origin.location}
+        </td>
+
+        {/* Destination */}
+        <td style={{ padding: '8px 12px', borderBottom: '1px solid #f3f4f6', fontSize: 10, color: '#374151', verticalAlign: 'middle', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 0 }}>
+          {job.destination.location}
+        </td>
+
         {/* Status */}
-        <td style={{ padding: '7px 12px', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' }}>
+        <td style={{ padding: '8px 12px', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' }}>
           {renderStatusChip(job.status)}
         </td>
 
-        {/* Cost */}
-        <td style={{ padding: '7px 12px', borderBottom: '1px solid #f3f4f6', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 600, color: '#111827', verticalAlign: 'middle' }}>
-          {renderCost(job)}
-        </td>
       </tr>
     );
   }
@@ -510,22 +536,6 @@ export default function JobsPage() {
     );
   }
 
-  function renderGroupCost(jobs: FlatJob[]) {
-    const totals = new Map<string, number>();
-    jobs.forEach((j) => {
-      const costMap = getJobCostMap(j);
-      costMap.forEach((val, curr) => totals.set(curr, (totals.get(curr) ?? 0) + val));
-    });
-    if (totals.size === 0) return null;
-    return (
-      <span style={{ fontSize: 10, color: '#9ca3af', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
-        {Array.from(totals.entries()).map(([curr, total], i) => (
-          <span key={curr}>{i > 0 ? ' + ' : ''}{formatCurrency(curr as Currency, total)}</span>
-        ))}
-      </span>
-    );
-  }
-
   // Table columns for grouped modes
   function getHideColumn(): 'vendor' | 'service' | 'pickup' | undefined {
     switch (groupBy) {
@@ -537,9 +547,6 @@ export default function JobsPage() {
   }
 
   const hideColumn = getHideColumn();
-
-  // Service code list for pills
-  const serviceCodes = ['FM', 'EC', 'CS', 'CR', 'OH'];
 
   // Right-aligned count text
   const rightCountText = useMemo(() => {
@@ -578,7 +585,7 @@ export default function JobsPage() {
           <p style={{ fontSize: 11, color: '#9ca3af', margin: '2px 0 0 0' }}>All vendor assignments across shipments</p>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button onClick={() => exportJobsCSV(filtered)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#fff', color: '#374151', border: '1px solid #e5e7eb', cursor: 'pointer', fontFamily: 'inherit' }}>
+          <button onClick={() => exportJobsCSV(filtered, locationMap)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#fff', color: '#374151', border: '1px solid #e5e7eb', cursor: 'pointer', fontFamily: 'inherit' }}>
             <Download size={12} /> Export
           </button>
         </div>
@@ -637,39 +644,7 @@ export default function JobsPage() {
 
         <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
 
-        {/* Service pills */}
-        <span style={{ fontSize: 10, color: '#9ca3af' }}>Service</span>
-        {serviceCodes.map((code) => {
-          const isOn = serviceFilter === code;
-          return (
-            <button
-              key={code}
-              onClick={() => { setServiceFilter(isOn ? null : code); setPage(1); }}
-              style={{
-                padding: '2px 6px', borderRadius: 99, fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                border: isOn ? '1px solid #152CFF' : '1px solid #e5e7eb',
-                background: isOn ? 'rgba(21,44,255,0.06)' : '#fff',
-                color: isOn ? '#152CFF' : '#6b7280',
-              }}
-            >
-              {code}
-            </button>
-          );
-        })}
-
-        <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
-
-        {/* Vendor dropdown */}
-        <span style={{ fontSize: 10, color: '#9ca3af' }}>Vendor</span>
-        <select
-          value={vendorFilter}
-          onChange={(e) => { setVendorFilter(e.target.value); setPage(1); }}
-          style={{ fontSize: 11, borderRadius: 4, padding: '4px 8px', border: '1px solid #e5e7eb', fontFamily: 'inherit' }}
-        >
-          <option value="">All ({vendors.length})</option>
-          {vendors.map((v) => <option key={v.code} value={v.code}>{v.name}</option>)}
-        </select>
-
+        {/* Date range */}
         <DateRangePopover
           startDate={dateStart}
           endDate={dateEnd}
@@ -678,8 +653,54 @@ export default function JobsPage() {
 
         <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
 
+        {/* Service dropdown */}
+        <select
+          value={serviceFilter ?? ''}
+          onChange={(e) => { setServiceFilter(e.target.value || null); setPage(1); }}
+          style={{
+            fontSize: 11, borderRadius: 4, padding: '4px 8px', fontFamily: 'inherit',
+            border: serviceFilter ? '1px solid #152CFF' : '1px solid #e5e7eb',
+            color: serviceFilter ? '#152CFF' : '#6b7280',
+            fontWeight: serviceFilter ? 600 : undefined,
+            background: serviceFilter ? 'rgba(21,44,255,0.04)' : '#fff',
+          }}
+        >
+          <option value="">Service</option>
+          <option value="FM">FM</option>
+          <option value="EC">EC</option>
+          <option value="CS">CS</option>
+          <option value="CR">CR</option>
+          <option value="OH">OH</option>
+        </select>
+
+        <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
+
+        {/* Text search inputs */}
+        <div style={{ position: 'relative' }}>
+          <Search size={11} style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', color: '#d1d5db', pointerEvents: 'none' }} />
+          <input
+            type="text"
+            placeholder="Trip, job, customer…"
+            value={jobSearch}
+            onChange={(e) => { setJobSearch(e.target.value); setPage(1); }}
+            style={{ fontFamily: 'var(--font-mono)', fontSize: 11, borderRadius: 4, padding: '4px 8px 4px 22px', border: '1px solid #e5e7eb', outline: 'none', width: 155 }}
+          />
+        </div>
+        <div style={{ position: 'relative' }}>
+          <Search size={11} style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', color: '#d1d5db', pointerEvents: 'none' }} />
+          <input
+            type="text"
+            placeholder="Vendor"
+            value={vendorFilter}
+            onChange={(e) => { setVendorFilter(e.target.value); setPage(1); }}
+            style={{ fontSize: 11, borderRadius: 4, padding: '4px 8px 4px 22px', border: '1px solid #e5e7eb', outline: 'none', width: 110 }}
+          />
+        </div>
+
+        <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
+
         {/* Group by dropdown */}
-        <span style={{ fontSize: 10, color: '#9ca3af' }}>Group by</span>
+        <span style={{ fontSize: 11, color: '#9ca3af' }}>Group</span>
         <select
           value={groupBy}
           onChange={(e) => { setGroupBy(e.target.value as GroupBy); setExpandedGroups(new Set()); setPage(1); }}
@@ -710,19 +731,21 @@ export default function JobsPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, overflow: 'hidden' }}>
             <thead>
               <tr>
-                <th style={{ ...th, width: '11%' }}>Trip &middot; Customer</th>
+                <th style={{ ...th, width: '7%' }}>Trip ID</th>
+                <th style={{ ...th, width: '7%' }}>Pickup</th>
+                <th style={{ ...th, width: '7%' }}>Job ID</th>
+                <th style={{ ...th, width: '10%' }}>Customer</th>
                 <th style={{ ...th, width: '10%' }}>Vendor</th>
                 <th style={{ ...th, width: '6%' }}>Service</th>
-                <th style={{ ...th, width: '38%' }}>Route</th>
-                <th style={{ ...th, width: '8%' }}>Pickup</th>
+                <th style={{ ...th, width: '20%' }}>Origin</th>
+                <th style={{ ...th, width: '20%' }}>Destination</th>
                 <th style={{ ...th, width: '10%' }}>Status</th>
-                <th style={{ ...th, width: '9%', textAlign: 'right' }}>Cost</th>
               </tr>
             </thead>
             <tbody>
               {paginatedJobs.length > 0 ? paginatedJobs.map((job) => renderJobRow(job)) : (
                 <tr>
-                  <td colSpan={7} style={{ padding: '60px 12px', textAlign: 'center' }}>
+                  <td colSpan={9} style={{ padding: '60px 12px', textAlign: 'center' }}>
                     <div style={{ width: 40, height: 40, borderRadius: 6, background: 'rgba(21,44,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
                       <Ship size={18} style={{ color: '#152CFF' }} />
                     </div>
@@ -755,20 +778,21 @@ export default function JobsPage() {
                       {groupBy !== 'service' ? group.label : ''}
                     </span>
                     {renderGroupStatusBadges(group.jobs)}
-                    {renderGroupCost(group.jobs)}
                   </div>
                   {/* Group body */}
                   {isExpanded && (
                     <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
                       <thead>
                         <tr>
-                          <th style={{ ...th, width: '11%' }}>Trip &middot; Customer</th>
+                          <th style={{ ...th, width: '7%' }}>Trip ID</th>
+                          {hideColumn !== 'pickup' && <th style={{ ...th, width: '7%' }}>Pickup</th>}
+                          <th style={{ ...th, width: '7%' }}>Job ID</th>
+                          <th style={{ ...th, width: '10%' }}>Customer</th>
                           {hideColumn !== 'vendor' && <th style={{ ...th, width: '10%' }}>Vendor</th>}
                           {hideColumn !== 'service' && <th style={{ ...th, width: '6%' }}>Service</th>}
-                          <th style={{ ...th, width: '38%' }}>Route</th>
-                          {hideColumn !== 'pickup' && <th style={{ ...th, width: '8%' }}>Pickup</th>}
+                          <th style={{ ...th, width: '20%' }}>Origin</th>
+                          <th style={{ ...th, width: '20%' }}>Destination</th>
                           <th style={{ ...th, width: '10%' }}>Status</th>
-                          <th style={{ ...th, width: '9%', textAlign: 'right' }}>Cost</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -828,7 +852,6 @@ export default function JobsPage() {
             onOpenJob={(tId, jId) => setPanelIds({ tripId: tId, jobId: jId })}
             onUpdateFeeQty={(feeId, qty) => updateFeeQty(panelTrip.id, panelJob.id, feeId, qty)}
             onToggleFee={(feeId) => toggleFee(panelTrip.id, panelJob.id, feeId)}
-            onUpdateJobQty={(qtys) => updateJobQty(panelTrip.id, panelJob.id, qtys)}
           />
         )}
       </SlideOutPanel>

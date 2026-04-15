@@ -1,0 +1,55 @@
+#,App,Module,Feature,Description,Work Type
+1,Teleport OS Admin,,,,
+1.1,,Shipment Management,Create shipment,Create shipment with customer MAWB pickup date and cargo details,New Feature
+1.2,,,Cancel shipment,Cancel shipment with mandatory reason. Immutable audit trail,New Feature
+1.3,,,Associate bags to shipment,Link bag packages (bag number weight origin destination) to a shipment,New Feature
+1.4,,,Search & filter shipments,Filter by status customer date range. Search by MAWB or shipment number,New Feature
+1.5,,,Shipment activity log,Auto-logged history of all changes with timestamp and actor,New Feature
+1.6,,Job Management,Assign jobs to vendors,Create vendor job assignments (1 job = 1 vendor + 1 service + route),New Feature
+1.7,,,Update job status,Progress jobs through lifecycle on behalf of vendors (Pending → In Progress → Completed),New Feature
+1.8,,,Upload proof of service,Upload proof documents (photo/PDF) on behalf of vendors. Auto-triggers Completed status,New Feature
+1.9,,,Verify proof of service,Admin verification gate (Completed → Verified). Locks fees quantities and proof documents,New Feature
+1.10,,,Cancel & replace job,Cancel job with mandatory reason + optionally create replacement job for different vendor. Bidirectional linkage,New Feature
+1.11,,,Partial completion,Mark job as Completed with remark and adjusted fees. Create follow-up job for retry,New Feature
+1.12,,,Job activity log,Auto-logged history of all status changes uploads cancellations and replacements,New Feature
+1.13,,,Jobs overview (supply view),Flat table of all jobs across shipments. Filter by status service vendor. Group by vendor/service/date,New Feature
+1.14,,Master Data,Facilities,Locations/warehouses/terminals with address and district mapping,New Feature
+1.15,,,Regions,China administrative regions (province → city → district) for rate lookup,New Feature
+1.16,,,Service types,L1/L2 service hierarchy (FM EC CS CR OH → sub-services with cost IDs),New Feature
+1.17,,,Customers,Customer list with code name active/inactive,New Feature
+1.18,,,Vendors,Vendor list with code name service capabilities active/inactive,New Feature
+1.19,,,Vehicle types,Truck type master data (1.5T 3T 5T 8T 10T 12T 40HQ 45HQ) with capacity specs,New Feature
+1.20,,,Vehicles (all vendors),Admin can CRUD vehicle data across all vendors,New Feature
+1.21,,,Drivers (all vendors),Admin can CRUD driver data across all vendors,New Feature
+2,Teleport OS Vendor,,,,
+2.1,,Vendor Login,Vendor authentication,Vendor logs in via phone number. Session-based. Sees only own data,Existing
+2.2,,Jobs Management,View assigned jobs,Flat table of jobs assigned to vendor. Synced with Admin in real-time,New Feature
+2.3,,,View job details,Full job detail: route cargo fees proofs activity log,New Feature
+2.4,,,Start job,Vendor progresses job from Pending → In Progress,New Feature
+2.5,,,Upload proof of service,Vendor uploads proof. Auto-triggers Completed status,New Feature
+2.6,,,Assign driver & vehicle,Assign pickup driver + vehicle to FM Trucking jobs from fleet master data,New Feature
+2.7,,,View fee breakdown,Read-only fee reconciliation view. All fees visible for vendor cross-check,New Feature
+2.8,,,CSV export,Export filtered job list with fee details for accounting reconciliation,New Feature
+2.9,,,View cancellations,Cancelled jobs visible with reason. Replacement job links shown,New Feature
+2.10,,Master Data (Vendor),Drivers,Vendor manages own drivers (name phone WeChat ID default vehicle active/inactive),Existing
+2.11,,,Vehicles,Vendor manages own vehicles (plate truck type capacity active/inactive),Existing
+2.12,,Localization,Multi-language support,Chinese and English language switching,Existing
+3,WeChat Mini Program,,,,
+3.1,,Data Integration,Remap WeChat backend,Remap existing WeChat Mini Program backend to support Teleport OS Admin + Vendor data model,New Feature
+3.2,,Driver,View assigned trips,Driver views list of active and historical trips with pickup date client origin destination,Existing
+3.3,,,Receive trip notifications,Driver receives push notification when trip is assigned by planner,Existing
+3.4,,,Start pickup status,Driver updates status to Started Pickup with confirmation dialogue,Existing
+3.5,,,Scan HU on pickup,Barcode scanning of handling units at pickup. Green/red feedback beep sound. Manual key-in fallback,Existing
+3.6,,,Review manifest (pickup),Review scanned vs expected HU count. Copy missing HU numbers to clipboard,Existing
+3.7,,,Upload proof of pickup,Camera capture or gallery upload. Max 5 images JPEG/PNG compressed under 1MB,Existing
+3.8,,,Start drop-off status,Driver updates status to Started Drop Off,Existing
+3.9,,,Upload proof of drop-off,Camera/gallery proof upload. Completes trip on submission,Existing
+3.10,,Hub Ops,Select hub / switch hub,Hub Ops selects active hub. Multi-hub users can switch between assigned hubs,Existing
+3.11,,,Scan inbound (Arrive at Facility),Scan HU barcodes to update ARR status. Select trip then scan. Manual key-in fallback,Existing
+3.12,,,Scan processing (Processed at Location),Scan HU barcodes to update PAL status at warehouse,Existing
+3.13,,,Scan outbound (Depart from Facility),Scan HU barcodes to update DEP status. Review manifest before submission,Existing
+3.14,,,HU exception handling,Scan HU + select exception reason + upload proof photo. Bulk exception submission,Existing
+3.15,,Role Management,Switch role (Driver / Hub Ops),Users with multiple roles can switch between Driver and Hub Ops interfaces,Existing
+4,Reports,,,,
+4.1,,Vendor Performance,Vendor performance report,Job completion rates average time-to-complete proof upload timeliness per vendor,New Feature
+4.2,,Adoption,Platform adoption report,Vendor login frequency % status updates via app vs manual active users over time,New Feature

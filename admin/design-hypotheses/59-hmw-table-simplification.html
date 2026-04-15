@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-59: Table Simplification — Trips & Jobs</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Instrument Sans', sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  .page { max-width: 1400px; margin: 0 auto; padding: 32px 16px; }
+  .hmw-header { margin-bottom: 32px; }
+  .hmw-header h1 { font-size: 18px; font-weight: 800; color: #111827; letter-spacing: -0.3px; }
+  .hmw-header p { font-size: 12px; color: #6b7280; margin-top: 4px; }
+  .hmw-question { font-size: 13px; font-weight: 600; color: #152CFF; background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.15); border-radius: 6px; padding: 12px 16px; margin-top: 12px; }
+
+  .section { margin-bottom: 48px; }
+  .section-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #9ca3af; margin-bottom: 16px; padding-bottom: 6px; border-bottom: 1px solid #e5e7eb; }
+  .option-name { font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 2px; }
+  .option-thesis { font-size: 11px; color: #6b7280; margin-bottom: 16px; }
+
+  /* Screen wrapper */
+  .screen { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-bottom: 32px; }
+
+  /* Nav */
+  .nav { height: 40px; background: #111827; display: flex; align-items: center; padding: 0 16px; gap: 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .nav-logo { display: flex; align-items: center; gap: 8px; margin-right: 20px; }
+  .nav-logo-icon { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; }
+  .nav-brand { font-size: 13px; font-weight: 700; color: #fff; }
+  .nav-sub { font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.35); margin-left: 2px; }
+  .nav-link { font-size: 12px; color: rgba(255,255,255,0.6); padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+  .nav-link.active { background: rgba(255,255,255,0.08); color: #fff; font-weight: 600; }
+
+  /* Stats bar */
+  .stats-bar { background: #f9fafb; border-bottom: 1px solid #e5e7eb; padding: 8px 16px; display: flex; align-items: center; gap: 0; font-size: 12px; }
+  .stats-sep { width: 1px; height: 14px; background: #e5e7eb; margin: 0 12px; }
+
+  /* Page header */
+  .page-header { display: flex; align-items: flex-end; justify-content: space-between; padding: 16px 16px 0; }
+  .page-title { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; color: #111827; }
+  .page-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+  .btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #374151; cursor: pointer; font-family: inherit; }
+  .btn-primary { background: #152CFF; color: #fff; border-color: transparent; }
+
+  /* Filter bar */
+  .filter-bar { display: flex; align-items: center; gap: 8px; padding: 6px 16px; border-bottom: 1px solid #e5e7eb; flex-wrap: wrap; }
+  .filter-sep { width: 1px; height: 16px; background: #e5e7eb; }
+  .filter-label { font-size: 11px; color: #9ca3af; }
+  .pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 600; cursor: pointer; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; }
+  .pill.active-blue { border-color: #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; }
+  .pill.active-amber { border-color: #a16207; background: #fefce8; color: #a16207; }
+  .pill.active-green { border-color: #059669; background: #f0fdf4; color: #059669; }
+  .pill-count { font-size: 9px; padding: 0 5px; border-radius: 99px; font-weight: 700; min-width: 16px; text-align: center; background: #f3f4f6; color: #9ca3af; border: 1px solid #e5e7eb; }
+  .pill.active-blue .pill-count { background: rgba(21,44,255,0.1); color: #152CFF; border-color: rgba(21,44,255,0.2); }
+  .svc-pill { padding: 2px 6px; border-radius: 99px; font-size: 10px; font-weight: 600; cursor: pointer; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; }
+
+  /* Table */
+  .table-wrap { padding: 0 16px 24px; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+  th { text-align: left; padding: 6px 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+  td { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr.hover td { background: #f9fafb; }
+  tr.expanded td { background: #f9fafb; border-bottom: none; }
+
+  /* Status chips */
+  .chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+  .chip-dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+  .chip-pending { background: #f9fafb; color: #9ca3af; border: 1px solid #e5e7eb; }
+  .chip-pending .chip-dot { background: #9ca3af; }
+  .chip-inprogress { background: rgba(21,44,255,0.04); color: #152CFF; border: 1px solid rgba(21,44,255,0.15); }
+  .chip-inprogress .chip-dot { background: #152CFF; }
+  .chip-completed { background: #fefce8; color: #a16207; border: 1px solid #fde68a; }
+  .chip-completed .chip-dot { background: #a16207; }
+  .chip-verified { background: #f0fdf4; color: #059669; border: 1px solid #a7f3d0; }
+  .chip-verified .chip-dot { background: #059669; }
+  .chip-cancelled { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+  .chip-cancelled .chip-dot { background: #dc2626; }
+
+  /* Service tags */
+  .svc-fm { background: rgba(21,44,255,0.06); color: #152CFF; border: 1px solid rgba(21,44,255,0.15); }
+  .svc-ec { background: #f0fdf4; color: #059669; border: 1px solid #a7f3d0; }
+  .svc-cs { background: #fefce8; color: #a16207; border: 1px solid #fde68a; }
+  .svc-oh { background: #f9fafb; color: #6b7280; border: 1px solid #e5e7eb; }
+  .svc-tag { display: inline-block; padding: 1px 6px; border-radius: 99px; font-size: 10px; font-weight: 600; }
+
+  /* Route arrow */
+  .route-cell { font-size: 11px; color: #374151; }
+  .route-arrow { color: #9ca3af; margin: 0 5px; font-size: 10px; }
+
+  /* Sub-table */
+  .sub-wrap { padding-left: 40px; padding-right: 12px; padding-top: 4px; padding-bottom: 10px; }
+  .sub-table { width: 100%; border-collapse: collapse; }
+  .sub-th { text-align: left; padding: 4px 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; }
+  .sub-td { padding: 6px 10px; border-bottom: 1px solid transparent; font-size: 11px; }
+  .sub-tr:hover .sub-td { background: #f3f4f6; }
+
+  /* Pros/cons */
+  .analysis { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px; margin-bottom: 24px; }
+  .analysis-box { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px 14px; }
+  .analysis-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .analysis-title.pros { color: #059669; }
+  .analysis-title.cons { color: #dc2626; }
+  .analysis-item { font-size: 11px; color: #374151; margin-bottom: 4px; display: flex; gap: 6px; }
+  .analysis-item::before { content: '·'; color: #9ca3af; flex-shrink: 0; }
+
+  /* Verdict */
+  .verdict { background: #fff; border: 2px solid #152CFF; border-radius: 8px; padding: 20px; margin-top: 32px; }
+  .verdict-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #152CFF; margin-bottom: 8px; }
+  .verdict-title { font-size: 15px; font-weight: 800; color: #111827; margin-bottom: 6px; }
+  .verdict-body { font-size: 12px; color: #374151; line-height: 1.6; }
+  .verdict-changes { margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb; }
+  .verdict-change { font-size: 11px; color: #374151; margin-bottom: 6px; display: flex; gap: 8px; align-items: flex-start; }
+  .verdict-change-tag { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px; background: rgba(21,44,255,0.06); color: #152CFF; border: 1px solid rgba(21,44,255,0.12); white-space: nowrap; flex-shrink: 0; }
+  .verdict-change-tag.remove { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+  .verdict-change-tag.keep { background: #f0fdf4; color: #059669; border-color: #a7f3d0; }
+
+  /* Current badge */
+  .current-badge { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 3px; background: #fefce8; color: #a16207; border: 1px solid #fde68a; margin-left: 8px; vertical-align: middle; }
+  .divider-label { font-size: 10px; font-weight: 600; color: #9ca3af; text-align: center; margin: 16px 0 8px; letter-spacing: 0.04em; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="hmw-header">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9ca3af;margin-bottom:6px;">HMW-59 · Table Simplification</div>
+    <h1>How might we simplify the Trips and Jobs tables so ops planners can scan at a glance without feeling overwhelmed?</h1>
+    <p>Both tables have accumulated columns beyond their designed intent. Trips grew to 9 data columns (designed: 7). Jobs grew to 9 (designed: 6). The question: how far do we consolidate?</p>
+    <div class="hmw-question">HMW: Simplify Trips + Jobs tables to their essential columns — reduce visual noise, restore scanning speed, eliminate inconsistency between pages.</div>
+  </div>
+
+  <!-- ===== OPTION A ===== -->
+  <div class="section">
+    <div class="section-label">Option A — Column Consolidation (implement design intent)</div>
+    <div class="option-name">Consolidate to designed column set</div>
+    <div class="option-thesis">Merge Origin + Destination → Route. In Jobs: combine Trip ID + Job ID + Customer into one cell. Secondary info (MAWB) becomes a sub-line. Both tables drop from 9 → 7 columns. Aligns with HMW-52 and DESIGN.md spec already decided.</div>
+
+    <div class="divider-label">TRIPS TABLE — Option A (7 data columns)</div>
+    <div class="screen">
+      <div class="nav">
+        <div class="nav-logo"><div class="nav-logo-icon"></div><span class="nav-brand">Teleport OS</span><span class="nav-sub">Admin</span></div>
+        <span class="nav-link">Trips</span><span class="nav-link active">Trips</span><span class="nav-link">Jobs</span><span class="nav-link">Master Data</span>
+      </div>
+      <div class="stats-bar">
+        <span style="color:#111827;font-weight:600;">8 trips</span>
+        <span class="stats-sep"></span>
+        <span style="color:#152CFF;font-weight:600;">5 active</span>
+        <span class="stats-sep"></span>
+        <span style="color:#a16207;font-weight:600;">2 completed</span>
+        <span class="stats-sep"></span>
+        <span style="color:#059669;font-weight:600;">1 verified</span>
+      </div>
+      <div class="page-header">
+        <div><div class="page-title">Trips</div><div class="page-sub">Monitor and manage trips across vendors</div></div>
+        <div style="display:flex;gap:6px;"><button class="btn">↓ Export</button><button class="btn btn-primary">+ New Trip</button></div>
+      </div>
+      <div class="filter-bar">
+        <button class="pill active-blue">Active <span class="pill-count">5</span></button>
+        <button class="pill">Completed <span class="pill-count">2</span></button>
+        <button class="pill">Verified <span class="pill-count">1</span></button>
+        <button class="pill">All <span class="pill-count">8</span></button>
+        <span class="filter-sep"></span>
+        <button class="btn" style="padding:3px 10px;font-size:10px;">Date Range</button>
+        <span class="filter-sep"></span>
+        <span class="filter-label">Trip / MAWB</span>
+        <input type="text" placeholder="T00001 or MAWB" style="padding:4px 8px;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;width:140px;font-family:inherit;">
+        <span class="filter-label">Customer</span>
+        <select style="padding:4px 8px;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;font-family:inherit;"><option>All</option></select>
+        <span class="filter-label">Vendor</span>
+        <select style="padding:4px 8px;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;font-family:inherit;"><option>All</option></select>
+        <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:#9ca3af;">5 trips</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:24px;padding:6px 8px;"></th>
+              <th>Trip · MAWB</th>
+              <th>Customer</th>
+              <th>Pickup</th>
+              <th>Delivery</th>
+              <th>Route</th>
+              <th>Load</th>
+              <th style="width:110px;">Verification</th>
+              <th style="width:50px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Row 1 — expanded -->
+            <tr class="expanded">
+              <td style="padding:8px 4px 8px 12px;color:#152CFF;font-size:12px;font-weight:700;">▾</td>
+              <td>
+                <div class="mono" style="font-size:11px;font-weight:600;color:#152CFF;">T00001</div>
+                <div class="mono" style="font-size:10px;color:#9ca3af;margin-top:1px;">MAWB-2024-0892</div>
+              </td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">TikTok Ltd</td>
+              <td>
+                <div class="mono" style="font-size:11px;color:#374151;">15 Apr</div>
+                <div class="mono" style="font-size:10px;color:#9ca3af;">09:00</div>
+              </td>
+              <td><div class="mono" style="font-size:11px;color:#374151;">18 Apr</div></td>
+              <td class="route-cell">Guangzhou<span class="route-arrow">→</span>KLIA2</td>
+              <td style="font-size:11px;color:#9ca3af;">240 bags · 3,200 kg</td>
+              <td>
+                <div>
+                  <div class="mono" style="font-size:10px;font-weight:600;color:#a16207;margin-bottom:3px;">2/3 <span style="font-weight:400;font-size:9px;">verified</span></div>
+                  <div style="height:4px;background:#e5e7eb;border-radius:2px;overflow:hidden;width:60px;"><div style="height:100%;width:66%;background:#a16207;border-radius:2px;"></div></div>
+                </div>
+              </td>
+              <td style="text-align:center;padding:8px 4px;">
+                <span style="color:#d1d5db;cursor:pointer;font-size:11px;">✏</span>
+                <span style="color:#d1d5db;cursor:pointer;font-size:11px;margin-left:6px;">⧉</span>
+              </td>
+            </tr>
+            <!-- Expanded sub-row -->
+            <tr style="background:#f9fafb;">
+              <td colspan="9" style="padding:0;border-bottom:1px solid #e5e7eb;">
+                <div class="sub-wrap">
+                  <table class="sub-table">
+                    <thead>
+                      <tr>
+                        <th class="sub-th" style="width:50px;">Job</th>
+                        <th class="sub-th">Vendor</th>
+                        <th class="sub-th">Service</th>
+                        <th class="sub-th">Origin</th>
+                        <th class="sub-th">Destination</th>
+                        <th class="sub-th" style="width:120px;">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="sub-tr" style="cursor:pointer;">
+                        <td class="sub-td" style="color:#152CFF;font-weight:600;">J01</td>
+                        <td class="sub-td" style="font-weight:600;">HaleSun Logistics</td>
+                        <td class="sub-td"><span class="svc-tag svc-fm">FM</span></td>
+                        <td class="sub-td" style="font-size:10px;color:#374151;">Guangzhou Warehouse</td>
+                        <td class="sub-td" style="font-size:10px;color:#374151;">KLIA2 Cargo Terminal</td>
+                        <td class="sub-td"><span class="chip chip-verified"><span class="chip-dot"></span>Verified</span></td>
+                      </tr>
+                      <tr class="sub-tr" style="cursor:pointer;">
+                        <td class="sub-td" style="color:#152CFF;font-weight:600;">J02</td>
+                        <td class="sub-td" style="font-weight:600;">SevenSeas Customs</td>
+                        <td class="sub-td"><span class="svc-tag svc-ec">EC</span></td>
+                        <td class="sub-td" style="font-size:10px;color:#374151;">KLIA2 Cargo Terminal</td>
+                        <td class="sub-td" style="font-size:10px;color:#374151;">KLIA2 Cargo Terminal</td>
+                        <td class="sub-td"><span class="chip chip-completed"><span class="chip-dot"></span>Completed</span></td>
+                      </tr>
+                      <tr class="sub-tr" style="cursor:pointer;">
+                        <td class="sub-td" style="color:#152CFF;font-weight:600;">J03</td>
+                        <td class="sub-td" style="font-weight:600;">Gonda Express</td>
+                        <td class="sub-td"><span class="svc-tag svc-oh">OH</span></td>
+                        <td class="sub-td" style="font-size:10px;color:#374151;">KLIA2 Warehouse</td>
+                        <td class="sub-td" style="font-size:10px;color:#374151;">KLIA2 Warehouse</td>
+                        <td class="sub-td"><span class="chip chip-verified"><span class="chip-dot"></span>Verified</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </td>
+            </tr>
+            <!-- Row 2 -->
+            <tr class="hover">
+              <td style="padding:8px 4px 8px 12px;color:#d1d5db;font-size:12px;">▸</td>
+              <td>
+                <div class="mono" style="font-size:11px;font-weight:600;color:#152CFF;">T00002</div>
+                <div class="mono" style="font-size:10px;color:#9ca3af;margin-top:1px;">MAWB-2024-1145</div>
+              </td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">Shopee Malaysia</td>
+              <td>
+                <div class="mono" style="font-size:11px;color:#374151;">16 Apr</div>
+                <div class="mono" style="font-size:10px;color:#9ca3af;">14:30</div>
+              </td>
+              <td><div class="mono" style="font-size:11px;color:#374151;">19 Apr</div></td>
+              <td class="route-cell">Shenzhen<span class="route-arrow">→</span>KLIA Cargo</td>
+              <td style="font-size:11px;color:#9ca3af;">180 bags · 2,100 kg</td>
+              <td>
+                <div class="mono" style="font-size:10px;font-weight:600;color:#9ca3af;">0/2 <span style="font-weight:400;font-size:9px;">verified</span></div>
+                <div style="height:4px;background:#e5e7eb;border-radius:2px;width:60px;margin-top:3px;"></div>
+              </td>
+              <td style="text-align:center;padding:8px 4px;">
+                <span style="color:#d1d5db;cursor:pointer;font-size:11px;">✏</span>
+                <span style="color:#d1d5db;cursor:pointer;font-size:11px;margin-left:6px;">⧉</span>
+              </td>
+            </tr>
+            <!-- Row 3 -->
+            <tr>
+              <td style="padding:8px 4px 8px 12px;color:#d1d5db;font-size:12px;">▸</td>
+              <td>
+                <div class="mono" style="font-size:11px;font-weight:600;color:#152CFF;">T00003</div>
+                <div class="mono" style="font-size:10px;color:#9ca3af;margin-top:1px;">MAWB-2024-1388</div>
+              </td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">Shein Logistics</td>
+              <td>
+                <div class="mono" style="font-size:11px;color:#374151;">17 Apr</div>
+                <div class="mono" style="font-size:10px;color:#9ca3af;">08:00</div>
+              </td>
+              <td><span style="font-size:11px;color:#d1d5db;">—</span></td>
+              <td class="route-cell">Guangzhou<span class="route-arrow">→</span>Don Mueang</td>
+              <td style="font-size:11px;color:#9ca3af;">320 bags · 4,800 kg</td>
+              <td>
+                <div class="mono" style="font-size:10px;font-weight:600;color:#9ca3af;">0/4 <span style="font-weight:400;font-size:9px;">verified</span></div>
+                <div style="height:4px;background:#e5e7eb;border-radius:2px;width:60px;margin-top:3px;"></div>
+              </td>
+              <td style="text-align:center;padding:8px 4px;">
+                <span style="color:#d1d5db;cursor:pointer;font-size:11px;">✏</span>
+                <span style="color:#d1d5db;cursor:pointer;font-size:11px;margin-left:6px;">⧉</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="divider-label">JOBS TABLE — Option A (7 columns: Trip·Job | Customer | Vendor | Service | Route | Pickup | Status)</div>
+    <div class="screen">
+      <div class="nav">
+        <div class="nav-logo"><div class="nav-logo-icon"></div><span class="nav-brand">Teleport OS</span><span class="nav-sub">Admin</span></div>
+        <span class="nav-link">Trips</span><span class="nav-link">Trips</span><span class="nav-link active">Jobs</span><span class="nav-link">Master Data</span>
+      </div>
+      <div class="stats-bar">
+        <span style="color:#111827;font-weight:600;">24 jobs</span>
+        <span class="stats-sep"></span>
+        <span style="color:#9ca3af;font-weight:600;">8 pending</span>
+        <span class="stats-sep"></span>
+        <span style="color:#152CFF;font-weight:600;">6 in progress</span>
+        <span class="stats-sep"></span>
+        <span style="color:#a16207;font-weight:600;">4 completed</span>
+        <span class="stats-sep"></span>
+        <span style="color:#059669;font-weight:600;">5 verified</span>
+        <span class="stats-sep"></span>
+        <span style="color:#dc2626;font-weight:600;">1 cancelled</span>
+      </div>
+      <div class="page-header">
+        <div><div class="page-title">Jobs</div><div class="page-sub">All vendor assignments across trips</div></div>
+        <div style="display:flex;gap:6px;"><button class="btn">↓ Export</button></div>
+      </div>
+      <div class="filter-bar">
+        <button class="pill active-blue">Active <span class="pill-count">14</span></button>
+        <button class="pill">Completed <span class="pill-count">4</span></button>
+        <button class="pill">Verified <span class="pill-count">5</span></button>
+        <button class="pill">All <span class="pill-count">24</span></button>
+        <span class="filter-sep"></span>
+        <span class="filter-label">Service</span>
+        <button class="svc-pill">FM</button>
+        <button class="svc-pill">EC</button>
+        <button class="svc-pill">CS</button>
+        <button class="svc-pill">CR</button>
+        <button class="svc-pill">OH</button>
+        <span class="filter-sep"></span>
+        <span class="filter-label">Vendor</span>
+        <select style="padding:4px 8px;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;font-family:inherit;"><option>All (12)</option></select>
+        <span class="filter-sep"></span>
+        <button class="btn" style="padding:3px 10px;font-size:10px;">Date Range</button>
+        <span class="filter-sep"></span>
+        <span class="filter-label">Group by</span>
+        <select style="padding:4px 8px;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;font-family:inherit;"><option>None</option><option>Vendor</option><option>Service</option></select>
+        <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:#9ca3af;">14 active · 8 vendors</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:90px;">Trip · Job</th>
+              <th style="width:13%;">Customer</th>
+              <th style="width:13%;">Vendor</th>
+              <th style="width:7%;">Service</th>
+              <th>Route</th>
+              <th style="width:8%;">Pickup</th>
+              <th style="width:13%;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="cursor:pointer;background:#fefafa;">
+              <td>
+                <div class="mono" style="font-size:10px;color:#374151;font-weight:500;">T00001 · J01</div>
+              </td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">TikTok Ltd</td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">HaleSun Logistics</td>
+              <td><span class="svc-tag svc-fm">FM</span></td>
+              <td class="route-cell">Guangzhou Warehouse<span class="route-arrow">→</span>KLIA2 Cargo</td>
+              <td>
+                <div class="mono" style="font-size:10px;color:#374151;">15 Apr</div>
+                <div class="mono" style="font-size:10px;color:#9ca3af;">09:00</div>
+              </td>
+              <td><span class="chip chip-cancelled"><span class="chip-dot"></span>Cancelled</span></td>
+            </tr>
+            <tr style="cursor:pointer;" class="hover">
+              <td>
+                <div class="mono" style="font-size:10px;color:#374151;font-weight:500;">T00002 · J03</div>
+              </td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">Shopee Malaysia</td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">HaleSun Logistics</td>
+              <td><span class="svc-tag svc-fm">FM</span></td>
+              <td class="route-cell">Shenzhen Warehouse<span class="route-arrow">→</span>KLIA Cargo Hub</td>
+              <td>
+                <div class="mono" style="font-size:10px;color:#374151;">16 Apr</div>
+                <div class="mono" style="font-size:10px;color:#9ca3af;">14:30</div>
+              </td>
+              <td><span class="chip chip-inprogress"><span class="chip-dot"></span>In Progress</span></td>
+            </tr>
+            <tr style="cursor:pointer;">
+              <td>
+                <div class="mono" style="font-size:10px;color:#374151;font-weight:500;">T00003 · J01</div>
+              </td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">Shein Logistics</td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">ThaiKee Transport</td>
+              <td><span class="svc-tag svc-fm">FM</span></td>
+              <td class="route-cell">Guangzhou South<span class="route-arrow">→</span>Don Mueang Airport</td>
+              <td>
+                <div class="mono" style="font-size:10px;color:#374151;">17 Apr</div>
+                <div class="mono" style="font-size:10px;color:#9ca3af;">08:00</div>
+              </td>
+              <td><span class="chip chip-pending"><span class="chip-dot"></span>Pending</span></td>
+            </tr>
+            <tr style="cursor:pointer;">
+              <td>
+                <div class="mono" style="font-size:10px;color:#374151;font-weight:500;">T00003 · J02</div>
+              </td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">Shein Logistics</td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">SevenSeas Customs</td>
+              <td><span class="svc-tag svc-ec">EC</span></td>
+              <td class="route-cell" style="color:#9ca3af;">Don Mueang Airport<span class="route-arrow">→</span>—</td>
+              <td>
+                <div class="mono" style="font-size:10px;color:#374151;">17 Apr</div>
+                <div class="mono" style="font-size:10px;color:#9ca3af;">—</div>
+              </td>
+              <td><span class="chip chip-pending"><span class="chip-dot"></span>Pending</span></td>
+            </tr>
+            <tr style="cursor:pointer;">
+              <td>
+                <div class="mono" style="font-size:10px;color:#374151;font-weight:500;">T00004 · J01</div>
+              </td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">AliExpress</td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">The Lorry</td>
+              <td><span class="svc-tag svc-fm">FM</span></td>
+              <td class="route-cell">Guangzhou Port<span class="route-arrow">→</span>Port Klang</td>
+              <td>
+                <div class="mono" style="font-size:10px;color:#374151;">18 Apr</div>
+                <div class="mono" style="font-size:10px;color:#9ca3af;">10:00</div>
+              </td>
+              <td><span class="chip chip-inprogress"><span class="chip-dot"></span>In Progress</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="analysis">
+      <div class="analysis-box">
+        <div class="analysis-title pros">Pros</div>
+        <div class="analysis-item">Aligns with already-decided HMW-52 + DESIGN.md spec — no new decisions needed</div>
+        <div class="analysis-item">Route as one column is cleaner and matches how ops thinks ("Guangzhou → KLIA")</div>
+        <div class="analysis-item">Trip · Job cell in Jobs page removes redundant Trip ID chip/badge</div>
+        <div class="analysis-item">MAWB as secondary line under Trip ID reduces a full column with same info</div>
+        <div class="analysis-item">Consistent column structure between Trips and Jobs (both use Route)</div>
+      </div>
+      <div class="analysis-box">
+        <div class="analysis-title cons">Cons</div>
+        <div class="analysis-item">Route cell can get long and truncate — need ellipsis + tooltip or title attribute</div>
+        <div class="analysis-item">Trip · Job compact format ("T00001 · J03") loses the link to navigate to Trips view</div>
+        <div class="analysis-item">Still 7 columns — not ultra-minimal, but appropriate for ops use</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== OPTION B ===== -->
+  <div class="section">
+    <div class="section-label">Option B — Ultra-minimal (4-5 essential columns only)</div>
+    <div class="option-name">Radical simplification — orientation only</div>
+    <div class="option-thesis">Tables answer "what and where", not "every detail". Keep only columns needed to identify + act. Everything else in slide-out. From 9 → 4-5 columns.</div>
+
+    <div class="divider-label">TRIPS TABLE — Option B (5 columns)</div>
+    <div class="screen">
+      <div class="nav">
+        <div class="nav-logo"><div class="nav-logo-icon"></div><span class="nav-brand">Teleport OS</span><span class="nav-sub">Admin</span></div>
+        <span class="nav-link">Trips</span><span class="nav-link active">Trips</span><span class="nav-link">Jobs</span><span class="nav-link">Master Data</span>
+      </div>
+      <div class="filter-bar">
+        <button class="pill active-blue">Active <span class="pill-count">5</span></button>
+        <button class="pill">Completed <span class="pill-count">2</span></button>
+        <button class="pill">Verified <span class="pill-count">1</span></button>
+        <button class="pill">All <span class="pill-count">8</span></button>
+        <span class="filter-sep"></span>
+        <button class="btn" style="padding:3px 10px;font-size:10px;">Date Range</button>
+        <span class="filter-sep"></span>
+        <span class="filter-label">Customer</span>
+        <select style="padding:4px 8px;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;font-family:inherit;"><option>All</option></select>
+        <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:#9ca3af;">5 trips</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:24px;padding:6px 8px;"></th>
+              <th style="width:160px;">Trip</th>
+              <th>Customer</th>
+              <th>Route</th>
+              <th style="width:90px;">Pickup</th>
+              <th style="width:120px;">Verification</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="hover">
+              <td style="padding:8px 4px 8px 12px;color:#d1d5db;font-size:12px;">▸</td>
+              <td>
+                <div class="mono" style="font-size:11px;font-weight:600;color:#152CFF;">T00001</div>
+                <div class="mono" style="font-size:10px;color:#9ca3af;margin-top:1px;">MAWB-2024-0892</div>
+              </td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">TikTok Ltd</td>
+              <td class="route-cell">Guangzhou<span class="route-arrow">→</span>KLIA2</td>
+              <td>
+                <div class="mono" style="font-size:11px;color:#374151;">15 Apr</div>
+                <div class="mono" style="font-size:10px;color:#9ca3af;">09:00</div>
+              </td>
+              <td>
+                <div class="mono" style="font-size:10px;font-weight:600;color:#a16207;margin-bottom:3px;">2/3 <span style="font-weight:400;font-size:9px;">verified</span></div>
+                <div style="height:4px;background:#e5e7eb;border-radius:2px;width:60px;"><div style="height:100%;width:66%;background:#a16207;border-radius:2px;"></div></div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px 4px 8px 12px;color:#d1d5db;font-size:12px;">▸</td>
+              <td>
+                <div class="mono" style="font-size:11px;font-weight:600;color:#152CFF;">T00002</div>
+                <div class="mono" style="font-size:10px;color:#9ca3af;margin-top:1px;">MAWB-2024-1145</div>
+              </td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">Shopee Malaysia</td>
+              <td class="route-cell">Shenzhen<span class="route-arrow">→</span>KLIA Cargo</td>
+              <td>
+                <div class="mono" style="font-size:11px;color:#374151;">16 Apr</div>
+                <div class="mono" style="font-size:10px;color:#9ca3af;">14:30</div>
+              </td>
+              <td>
+                <div class="mono" style="font-size:10px;font-weight:600;color:#9ca3af;">0/2 <span style="font-weight:400;font-size:9px;">verified</span></div>
+                <div style="height:4px;background:#e5e7eb;border-radius:2px;width:60px;margin-top:3px;"></div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px 4px 8px 12px;color:#d1d5db;font-size:12px;">▸</td>
+              <td>
+                <div class="mono" style="font-size:11px;font-weight:600;color:#152CFF;">T00003</div>
+                <div class="mono" style="font-size:10px;color:#9ca3af;margin-top:1px;">MAWB-2024-1388</div>
+              </td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">Shein Logistics</td>
+              <td class="route-cell">Guangzhou<span class="route-arrow">→</span>Don Mueang</td>
+              <td>
+                <div class="mono" style="font-size:11px;color:#374151;">17 Apr</div>
+                <div class="mono" style="font-size:10px;color:#9ca3af;">08:00</div>
+              </td>
+              <td>
+                <div class="mono" style="font-size:10px;font-weight:600;color:#9ca3af;">0/4 <span style="font-weight:400;font-size:9px;">verified</span></div>
+                <div style="height:4px;background:#e5e7eb;border-radius:2px;width:60px;margin-top:3px;"></div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="divider-label">JOBS TABLE — Option B (5 columns)</div>
+    <div class="screen">
+      <div class="nav">
+        <div class="nav-logo"><div class="nav-logo-icon"></div><span class="nav-brand">Teleport OS</span><span class="nav-sub">Admin</span></div>
+        <span class="nav-link">Trips</span><span class="nav-link">Trips</span><span class="nav-link active">Jobs</span><span class="nav-link">Master Data</span>
+      </div>
+      <div class="filter-bar">
+        <button class="pill active-blue">Active <span class="pill-count">14</span></button>
+        <button class="pill">Completed <span class="pill-count">4</span></button>
+        <button class="pill">Verified <span class="pill-count">5</span></button>
+        <button class="pill">All <span class="pill-count">24</span></button>
+        <span class="filter-sep"></span>
+        <span class="filter-label">Service</span>
+        <button class="svc-pill">FM</button><button class="svc-pill">EC</button><button class="svc-pill">CS</button><button class="svc-pill">CR</button><button class="svc-pill">OH</button>
+        <span class="filter-sep"></span>
+        <span class="filter-label">Vendor</span>
+        <select style="padding:4px 8px;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;font-family:inherit;"><option>All (12)</option></select>
+        <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:#9ca3af;">14 active</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:90px;">Trip · Job</th>
+              <th style="width:14%;">Vendor</th>
+              <th style="width:7%;">Service</th>
+              <th>Route</th>
+              <th style="width:13%;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="cursor:pointer;background:#fefafa;">
+              <td>
+                <div class="mono" style="font-size:10px;color:#374151;font-weight:500;">T00001 · J01</div>
+                <div style="font-size:10px;color:#9ca3af;margin-top:1px;">TikTok Ltd</div>
+              </td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">HaleSun Logistics</td>
+              <td><span class="svc-tag svc-fm">FM</span></td>
+              <td class="route-cell">Guangzhou Warehouse<span class="route-arrow">→</span>KLIA2 Cargo</td>
+              <td><span class="chip chip-cancelled"><span class="chip-dot"></span>Cancelled</span></td>
+            </tr>
+            <tr style="cursor:pointer;" class="hover">
+              <td>
+                <div class="mono" style="font-size:10px;color:#374151;font-weight:500;">T00002 · J03</div>
+                <div style="font-size:10px;color:#9ca3af;margin-top:1px;">Shopee Malaysia</div>
+              </td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">HaleSun Logistics</td>
+              <td><span class="svc-tag svc-fm">FM</span></td>
+              <td class="route-cell">Shenzhen Warehouse<span class="route-arrow">→</span>KLIA Cargo</td>
+              <td><span class="chip chip-inprogress"><span class="chip-dot"></span>In Progress</span></td>
+            </tr>
+            <tr style="cursor:pointer;">
+              <td>
+                <div class="mono" style="font-size:10px;color:#374151;font-weight:500;">T00003 · J01</div>
+                <div style="font-size:10px;color:#9ca3af;margin-top:1px;">Shein Logistics</div>
+              </td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">ThaiKee Transport</td>
+              <td><span class="svc-tag svc-fm">FM</span></td>
+              <td class="route-cell">Guangzhou South<span class="route-arrow">→</span>Don Mueang</td>
+              <td><span class="chip chip-pending"><span class="chip-dot"></span>Pending</span></td>
+            </tr>
+            <tr style="cursor:pointer;">
+              <td>
+                <div class="mono" style="font-size:10px;color:#374151;font-weight:500;">T00003 · J02</div>
+                <div style="font-size:10px;color:#9ca3af;margin-top:1px;">Shein Logistics</div>
+              </td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">SevenSeas Customs</td>
+              <td><span class="svc-tag svc-ec">EC</span></td>
+              <td class="route-cell" style="color:#9ca3af;">Don Mueang Airport<span class="route-arrow">→</span>—</td>
+              <td><span class="chip chip-pending"><span class="chip-dot"></span>Pending</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="analysis">
+      <div class="analysis-box">
+        <div class="analysis-title pros">Pros</div>
+        <div class="analysis-item">Maximum scan speed — 5 columns is truly glanceable</div>
+        <div class="analysis-item">Forces focus: "who, what, where, status" — everything else is detail</div>
+        <div class="analysis-item">Works well on narrower screens / smaller laptop viewports</div>
+        <div class="analysis-item">Pickup date removed from Jobs — ops already knows roughly when things are, can check slide-out</div>
+      </div>
+      <div class="analysis-box">
+        <div class="analysis-title cons">Cons</div>
+        <div class="analysis-item">Customer removed from Jobs — can't quickly see "this is Shopee's job" without clicking</div>
+        <div class="analysis-item">Pickup date critical for scheduling urgency — removed here reduces ops awareness</div>
+        <div class="analysis-item">Delivery date removed from Trips — useful for SLA monitoring</div>
+        <div class="analysis-item">Too minimal for ops who do have to cross-reference multiple attributes simultaneously</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== OPTION C ===== -->
+  <div class="section">
+    <div class="section-label">Option C — Typography fix (same columns, better reading order + visual hierarchy)</div>
+    <div class="option-name">No structural change — fix the read order and text weight</div>
+    <div class="option-thesis">Keep the same number of columns but fix: (1) column order in Jobs to match spec, (2) visual hierarchy — bold primary data, mute secondary data, reduce Trip ID from a badge/chip to plain mono text. Problem is perception, not structure.</div>
+
+    <div class="divider-label">JOBS TABLE — Option C (current columns, fixed order + visual hierarchy)</div>
+    <div class="screen">
+      <div class="nav">
+        <div class="nav-logo"><div class="nav-logo-icon"></div><span class="nav-brand">Teleport OS</span><span class="nav-sub">Admin</span></div>
+        <span class="nav-link">Trips</span><span class="nav-link">Trips</span><span class="nav-link active">Jobs</span><span class="nav-link">Master Data</span>
+      </div>
+      <div class="filter-bar">
+        <button class="pill active-blue">Active <span class="pill-count">14</span></button>
+        <button class="pill">Completed <span class="pill-count">4</span></button>
+        <button class="pill">Verified <span class="pill-count">5</span></button>
+        <button class="pill">All <span class="pill-count">24</span></button>
+        <span class="filter-sep"></span>
+        <span class="filter-label">Service</span>
+        <button class="svc-pill">FM</button><button class="svc-pill">EC</button><button class="svc-pill">CS</button><button class="svc-pill">CR</button><button class="svc-pill">OH</button>
+        <span class="filter-sep"></span>
+        <span class="filter-label">Vendor</span>
+        <select style="padding:4px 8px;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;font-family:inherit;"><option>All (12)</option></select>
+        <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:#9ca3af;">14 active</span>
+      </div>
+      <div class="table-wrap">
+        <!-- Current order is: Trip ID | Pickup | Job ID | Customer | Vendor | Service | Origin | Dest | Status -->
+        <!-- Proposed fix order: Trip·Job | Customer | Vendor | Service | Origin | Dest | Pickup | Status -->
+        <table>
+          <thead>
+            <tr>
+              <th style="width:80px;">Trip</th>
+              <th style="width:60px;">Job</th>
+              <th style="width:12%;">Customer</th>
+              <th style="width:13%;">Vendor</th>
+              <th style="width:7%;">Service</th>
+              <th>Origin</th>
+              <th>Destination</th>
+              <th style="width:80px;">Pickup</th>
+              <th style="width:13%;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="cursor:pointer;background:#fefafa;">
+              <td class="mono" style="font-size:10px;color:#374151;">T00001</td>
+              <td class="mono" style="font-size:10px;color:#6b7280;">J01</td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">TikTok Ltd</td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">HaleSun Logistics</td>
+              <td><span class="svc-tag svc-fm">FM</span></td>
+              <td style="font-size:10px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;">Guangzhou Warehouse</td>
+              <td style="font-size:10px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;">KLIA2 Cargo Terminal</td>
+              <td>
+                <div class="mono" style="font-size:10px;color:#374151;">15 Apr</div>
+                <div class="mono" style="font-size:10px;color:#9ca3af;">09:00</div>
+              </td>
+              <td><span class="chip chip-cancelled"><span class="chip-dot"></span>Cancelled</span></td>
+            </tr>
+            <tr style="cursor:pointer;" class="hover">
+              <td class="mono" style="font-size:10px;color:#374151;">T00002</td>
+              <td class="mono" style="font-size:10px;color:#6b7280;">J03</td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">Shopee Malaysia</td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">HaleSun Logistics</td>
+              <td><span class="svc-tag svc-fm">FM</span></td>
+              <td style="font-size:10px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;">Shenzhen Warehouse</td>
+              <td style="font-size:10px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;">KLIA Cargo Hub</td>
+              <td>
+                <div class="mono" style="font-size:10px;color:#374151;">16 Apr</div>
+                <div class="mono" style="font-size:10px;color:#9ca3af;">14:30</div>
+              </td>
+              <td><span class="chip chip-inprogress"><span class="chip-dot"></span>In Progress</span></td>
+            </tr>
+            <tr style="cursor:pointer;">
+              <td class="mono" style="font-size:10px;color:#374151;">T00003</td>
+              <td class="mono" style="font-size:10px;color:#6b7280;">J01</td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">Shein Logistics</td>
+              <td style="font-size:11px;font-weight:600;color:#111827;">ThaiKee Transport</td>
+              <td><span class="svc-tag svc-fm">FM</span></td>
+              <td style="font-size:10px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;">Guangzhou South</td>
+              <td style="font-size:10px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;">Don Mueang Airport</td>
+              <td>
+                <div class="mono" style="font-size:10px;color:#374151;">17 Apr</div>
+                <div class="mono" style="font-size:10px;color:#9ca3af;">08:00</div>
+              </td>
+              <td><span class="chip chip-pending"><span class="chip-dot"></span>Pending</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="font-size:10px;color:#9ca3af;margin-top:8px;font-style:italic;">Note: 9 columns unchanged. Trip ID is plain mono text (not a badge chip). Job ID is smaller + muted. Column order fixed to match spec.</div>
+      </div>
+    </div>
+
+    <div class="analysis">
+      <div class="analysis-box">
+        <div class="analysis-title pros">Pros</div>
+        <div class="analysis-item">Zero structural risk — same data, no information removed</div>
+        <div class="analysis-item">Fixes the most immediately jarring thing: Trip ID styled as a badge/chip in Jobs page</div>
+        <div class="analysis-item">Correct column order matches DESIGN.md spec</div>
+      </div>
+      <div class="analysis-box">
+        <div class="analysis-title cons">Cons</div>
+        <div class="analysis-item">Still 9 columns — doesn't address the core complaint of too many columns</div>
+        <div class="analysis-item">Separate Origin + Destination columns remain inconsistent with Trips sub-table (which uses Origin/Destination separately too, but HMW-52 decided on Route)</div>
+        <div class="analysis-item">Doesn't reduce the cognitive load of scanning 9 columns</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== VERDICT ===== -->
+  <div class="verdict">
+    <div class="verdict-label">Recommendation</div>
+    <div class="verdict-title">Option A — Column Consolidation</div>
+    <div class="verdict-body">
+      The tables feel overwhelming not because they're "fancy" — the actual styling is already clean — but because they have too many columns (9 each) with redundant or splittable information. Option A reduces both to 7 by implementing what was already decided: HMW-52 called for Route as one column in Trips, and DESIGN.md specifies 6 columns for Jobs. The code diverged from those decisions. Option A is the fix.<br><br>
+      Option B is too aggressive — removing Pickup date from Jobs and Customer from Jobs loses meaningful scanning context ops planners need. Option C doesn't actually address the root cause.
+    </div>
+    <div class="verdict-changes">
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9ca3af;margin-bottom:10px;">Specific changes to implement</div>
+
+      <div class="verdict-change">
+        <span class="verdict-change-tag">TRIPS</span>
+        Merge <strong>Origin</strong> + <strong>Destination</strong> → single <strong>Route</strong> column ("Guangzhou → KLIA2"). Remove separate Origin and Destination columns.
+      </div>
+      <div class="verdict-change">
+        <span class="verdict-change-tag">TRIPS</span>
+        Move <strong>MAWB</strong> as secondary line under Trip ID cell. Remove standalone MAWB column. Trip cell becomes: Trip ID on line 1, MAWB in mono muted on line 2.
+      </div>
+      <div class="verdict-change">
+        <span class="verdict-change-tag">TRIPS</span>
+        <span class="verdict-change-tag keep">KEEP</span>
+        Keep Pickup, Delivery, Load, Verification columns as-is. These are all useful at-a-glance.
+      </div>
+      <div class="verdict-change">
+        <span class="verdict-change-tag">JOBS</span>
+        Remove separate <strong>Trip ID column</strong> and <strong>Job ID column</strong>. Combine into one <strong>Trip · Job</strong> cell: "T00001 · J03" in mono, muted. Keep as navigation anchor (clicking Trip goes to Trips view).
+      </div>
+      <div class="verdict-change">
+        <span class="verdict-change-tag">JOBS</span>
+        Merge <strong>Origin</strong> + <strong>Destination</strong> → <strong>Route</strong> cell ("Shenzhen → KLIA"). Remove separate origin and destination columns.
+      </div>
+      <div class="verdict-change">
+        <span class="verdict-change-tag">JOBS</span>
+        <span class="verdict-change-tag keep">KEEP</span>
+        Keep Customer, Vendor, Service, Pickup, Status columns. Customer belongs in Jobs — ops needs to know which client's job this is without expanding.
+      </div>
+      <div class="verdict-change">
+        <span class="verdict-change-tag remove">REMOVE</span>
+        Remove the <strong>Trip ID badge/chip</strong> styling in Jobs page. Plain mono text ("T00001") is enough — the chip adds visual weight without benefit.
+      </div>
+      <div class="verdict-change">
+        <span class="verdict-change-tag remove">REMOVE</span>
+        Remove <strong>Stats bar</strong> from both pages. The filter pills already show the same counts (active/completed/verified/all). The stats bar is pure duplication — 32px of redundant data that adds a layer before the page header.
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
