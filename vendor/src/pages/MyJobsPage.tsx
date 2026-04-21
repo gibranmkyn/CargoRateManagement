@@ -1,16 +1,23 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Download, Ship } from 'lucide-react';
-import { seedLocations } from '../../../shared/mockData';
-import type { Trip, Job, JobStatus } from '../../../shared/mockData';
+import { Download } from 'lucide-react';
+import { seedLocations, seedZones } from '../../../shared/mockData';
+import type { Trip, Job } from '../../../shared/mockData';
 import DateRangePopover from '../components/DateRangePopover';
 import { useTrips } from '../../../shared/TripContext';
 import { useVendorAuth } from '../context/VendorAuthContext';
-import { getStatusChipStyle, parsePickupDate } from '../../../shared/statusStyles';
+import {
+  VERIFICATION_LABELS,
+  STATUS_LABELS,
+  parsePickupDate,
+  stateSortRank,
+} from '../../../shared/statusStyles';
+import StatusCell from '../components/StatusCell';
+import VerificationCell from '../components/VerificationCell';
 
 // -- Types --
 
-type StatusFilter = 'active' | 'completed' | 'verified' | 'cancelled' | 'all';
+type SegmentKey = 'All' | 'Pending' | 'In Progress' | 'To verify' | 'Verified' | 'Cancelled';
 
 interface FlatJob extends Job {
   trip: Trip;
@@ -18,42 +25,50 @@ interface FlatJob extends Job {
 
 // -- Helpers --
 
-const STATUS_ORDER: Record<string, number> = {
-  Pending: 0,
-  'In Progress': 1,
-  Completed: 2,
-  Verified: 3,
-  Cancelled: 4,
-};
+function buildSegmentCounts(jobs: FlatJob[]): Record<SegmentKey | 'Rejected', number> {
+  let All = 0, Pending = 0, InProgress = 0, ToVerify = 0, Verified = 0, Cancelled = 0, Rejected = 0;
+  for (const j of jobs) {
+    All++;
+    if (j.status === 'Pending') Pending++;
+    else if (j.status === 'In Progress') InProgress++;
+    else if (j.status === 'Cancelled') Cancelled++;
 
-function sortActiveJobs(a: FlatJob, b: FlatJob): number {
-  const orderA = STATUS_ORDER[a.status] ?? 5;
-  const orderB = STATUS_ORDER[b.status] ?? 5;
-  if (orderA !== orderB) return orderA - orderB;
-  const dateA = a.origin.date || '';
-  const dateB = b.origin.date || '';
-  return dateA.localeCompare(dateB);
+    if (j.status === 'Completed' && j.verificationStatus !== 'Verified') ToVerify++;
+    if (j.verificationStatus === 'Verified') Verified++;
+    if (j.verificationStatus === 'Rejected') Rejected++;
+  }
+  return {
+    All, Pending,
+    'In Progress': InProgress,
+    'To verify': ToVerify,
+    Verified, Cancelled, Rejected,
+  };
 }
 
-function sortDefaultJobs(a: FlatJob, b: FlatJob): number {
-  const dateA = a.origin.date || '';
-  const dateB = b.origin.date || '';
-  return dateA.localeCompare(dateB);
-}
-
-type LocationEntry = { code: string; city: string; district: string };
+type LocationEntry = { code: string; zoneName: string };
 
 function buildLocationMap(): Map<string, LocationEntry> {
+  const zoneMap = new Map<string, string>(seedZones.map((z) => [z.id, z.name]));
+  try {
+    const storedZones = localStorage.getItem('tripmanager_zones');
+    if (storedZones) {
+      const zones = JSON.parse(storedZones) as Array<{ id: string; name: string }>;
+      for (const z of zones) zoneMap.set(z.id, z.name);
+    }
+  } catch { /* ignore */ }
+
   const map = new Map<string, LocationEntry>();
   for (const l of seedLocations) {
-    map.set(l.name, { code: l.code ?? '', city: l.city ?? '', district: l.district ?? '' });
+    const zoneName = zoneMap.get(l.zoneId) ?? '';
+    map.set(l.name, { code: l.code ?? '', zoneName });
   }
   try {
     const stored = localStorage.getItem('tripmanager_locations');
     if (stored) {
-      const locs = JSON.parse(stored) as Array<{ name: string; code?: string; city?: string; district?: string }>;
+      const locs = JSON.parse(stored) as Array<{ name: string; code?: string; zoneId?: string }>;
       for (const l of locs) {
-        map.set(l.name, { code: l.code ?? '', city: l.city ?? '', district: l.district ?? '' });
+        const zoneName = l.zoneId ? (zoneMap.get(l.zoneId) ?? '') : '';
+        map.set(l.name, { code: l.code ?? '', zoneName });
       }
     }
   } catch { /* ignore */ }
@@ -64,9 +79,9 @@ function exportCSV(jobs: FlatJob[]) {
   const locationMap = buildLocationMap();
   const header = [
     'Trip', 'Customer', 'Service',
-    'Origin Code', 'Origin', 'Origin District', 'Origin City',
-    'Dest Code', 'Destination', 'Dest District', 'Dest City',
-    'Pickup', 'Status',
+    'Origin Code', 'Origin', 'Origin Zone',
+    'Dest Code', 'Destination', 'Dest Zone',
+    'Pickup', 'Status', 'Verification Status', 'Verification Updated',
   ];
   const rows = jobs.map((j) => {
     const orig = locationMap.get(j.origin.location);
@@ -77,14 +92,14 @@ function exportCSV(jobs: FlatJob[]) {
       j.service.code,
       orig?.code ?? '',
       j.origin.location,
-      orig?.district ?? '',
-      orig?.city ?? '',
+      orig?.zoneName ?? '',
       dest?.code ?? '',
       j.destination.location,
-      dest?.district ?? '',
-      dest?.city ?? '',
+      dest?.zoneName ?? '',
       j.origin.date || '-',
-      j.status,
+      STATUS_LABELS[j.status]?.label ?? j.status,
+      VERIFICATION_LABELS[j.verificationStatus] ?? j.verificationStatus,
+      j.verificationChangedAt ?? '',
     ];
   });
   const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -97,13 +112,15 @@ function exportCSV(jobs: FlatJob[]) {
   URL.revokeObjectURL(url);
 }
 
+const SEGMENTS: SegmentKey[] = ['All', 'Pending', 'In Progress', 'To verify', 'Verified', 'Cancelled'];
+
 // -- Component --
 
 export default function MyJobsPage() {
   const navigate = useNavigate();
   const { trips } = useTrips();
   const { vendorCode } = useVendorAuth();
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
+  const [segment, setSegment] = useState<SegmentKey>('All');
   const [serviceFilters, setServiceFilters] = useState<Set<string>>(new Set());
   const [dateStart, setDateStart] = useState<string | null>(null);
   const [dateEnd, setDateEnd] = useState<string | null>(null);
@@ -116,65 +133,7 @@ export default function MyJobsPage() {
     [trips, vendorCode]
   );
 
-  // Stats (computed from ALL vendor jobs, not filtered)
-  const stats = useMemo(() => ({
-    total: allJobs.length,
-    pending: allJobs.filter((j) => j.status === 'Pending').length,
-    inProgress: allJobs.filter((j) => j.status === 'In Progress').length,
-    completed: allJobs.filter((j) => j.status === 'Completed').length,
-    verified: allJobs.filter((j) => j.status === 'Verified').length,
-    cancelled: allJobs.filter((j) => j.status === 'Cancelled').length,
-  }), [allJobs]);
-
-  // Filter jobs
-  const filtered = useMemo(() => {
-    let jobs = allJobs;
-
-    // Status filter
-    switch (statusFilter) {
-      case 'active':
-        jobs = jobs.filter((j) => j.status === 'Pending' || j.status === 'In Progress');
-        break;
-      case 'completed':
-        jobs = jobs.filter((j) => j.status === 'Completed');
-        break;
-      case 'verified':
-        jobs = jobs.filter((j) => j.status === 'Verified');
-        break;
-      case 'cancelled':
-        jobs = jobs.filter((j) => j.status === 'Cancelled');
-        break;
-      case 'all':
-        break;
-    }
-
-    // Service filter (multi-select toggle)
-    if (serviceFilters.size > 0) {
-      jobs = jobs.filter((j) => serviceFilters.has(j.service.code));
-    }
-
-    // Date filter — by pickup date, works on all tabs
-    if (dateStart || dateEnd) {
-      jobs = jobs.filter((j) => {
-        const d = j.origin.date ? j.origin.date.slice(0, 10) : null;
-        if (!d) return false;
-        if (dateStart && d < dateStart) return false;
-        if (dateEnd && d > dateEnd) return false;
-        return true;
-      });
-    }
-
-    // Sort
-    if (statusFilter === 'active') {
-      jobs = [...jobs].sort(sortActiveJobs);
-    } else {
-      jobs = [...jobs].sort(sortDefaultJobs);
-    }
-
-    return jobs;
-  }, [allJobs, statusFilter, serviceFilters, dateStart, dateEnd]);
-
-  // Status pill counts (from allJobs filtered only by service/date, NOT status)
+  // Segment counts (from allJobs filtered only by service/date, NOT segment)
   const pillCounts = useMemo(() => {
     let jobs = allJobs;
     if (serviceFilters.size > 0) jobs = jobs.filter((j) => serviceFilters.has(j.service.code));
@@ -187,19 +146,81 @@ export default function MyJobsPage() {
         return true;
       });
     }
-    return {
-      active: jobs.filter((j) => j.status === 'Pending' || j.status === 'In Progress').length,
-      completed: jobs.filter((j) => j.status === 'Completed').length,
-      verified: jobs.filter((j) => j.status === 'Verified').length,
-      cancelled: jobs.filter((j) => j.status === 'Cancelled').length,
-      all: jobs.length,
-    };
+    return buildSegmentCounts(jobs);
   }, [allJobs, serviceFilters, dateStart, dateEnd]);
+
+  // Filter jobs
+  const filtered = useMemo(() => {
+    let jobs = allJobs;
+
+    // Segment filter
+    switch (segment) {
+      case 'Pending':
+        jobs = jobs.filter((j) => j.status === 'Pending');
+        break;
+      case 'In Progress':
+        jobs = jobs.filter((j) => j.status === 'In Progress');
+        break;
+      case 'To verify':
+        jobs = jobs.filter((j) => j.status === 'Completed' && (j.verificationStatus === 'Pending' || j.verificationStatus === 'Rejected'));
+        break;
+      case 'Verified':
+        jobs = jobs.filter((j) => j.verificationStatus === 'Verified');
+        break;
+      case 'Cancelled':
+        jobs = jobs.filter((j) => j.status === 'Cancelled');
+        break;
+      case 'All':
+      default:
+        break;
+    }
+
+    // Service filter (multi-select toggle)
+    if (serviceFilters.size > 0) {
+      jobs = jobs.filter((j) => serviceFilters.has(j.service.code));
+    }
+
+    // Date filter — by pickup date
+    if (dateStart || dateEnd) {
+      jobs = jobs.filter((j) => {
+        const d = j.origin.date ? j.origin.date.slice(0, 10) : null;
+        if (!d) return false;
+        if (dateStart && d < dateStart) return false;
+        if (dateEnd && d > dateEnd) return false;
+        return true;
+      });
+    }
+
+    // Sort
+    if (segment === 'All') {
+      jobs = [...jobs].sort((a, b) => {
+        const ra = stateSortRank(a);
+        const rb = stateSortRank(b);
+        if (ra !== rb) return ra - rb;
+        return (a.origin.date || '').localeCompare(b.origin.date || '');
+      });
+    } else {
+      jobs = [...jobs].sort((a, b) =>
+        (a.origin.date || '').localeCompare(b.origin.date || '')
+      );
+    }
+
+    return jobs;
+  }, [allJobs, segment, serviceFilters, dateStart, dateEnd]);
 
   // Pagination
   const totalFiltered = filtered.length;
   const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
   const paginatedJobs = totalFiltered > PAGE_SIZE ? filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : filtered;
+
+  // Clear filters
+  const clearFilters = useCallback(() => {
+    setSegment('All');
+    setServiceFilters(new Set());
+    setDateStart(null);
+    setDateEnd(null);
+    setPage(1);
+  }, []);
 
   // Service toggle handler
   function toggleService(code: string) {
@@ -211,7 +232,6 @@ export default function MyJobsPage() {
     });
     setPage(1);
   }
-
 
   // -- Styles --
 
@@ -231,54 +251,56 @@ export default function MyJobsPage() {
   // Service code list for pills
   const serviceCodes = ['FM', 'EC', 'CS', 'CR', 'OH'];
 
+  // -- Pill styling (match admin pattern) --
+
+  function getSegmentPillStyle(key: SegmentKey, isOn: boolean): { pill: React.CSSProperties; badge: React.CSSProperties } {
+    if (!isOn) {
+      return {
+        pill: { border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280' },
+        badge: { background: '#f3f4f6', color: '#6b7280', border: '1px solid #e5e7eb' },
+      };
+    }
+    switch (key) {
+      case 'To verify':
+        return {
+          pill: { border: '1px solid #a16207', background: '#fefce8', color: '#a16207' },
+          badge: { background: '#fefce8', color: '#a16207', border: '1px solid #fde68a' },
+        };
+      case 'Verified':
+        return {
+          pill: { border: '1px solid #059669', background: '#f0fdf4', color: '#059669' },
+          badge: { background: '#f0fdf4', color: '#059669', border: '1px solid #a7f3d0' },
+        };
+      case 'Cancelled':
+        return {
+          pill: { border: '1px solid #dc2626', background: '#fef2f2', color: '#dc2626' },
+          badge: { background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' },
+        };
+      case 'All':
+      case 'Pending':
+      case 'In Progress':
+      default:
+        return {
+          pill: { border: '1px solid #111827', background: '#111827', color: '#fff' },
+          badge: { background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)' },
+        };
+    }
+  }
+
   // -- Render helpers --
 
-  function renderStatusChip(status: JobStatus) {
-    const c = getStatusChipStyle(status);
-    return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600, border: `1px solid ${c.border}`, background: c.bg, color: c.text }}>
-        <span style={{ width: 5, height: 5, borderRadius: '50%', background: c.dot, display: 'inline-block' }} />
-        {status}
-      </span>
-    );
-  }
-
-  function renderServiceTag(service: { code: string; label: string }) {
-    return (
-      <span
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 3,
-          padding: '1px 5px',
-          borderRadius: 99,
-          fontSize: 9,
-          fontWeight: 600,
-          background: 'rgba(21,44,255,0.06)',
-          border: '1px solid rgba(21,44,255,0.1)',
-        }}
-      >
-        <span style={{ color: '#152CFF', fontFamily: "var(--font-mono)" }}>{service.code}</span>
-        <span style={{ color: '#374151' }}>{service.label}</span>
-      </span>
-    );
-  }
-
   function renderJobRow(job: FlatJob) {
-    const isRejected = job.status === 'Cancelled';
     return (
       <tr
         key={`${job.trip.id}-${job.id}`}
         onClick={() => navigate(`/jobs/${job.trip.id}/${job.id}`)}
-        style={{ cursor: 'pointer', background: isRejected ? '#fefafa' : undefined, transition: 'background 0.1s' }}
-        onMouseEnter={(e) => { if (!isRejected) e.currentTarget.style.background = '#f9fafb'; }}
-        onMouseLeave={(e) => { if (!isRejected) e.currentTarget.style.background = ''; }}
+        style={{ cursor: 'pointer', transition: 'background 0.1s' }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = '#f9fafb'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
       >
         {/* Trip */}
         <td style={{ padding: '7px 12px', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' }}>
-          <span
-            style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#152CFF', background: 'rgba(21,44,255,0.04)', padding: '1px 5px', borderRadius: 3, border: '1px solid rgba(21,44,255,0.1)' }}
-          >
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#111827', fontWeight: 500 }}>
             {job.trip.id}
           </span>
         </td>
@@ -290,7 +312,14 @@ export default function MyJobsPage() {
 
         {/* Service */}
         <td style={{ padding: '7px 12px', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' }}>
-          {renderServiceTag(job.service)}
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 600, color: '#6b7280', letterSpacing: '0.02em' }}>
+            {job.service.code}
+          </span>
+          {job.service.label && (
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#9ca3af', marginLeft: 4 }}>
+              {job.service.label}
+            </span>
+          )}
         </td>
 
         {/* Where */}
@@ -303,7 +332,7 @@ export default function MyJobsPage() {
           <div style={{ fontSize: 9, marginTop: 2 }}>
             {job.service.code === 'FM' ? (
               job.driverAssignment ? (
-                <span style={{ color: '#152CFF', display: 'inline-flex', alignItems: 'center' }}>
+                <span style={{ color: '#6b7280', display: 'inline-flex', alignItems: 'center' }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ width: 8, height: 8, verticalAlign: 'middle', marginRight: 2 }}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                   {job.driverAssignment.name}{job.vehicleAssignment ? ` · ${job.vehicleAssignment.plateNumber}` : ''}
                 </span>
@@ -337,74 +366,20 @@ export default function MyJobsPage() {
 
         {/* Status */}
         <td style={{ padding: '7px 12px', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' }}>
-          {renderStatusChip(job.status)}
+          <StatusCell job={job} showReason />
+        </td>
+
+        {/* Verification */}
+        <td style={{ padding: '7px 12px', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' }}>
+          <VerificationCell job={job} showReason />
         </td>
 
       </tr>
     );
   }
 
-  // Status pill config
-  const statusPills: { key: StatusFilter; label: string; count: number }[] = [
-    { key: 'active', label: 'Active', count: pillCounts.active },
-    { key: 'completed', label: 'Completed', count: pillCounts.completed },
-    { key: 'verified', label: 'Verified', count: pillCounts.verified },
-    { key: 'cancelled', label: 'Cancelled', count: pillCounts.cancelled },
-    { key: 'all', label: 'All', count: pillCounts.all },
-  ];
-
-  function getPillStyle(key: StatusFilter, isOn: boolean): { pill: React.CSSProperties; badge: React.CSSProperties } {
-    if (!isOn) {
-      return {
-        pill: { border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280' },
-        badge: { background: '#f3f4f6', color: '#6b7280', border: '1px solid #e5e7eb' },
-      };
-    }
-    switch (key) {
-      case 'verified':
-        return {
-          pill: { border: '1px solid #059669', background: '#f0fdf4', color: '#059669' },
-          badge: { background: '#f0fdf4', color: '#059669', border: '1px solid #a7f3d0' },
-        };
-      case 'completed':
-        return {
-          pill: { border: '1px solid #a16207', background: '#fefce8', color: '#a16207' },
-          badge: { background: '#fefce8', color: '#a16207', border: '1px solid #fde68a' },
-        };
-      case 'cancelled':
-        return {
-          pill: { border: '1px solid #dc2626', background: '#fef2f2', color: '#dc2626' },
-          badge: { background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' },
-        };
-      case 'active':
-      default:
-        return {
-          pill: { border: '1px solid #111827', background: '#111827', color: '#fff' },
-          badge: { background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)' },
-        };
-      case 'all':
-        return {
-          pill: { border: '1px solid #152CFF', background: 'rgba(21,44,255,0.06)', color: '#152CFF' },
-          badge: { background: 'rgba(21,44,255,0.1)', color: '#152CFF', border: '1px solid rgba(21,44,255,0.2)' },
-        };
-    }
-  }
-
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-
-      {/* -- Stats bar -- */}
-      <div style={{ display: 'flex', alignItems: 'center', padding: '8px 16px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontSize: 12, gap: 0 }}>
-        <span style={{ color: '#111827', fontWeight: 600 }}>{stats.total} jobs</span>
-        <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-        <span style={{ color: '#9ca3af', fontWeight: 600 }}>{stats.pending} pending</span>
-        <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-        <span style={{ color: '#152CFF', fontWeight: 600 }}>{stats.inProgress} in progress</span>
-        <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-        <span style={{ color: '#a16207', fontWeight: 600 }}>{stats.completed} completed</span>
-        <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-        <span style={{ color: '#059669', fontWeight: 600 }}>{stats.verified} verified</span>
-      </div>
 
       {/* -- Page header -- */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: '16px 16px 0 16px' }}>
@@ -423,61 +398,73 @@ export default function MyJobsPage() {
       </div>
 
       {/* -- Filter bar -- */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 16px', borderBottom: '1px solid #e5e7eb', flexWrap: 'wrap' }}>
-        {/* Status pills */}
-        {statusPills.map(({ key, label, count }) => {
-          const isOn = statusFilter === key;
-          const styles = getPillStyle(key, isOn);
-          return (
-            <button
-              key={key}
-              onClick={() => { setStatusFilter(key); setPage(1); }}
-              style={{
-                padding: '3px 10px', borderRadius: 99, fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                display: 'inline-flex', alignItems: 'center', gap: 4,
-                ...styles.pill,
-              }}
-            >
-              {label}
-              <span style={{ fontSize: 9, padding: '0 5px', borderRadius: 99, fontWeight: 700, minWidth: 16, textAlign: 'center', ...styles.badge }}>{count}</span>
-            </button>
-          );
-        })}
+      <div style={{ padding: '8px 16px', borderBottom: '1px solid #e5e7eb', background: '#fff' }}>
+        {/* Segment pills */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+          {SEGMENTS.map((k) => {
+            const isOn = segment === k;
+            const styles = getSegmentPillStyle(k, isOn);
+            return (
+              <button
+                key={k}
+                onClick={() => { setSegment(k); setPage(1); }}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '5px 10px', borderRadius: 4,
+                  fontSize: 11, fontWeight: isOn ? 600 : 500,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  ...styles.pill,
+                }}
+              >
+                <span>{k}</span>
+                <span
+                  style={{
+                    fontSize: 10, padding: '0 5px', borderRadius: 8, fontWeight: 700,
+                    minWidth: 14, textAlign: 'center',
+                    ...styles.badge,
+                  }}
+                >
+                  {pillCounts[k] ?? 0}
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
-        <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
+        {/* Service pills + date + right count */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 10, color: '#9ca3af' }}>Service</span>
+          {serviceCodes.map((code) => {
+            const isOn = serviceFilters.has(code);
+            return (
+              <button
+                key={code}
+                onClick={() => toggleService(code)}
+                style={{
+                  padding: '2px 6px', borderRadius: 99, fontSize: 9, fontWeight: 600, cursor: 'pointer',
+                  fontFamily: 'var(--font-mono)',
+                  border: isOn ? '1px solid #152CFF' : '1px solid #e5e7eb',
+                  background: isOn ? 'rgba(21,44,255,0.06)' : '#fff',
+                  color: isOn ? '#152CFF' : '#6b7280',
+                }}
+              >
+                {code}
+              </button>
+            );
+          })}
 
-        {/* Service pills */}
-        <span style={{ fontSize: 10, color: '#9ca3af' }}>Service</span>
-        {serviceCodes.map((code) => {
-          const isOn = serviceFilters.has(code);
-          return (
-            <button
-              key={code}
-              onClick={() => toggleService(code)}
-              style={{
-                padding: '2px 6px', borderRadius: 99, fontSize: 9, fontWeight: 600, cursor: 'pointer',
-                fontFamily: 'var(--font-mono)',
-                border: isOn ? '1px solid #152CFF' : '1px solid #e5e7eb',
-                background: isOn ? 'rgba(21,44,255,0.06)' : '#fff',
-                color: isOn ? '#152CFF' : '#6b7280',
-              }}
-            >
-              {code}
-            </button>
-          );
-        })}
+          <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
+          <DateRangePopover
+            startDate={dateStart}
+            endDate={dateEnd}
+            onChange={(s, e) => { setDateStart(s); setDateEnd(e); setPage(1); }}
+          />
 
-        <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
-        <DateRangePopover
-          startDate={dateStart}
-          endDate={dateEnd}
-          onChange={(s, e) => { setDateStart(s); setDateEnd(e); setPage(1); }}
-        />
-
-        {/* Right count */}
-        <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 11, color: '#9ca3af', whiteSpace: 'nowrap' }}>
-          {totalFiltered} {statusFilter === 'all' ? 'jobs' : statusFilter === 'active' ? 'active' : statusFilter}
-        </span>
+          {/* Right count */}
+          <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 11, color: '#9ca3af', whiteSpace: 'nowrap' }}>
+            {totalFiltered} jobs
+          </span>
+        </div>
       </div>
 
       {/* -- Table -- */}
@@ -486,22 +473,21 @@ export default function MyJobsPage() {
           <thead>
             <tr>
               <th style={{ ...th, width: '10%' }}>Trip</th>
-              <th style={{ ...th, width: '13%' }}>Customer</th>
+              <th style={{ ...th, width: '12%' }}>Customer</th>
               <th style={{ ...th, width: '7%' }}>Service</th>
-              <th style={{ ...th, width: '35%' }}>Where</th>
-              <th style={{ ...th, width: '10%' }}>Pickup</th>
-              <th style={{ ...th, width: '21%' }}>Status</th>
+              <th style={{ ...th, width: '29%' }}>Where</th>
+              <th style={{ ...th, width: '9%' }}>Pickup</th>
+              <th style={{ ...th, width: '14%' }}>Status</th>
+              <th style={{ ...th, width: '11%' }}>Verification</th>
             </tr>
           </thead>
           <tbody>
             {paginatedJobs.length > 0 ? paginatedJobs.map((job) => renderJobRow(job)) : (
               <tr>
-                <td colSpan={6} style={{ padding: '60px 12px', textAlign: 'center' }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 6, background: 'rgba(21,44,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                    <Ship size={18} style={{ color: '#152CFF' }} />
+                <td colSpan={7}>
+                  <div style={{ textAlign: 'center', padding: '40px 16px', color: '#6b7280', fontSize: 12 }}>
+                    No jobs match &middot; <button onClick={clearFilters} style={{ background: 'none', border: 'none', color: '#152CFF', cursor: 'pointer', fontSize: 12, padding: 0, fontFamily: 'inherit' }}>clear filters</button>
                   </div>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>No jobs match your filters</p>
-                  <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>Try adjusting your filters above</p>
                 </td>
               </tr>
             )}

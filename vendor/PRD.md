@@ -377,6 +377,12 @@ See `design-preview.html` (this folder) for visual mockups of all screens.
 - [ ] Invoice generation from verified jobs
 - [ ] Multi-language support (Chinese + English + Malay)
 
+## Changelog
+
+| Date | Note |
+|------|------|
+| 2026-04-21 | No vendor changes — admin absorbed the client status model reconciliation (separate Status + Verification columns). Vendor single-signal display retained as-is; verification remains admin-only. |
+
 ## Open Questions
 
 1. **Should vendors see other vendors on the same DO?** Current design says no — vendor only sees their own jobs. But for coordinating handoffs (e.g., FM trucker needs to know customs agent status), some cross-visibility might help. Decision: **No for v1.** Teleport ops coordinates handoffs.

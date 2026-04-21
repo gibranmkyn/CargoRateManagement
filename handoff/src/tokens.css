@@ -1,0 +1,60 @@
+/* tokens.css — color budget enforcement
+ *
+ * Add these CSS custom properties to your :root stylesheet.
+ * This documents the *intent* of each color so engineers stop reaching for
+ * blue tints on non-interactive surfaces.
+ */
+
+:root {
+  /* ── Ink scale (text + dividers) ─────────────────────────────── */
+  --ink-primary:   #111827;  /* headings, primary data */
+  --ink-secondary: #374151;  /* body text, ordinary labels */
+  --ink-muted:     #6b7280;  /* secondary labels, meta */
+  --ink-faint:     #9ca3af;  /* timestamps, placeholders, column headers */
+  --ink-ghost:     #d1d5db;  /* pending dots, disabled text */
+
+  /* ── Surfaces ────────────────────────────────────────────────── */
+  --surface-page:    #f3f4f6;
+  --surface-card:    #ffffff;
+  --surface-raised:  #f9fafb;  /* table headers, expanded sub-tables */
+  --border:          #e5e7eb;
+  --border-subtle:   #f3f4f6;
+
+  /* ── Accent (INTERACTIVE ONLY — do not use on data rows) ─────── */
+  --accent:        #152CFF;   /* links, primary buttons, active nav, in-progress dot */
+  --accent-hover:  #1024CC;
+  --accent-soft:   rgba(21, 44, 255, 0.06);  /* nav-item active bg, button hover */
+
+  /* ── State colors (text + dot only — no filled chips on rows) ─ */
+  --state-progress-dot: #152CFF;   /* dot only, text stays ink-primary */
+  --state-attention:    #a16207;   /* dot for Awaiting Verify; also amber text */
+  --state-success:      #059669;   /* Verified */
+  --state-danger:       #dc2626;   /* Rejected, Cancelled */
+
+  /* Backgrounds reserved for SINGLE ACTIVE CONTAINER (slide-out forms only) */
+  --container-danger-bg:     #fef2f2;
+  --container-danger-border: #fecaca;
+  --container-attention-bg:     #fefce8;
+  --container-attention-border: #fde68a;
+  --container-success-bg:     #f0fdf4;
+  --container-success-border: #a7f3d0;
+}
+
+/* ── Rules to enforce in code review ───────────────────────────── */
+
+/*
+ * ❌ DO NOT: var(--accent) on a table cell background
+ * ❌ DO NOT: var(--accent) on a service-tag pill
+ * ❌ DO NOT: var(--accent) on a trip-ID chip
+ * ❌ DO NOT: filled (--state-*-bg) chips on data rows — use `dot + text`
+ * ❌ DO NOT: render two colored containers simultaneously in a panel
+ *
+ * ✅ DO: var(--accent) on <a>, primary <button>, active nav, focus ring
+ * ✅ DO: var(--state-progress-dot) on a 6×6 dot next to ink-primary text
+ * ✅ DO: var(--state-danger) as text for Rejected rows, with the reason as
+ *        a muted subline — no tinted row background
+ */
+
+/* Optional: a lint rule via stylelint/eslint isn't included here, but a grep
+ * for `rgba(21,44,255` outside button/link contexts is a good PR check.
+ */

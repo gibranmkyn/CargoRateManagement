@@ -124,19 +124,6 @@ export default function FleetPage() {
   // Delete confirmation
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  // Stats
-  const driverStats = useMemo(() => ({
-    total: drivers.length,
-    active: drivers.filter((d) => d.isActive).length,
-    inactive: drivers.filter((d) => !d.isActive).length,
-  }), [drivers]);
-
-  const vehicleStats = useMemo(() => ({
-    total: vehicles.length,
-    active: vehicles.filter((v) => v.isActive).length,
-    inactive: vehicles.filter((v) => !v.isActive).length,
-  }), [vehicles]);
-
   // Vehicle lookup for driver's default vehicle display
   const vehicleMap = useMemo(() => {
     const m = new Map<string, Vehicle>();
@@ -314,17 +301,23 @@ export default function FleetPage() {
 
   function statusBadge(isActive: boolean): React.CSSProperties {
     return isActive
-      ? { background: '#f0fdf4', color: '#059669', border: '1px solid #a7f3d0', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600, cursor: 'pointer', display: 'inline-block' }
-      : { background: '#f9fafb', color: '#9ca3af', border: '1px solid #e5e7eb', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600, cursor: 'pointer', display: 'inline-block' };
+      ? { color: '#059669', fontSize: 10, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }
+      : { color: '#9ca3af', fontSize: 10, fontWeight: 500, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 };
+  }
+
+  function statusDot(isActive: boolean): React.CSSProperties {
+    return {
+      width: 5,
+      height: 5,
+      borderRadius: '50%',
+      background: isActive ? '#059669' : '#d1d5db',
+      flexShrink: 0,
+    };
   }
 
   function truckTypeBadge(): React.CSSProperties {
     return {
-      background: 'rgba(21,44,255,0.06)',
-      color: '#152CFF',
-      border: '1px solid rgba(21,44,255,0.15)',
-      padding: '2px 6px',
-      borderRadius: 4,
+      color: '#6b7280',
       fontSize: 10,
       fontWeight: 600,
       fontFamily: 'var(--font-mono)',
@@ -363,20 +356,8 @@ export default function FleetPage() {
 
   // -- Render --
 
-  const currentStats = tab === 'drivers' ? driverStats : vehicleStats;
-  const entityLabel = tab === 'drivers' ? 'drivers' : 'vehicles';
-
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-
-      {/* Stats bar — same pattern as My Jobs */}
-      <div style={{ display: 'flex', alignItems: 'center', padding: '8px 16px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontSize: 12, gap: 0 }}>
-        <span style={{ color: '#111827', fontWeight: 600 }}>{currentStats.total} {entityLabel}</span>
-        <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-        <span style={{ color: '#059669', fontWeight: 600 }}>{currentStats.active} active</span>
-        <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-        <span style={{ color: '#9ca3af', fontWeight: 600 }}>{currentStats.inactive} inactive</span>
-      </div>
 
       {/* Page header + tabs + add button */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: '16px 16px 0 16px' }}>
@@ -488,7 +469,7 @@ export default function FleetPage() {
                     </select>
                   </td>
                   <td style={td}>
-                    <span style={statusBadge(true)}>Active</span>
+                    <span style={statusBadge(true)}><span style={statusDot(true)} />Active</span>
                   </td>
                   <td style={{ ...td, textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
@@ -546,7 +527,7 @@ export default function FleetPage() {
                       </td>
                       <td style={td}>
                         <span style={statusBadge(d.isActive)} onClick={() => toggleDriverActive(d.id)}>
-                          {d.isActive ? 'Active' : 'Inactive'}
+                          <span style={statusDot(d.isActive)} />{d.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td style={{ ...td, textAlign: 'right' }}>
@@ -587,7 +568,7 @@ export default function FleetPage() {
                         style={statusBadge(d.isActive)}
                         onClick={(e) => { e.stopPropagation(); toggleDriverActive(d.id); }}
                       >
-                        {d.isActive ? 'Active' : 'Inactive'}
+                        <span style={statusDot(d.isActive)} />{d.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td style={{ ...td, textAlign: 'right' }}>
@@ -687,7 +668,7 @@ export default function FleetPage() {
                     })()}
                   </td>
                   <td style={td}>
-                    <span style={statusBadge(true)}>Active</span>
+                    <span style={statusBadge(true)}><span style={statusDot(true)} />Active</span>
                   </td>
                   <td style={{ ...td, textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
@@ -739,7 +720,7 @@ export default function FleetPage() {
                       </td>
                       <td style={td}>
                         <span style={statusBadge(v.isActive)} onClick={() => toggleVehicleActive(v.id)}>
-                          {v.isActive ? 'Active' : 'Inactive'}
+                          <span style={statusDot(v.isActive)} />{v.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td style={{ ...td, textAlign: 'right' }}>
@@ -772,7 +753,7 @@ export default function FleetPage() {
                         style={statusBadge(v.isActive)}
                         onClick={(e) => { e.stopPropagation(); toggleVehicleActive(v.id); }}
                       >
-                        {v.isActive ? 'Active' : 'Inactive'}
+                        <span style={statusDot(v.isActive)} />{v.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td style={{ ...td, textAlign: 'right' }}>

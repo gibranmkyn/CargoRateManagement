@@ -10,10 +10,17 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '@shared': path.resolve(__dirname, '../shared'),
       react: path.resolve(__dirname, 'node_modules/react'),
       'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
       'react-router-dom': path.resolve(__dirname, 'node_modules/react-router-dom'),
       'lucide-react': path.resolve(__dirname, 'node_modules/lucide-react'),
+    },
+    dedupe: ['react', 'react-dom', 'lucide-react'],
+  },
+  server: {
+    fs: {
+      allow: ['..'],
     },
   },
 })

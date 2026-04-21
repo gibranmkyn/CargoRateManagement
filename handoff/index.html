@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Slop Reduction — Engineering Handoff</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink-primary: #111827; --ink-secondary: #374151; --ink-muted: #6b7280; --ink-faint: #9ca3af;
+    --surface-page: #f3f4f6; --surface-card: #fff; --surface-raised: #f9fafb;
+    --border: #e5e7eb; --border-subtle: #f3f4f6;
+    --accent: #152CFF; --accent-hover: #1024CC; --accent-soft: rgba(21,44,255,0.06);
+    --state-progress: #152CFF; --state-attention: #a16207; --state-success: #059669; --state-danger: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: 'Instrument Sans', system-ui, sans-serif; background: var(--surface-page); color: var(--ink-primary); font-size: 13px; line-height: 1.5; }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+  /* Page layout */
+  .shell { max-width: 960px; margin: 0 auto; padding: 40px 24px 80px; }
+  header.top { margin-bottom: 32px; }
+  .eyebrow { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); }
+  h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; margin: 6px 0 8px; }
+  .lede { font-size: 14px; color: var(--ink-secondary); max-width: 640px; margin: 0; text-wrap: pretty; }
+
+  /* Cards */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
+  .card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .card header { padding: 14px 16px 10px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .card h3 { font-size: 13px; font-weight: 700; margin: 0; letter-spacing: -0.1px; }
+  .card p { margin: 8px 0 12px; color: var(--ink-muted); font-size: 12px; }
+  .card .body { padding: 12px 16px 16px; }
+  .badge { font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 7px; border-radius: 3px; background: var(--accent-soft); color: var(--accent); }
+  .badge.neutral { background: var(--border-subtle); color: var(--ink-muted); }
+  .badge.success { background: #f0fdf4; color: var(--state-success); }
+  .badge.attention { background: #fefce8; color: var(--state-attention); }
+
+  /* File list */
+  .files { list-style: none; margin: 0; padding: 0; }
+  .files li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); font-size: 12px; }
+  .files li:last-child { border-bottom: none; }
+  .files .mono { font-size: 11px; color: var(--ink-secondary); }
+  .files .desc { color: var(--ink-muted); font-size: 11px; }
+  .files a { color: var(--accent); text-decoration: none; font-weight: 500; }
+  .files a:hover { text-decoration: underline; }
+
+  /* Table of phases */
+  table { width: 100%; border-collapse: collapse; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--surface-card); margin-top: 8px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border-subtle); font-size: 12px; }
+  th { background: var(--surface-raised); color: var(--ink-faint); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+  tbody tr:last-child td { border-bottom: none; }
+  td.n { text-align: center; width: 40px; font-weight: 700; color: var(--ink-secondary); }
+  .risk-low { color: var(--state-success); font-weight: 600; }
+  .risk-med { color: var(--state-attention); font-weight: 600; }
+
+  /* Section titles */
+  h2 { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); margin: 36px 0 12px; }
+
+  /* Button row */
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration: none; cursor: pointer; border: 1px solid var(--border); background: var(--surface-card); color: var(--ink-primary); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .btn:hover { background: var(--surface-raised); }
+
+  /* Preview strip */
+  .preview { margin-top: 8px; padding: 10px 12px; background: var(--surface-raised); border: 1px solid var(--border-subtle); border-radius: 4px; font-size: 11px; color: var(--ink-secondary); }
+  .preview .line { display: flex; gap: 6px; align-items: center; padding: 3px 0; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+
+  /* Rules list */
+  .rules { list-style: none; margin: 0; padding: 0; counter-reset: r; }
+  .rules li { counter-increment: r; position: relative; padding: 10px 12px 10px 40px; background: var(--surface-card); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 6px; font-size: 12px; color: var(--ink-secondary); }
+  .rules li::before { content: counter(r); position: absolute; left: 10px; top: 9px; width: 20px; height: 20px; border-radius: 3px; background: var(--ink-primary); color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; }
+  .rules strong { color: var(--ink-primary); }
+
+  @media (max-width: 640px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="top">
+    <div class="eyebrow">Engineering handoff · Cargo Management</div>
+    <h1>Slop Reduction — 4-phase rollout</h1>
+    <p class="lede">
+      A design-to-code handoff package. The prototype in <span class="mono">phases/index.html</span>
+      shows before/after for each phase; this page is the engineering bundle — spec, drop-in
+      TypeScript files, and design-doc diffs that map directly onto your existing codebase.
+    </p>
+    <div class="actions">
+      <a class="btn primary" href="phases/index.html">Open interactive prototype →</a>
+      <a class="btn" href="handoff/README.md" target="_blank">README.md</a>
+      <a class="btn" href="handoff/SPEC.md" target="_blank">SPEC.md</a>
+      <a class="btn" href="handoff/DESIGN-DIFF.md" target="_blank">DESIGN-DIFF.md</a>
+    </div>
+  </header>
+
+  <h2>Rollout plan</h2>
+  <table>
+    <thead>
+      <tr><th>#</th><th>Phase</th><th>Files touched</th><th>Risk</th><th>Payoff</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="n">1</td><td>Page chrome simplification</td><td class="mono">JobsPage · TripsPage</td><td class="risk-low">Low</td><td>High</td></tr>
+      <tr><td class="n">2</td><td>Single State column</td><td class="mono">statusStyles · StateCell · *Page</td><td class="risk-med">Medium</td><td>High</td></tr>
+      <tr><td class="n">3</td><td>Slide-out flattening</td><td class="mono">JobSlideOut · JobDetailPage</td><td class="risk-low">Low–Med</td><td>High</td></tr>
+      <tr><td class="n">4</td><td>Color budget</td><td class="mono">ServiceTag · FleetPage · tokens</td><td class="risk-low">Low</td><td>Medium</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Drop-in files</h2>
+  <div class="grid">
+    <section class="card">
+      <header>
+        <h3>Source files</h3>
+        <span class="badge">TypeScript · React</span>
+      </header>
+      <div class="body">
+        <p>Use the existing <span class="mono">@shared/</span> aliases. No rewiring needed.</p>
+        <ul class="files">
+          <li>
+            <div>
+              <div class="mono">shared/statusStyles.patch.ts</div>
+              <div class="desc">Adds getStateStyle + stateSortRank</div>
+            </div>
+            <a href="handoff/src/shared/statusStyles.patch.ts" target="_blank">view</a>
+          </li>
+          <li>
+            <div>
+              <div class="mono">components/StateCell.tsx</div>
+              <div class="desc">NEW — single state cell for tables</div>
+            </div>
+            <a href="handoff/src/components/StateCell.tsx" target="_blank">view</a>
+          </li>
+          <li>
+            <div>
+              <div class="mono">components/JobSlideOut.new.tsx</div>
+              <div class="desc">Replaces the current JobSlideOut</div>
+            </div>
+            <a href="handoff/src/components/JobSlideOut.new.tsx" target="_blank">view</a>
+          </li>
+          <li>
+            <div>
+              <div class="mono">tokens.css</div>
+              <div class="desc">Documented color intent for :root</div>
+            </div>
+            <a href="handoff/src/tokens.css" target="_blank">view</a>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="card">
+      <header>
+        <h3>Paste-in snippets</h3>
+        <span class="badge neutral">Patch-style</span>
+      </header>
+      <div class="body">
+        <p>Replace specific blocks in existing pages.</p>
+        <ul class="files">
+          <li>
+            <div>
+              <div class="mono">JobsPage.filter-bar.tsx</div>
+              <div class="desc">Replaces current filter bar</div>
+            </div>
+            <a href="handoff/src/snippets/JobsPage.filter-bar.tsx" target="_blank">view</a>
+          </li>
+          <li>
+            <div>
+              <div class="mono">JobsPage.stats-bar.tsx</div>
+              <div class="desc">DELETE block — shows what to remove</div>
+            </div>
+            <a href="handoff/src/snippets/JobsPage.stats-bar.tsx" target="_blank">view</a>
+          </li>
+          <li>
+            <div>
+              <div class="mono">TripsPage.row-state.tsx</div>
+              <div class="desc">Trip row state + progress cell</div>
+            </div>
+            <a href="handoff/src/snippets/TripsPage.row-state.tsx" target="_blank">view</a>
+          </li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <h2>Rules the code must enforce</h2>
+  <ul class="rules">
+    <li><strong>Blue = interactive only.</strong> Primary buttons, links, active nav, the In-Progress dot. Never on trip IDs, service tags, or proof-doc icons.</li>
+    <li><strong>Verified replaces Completed.</strong> A single <em>State</em> column derived from both fields via <span class="mono">getStateStyle</span> — not two chips side by side.</li>
+    <li><strong>One colored container per panel.</strong> Slide-out forms (Cancel, Reject, Remark) are mutually exclusive; the active one is the only tinted box.</li>
+    <li><strong>Amber is text-only on data rows.</strong> No tinted backgrounds for Awaiting Verify rows — a dot + text reads cleaner.</li>
+    <li><strong>No row tints for exception states.</strong> Cancelled/Rejected surface via the state cell + muted subline, not a pink row.</li>
+  </ul>
+
+  <h2>Visual sample · the new State cell</h2>
+  <div class="preview">
+    <div class="line"><span class="dot" style="background:#d1d5db"></span><span style="color:var(--ink-muted)">Pending</span></div>
+    <div class="line"><span class="dot" style="background:var(--state-progress)"></span><span style="color:var(--ink-primary);font-weight:500">In progress</span></div>
+    <div class="line"><span class="dot" style="background:var(--state-attention)"></span><span style="color:var(--ink-secondary);font-weight:500">Awaiting verify</span></div>
+    <div class="line"><span class="dot" style="background:var(--state-success)"></span><span style="color:var(--state-success);font-weight:600">Verified</span></div>
+    <div class="line"><span class="dot" style="background:var(--state-danger)"></span><span style="color:var(--state-danger);font-weight:600">Verify rejected</span><span style="color:var(--ink-faint);margin-left:8px">· Missing seal photo</span></div>
+    <div class="line"><span class="dot" style="background:var(--state-danger)"></span><span style="color:var(--state-danger);font-weight:600">Cancelled</span><span style="color:var(--ink-faint);margin-left:8px">· Vendor unavailable</span></div>
+  </div>
+
+  <h2>Next steps</h2>
+  <p style="color:var(--ink-secondary); max-width:640px;">
+    Ship P1 and P3 in parallel — they don't share files. P2 needs a single commit across
+    <span class="mono">statusStyles.ts</span>, <span class="mono">JobsPage</span>, <span class="mono">TripsPage</span>, and <span class="mono">MyJobsPage</span>
+    (vendor side can stay on the 2-chip view until its own audit). P4 is mechanical
+    search-and-replace against <span class="mono">rgba(21,44,255</span> outside interactive contexts.
+  </p>
+
+  <div class="actions">
+    <a class="btn primary" href="phases/index.html">Review the prototype</a>
+    <a class="btn" href="handoff/SPEC.md" target="_blank">Read full spec</a>
+  </div>
+</div>
+</body>
+</html>

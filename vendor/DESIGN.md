@@ -19,10 +19,9 @@ The vendor app uses the exact same design tokens as the admin app. A vendor and 
 |-------|-------|-----------|
 | Nav height | 40px | `../admin/DESIGN.md` → Spacing |
 | Nav background | `#111827` | `../admin/DESIGN.md` → Colors |
-| Accent (Future Blue) | `#152CFF` | `../admin/DESIGN.md` → Colors |
-| 5-color status system | gray/blue/amber/green/red | `../admin/DESIGN.md` → Color |
-| Status chip styling | dot + label, 2px 8px, 4px radius | `../admin/DESIGN.md` → Status Chips |
-| Service tag styling | code + label pill, 99px radius | `../admin/DESIGN.md` → Service Tag |
+| Accent (Future Blue) | `#152CFF` — **interactive only** | `../admin/DESIGN.md` → Colors |
+| Status/Verification cells | dot + label + timestamp subline, 11px, no filled chips | `../admin/DESIGN.md` → Color |
+| Service tag styling | mono gray code, no pill chrome | see Color section below |
 | Typography | Instrument Sans + JetBrains Mono | `../admin/DESIGN.md` → Typography |
 | Type scale | Same sizes (9-16px range) | `../admin/DESIGN.md` → Typography |
 | Table density | 8px 12px cells, 6px 12px headers | `../admin/DESIGN.md` → Spacing |
@@ -30,6 +29,41 @@ The vendor app uses the exact same design tokens as the admin app. A vendor and 
 | Shadows | Minimal (border-only for most) | `../admin/DESIGN.md` → Shadows |
 | Inputs | 1px border, 4px radius, 5px 8px pad | `../admin/DESIGN.md` → Global CSS |
 | Toast notifications | Same styling and behavior | `../admin/DESIGN.md` → Toast |
+
+## Color
+
+### Accent — interactive only
+
+`#152CFF` is used exclusively on: links, primary buttons, active nav, selected filter pills (service toggle), selected pagination buttons.
+
+**Never on data chrome:** trip IDs, service tags, plate numbers, driver/assignment text, empty-state icons, status/verification chips.
+
+### State colors (dot + text — no filled chips on data rows)
+
+| Signal | Dot | Text | Weight |
+|--------|-----|------|--------|
+| Pending | `#d1d5db` | `#6b7280` | 400 |
+| In Progress | `#152CFF` | `#111827` | 500 |
+| Completed / To verify | `#a16207` | `#374151` | 500 |
+| Verified | `#059669` | `#059669` | 600 |
+| Rejected | `#dc2626` | `#dc2626` | 600 |
+| Cancelled | `#dc2626` | `#dc2626` | 600 |
+
+Pattern: 6px dot + label at 11px + `#9ca3af` timestamp subline at 10px mono. Optional muted reason subline for Cancelled/Rejected.
+
+No row tints for cancelled or rejected rows. The Status/Verification cell's dot + text + reason subline carries the signal.
+
+### Color budget per row
+
+Maximum one accent color beyond ink/muted/faint:
+- In Progress dot → blue
+- Verified text → green
+- Rejected / Cancelled text → red
+- Everything else → `#111827 / #374151 / #6b7280 / #9ca3af`
+
+### Tinted containers — slide-out / status action bar only
+
+Tinted backgrounds (`#fefce8` amber, `#f0fdf4` green, `#fef2f2` red, `#f9fafb` gray) are reserved for the Status Action Bar on the Job Detail page. Not used on table rows.
 
 ## What's Different
 
@@ -40,19 +74,28 @@ The vendor app uses the exact same design tokens as the admin app. A vendor and 
 - **No admin controls** in nav (no rates, no master data)
 
 ### Job List (My Jobs)
-- **Same flat table** as admin Jobs page
-- **No vendor column** — data is pre-filtered to logged-in vendor
-- **No Group By toggle** — no need to group by vendor when you're one vendor
-- **No vendor filter dropdown**
-- **Columns:** Trip (DO #) 10% | Customer 13% | Service 7% | Where 35% | Pickup 10% | Status 11% | Cost 10%
-- **"Where" column** (renamed from "Route"): shows service-contextual content with sub-lines (HMW-V04):
+
+Platform-aligned flat table. Two separate columns: **Status** and **Verification** (client spec — do NOT merge into a single State column).
+
+- **No vendor column** — pre-filtered to logged-in vendor
+- **No Group By toggle**
+- **No stats bar** — segment pills carry counts
+- **No search** — no search input currently (future iteration)
+- **Columns:** Trip 10% | Customer 12% | Service 7% | Where 29% | Pickup 9% | Status 14% | Verification 11%
+- **Status cell:** `StatusCell` component — dot + label + relative timestamp subline + optional cancel reason subline
+- **Verification cell:** `VerificationCell` component — dot + label + timestamp subline + optional rejection reason subline
+- **"Where" column** (renamed from "Route"): service-contextual content with sub-lines (HMW-V04):
   - FM: origin → destination + driver/vehicle sub-line (HMW-V03)
   - EC/CS: location + MAWB sub-line
-  - OH: location + bag count + weight sub-line
-  - CR: location + bag count sub-line
-- **Status pills:** Active | Completed | Verified | Cancelled | All (note: Cancelled gets its own pill, not grouped into Active like admin)
-- **Export CSV button** in filter bar (right-aligned)
-- **Stats bar:** Same pattern, vendor-scoped counts
+  - OH/CR: location + bags + weight sub-line
+- **Trip ID:** ink mono (`#111827`, 10px JetBrains Mono) — no chip, no blue
+- **Service tag:** mono gray (`#6b7280`, 10px JetBrains Mono) — no pill, no blue
+- **Segment pills:** `All · Pending · In Progress · To verify · Verified · Cancelled`
+  - `To verify` = `status === 'Completed' && verificationStatus !== 'Verified'`
+  - `Verified` = `verificationStatus === 'Verified'`
+  - Active pill: dark fill (`#111827` bg, white text) for neutral segments; state-colored border+bg for To verify / Verified / Cancelled
+- **Export CSV button** in page header (right-aligned)
+- **Empty state:** plain muted text + `clear filters` link — no decorative icon, no tinted box
 
 ### Job Detail — Full Page (NOT Slide-Out)
 The admin uses a 380px slide-out panel because ops planners rapidly scan a table and peek at jobs. Vendors open one job, review everything, take action, move on. Full page gives more room for the fee reconciliation table.
@@ -113,6 +156,13 @@ No dispatch assignment (not applicable to non-FM). No origin→destination (sing
 - Same format as admin: timestamp (mono 9px) + action + user
 - Shows both vendor and admin actions
 - Reverse chronological
+- Timeline rail only when log > 10 entries
+
+**Regression guard — do not reintroduce:**
+- Single bordered action row in Status Action Bar (no stacked tinted containers)
+- Inline reason text for cancelled/rejected (no tinted reason boxes)
+- Flat proof list with mono-gray icons (no card grids)
+- Tinted action bar backgrounds are per the Status Action Bar table above — one at a time, never stacked
 
 ### Dispatch Assignment (FM Trucking only)
 Appears on Job Detail page between Status Action Bar and Pickup/Delivery Timeline. Only for FM service type.
@@ -131,17 +181,19 @@ New nav item. Nav becomes: **My Jobs | Fleet**
 **Two tabs:** Drivers | Vehicles
 
 **Drivers table:**
-- Columns: Name | Phone | WeChat ID | Default Vehicle | Status (Active/Inactive)
-- Dense CRUD table matching admin master data style (8px 12px cells, 6px 12px headers)
-- "+ Add Driver" button (blue, bottom-right)
-- Default vehicle shows plate + truck type badge
+- Columns: Name | Phone | WeChat ID | Default Vehicle | Status | Actions
+- Dense CRUD table (8px 12px cells, 6px 12px headers)
+- "+ Add Driver" button in page header (blue outline, `#152CFF` text — interactive context)
+- Default vehicle: plate in ink mono + truck type code in mono gray (no blue pill)
+- Status (Active/Inactive): flat dot + text — green dot `#059669` for Active, ghost dot `#d1d5db` for Inactive. No filled badge.
 
 **Vehicles table:**
-- Columns: Plate Number | Truck Type | Capacity | Status (Active/Inactive)
-- Truck type shown as badge (same styling as service tags)
-- "+ Add Vehicle" button
+- Columns: Plate | Truck Type | Capacity | Status | Actions
+- Plate number: ink mono (`var(--font-mono)`) — no blue
+- Truck type: mono gray (`#6b7280`, `var(--font-mono)`) — no blue pill
+- Status: same flat dot + text pattern as Drivers
 
-**Stats bar:** `5 drivers · 8 vehicles` (same pattern as My Jobs stats bar)
+**No stats bar.** No `5 drivers · 8 vehicles` chrome above the table.
 
 ### Responsive Breakpoints
 Unlike the admin app (desktop-only, min 1200px), the vendor app targets 768px+.
@@ -160,6 +212,12 @@ Unlike the admin app (desktop-only, min 1200px), the vendor app targets 768px+.
 - `[Sign In]` button (blue, full-width)
 - Simple, minimal. No hero images, no marketing copy.
 
+## Status + Verification Model (2026-04-21, updated)
+
+The vendor app **surfaces both Status and Verification as separate columns** in the My Jobs table — mirroring the admin app. This is intentional: vendors benefit from knowing whether their completed jobs have been verified (billing gate). Verification is read-only for vendors; they cannot trigger it.
+
+Both columns use `StatusCell` and `VerificationCell` (shared components, same pattern as admin): dot + label + timestamp subline + optional reason subline. No filled chips. No row tints.
+
 ## Decisions Log
 
 | Date | Decision | Rationale |
@@ -175,7 +233,7 @@ Unlike the admin app (desktop-only, min 1200px), the vendor app targets 768px+.
 | 2026-03-29 | Fees-first section ordering (HMW-V02) | App exists for reconciliation — lead with the money. Vendor already knows the route. Order: Fees → Route + Cargo → Proofs → Activity Log. |
 | 2026-03-30 | FM assignment above fees (design review) | For FM jobs only, Driver & Vehicle Assignment section sits between Status Action Bar and Fee Breakdown. Dispatcher's first question is "who's driving?" not "are the fees right?" Non-FM services skip this section. |
 | 2026-03-30 | Assignment ≠ Start Job (design review) | Assigning a driver is dispatch-time (morning). Starting the job is execution-time (driver arrives at pickup). Separate actions, separate moments. |
-| 2026-03-30 | Driver sub-line under Route (HMW-V03) | Driver name + vehicle plate shown as sub-line under route text in job list. Blue for assigned, faint gray "No driver assigned" for unassigned FM jobs. Non-FM shows nothing. Route column has most width (35%) and strongest semantic link. |
+| 2026-03-30 | Driver sub-line under Route (HMW-V03) | Driver name + vehicle plate shown as sub-line under route text in job list. Muted gray (`#6b7280`) for assigned, ghost gray (`#d1d5db`) "No driver assigned" for unassigned FM jobs. Non-FM shows nothing. Route column has most width and strongest semantic link. |
 | 2026-03-30 | Rename "Route" → "Where" + service sub-lines (HMW-V04) | Same 7-column table, rename column. Sub-lines per service: FM=driver+vehicle, EC/CS=MAWB, OH/CR=bags+weight. Option C (compact two-line rows) rejected as overcomplicating the smart spreadsheet. |
 | 2026-03-30 | Service-adaptive job detail | Same skeleton (header → status → [adaptive] → fees → proofs → log), but middle section changes per service. FM gets Dispatch + Timeline. Non-FM gets single Location. One generic layout serves neither well. |
 | 2026-03-30 | Multi-file proof upload | `<input multiple>` + drag-and-drop + camera button for tablet. Batch activity log entry. Simple file rows, not card boxes. |
@@ -183,6 +241,7 @@ Unlike the admin app (desktop-only, min 1200px), the vendor app targets 768px+.
 | 2026-03-30 | Pickup/Delivery Timeline for FM | Two-point layout with big mono times. The single most important data for FM dispatchers. Non-FM services show single Location row instead. |
 | 2026-03-30 | Vertical timeline for FM route planning (HMW-V05) | Nodes for stops (origin, hubs, destination), leg cards between nodes with driver/vehicle/status, hub ops badges (ARR/PAL/DEP) inline on hub nodes. Three states: empty (add stops), planned (assign drivers), execution (live progress with opacity fade for future legs). |
 | 2026-03-30 | No unnecessary complexity | Don't add labels, badges, or classifications that aren't prompted by user needs (e.g., no "cross-border" tags). A leg is a leg. Keep it simple. |
+| 2026-04-21 | Vendor slop-reduction alignment | Stats bar removed from My Jobs + Fleet; ServiceTag mono-gray (`#6b7280`, no pill); Trip ID ink mono (no chip, no blue); status/verification chips replaced by flat dot+text cells (`StatusCell` + `VerificationCell` mirroring admin); segment pills unified to `All · Pending · In Progress · To verify · Verified · Cancelled`; row tints removed; empty state simplified to muted text + `clear filters` link. Client-spec override retained: Status + Verification stay in two columns, not merged. Fleet: no stats bar; driver/vehicle Active status is flat dot+text, not filled badge; truck type code and plate numbers are ink/mono-gray, not blue. |
 
 ## Preview
 Open `vendor/design-preview.html` in a browser to see the proposed screens.
