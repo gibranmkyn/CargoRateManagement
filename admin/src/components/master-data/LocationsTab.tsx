@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Plus, Pencil, Trash2, Check, X, MapPin } from 'lucide-react';
 import { useLocations, generateLocationId } from '../../context/LocationContext';
+import { useZones } from '@shared/ZoneContext';
 import { useToast } from '@shared/Toast';
 import type { Location, LocationType } from '@shared/mockData';
-import DistrictSearchDropdown from '../shared/DistrictSearchDropdown';
 
 const LOCATION_TYPES: LocationType[] = ['warehouse', 'airport', 'port', 'checkpoint', 'hub'];
 const TYPE_LABEL: Record<LocationType, string> = { warehouse: 'Warehouse', airport: 'Airport', port: 'Port', checkpoint: 'Checkpoint', hub: 'Hub' };
@@ -12,11 +12,15 @@ const th: React.CSSProperties = { textAlign: 'left', padding: '6px 12px', fontSi
 const td: React.CSSProperties = { padding: '8px 12px', fontSize: 11, color: '#374151', borderBottom: '1px solid #f3f4f6' };
 const typeBadge = (_type: LocationType): React.CSSProperties => ({ padding: '1px 5px', borderRadius: 4, fontSize: 9, fontWeight: 600, color: '#6b7280', background: '#f3f4f6', border: '1px solid #e5e7eb' });
 
-// Blank state for both add and edit forms
-const blankForm = () => ({ name: '', code: '', type: 'warehouse' as LocationType, zone: '', district: '', districtCode: '', city: '' });
+const blankForm = () => ({ name: '', code: '', type: 'warehouse' as LocationType, zoneId: '' });
 
-export default function LocationsTab() {
+interface Props {
+  onNavigateToZones?: () => void;
+}
+
+export default function LocationsTab({ onNavigateToZones }: Props) {
   const { locations, addLocation, updateLocation, deleteLocation } = useLocations();
+  const { zones } = useZones();
   const toast = useToast();
 
   const [search, setSearch] = useState('');
@@ -25,9 +29,10 @@ export default function LocationsTab() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [addError, setAddError] = useState('');
 
-  // Shared form state (used for both add and edit via derived state)
   const [addForm, setAddForm] = useState(blankForm());
   const [editForm, setEditForm] = useState(blankForm());
+
+  const noZones = zones.length === 0;
 
   const filtered = locations.filter((l) => {
     if (search && !l.name.toLowerCase().includes(search.toLowerCase()) && !l.code.toLowerCase().includes(search.toLowerCase())) return false;
@@ -36,11 +41,15 @@ export default function LocationsTab() {
   });
 
   const inputStyle: React.CSSProperties = { fontSize: 11, padding: '4px 8px', border: '1px solid #e5e7eb', borderRadius: 4, outline: 'none' };
+  const disabledInputStyle: React.CSSProperties = { ...inputStyle, background: '#f9fafb', color: '#9ca3af', cursor: 'not-allowed' };
+
+  function resolveZoneName(zoneId: string): string {
+    return zones.find((z) => z.id === zoneId)?.name ?? 'Unassigned';
+  }
 
   function handleAdd() {
     setAddError('');
     if (!addForm.name.trim()) { setAddError('Name is required'); return; }
-    if (!addForm.district.trim()) { setAddError('District is required'); return; }
     const duplicate = locations.find((l) => l.name.toLowerCase() === addForm.name.trim().toLowerCase());
     if (duplicate) { setAddError(`"${addForm.name}" already exists`); return; }
     const code = addForm.code.trim() || addForm.name.trim().substring(0, 8).toUpperCase().replace(/[\s,]/g, '-');
@@ -48,11 +57,8 @@ export default function LocationsTab() {
       id: generateLocationId(),
       name: addForm.name.trim(),
       code,
-      zone: addForm.zone.trim() || addForm.city || '',
       type: addForm.type,
-      district: addForm.district,
-      districtCode: addForm.districtCode,
-      city: addForm.city,
+      zoneId: addForm.zoneId,
     });
     toast.success(`Added: ${addForm.name.trim()}`);
     setAddForm(blankForm());
@@ -65,10 +71,7 @@ export default function LocationsTab() {
       name: loc.name,
       code: loc.code,
       type: loc.type,
-      zone: loc.zone ?? '',
-      district: loc.district ?? '',
-      districtCode: loc.districtCode ?? '',
-      city: loc.city ?? '',
+      zoneId: loc.zoneId ?? '',
     });
   }
 
@@ -78,10 +81,7 @@ export default function LocationsTab() {
       name: editForm.name.trim(),
       code: editForm.code.trim(),
       type: editForm.type,
-      zone: editForm.zone.trim() || editForm.city || '',
-      district: editForm.district,
-      districtCode: editForm.districtCode,
-      city: editForm.city,
+      zoneId: editForm.zoneId,
     });
     toast.success(`Updated: ${editForm.name.trim()}`);
     setEditingId(null);
@@ -92,7 +92,15 @@ export default function LocationsTab() {
     toast.success(`Deleted: ${loc.name}`);
   }
 
-  // Shared inline add-row for the table
+  const noZonesHint = (
+    <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 8 }}>
+      {onNavigateToZones
+        ? <>Create a zone first{' '}<button onClick={onNavigateToZones} style={{ background: 'none', border: 'none', color: '#152CFF', fontWeight: 600, fontSize: 11, cursor: 'pointer', padding: 0 }}>→ Go to Zones</button></>
+        : 'Create a zone first in the Zones tab.'
+      }
+    </div>
+  );
+
   function AddRow() {
     return (
       <tr style={{ background: 'rgba(21,44,255,0.03)', borderTop: '2px solid rgba(21,44,255,0.12)' }}>
@@ -103,8 +111,9 @@ export default function LocationsTab() {
             type="text"
             placeholder="Location name *"
             value={addForm.name}
+            disabled={noZones}
             onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))}
-            style={{ ...inputStyle, width: '100%' }}
+            style={{ ...(noZones ? disabledInputStyle : inputStyle), width: '100%' }}
           />
           {addError && <div style={{ fontSize: 10, color: '#dc2626', marginTop: 2 }}>{addError}</div>}
         </td>
@@ -114,52 +123,37 @@ export default function LocationsTab() {
             type="text"
             placeholder={addForm.name ? addForm.name.substring(0, 8).toUpperCase().replace(/[\s,]/g, '-') : 'Auto'}
             value={addForm.code}
+            disabled={noZones}
             onChange={(e) => setAddForm((f) => ({ ...f, code: e.target.value }))}
-            style={{ ...inputStyle, width: '100%', fontFamily: "'JetBrains Mono', monospace", fontSize: 10 }}
+            style={{ ...(noZones ? disabledInputStyle : inputStyle), width: '100%', fontFamily: "'JetBrains Mono', monospace", fontSize: 10 }}
           />
         </td>
         {/* Type */}
         <td style={td}>
           <select
             value={addForm.type}
+            disabled={noZones}
             onChange={(e) => setAddForm((f) => ({ ...f, type: e.target.value as LocationType }))}
-            style={{ ...inputStyle, width: '100%' }}
+            style={{ ...(noZones ? disabledInputStyle : inputStyle), width: '100%' }}
           >
             {LOCATION_TYPES.map((t) => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}
           </select>
         </td>
-        {/* District — search dropdown, auto-fills code + city + zone */}
-        <td style={{ ...td, position: 'relative' }}>
-          <DistrictSearchDropdown
-            value={addForm.district}
-            onSelect={({ district, districtCode, city, zone }) =>
-              setAddForm((f) => ({ ...f, district, districtCode, city, zone: f.zone || zone }))
-            }
-            placeholder="Type Shenzhen, 宝安, or 440306…"
-          />
-          {addForm.districtCode && (
-            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: '#9ca3af', marginTop: 2 }}>
-              {addForm.districtCode}
-            </div>
-          )}
-        </td>
-        {/* City (read-only, auto-filled) */}
-        <td style={{ ...td, color: addForm.city ? '#374151' : '#9ca3af', fontStyle: addForm.city ? 'normal' : 'italic' }}>
-          {addForm.city || 'auto'}
-        </td>
-        {/* Zone (auto-filled from city, manually overrideable) */}
+        {/* Zone */}
         <td style={td}>
-          <input
-            type="text"
-            placeholder={addForm.city || 'Zone'}
-            value={addForm.zone}
-            onChange={(e) => setAddForm((f) => ({ ...f, zone: e.target.value }))}
-            style={{ ...inputStyle, width: '100%', color: addForm.zone ? '#374151' : '#9ca3af' }}
-          />
+          <select
+            value={addForm.zoneId}
+            disabled={noZones}
+            onChange={(e) => setAddForm((f) => ({ ...f, zoneId: e.target.value }))}
+            style={{ ...(noZones ? disabledInputStyle : inputStyle), width: '100%' }}
+          >
+            <option value="">— Select zone —</option>
+            {zones.map((z) => <option key={z.id} value={z.id}>{z.name}</option>)}
+          </select>
         </td>
         {/* Actions */}
         <td style={{ ...td, textAlign: 'center', whiteSpace: 'nowrap' }}>
-          <button onClick={handleAdd} title="Save" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#059669', padding: 2 }}><Check size={14} /></button>
+          <button onClick={handleAdd} disabled={noZones} title="Save" style={{ border: 'none', background: 'none', cursor: noZones ? 'not-allowed' : 'pointer', color: noZones ? '#d1d5db' : '#059669', padding: 2 }}><Check size={14} /></button>
           <button
             onClick={() => { setShowAddForm(false); setAddForm(blankForm()); setAddError(''); }}
             title="Cancel"
@@ -172,6 +166,9 @@ export default function LocationsTab() {
 
   return (
     <div>
+      {/* No-zones hint */}
+      {noZones && noZonesHint}
+
       {/* Filter bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', marginBottom: 12 }}>
         <label style={{ fontSize: 11, color: '#9ca3af' }}>Type</label>
@@ -188,8 +185,9 @@ export default function LocationsTab() {
         />
         <div style={{ marginLeft: 'auto' }}>
           <button
-            onClick={() => { setShowAddForm(true); setAddError(''); setAddForm(blankForm()); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 6, border: 'none', background: '#152CFF', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+            onClick={() => { if (!noZones) { setShowAddForm(true); setAddError(''); setAddForm(blankForm()); } }}
+            disabled={noZones}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 6, border: 'none', background: noZones ? '#e5e7eb' : '#152CFF', color: noZones ? '#9ca3af' : '#fff', fontSize: 11, fontWeight: 600, cursor: noZones ? 'not-allowed' : 'pointer' }}
           >
             <Plus size={12} /> Add Facility
           </button>
@@ -208,9 +206,7 @@ export default function LocationsTab() {
             <th style={th}>Name</th>
             <th style={{ ...th, width: 90 }}>Short Code</th>
             <th style={{ ...th, width: 90 }}>Type</th>
-            <th style={{ ...th, width: 180 }}>District</th>
-            <th style={{ ...th, width: 90 }}>City</th>
-            <th style={{ ...th, width: 90 }}>Zone</th>
+            <th style={{ ...th, width: 130 }}>Zone</th>
             <th style={{ ...th, width: 70, textAlign: 'center' }}>Actions</th>
           </tr>
         </thead>
@@ -250,52 +246,14 @@ export default function LocationsTab() {
                     : <span style={typeBadge(loc.type)}>{TYPE_LABEL[loc.type]}</span>
                   }
                 </td>
-                {/* District */}
-                <td style={{ ...td, position: 'relative' }}>
-                  {isEditing ? (
-                    <>
-                      <DistrictSearchDropdown
-                        value={editForm.district}
-                        onSelect={({ district, districtCode, city, zone }) =>
-                          setEditForm((f) => ({ ...f, district, districtCode, city, zone: f.zone || zone }))
-                        }
-                        placeholder="Type Shenzhen, 宝安, or 440306…"
-                      />
-                      {editForm.districtCode && (
-                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: '#9ca3af', marginTop: 2 }}>
-                          {editForm.districtCode}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <span>
-                      {loc.district || <span style={{ color: '#d1d5db' }}>—</span>}
-                      {loc.districtCode && (
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: '#d1d5db', marginLeft: 5 }}>
-                          {loc.districtCode}
-                        </span>
-                      )}
-                    </span>
-                  )}
-                </td>
-                {/* City */}
-                <td style={{ ...td, color: '#6b7280' }}>
-                  {isEditing
-                    ? <span style={{ fontSize: 11, color: editForm.city ? '#374151' : '#9ca3af', fontStyle: editForm.city ? 'normal' : 'italic' }}>{editForm.city || 'auto'}</span>
-                    : (loc.city || <span style={{ color: '#d1d5db' }}>—</span>)
-                  }
-                </td>
                 {/* Zone */}
                 <td style={{ ...td, color: '#6b7280' }}>
                   {isEditing
-                    ? <input
-                        type="text"
-                        value={editForm.zone}
-                        placeholder={editForm.city || 'Zone'}
-                        onChange={(e) => setEditForm((f) => ({ ...f, zone: e.target.value }))}
-                        style={{ ...inputStyle, width: '100%' }}
-                      />
-                    : (loc.zone || <span style={{ color: '#d1d5db' }}>—</span>)
+                    ? <select value={editForm.zoneId} onChange={(e) => setEditForm((f) => ({ ...f, zoneId: e.target.value }))} style={{ ...inputStyle, width: '100%' }}>
+                        <option value="">— Select zone —</option>
+                        {zones.map((z) => <option key={z.id} value={z.id}>{z.name}</option>)}
+                      </select>
+                    : (loc.zoneId ? resolveZoneName(loc.zoneId) : <span style={{ color: '#d1d5db' }}>Unassigned</span>)
                   }
                 </td>
                 {/* Actions */}
@@ -319,7 +277,7 @@ export default function LocationsTab() {
           {/* Empty state */}
           {filtered.length === 0 && !showAddForm && (
             <tr>
-              <td colSpan={7} style={{ padding: '48px 16px', textAlign: 'center', color: '#9ca3af' }}>
+              <td colSpan={5} style={{ padding: '48px 16px', textAlign: 'center', color: '#9ca3af' }}>
                 <MapPin size={20} style={{ color: '#152CFF', marginBottom: 8, display: 'block', margin: '0 auto 8px' }} />
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', marginBottom: 4 }}>
                   {locations.length === 0 ? 'No facilities yet' : 'No facilities match filters'}
@@ -327,7 +285,7 @@ export default function LocationsTab() {
                 <div style={{ fontSize: 11, marginBottom: 12 }}>
                   {locations.length === 0 ? 'Add warehouses, airports, ports, and checkpoints' : 'Try adjusting your filters'}
                 </div>
-                {locations.length === 0 && (
+                {locations.length === 0 && !noZones && (
                   <button
                     onClick={() => setShowAddForm(true)}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 6, border: 'none', background: '#152CFF', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}

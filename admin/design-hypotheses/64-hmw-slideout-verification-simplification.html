@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HMW-64: JobSlideOut Verification Interaction — Simplification</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .page { max-width: 1200px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 44px 0 10px; color: #152CFF; }
+  h3 { font-size: 13px; font-weight: 700; margin-bottom: 8px; color: #111827; }
+  .hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 16px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+  .context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 24px; font-size: 11px; color: #92400e; line-height: 1.6; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin: 10px 0; font-size: 12px; color: #374151; line-height: 1.6; }
+  .rationale strong { color: #111827; }
+  .rationale ul { margin: 6px 0 0 18px; }
+  .rationale li { margin-bottom: 4px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+  .label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+  .label-bad { background: #fef2f2; color: #dc2626; }
+  .label-good { background: #f0fdf4; color: #059669; }
+
+  /* slide-out panel chrome */
+  .panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; max-width: 420px; box-shadow: 0 10px 24px rgba(0,0,0,0.05); }
+  .panel-hdr { padding: 14px 16px; border-bottom: 1px solid #f3f4f6; display: flex; align-items: center; justify-content: space-between; }
+  .panel-hdr .id { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9ca3af; font-weight: 500; }
+  .panel-hdr .close { color: #9ca3af; font-size: 14px; cursor: pointer; }
+  .panel-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+  /* status action bar */
+  .status-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 4px; }
+  .sb-completed { background: #fefce8; border: 1px solid #fde68a; }
+  .st-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+  .st-chip.c-completed { background: #fefce8; border: 1px solid #fde68a; color: #a16207; }
+  .st-chip .dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+  .c-completed .dot { background: #a16207; }
+  .sb-hint { font-size: 10px; color: #a16207; margin-left: auto; }
+
+  /* buttons */
+  .btn { padding: 6px 14px; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; border: 1px solid transparent; white-space: nowrap; }
+  .btn-primary { background: #152CFF; color: #fff; border: none; font-weight: 700; }
+  .btn-verify { background: #059669; color: #fff; border: none; font-weight: 700; }
+  .btn-reject { background: #fff; color: #dc2626; border: 1px solid #fecaca; }
+  .btn-danger { background: #dc2626; color: #fff; border: none; font-weight: 700; }
+  .btn-ghost { background: #fff; color: #374151; border: 1px solid #e5e7eb; }
+  .btn-ghost-muted { background: transparent; color: #9ca3af; border: 1px solid #e5e7eb; }
+  .btn:disabled { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
+
+  /* ------ BEFORE: filled verification bars ------ */
+  .v-bar-pending { background: #fefce8; border: 1px solid #fde68a; border-radius: 4px; padding: 10px 12px; display: flex; align-items: center; gap: 8px; }
+  .v-bar-pending .lbl { font-size: 11px; font-weight: 600; color: #a16207; }
+  .v-bar-verified { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; padding: 10px 12px; display: flex; align-items: center; gap: 8px; }
+  .v-bar-verified .lbl { font-size: 11px; font-weight: 600; color: #059669; }
+  .v-bar-rejected { background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .v-bar-rejected .row { display: flex; align-items: center; gap: 8px; }
+  .v-bar-rejected .lbl { font-size: 11px; font-weight: 600; color: #dc2626; }
+  .v-bar-rejected .reason { font-size: 10px; color: #9ca3af; font-style: italic; }
+  .right { margin-left: auto; display: flex; gap: 6px; }
+  .v-form-bad { background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 10px; }
+  .v-form-bad .tlbl { font-size: 10px; font-weight: 700; color: #dc2626; margin-bottom: 6px; }
+
+  /* ------ AFTER: text-only inline rows ------ */
+  .v-row { border-top: 1px solid #f3f4f6; padding-top: 12px; display: flex; align-items: center; gap: 10px; }
+  .v-state { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .v-state .d { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .v-pending { color: #6b7280; }
+  .v-pending .d { background: #d1d5db; }
+  .v-verified { color: #059669; }
+  .v-verified .d { background: #059669; }
+  .v-rejected { color: #dc2626; }
+  .v-rejected .d { background: #dc2626; }
+  .meta { font-size: 10px; color: #9ca3af; font-family: 'JetBrains Mono', monospace; }
+  .reason-line { font-size: 11px; color: #6b7280; margin-top: 4px; padding-left: 14px; line-height: 1.5; }
+  .reason-line strong { color: #374151; font-weight: 600; }
+
+  .v-form-good { border-top: 1px solid #f3f4f6; padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .v-form-good label { font-size: 11px; font-weight: 600; color: #374151; }
+  .v-form-good textarea { width: 100%; border: 1px solid #e5e7eb; border-radius: 4px; font-family: inherit; font-size: 11px; padding: 8px 10px; resize: vertical; min-height: 52px; color: #111827; }
+  .v-form-good textarea:focus { outline: none; border-color: #152CFF; }
+
+  /* route/service blocks (dim, reference only) */
+  .section-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 6px; }
+  .route { font-size: 11px; color: #111827; }
+  .route .arrow { color: #d1d5db; }
+  .svc-tag { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 9px; font-weight: 600; background: rgba(21,44,255,0.06); color: #152CFF; border: 1px solid rgba(21,44,255,0.15); margin-top: 6px; }
+
+  .verdict { background: #fff; border: 2px dashed #059669; border-radius: 6px; padding: 16px; margin-top: 32px; }
+  .verdict h3 { color: #059669; font-size: 13px; margin-bottom: 8px; }
+  .count-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+  .count-table th, .count-table td { text-align: left; padding: 6px 10px; border-bottom: 1px solid #f3f4f6; }
+  .count-table th { font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; font-weight: 600; }
+  .count-table td.hi { color: #dc2626; font-weight: 600; }
+  .count-table td.ok { color: #059669; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>HMW-64: JobSlideOut verification interaction — simplification</h1>
+  <div class="hmw">How might we let ops verify or reject a job without stacking three colored containers and multiple filled buttons in the slide-out?</div>
+
+  <div class="context">
+    <strong>Problem:</strong> The current Verification Action Bar (built in Phase 2 chunk 2c) stacks a second filled colored container <em>below</em> the Status Action Bar. Each variant (Pending / Verified / Rejected) has 2–3 filled buttons. The reject form adds a third red container. That's too many colors competing for attention when the user is making ONE decision.
+    <br /><br />
+    <strong>Design memory:</strong> "Simple design users understand beats complex design that preserves more signals" (feedback 2026-04-20). Also: "one dominant pill per row" — the same principle should extend to stacked filled containers within a panel.
+  </div>
+
+  <h2>Before vs After</h2>
+
+  <div class="grid">
+    <!-- ===== BEFORE ===== -->
+    <div>
+      <span class="label label-bad">Before — current implementation</span>
+
+      <h3 style="margin-top:8px">Pending verification</h3>
+      <div class="panel">
+        <div class="panel-hdr">
+          <div><strong>T00021-01</strong> <span class="id">HaleSun · FM</span></div>
+          <span class="close">×</span>
+        </div>
+        <div class="panel-body">
+          <div class="status-bar sb-completed">
+            <span class="st-chip c-completed"><span class="dot"></span>Completed</span>
+            <span class="sb-hint">Ready for Verification →</span>
+          </div>
+          <div class="v-bar-pending">
+            <span class="lbl">Awaiting Verification</span>
+            <div class="right">
+              <button class="btn btn-reject">Reject</button>
+              <button class="btn btn-verify">✓ Verify</button>
+            </div>
+          </div>
+          <div>
+            <div class="section-title">Route</div>
+            <div class="route">TikTok WH <span class="arrow">→</span> Huanggang Port</div>
+            <span class="svc-tag">FM · Trucking</span>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin-top:16px">Verified</h3>
+      <div class="panel">
+        <div class="panel-hdr"><div><strong>T00021-02</strong> <span class="id">Gonda · EC</span></div><span class="close">×</span></div>
+        <div class="panel-body">
+          <div class="status-bar sb-completed">
+            <span class="st-chip c-completed"><span class="dot"></span>Completed</span>
+          </div>
+          <div class="v-bar-verified">
+            <span class="lbl">Verified · 2h ago · Ops Admin</span>
+            <div class="right">
+              <button class="btn btn-ghost">Unverify to edit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin-top:16px">Rejected + reject form</h3>
+      <div class="panel">
+        <div class="panel-hdr"><div><strong>T00021-01</strong> <span class="id">HaleSun · FM</span></div><span class="close">×</span></div>
+        <div class="panel-body">
+          <div class="status-bar sb-completed">
+            <span class="st-chip c-completed"><span class="dot"></span>Completed</span>
+          </div>
+          <div class="v-bar-rejected">
+            <div class="row">
+              <span class="lbl">Rejected · 3h ago</span>
+              <div class="right">
+                <button class="btn btn-ghost">Unreject</button>
+                <button class="btn btn-verify">Re-verify</button>
+              </div>
+            </div>
+            <div class="reason">Proof of delivery photo is blurry — license plate not readable.</div>
+          </div>
+          <div class="v-form-bad">
+            <div class="tlbl">REJECT JOB</div>
+            <textarea placeholder="Why is this being rejected?" style="width:100%;border:1px solid #fecaca;border-radius:4px;font-family:inherit;font-size:11px;padding:6px 8px;min-height:48px;"></textarea>
+            <div style="display:flex;gap:6px;margin-top:8px;">
+              <button class="btn btn-danger">Confirm Reject</button>
+              <button class="btn btn-ghost-muted">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rationale">
+        <strong>Slop signals counted in "Before":</strong>
+        <ul>
+          <li>2 stacked filled colored containers (Status + Verification bar) even in happy path</li>
+          <li>3 separate colored backgrounds when reject form is open (amber + red + red form)</li>
+          <li>2 filled colored buttons side-by-side (red Reject outline + green Verify filled) — two signals for one decision</li>
+          <li>Rejected variant: red container + red button + green button + italic gray reason = 4 different colored elements</li>
+          <li>Violates "one dominant pill per row" at the container level</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ===== AFTER ===== -->
+    <div>
+      <span class="label label-good">After — simplified (proposed)</span>
+
+      <h3 style="margin-top:8px">Pending verification</h3>
+      <div class="panel">
+        <div class="panel-hdr">
+          <div><strong>T00021-01</strong> <span class="id">HaleSun · FM</span></div>
+          <span class="close">×</span>
+        </div>
+        <div class="panel-body">
+          <div class="status-bar sb-completed">
+            <span class="st-chip c-completed"><span class="dot"></span>Completed</span>
+            <span class="sb-hint">Ready for Verification →</span>
+          </div>
+          <div class="v-row">
+            <span class="v-state v-pending"><span class="d"></span>Verification pending</span>
+            <div class="right">
+              <button class="btn btn-ghost" style="color:#dc2626;">Reject</button>
+              <button class="btn btn-verify">✓ Verify</button>
+            </div>
+          </div>
+          <div>
+            <div class="section-title">Route</div>
+            <div class="route">TikTok WH <span class="arrow">→</span> Huanggang Port</div>
+            <span class="svc-tag">FM · Trucking</span>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin-top:16px">Verified</h3>
+      <div class="panel">
+        <div class="panel-hdr"><div><strong>T00021-02</strong> <span class="id">Gonda · EC</span></div><span class="close">×</span></div>
+        <div class="panel-body">
+          <div class="status-bar sb-completed">
+            <span class="st-chip c-completed"><span class="dot"></span>Completed</span>
+          </div>
+          <div class="v-row">
+            <span class="v-state v-verified"><span class="d"></span>Verified</span>
+            <span class="meta">2h ago · Ops Admin</span>
+            <div class="right">
+              <button class="btn btn-ghost">Unverify</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin-top:16px">Rejected + reject form</h3>
+      <div class="panel">
+        <div class="panel-hdr"><div><strong>T00021-01</strong> <span class="id">HaleSun · FM</span></div><span class="close">×</span></div>
+        <div class="panel-body">
+          <div class="status-bar sb-completed">
+            <span class="st-chip c-completed"><span class="dot"></span>Completed</span>
+          </div>
+          <div class="v-row" style="flex-wrap:wrap;">
+            <span class="v-state v-rejected"><span class="d"></span>Rejected</span>
+            <span class="meta">3h ago</span>
+            <div class="right">
+              <button class="btn btn-ghost">Unreject</button>
+              <button class="btn btn-verify">Re-verify</button>
+            </div>
+            <div class="reason-line" style="flex:0 0 100%;"><strong>Reason:</strong> Proof of delivery photo is blurry — license plate not readable.</div>
+          </div>
+          <div class="v-form-good">
+            <label>Rejection reason</label>
+            <textarea placeholder="e.g., Proof photo is blurry — plate unreadable"></textarea>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-danger">Confirm Reject</button>
+              <button class="btn btn-ghost-muted">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rationale">
+        <strong>What we removed / kept:</strong>
+        <ul>
+          <li>No filled container around verification state — just a top divider (1px gray line)</li>
+          <li>State shown as text-only dot + label (HMW-60 pattern, consistent with Jobs table)</li>
+          <li>Only ONE filled button at a time: green Verify is the primary action; Reject is a ghost button with red text only</li>
+          <li>Rejected state: no red tint; reason shown inline in gray under the row</li>
+          <li>Reject form: plain gray textarea; red "Confirm Reject" is the only red thing, and only at the confirmation moment</li>
+          <li>Status Action Bar above stays colored — it's the one dominant filled element in the panel top area</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <h2>Color count per state</h2>
+  <table class="count-table">
+    <thead><tr><th>State</th><th>Before — filled colored elements</th><th>After — filled colored elements</th></tr></thead>
+    <tbody>
+      <tr><td>Pending verification</td><td class="hi">3 (amber bar + red outline button + green filled button)</td><td class="ok">2 (amber status bar + green Verify)</td></tr>
+      <tr><td>Verified</td><td class="hi">2 (amber status bar + green verified bar)</td><td class="ok">1 (amber status bar)</td></tr>
+      <tr><td>Rejected</td><td class="hi">3 (amber + red bar + green re-verify)</td><td class="ok">1 (amber status bar)</td></tr>
+      <tr><td>Reject form open</td><td class="hi">4 (amber + red reject bar + red form box + red Confirm)</td><td class="ok">2 (amber status bar + red Confirm button only)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="verdict">
+    <h3>Proposed resolution</h3>
+    <p><strong>Adopt the "After" design.</strong> Replace the filled Verification Action Bar with a text-only inline row separated by a 1px top divider. The primary action (Verify) keeps a filled green pill so the user's main choice remains obvious. Reject is downgraded to a ghost-with-red-text affordance. The Reject form drops its red container and becomes a plain textarea; the red only returns on the Confirm button at the moment the user is about to commit.</p>
+    <p style="margin-top:10px;"><strong>Net effect:</strong> Panel top section has exactly ONE filled colored container (the existing Status Action Bar) across every state. Verification state is communicated with a single colored dot + label — same rule we already shipped in the Jobs table (HMW-60).</p>
+  </div>
+</div>
+</body>
+</html>

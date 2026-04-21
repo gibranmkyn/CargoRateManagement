@@ -32,7 +32,7 @@ Both share localStorage key `tripmanager_state`. Seeded from `shared/mockData.ts
 ## Design System
 **Always read `admin/DESIGN.md` before any UI/visual work.**
 - **Dense data** — ops planners use Excel. Every pixel shows data, not decoration.
-- **5-color status** — gray (pending), blue (in progress), amber (completed), green (verified), red (cancelled). Colors carry meaning.
+- **Two-signal status model** — Status (Pending / In Progress / Completed / Cancelled) and Verification (Pending / Verified / Rejected) are independent signals. Each rendered as dot + label + timestamp in separate columns. Colors: Pending=#d1d5db/#6b7280, In Progress=#152CFF/#111827, Completed=#a16207/#374151, Cancelled=#dc2626, Verified=#059669, Rejected=#dc2626.
 - **Tables not cards** — expanded jobs are sub-table rows, not card grids.
 - **Inline styles** — match mockup CSS exactly. No Tailwind for visual properties.
 - **Sharp radius** — 4-6px containers, 4px inputs/chips.
@@ -53,13 +53,13 @@ Both share localStorage key `tripmanager_state`. Seeded from `shared/mockData.ts
 - **Trip** → many **Jobs**. Each Job = 1 vendor + 1 service + origin/destination.
 - **FM job:** one vendor, one pickup, one delivery. Vendor assigns ONE pickup driver. Everything between (intermediate hubs, truck changes) is vendor's internal ops — not modeled.
 - **OH/EC/CS jobs:** standalone admin-created jobs at specific facilities.
-- **Status lifecycle:** `Pending → In Progress → Completed → Verified`. Terminal: `Cancelled` (admin only).
-- Proof upload → auto-transitions to Completed (even from Pending). Admin Verify → locks fees/quantities/proofs.
+- **Status and Verification are independent signals.** `Job.status`: `Pending → In Progress → Completed`. Terminal: `Cancelled` (admin only). `Job.verificationStatus`: `Pending → Verified` (admin sign-off, locks fees/quantities/proofs) or `Rejected` (loops back). Verify/Reject/Unverify/Re-verify actions drive `verificationStatus`. Status changes are audit-logged automatically via `UPDATE_JOB_STATUS` reducer → `activityLog` + `statusChangedAt`.
+- Proof upload → auto-transitions status to Completed (even from Pending). Admin Verify → locks record.
 - localStorage auto-migrates old multi-service format to seed data.
 
 ## Admin Pages & Interactions
-- **Trips** (`/trips`) — client/demand view. Expandable sub-table with jobs.
-- **Jobs** (`/jobs`) — vendor/execution view. Flat table, status pills, service filters, vendor dropdown, Group by toggle.
+- **Trips** (`/trips`) — client/demand view. Expandable sub-table with jobs. Two columns per trip: Trip Status (auto-derived) + Trip Verification (auto-derived). Sub-rows show Status + Verification each as dot+label+timestamp with cancel/reject reason subline. Segment pills: All / Pending / In Progress / Completed / Cancelled.
+- **Jobs** (`/jobs`) — vendor/execution view. Flat table, two columns: Status + Verification (dot+label+timestamp). Workflow pills: All / Pending / In Progress / To verify / Verified / Cancelled. `To verify` = Completed status with Pending or Rejected verification. Service filters, vendor dropdown, Group by toggle.
 - **Master Data** (`/master-data`) — Facilities, Regions, Vendors, Customers, Services
 
 Key patterns:

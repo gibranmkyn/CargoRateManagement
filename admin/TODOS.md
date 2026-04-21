@@ -1,5 +1,25 @@
 # TODOS — Teleport OS Platform
 
+## 2026-04-21 — Client Status Model Reconciliation (completed)
+
+### ~~TODO-060: Foundation cells~~ ✅
+`StatusCell`, `VerificationCell`, `TripStatusCell`, `TripVerificationCell` in `admin/src/components/trips/`. Deleted `StateCell` and `TripStateCell`. Helpers in `shared/statusStyles.ts`: `getJobStatusDot`, `getVerificationDot`, `getTripStatusDot`, `getTripVerificationDisplay`, `isTripCancelled`, re-exports `deriveTripStatus`/`deriveTripVerification`/`tripHasRejectedJob`.
+
+### ~~TODO-061: UPDATE_JOB_STATUS audit logging~~ ✅
+`shared/TripContext.tsx` reducer appends `{ action: 'Status → <NewStatus>', user: 'Ops Admin' }` to `job.activityLog` and sets `job.statusChangedAt` on every status change.
+
+### ~~TODO-062: TripsPage restructure~~ ✅
+Two trip-level columns: Trip Status + Trip Verification (replaced single TripStateCell). Sub-rows: StatusCell + VerificationCell (with `showReason`). Segment pills: `All / Pending / In Progress / Completed / Cancelled`. CSV split into Status, Status Updated, Verification, Verification Updated.
+
+### ~~TODO-063: JobsPage restructure~~ ✅
+Two job columns: StatusCell + VerificationCell (~9% each; Origin/Destination narrowed to 15%). Workflow pills: `All / Pending / In Progress / To verify / Verified / Cancelled`. Verification `<select>` dropdown removed. CSV columns: Status, Status Updated, Verification, Verification Updated.
+
+### ~~TODO-064: JobSlideOut labeled pair~~ ✅
+Header action row shows labeled "Status" (StatusCell + showReason) + "Verification" (VerificationCell + showReason). All action buttons (Start/Upload/Reject/Verify/Unverify/Re-verify/Re-upload) and "Edit L2" entry preserved.
+
+### ~~TODO-065: Netlify `_redirects`~~ ✅
+Added `/*  /index.html  200` to `admin/public/`, `vendor/public/`, `admin/dist/`, `vendor/dist/`.
+
 ## ~~PRIORITY: Vendor FM Trucking — Driver & Vehicle Assignment~~ (completed)
 
 ### ~~TODO-047: Vendor master data — Drivers and Vehicles~~ ✅

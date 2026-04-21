@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HMW-63: Trips Page — Status &amp; Verification Columns</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .page { max-width: 1400px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 44px 0 6px; color: #152CFF; }
+  h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+  .context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 24px; font-size: 11px; color: #92400e; line-height: 1.6; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+  .rationale strong { color: #111827; }
+  .rationale code { font-family: 'JetBrains Mono', monospace; font-size: 11px; background: #f3f4f6; padding: 1px 5px; border-radius: 3px; }
+  .screen { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+  .verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 24px; }
+  .verdict h3 { color: #059669; font-size: 13px; margin-bottom: 8px; }
+  .rejected-section { background: #fff; border: 1px dashed #d1d5db; border-radius: 6px; padding: 14px; margin: 14px 0; }
+
+  .hdr { display: flex; align-items: flex-end; justify-content: space-between; padding: 16px 16px 0 16px; }
+  .hdr h3 { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; color: #111827; margin: 0; }
+  .hdr p { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+  /* table */
+  table.t { width: 100%; border-collapse: collapse; background: #fff; }
+  table.t th { text-align: left; padding: 6px 12px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+  table.t td { padding: 7px 12px; border-bottom: 1px solid #f3f4f6; font-size: 11px; vertical-align: middle; }
+  table.t tr.r:hover td { background: #f9fafb; }
+  table.t tr.r.rj td { background: #fefafa; }
+  table.t tr.r.rj:hover td { background: #fef2f2; }
+  table.t tr.expanded td { background: #f9fafb; border-bottom: none; }
+  table.t tr.expanded.rj td { background: #fef2f2; }
+  table.t .sub-row td { background: #f9fafb; padding: 0; }
+
+  /* filter bar for rejected shortcut */
+  .filters { display: flex; align-items: center; gap: 8px; padding: 6px 16px; border-bottom: 1px solid #e5e7eb; flex-wrap: wrap; }
+  .pill-f { padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 4px; }
+  .pill-f.on { border-color: #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; }
+  .pill-f.has-rej { border-color: #fecaca; color: #dc2626; background: #fff; }
+  .pill-f .b { font-size: 9px; padding: 0 5px; border-radius: 99px; font-weight: 700; min-width: 16px; text-align: center; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+  .fsep { width: 1px; height: 16px; background: #e5e7eb; }
+  .fl { font-size: 10px; color: #9ca3af; }
+  .fsel { font-size: 11px; border-radius: 4px; padding: 4px 8px; border: 1px solid #e5e7eb; font-family: inherit; background: #fff; }
+
+  /* filled status pill */
+  .st { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+  .st-pending { border: 1px solid #e5e7eb; background: #f9fafb; color: #9ca3af; }
+  .st-progress { border: 1px solid rgba(21,44,255,0.15); background: rgba(21,44,255,0.04); color: #152CFF; }
+  .st-completed { border: 1px solid #fde68a; background: #fefce8; color: #a16207; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+
+  /* verification — text-only */
+  .v-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+  .v-tag .v-dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+  .v-pending { color: #9ca3af; }
+  .v-pending .v-dot { background: #d1d5db; }
+  .v-verified { color: #059669; }
+  .v-verified .v-dot { background: #059669; }
+  .v-rejected { color: #dc2626; font-weight: 700; }
+  .v-rejected .v-dot { background: #dc2626; }
+
+  /* timestamps */
+  .ts { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; display: block; margin-top: 2px; }
+
+  /* service pills */
+  .sp { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 9px; font-weight: 600; letter-spacing: 0.04em; }
+  .sp-fm { background: rgba(21,44,255,0.06); color: #152CFF; border: 1px solid rgba(21,44,255,0.15); }
+  .sp-ec { background: #fefce8; color: #a16207; border: 1px solid #fde68a; }
+  .sp-cs { background: #f0fdf4; color: #059669; border: 1px solid #a7f3d0; }
+
+  .dl { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #152CFF; background: rgba(21,44,255,0.04); padding: 1px 5px; border-radius: 3px; border: 1px solid rgba(21,44,255,0.1); }
+  .caret { color: #152CFF; font-size: 10px; margin-right: 4px; display: inline-block; width: 10px; }
+
+  /* sub-table */
+  .subtable { width: 100%; margin: 0; border-collapse: collapse; background: #fff; border: 1px solid #e5e7eb; border-radius: 4px; }
+  .subtable th { text-align: left; padding: 4px 10px; font-size: 8px; font-weight: 600; text-transform: uppercase; color: #9ca3af; background: #fff; border-bottom: 1px solid #f3f4f6; letter-spacing: 0.06em; }
+  .subtable td { padding: 6px 10px; font-size: 10px; border-bottom: 1px solid #f3f4f6; background: #fff; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-63: Trips Page — Status &amp; Verification Columns</h1>
+<div class="hmw">"How might we add trip-level Status and Verification to the Trips table — simply enough that ops planners understand at a glance, detail lives one click away?"</div>
+
+<div class="context">
+<strong>Design principle for this mockup:</strong> simple design users immediately understand beats clever design that preserves more signals. Trip row answers one question per column: <em>is this trip done?</em> and <em>is this trip billable?</em> Everything else — progress counts, rejected job counts, per-job timestamps — lives inside the expanded view, where it already belongs.
+</div>
+
+<div class="context">
+<strong>Locked decisions:</strong><br>
+• Trip Status auto-derived: <em>In Progress</em> if any job in progress; <em>Completed</em> if all non-cancelled jobs completed; <em>Pending</em> otherwise. No Verified in trip status.<br>
+• Trip Verification auto-derived binary: <em>Verified</em> if all non-cancelled jobs verified; <em>Pending</em> otherwise. Rejected jobs don't bubble up — trip stays Pending.<br>
+• Filters on Trips page are trip-level (status + verification).<br>
+• Expanded sub-rows inherit HMW-60/61 pattern unchanged (job chips + inline timestamps + tooltip attribution).
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- THE DESIGN                                              -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>The design</h2>
+
+<div class="rationale">
+Two new columns at the end of the Trips table. <strong>Status</strong> — filled pill (Pending / In Progress / Completed). <strong>Verification</strong> — text-only tag (Pending / Verified). No timestamps on trip rows, no progress counts, no per-row rejected callouts. A trip row gives you the answer; the expanded view gives you the story.
+</div>
+
+<div class="rationale">
+<strong>Rejected jobs are still findable at a glance</strong> — two lightweight surfaces, neither adds a new column or sub-stat:
+<ol style="margin-top: 6px; padding-left: 20px; line-height: 1.7;">
+<li><strong>Row tint.</strong> Any trip containing at least one job with <code class="mono">verificationStatus === 'Rejected'</code> gets a subtle red background tint (same <code class="mono">.rj</code> pattern the Jobs table already uses). No icon, no text, no count — just "this row needs attention."</li>
+<li><strong>Filter chip.</strong> A "Has Rejected" shortcut chip in the filter bar jumps straight to those trips. Not a verification state (verification remains binary), just a practical filter.</li>
+</ol>
+</div>
+
+<div class="screen">
+<div class="hdr"><div><h3>Trips</h3><p>Trip row — minimal by design; rejected surfaces via row tint + filter chip</p></div></div>
+
+<div class="filters">
+<span class="fl">Status</span>
+<button class="pill-f on">All</button>
+<button class="pill-f">Pending</button>
+<button class="pill-f">In Progress</button>
+<button class="pill-f">Completed</button>
+<span class="fsep"></span>
+<span class="fl">Verification</span>
+<button class="pill-f on">All</button>
+<button class="pill-f">Pending</button>
+<button class="pill-f">Verified</button>
+<button class="pill-f has-rej">Has Rejected <span class="b">1</span></button>
+<span class="fsep"></span>
+<span class="fl">Customer</span>
+<select class="fsel"><option>All</option></select>
+</div>
+
+<div style="padding: 12px 16px 16px;">
+<table class="t" style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+<thead>
+<tr>
+<th style="width: 24px;"></th>
+<th style="width: 95px;">Trip</th>
+<th style="width: 120px;">Customer</th>
+<th style="width: 70px;">Pickup</th>
+<th>Route</th>
+<th style="width: 90px;">MAWB</th>
+<th style="width: 110px;">Status</th>
+<th style="width: 95px;">Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr class="r rj">
+<td><span class="caret">▸</span></td>
+<td><span class="dl">TRP-014</span></td>
+<td>TikTok</td>
+<td class="mono" style="font-size: 10px;">29 Mar</td>
+<td style="font-size: 10px; color: #374151;">Qianhai → Huanggang</td>
+<td class="mono" style="font-size: 10px;">180-4421</td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span></td>
+<td><span class="v-tag v-pending"><span class="v-dot"></span> Pending</span></td>
+</tr>
+<tr class="r">
+<td><span class="caret">▸</span></td>
+<td><span class="dl">TRP-011</span></td>
+<td>TikTok</td>
+<td class="mono" style="font-size: 10px;">28 Mar</td>
+<td style="font-size: 10px; color: #374151;">Shekou Terminal</td>
+<td class="mono" style="font-size: 10px;">180-4398</td>
+<td><span class="st st-progress"><span class="dot" style="background: #152CFF;"></span> In Progress</span></td>
+<td><span class="v-tag v-pending"><span class="v-dot"></span> Pending</span></td>
+</tr>
+<tr class="r">
+<td><span class="caret">▸</span></td>
+<td><span class="dl">TRP-008</span></td>
+<td>Shopee</td>
+<td class="mono" style="font-size: 10px;">25 Mar</td>
+<td style="font-size: 10px; color: #374151;">Baoan → Futian</td>
+<td class="mono" style="font-size: 10px;">180-4302</td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span></td>
+<td><span class="v-tag v-verified"><span class="v-dot"></span> Verified</span></td>
+</tr>
+<tr class="r">
+<td><span class="caret">▸</span></td>
+<td><span class="dl">TRP-019</span></td>
+<td>Shein</td>
+<td class="mono" style="font-size: 10px;">26 Mar</td>
+<td style="font-size: 10px; color: #374151;">Futian Checkpoint</td>
+<td class="mono" style="font-size: 10px;">180-4447</td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span></td>
+<td><span class="v-tag v-pending"><span class="v-dot"></span> Pending</span></td>
+</tr>
+<tr class="r">
+<td><span class="caret">▸</span></td>
+<td><span class="dl">TRP-016</span></td>
+<td>AliExpress</td>
+<td class="mono" style="font-size: 10px;">29 Mar</td>
+<td style="font-size: 10px; color: #374151;">Dongguan → Nanshan</td>
+<td class="mono" style="font-size: 10px;">180-4510</td>
+<td><span class="st st-pending"><span class="dot" style="background: #9ca3af;"></span> Pending</span></td>
+<td><span class="v-tag v-pending"><span class="v-dot"></span> Pending</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3>Expanded trip — detail lives here</h3>
+<div class="rationale">
+Clicking a trip reveals the job sub-rows. This is where per-job chips, timestamps, and rejected-job visibility belong — following the HMW-60 and HMW-61 conventions already decided. No new design needed; just the existing pattern applied inside an expanded row.
+</div>
+
+<div class="screen">
+<div style="padding: 12px 16px 16px;">
+<table class="t" style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+<thead>
+<tr>
+<th style="width: 24px;"></th>
+<th style="width: 95px;">Trip</th>
+<th style="width: 120px;">Customer</th>
+<th style="width: 70px;">Pickup</th>
+<th>Route</th>
+<th style="width: 90px;">MAWB</th>
+<th style="width: 110px;">Status</th>
+<th style="width: 95px;">Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr class="expanded rj">
+<td><span class="caret" style="color: #152CFF;">▾</span></td>
+<td><span class="dl">TRP-014</span></td>
+<td>TikTok</td>
+<td class="mono" style="font-size: 10px;">29 Mar</td>
+<td style="font-size: 10px; color: #374151;">Qianhai → Huanggang</td>
+<td class="mono" style="font-size: 10px;">180-4421</td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span></td>
+<td><span class="v-tag v-pending"><span class="v-dot"></span> Pending</span></td>
+</tr>
+<tr class="sub-row">
+<td colspan="8" style="padding: 10px 40px 14px;">
+<table class="subtable">
+<thead>
+<tr>
+<th style="width: 90px;">Job</th>
+<th style="width: 90px;">Vendor</th>
+<th style="width: 44px;">Svc</th>
+<th>Route</th>
+<th style="width: 110px;">Status</th>
+<th style="width: 115px;">Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="dl" style="font-size: 9px;">JOB-041</span></td>
+<td style="font-weight: 600;">HaleSun</td>
+<td><span class="sp sp-fm">FM</span></td>
+<td>Qianhai WH → Huanggang</td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span><span class="ts">3h ago</span></td>
+<td><span class="v-tag v-rejected"><span class="v-dot"></span> Rejected</span><span class="ts">12m ago</span></td>
+</tr>
+<tr>
+<td><span class="dl" style="font-size: 9px;">JOB-042</span></td>
+<td style="font-weight: 600;">Gonda</td>
+<td><span class="sp sp-ec">EC</span></td>
+<td>Qianhai WH</td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span><span class="ts">4h ago</span></td>
+<td><span class="v-tag v-verified"><span class="v-dot"></span> Verified</span><span class="ts">1h ago</span></td>
+</tr>
+<tr>
+<td><span class="dl" style="font-size: 9px;">JOB-043</span></td>
+<td style="font-weight: 600;">WanDa</td>
+<td><span class="sp sp-cs">CS</span></td>
+<td>SZX Terminal</td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span><span class="ts">6h ago</span></td>
+<td><span class="v-tag v-verified"><span class="v-dot"></span> Verified</span><span class="ts">2h ago</span></td>
+</tr>
+<tr>
+<td><span class="dl" style="font-size: 9px;">JOB-044</span></td>
+<td style="font-weight: 600;">HaleSun</td>
+<td><span class="sp sp-fm">FM</span></td>
+<td>Huanggang → Kwai Chung</td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span><span class="ts">5h ago</span></td>
+<td><span class="v-tag v-pending"><span class="v-dot"></span> Pending</span><span class="ts">5h ago</span></td>
+</tr>
+<tr>
+<td><span class="dl" style="font-size: 9px;">JOB-045</span></td>
+<td style="font-weight: 600;">ThaiKee</td>
+<td><span class="sp sp-ec">EC</span></td>
+<td>Kwai Chung</td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span><span class="ts">1h ago</span></td>
+<td><span class="v-tag v-pending"><span class="v-dot"></span> Pending</span><span class="ts">1h ago</span></td>
+</tr>
+</tbody>
+</table>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- WHAT WE REJECTED                                        -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>What we considered and rejected</h2>
+
+<div class="rejected-section">
+<strong>× Timestamps on trip rows.</strong>
+<p style="margin-top: 6px; color: #6b7280;">A trip-level timestamp is ambiguous — "Completed · 3h ago" really means "the last job to complete did so 3h ago," which you can just as well see by expanding the trip. Trip rows stay clean; job rows carry the time info where it's unambiguous.</p>
+</div>
+
+<div class="rejected-section">
+<strong>× "N/M verified" progress sub-stat.</strong>
+<p style="margin-top: 6px; color: #6b7280;">Tempting because it preserves HMW-54's billing-readiness signal, but it adds a second line of mono text to every row and forces the reader to do arithmetic. "Pending" already tells you billing isn't ready; if you want to know <em>how close</em>, expand the trip and you see each job's state directly.</p>
+</div>
+
+<div class="rejected-section">
+<strong>× Rejected-job count as red mono text on the row.</strong>
+<p style="margin-top: 6px; color: #6b7280;">Adds a number to every rejected-containing row and forces the reader to interpret it. The subtle red row tint + "Has Rejected" filter chip answer the same need — "which trips have rejects?" — without making you read. Exact count lives one click away, in the expanded sub-table.</p>
+</div>
+
+<div class="rejected-section">
+<strong>× HMW-54's progress bar.</strong>
+<p style="margin-top: 6px; color: #6b7280;">Used a green/amber fill to encode completion percent. Re-introduces secondary color and diverges from the Jobs-page visual language for the same concept. The binary pill is the shared vocabulary now.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- DERIVATION                                               -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>Derivation rules</h2>
+
+<div class="rationale">
+<strong>Trip Status</strong> (computed on read, no stored field)
+<ul style="margin-top: 6px; padding-left: 20px; line-height: 1.7;">
+<li><strong>In Progress</strong> if any non-cancelled job is In Progress</li>
+<li><strong>Completed</strong> if all non-cancelled jobs are Completed (regardless of verification state)</li>
+<li><strong>Pending</strong> otherwise</li>
+<li>Cancelled jobs are excluded (a trip of 3 jobs where 1 is cancelled + 2 completed = Trip Completed)</li>
+</ul>
+</div>
+
+<div class="rationale">
+<strong>Trip Verification</strong> (computed on read, no stored field)
+<ul style="margin-top: 6px; padding-left: 20px; line-height: 1.7;">
+<li><strong>Verified</strong> if all non-cancelled jobs have <code class="mono">verificationStatus === 'Verified'</code></li>
+<li><strong>Pending</strong> in every other case (any job pending, any job rejected, trip still in progress)</li>
+</ul>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- VERDICT                                                 -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="verdict">
+<h3>Verdict — PENDING</h3>
+<p style="font-size: 12px; color: #374151; line-height: 1.6;">
+Trip row = one question per column: <em>is this trip done?</em> (Status pill) and <em>is this trip billable?</em> (Verification tag). All secondary detail — per-job state, timestamps, rejected jobs, progress counts — lives in the expanded sub-rows, which already follow HMW-60 / HMW-61 conventions. No new vocabulary, no arithmetic, no colored progress bars.
+</p>
+</div>
+
+</div>
+</body>
+</html>

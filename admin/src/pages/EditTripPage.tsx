@@ -1,14 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { X, ArrowRight, ArrowLeft, Package, Lock } from 'lucide-react';
-import { customers, vendors, serviceTypes, TRUCK_TYPES, seedBagPackages, seedFtlRates, getL1ByCode } from '@shared/mockData';
+import { customers, vendors, serviceTypes, TRUCK_TYPES, seedBagPackages, getL1ByCode } from '@shared/mockData';
 import type { Job, ServiceType, TruckType } from '@shared/mockData';
 import { useTrips, generateJobId } from '@shared/TripContext';
 import { useLocations } from '../context/LocationContext';
 import { useToast } from '@shared/Toast';
 import LocationDropdown from '../components/shared/LocationDropdown';
 import SelectBagsModal from '../components/trips/SelectBagsModal';
-import { ALL_CITIES, ALL_DISTRICTS } from '../data/chinaRegions';
 import { getStatusChipStyle } from '@shared/statusStyles';
 
 interface JobDraft {
@@ -18,22 +17,15 @@ interface JobDraft {
   existingJob?: Job;     // full job for locked display
   serviceCode: string;
   vendorCode: string;
-  originDistrictCode: string;
-  destDistrictCode: string;
   truckType: TruckType | '';
   locationId: string;
   l2CostIds: string[];
 }
 
-const LOCKED_STATUSES = new Set(['Completed', 'Verified', 'Cancelled']);
+const LOCKED_STATUSES = new Set(['Completed', 'Cancelled']);
 
-function districtCodeFromLabel(label: string): string {
-  for (const city of ALL_CITIES) {
-    for (const d of city.districts) {
-      if (`${d.name}, ${city.name}` === label || d.name === label) return d.code;
-    }
-  }
-  return '';
+function isJobLocked(job: Job): boolean {
+  return LOCKED_STATUSES.has(job.status) || job.verificationStatus === 'Verified' || job.verificationStatus === 'Rejected';
 }
 
 function truckTypeFromFees(job: Job): TruckType | '' {
@@ -74,7 +66,7 @@ export default function EditTripPage() {
   const initialJobs = useMemo((): JobDraft[] => {
     if (!trip) return [];
     return trip.jobs.map((job) => {
-      const isLocked = LOCKED_STATUSES.has(job.status);
+      const isLocked = isJobLocked(job);
       const isFM = job.service.code === 'FM';
       return {
         key: job.id,
@@ -83,8 +75,6 @@ export default function EditTripPage() {
         existingJob: job,
         serviceCode: job.service.code,
         vendorCode: job.vendor.code,
-        originDistrictCode: isFM ? districtCodeFromLabel(job.origin.location) : '',
-        destDistrictCode: isFM ? districtCodeFromLabel(job.destination.location) : '',
         truckType: isFM ? truckTypeFromFees(job) : '',
         locationId: !isFM ? (getLocationByName(job.origin.location)?.id ?? '') : '',
         l2CostIds: job.l2CostIds ?? [],
@@ -116,12 +106,8 @@ export default function EditTripPage() {
 
   function getJobDefaults(svcCode: string): Partial<JobDraft> {
     if (svcCode === 'FM') {
-      const originL = originLocationId ? getLocationById(originLocationId) : null;
-      const destL = destinationLocationId ? getLocationById(destinationLocationId) : null;
-      return {
-        originDistrictCode: originL?.districtCode ?? '',
-        destDistrictCode: destL?.districtCode ?? '',
-      };
+      // FM: origin/destination come from trip-level facility pickers.
+      return {};
     }
     const side = SERVICE_LOCATION_DEFAULT[svcCode];
     if (side === 'origin') return { locationId: originLocationId };
@@ -136,8 +122,6 @@ export default function EditTripPage() {
       isLocked: false,
       serviceCode: svc.code,
       vendorCode: defaultVendor,
-      originDistrictCode: '',
-      destDistrictCode: '',
       truckType: '',
       locationId: '',
       l2CostIds: [],
@@ -153,13 +137,6 @@ export default function EditTripPage() {
     setJobs((prev) => prev.filter((j) => j.key !== key));
   }
 
-  function districtLabel(code: string): string {
-    const d = ALL_DISTRICTS.find((x) => x.code === code);
-    if (!d) return code;
-    const c = ALL_CITIES.find((x) => x.districts.some((dd) => dd.code === code));
-    return `${d.name}${c ? ', ' + c.name : ''}`;
-  }
-
   function validate(): string[] {
     const errs: string[] = [];
     if (!customerCode) errs.push('Customer is required');
@@ -171,8 +148,6 @@ export default function EditTripPage() {
       const label = `J${String(i + 1).padStart(2, '0')}`;
       if (!job.vendorCode) errs.push(`${label}: select a vendor`);
       if (job.serviceCode === 'FM') {
-        if (!job.originDistrictCode) errs.push(`${label}: select origin district`);
-        if (!job.destDistrictCode) errs.push(`${label}: select destination district`);
         if (!job.truckType) errs.push(`${label}: select truck type`);
       } else {
         if (!job.locationId) errs.push(`${label}: select location`);
@@ -210,7 +185,7 @@ export default function EditTripPage() {
     // 2. Delete removed editable jobs
     const keptJobIds = new Set(jobs.filter((j) => j.jobId).map((j) => j.jobId!));
     for (const j of trip.jobs) {
-      if (!keptJobIds.has(j.id) && !LOCKED_STATUSES.has(j.status)) {
+      if (!keptJobIds.has(j.id) && !isJobLocked(j)) {
         deleteJob(trip.id, j.id);
       }
     }
@@ -226,8 +201,8 @@ export default function EditTripPage() {
       let originName = '';
       let destName = '';
       if (isFM) {
-        originName = districtLabel(draft.originDistrictCode);
-        destName = districtLabel(draft.destDistrictCode);
+        originName = originL?.name ?? trip.origin;
+        destName = destL?.name ?? trip.destination;
       } else {
         const loc = getLocationById(draft.locationId);
         originName = loc?.name ?? draft.locationId;
@@ -246,7 +221,7 @@ export default function EditTripPage() {
       } else {
         // Add new job
         const newJobId = generateJobId(trip.id, allCurrentJobs);
-        allCurrentJobs.push({ id: newJobId });
+        allCurrentJobs.push({ id: newJobId } as Job);
         const newJob: Job = {
           id: newJobId,
           vendor: { code: vendor.code, name: vendor.name },
@@ -254,6 +229,8 @@ export default function EditTripPage() {
           destination: { location: destName, date: '' },
           service: svc,
           status: 'Pending',
+          verificationStatus: 'Pending' as const,
+          statusChangedAt: now.toISOString(),
           duration: null,
           execution: null,
           activityLog: [{ id: `log-${Date.now()}`, timestamp: now.toISOString().replace('T', ' ').slice(0, 16), action: 'Job created', user: 'Ops Admin', details: `Assigned to ${vendor.name}` }],
@@ -476,31 +453,7 @@ export default function EditTripPage() {
                         {vendors.map((v) => <option key={v.code} value={v.code}>{v.name}</option>)}
                       </select>
 
-                      {isFM ? (
-                        <>
-                          <div style={{ flex: 1 }}>
-                            <select value={job.originDistrictCode} onChange={(e) => updateDraft(job.key, { originDistrictCode: e.target.value })} style={{ width: '100%', fontSize: 11 }}>
-                              <option value="">Origin district...</option>
-                              {ALL_CITIES.map((city) => (
-                                <optgroup key={city.code} label={city.name}>
-                                  {city.districts.map((d) => <option key={d.code} value={d.code}>{d.name}</option>)}
-                                </optgroup>
-                              ))}
-                            </select>
-                          </div>
-                          <ArrowRight size={12} style={{ color: '#d1d5db', flexShrink: 0, alignSelf: 'center', marginTop: 4 }} />
-                          <div style={{ flex: 1 }}>
-                            <select value={job.destDistrictCode} onChange={(e) => updateDraft(job.key, { destDistrictCode: e.target.value })} style={{ width: '100%', fontSize: 11 }}>
-                              <option value="">Destination district...</option>
-                              {ALL_CITIES.map((city) => (
-                                <optgroup key={city.code} label={city.name}>
-                                  {city.districts.map((d) => <option key={d.code} value={d.code}>{d.name}</option>)}
-                                </optgroup>
-                              ))}
-                            </select>
-                          </div>
-                        </>
-                      ) : (
+                      {!isFM && (
                         <div style={{ flex: 1 }}>
                           <LocationDropdown value={job.locationId} onChange={(id) => updateDraft(job.key, { locationId: id })} placeholder="Location..." />
                         </div>
@@ -513,18 +466,12 @@ export default function EditTripPage() {
                         <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
                           {TRUCK_TYPES.map((t) => {
                             const isSelected = job.truckType === t.type;
-                            const hasRate = job.originDistrictCode && job.destDistrictCode && seedFtlRates.some((r) =>
-                              r.vendorCode === job.vendorCode && r.isActive &&
-                              r.originCode === job.originDistrictCode && r.destCode === job.destDistrictCode &&
-                              r.rates[t.type] !== undefined
-                            );
                             return (
                               <button key={t.type} type="button" onClick={() => updateDraft(job.key, { truckType: t.type })} style={{
                                 padding: '3px 8px', borderRadius: 4, fontSize: 9, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
                                 border: isSelected ? '1.5px solid #152CFF' : '1px solid #e5e7eb',
                                 background: isSelected ? 'rgba(21,44,255,0.06)' : '#fff',
-                                color: isSelected ? '#152CFF' : hasRate ? '#374151' : '#d1d5db',
-                                opacity: hasRate || !job.originDistrictCode ? 1 : 0.5,
+                                color: isSelected ? '#152CFF' : '#374151',
                               }}>
                                 {t.type}
                                 <span style={{ fontSize: 7, color: '#9ca3af', marginLeft: 2 }}>&lt;{(t.maxKg / 1000).toFixed(t.maxKg >= 10000 ? 0 : 1)}t</span>

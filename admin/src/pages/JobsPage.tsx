@@ -1,65 +1,61 @@
 import { useState, useCallback, useMemo } from 'react';
-import { Download, Search, Ship } from 'lucide-react';
+import { Download, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { vendors, getL2ByCostId } from '@shared/mockData';
-import type { Trip, Job, JobStatus } from '@shared/mockData';
+import type { Trip, Job } from '@shared/mockData';
 import DateRangePopover from '../components/shared/DateRangePopover';
 import { useTrips, generateJobId } from '@shared/TripContext';
 import { useLocations } from '../context/LocationContext';
+import { useZones } from '@shared/ZoneContext';
 import { useToast } from '@shared/Toast';
 import SlideOutPanel from '../components/SlideOutPanel';
 import JobSlideOut from '../components/trips/JobSlideOut';
 import ServiceTag from '../components/trips/ServiceTag';
-import { getStatusChipStyle, parsePickupDate } from '@shared/statusStyles';
+import StatusCell from '../components/trips/StatusCell';
+import VerificationCell from '../components/trips/VerificationCell';
+import { stateSortRank, parsePickupDate } from '@shared/statusStyles';
 
 // -- Types --
 
-type StatusFilter = 'active' | 'completed' | 'verified' | 'all';
+type SegmentKey = 'All' | 'Pending' | 'In Progress' | 'To verify' | 'Verified' | 'Cancelled';
 type GroupBy = 'none' | 'vendor' | 'service' | 'date';
 
 interface FlatJob extends Job {
   trip: Trip;
 }
 
+type LocationMap = Map<string, { code: string; zoneId: string }>;
+
 // -- Helpers --
 
-const STATUS_ORDER: Record<string, number> = {
-  Rejected: 0,
-  'In Progress': 1,
-  Pending: 2,
-  Completed: 3,
-  Verified: 4,
-  Cancelled: 5,
-};
+function buildSegmentCounts(jobs: FlatJob[]): Record<SegmentKey | 'Rejected', number> {
+  let All = 0, Pending = 0, InProgress = 0, ToVerify = 0, Verified = 0, Cancelled = 0, Rejected = 0;
+  for (const j of jobs) {
+    All++;
+    if (j.status === 'Pending') Pending++;
+    else if (j.status === 'In Progress') InProgress++;
+    else if (j.status === 'Cancelled') Cancelled++;
 
-
-function sortActiveJobs(a: FlatJob, b: FlatJob): number {
-  const orderA = STATUS_ORDER[a.status] ?? 5;
-  const orderB = STATUS_ORDER[b.status] ?? 5;
-  if (orderA !== orderB) return orderA - orderB;
-  // Within same status group, sort by pickup date soonest first
-  const dateA = a.origin.date || '';
-  const dateB = b.origin.date || '';
-  return dateA.localeCompare(dateB);
+    if (j.status === 'Completed' && j.verificationStatus !== 'Verified') ToVerify++;
+    if (j.verificationStatus === 'Verified') Verified++;
+    if (j.verificationStatus === 'Rejected') Rejected++;
+  }
+  return {
+    All, Pending,
+    'In Progress': InProgress,
+    'To verify': ToVerify,
+    Verified, Cancelled, Rejected,
+  };
 }
 
-function sortDefaultJobs(a: FlatJob, b: FlatJob): number {
-  // For non-active views, sort by pickup date soonest first
-  const dateA = a.origin.date || '';
-  const dateB = b.origin.date || '';
-  return dateA.localeCompare(dateB);
-}
-
-type LocationMap = Map<string, { code: string; city: string; district: string }>;
-
-function exportJobsCSV(jobs: FlatJob[], locationMap: LocationMap) {
+function exportJobsCSV(jobs: FlatJob[], locationMap: LocationMap, zoneMap: Map<string, string>) {
   const header = [
     'Trip ID', 'MAWB', 'Bags', 'Weight (kg)', 'Pickup Date', 'Delivery Date', 'Remarks',
     'Customer', 'Job ID', 'Vendor', 'Service (L1)',
     'Cost ID', 'Subservice (L2)',
-    'Origin Code', 'Origin', 'Origin District', 'Origin City',
-    'Dest Code', 'Destination', 'Dest District', 'Dest City',
-    'Job Pickup', 'Status',
+    'Origin Code', 'Origin', 'Origin Zone',
+    'Dest Code', 'Destination', 'Dest Zone',
+    'Job Pickup', 'Status', 'Status Updated', 'Verification', 'Verification Updated',
   ];
   const rows = jobs.flatMap((j) => {
     const orig = locationMap.get(j.origin.location);
@@ -83,14 +79,15 @@ function exportJobsCSV(jobs: FlatJob[], locationMap: LocationMap) {
         l2?.name ?? costId,
         orig?.code ?? '',
         j.origin.location,
-        orig?.district ?? '',
-        orig?.city ?? '',
+        orig ? (zoneMap.get(orig.zoneId) ?? '') : '',
         dest?.code ?? '',
         j.destination.location,
-        dest?.district ?? '',
-        dest?.city ?? '',
+        dest ? (zoneMap.get(dest.zoneId) ?? '') : '',
         j.origin.date || '-',
         j.status,
+        j.statusChangedAt || '',
+        j.verificationStatus,
+        j.verificationChangedAt || '',
       ];
     });
   });
@@ -104,21 +101,22 @@ function exportJobsCSV(jobs: FlatJob[], locationMap: LocationMap) {
   URL.revokeObjectURL(url);
 }
 
+const SEGMENTS: SegmentKey[] = ['All', 'Pending', 'In Progress', 'To verify', 'Verified', 'Cancelled'];
+
 // -- Component --
 
 export default function JobsPage() {
   const toast = useToast();
   const { trips, updateJobStatus, addProofDocument, removeProofDocument, addActivityLog, updateJob, updateFeeQty, toggleFee, startJob, verifyJob, cancelJob, cancelAndReplace, createFollowup, setCompletionRemark } = useTrips();
   const { locations } = useLocations();
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
-  const [serviceFilter, setServiceFilter] = useState<string | null>(null);
-  const [vendorFilter, setVendorFilter] = useState('');
-  const [jobSearch, setJobSearch] = useState('');
+  const { zones } = useZones();
+  const [segment, setSegment] = useState<SegmentKey>('All');
+  const [serviceFilter, setServiceFilter] = useState<string>('');
+  const [search, setSearch] = useState('');
   const [dateStart, setDateStart] = useState<string | null>(null);
   const [dateEnd, setDateEnd] = useState<string | null>(null);
   const [groupBy, setGroupBy] = useState<GroupBy>('none');
   const [panelIds, setPanelIds] = useState<{ tripId: string; jobId: string } | null>(null);
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 50;
 
@@ -128,41 +126,69 @@ export default function JobsPage() {
     [trips]
   );
 
-  // Location lookup map for CSV export (includes user-created locations)
+  // Location lookup map for CSV export
   const locationMap: LocationMap = useMemo(() => {
-    const map = new Map<string, { code: string; city: string; district: string }>();
+    const map = new Map<string, { code: string; zoneId: string }>();
     for (const l of locations) {
-      map.set(l.name, { code: l.code ?? '', city: l.city ?? '', district: l.district ?? '' });
+      map.set(l.name, { code: l.code ?? '', zoneId: l.zoneId ?? '' });
     }
     return map;
   }, [locations]);
 
-  // Stats (computed from ALL jobs, not filtered)
-  const stats = useMemo(() => ({
-    total: allJobs.length,
-    pending: allJobs.filter((j) => j.status === 'Pending').length,
-    inProgress: allJobs.filter((j) => j.status === 'In Progress').length,
-    completed: allJobs.filter((j) => j.status === 'Completed').length,
-    verified: allJobs.filter((j) => j.status === 'Verified').length,
-    cancelled: allJobs.filter((j) => j.status === 'Cancelled').length,
-  }), [allJobs]);
+  // Zone id → name map for CSV export
+  const zoneMap = useMemo(() => {
+    return new Map<string, string>(zones.map((z) => [z.id, z.name]));
+  }, [zones]);
+
+  // Segment counts (from allJobs filtered only by service/search/date, NOT segment or verificationFilter)
+  const pillCounts = useMemo(() => {
+    let jobs = allJobs;
+    if (serviceFilter) jobs = jobs.filter((j) => j.service.code === serviceFilter);
+    if (search) {
+      const q = search.toLowerCase();
+      jobs = jobs.filter((j) =>
+        j.trip.id.toLowerCase().includes(q) ||
+        j.id.toLowerCase().includes(q) ||
+        j.trip.customer.name.toLowerCase().includes(q) ||
+        j.vendor.name.toLowerCase().includes(q) ||
+        (j.trip.mawb ?? '').toLowerCase().includes(q)
+      );
+    }
+    if (dateStart || dateEnd) {
+      jobs = jobs.filter((j) => {
+        const d = j.origin.date ? j.origin.date.slice(0, 10) : null;
+        if (!d) return false;
+        if (dateStart && d < dateStart) return false;
+        if (dateEnd && d > dateEnd) return false;
+        return true;
+      });
+    }
+    return buildSegmentCounts(jobs);
+  }, [allJobs, serviceFilter, search, dateStart, dateEnd]);
 
   // Filter jobs
   const filtered = useMemo(() => {
     let jobs = allJobs;
 
-    // Status filter
-    switch (statusFilter) {
-      case 'active':
-        jobs = jobs.filter((j) => j.status === 'Pending' || j.status === 'In Progress' || j.status === 'Cancelled');
+    // Segment filter
+    switch (segment) {
+      case 'Pending':
+        jobs = jobs.filter((j) => j.status === 'Pending');
         break;
-      case 'completed':
-        jobs = jobs.filter((j) => j.status === 'Completed');
+      case 'In Progress':
+        jobs = jobs.filter((j) => j.status === 'In Progress');
         break;
-      case 'verified':
-        jobs = jobs.filter((j) => j.status === 'Verified');
+      case 'To verify':
+        jobs = jobs.filter((j) => j.status === 'Completed' && (j.verificationStatus === 'Pending' || j.verificationStatus === 'Rejected'));
         break;
-      case 'all':
+      case 'Verified':
+        jobs = jobs.filter((j) => j.verificationStatus === 'Verified');
+        break;
+      case 'Cancelled':
+        jobs = jobs.filter((j) => j.status === 'Cancelled');
+        break;
+      case 'All':
+      default:
         break;
     }
 
@@ -171,18 +197,15 @@ export default function JobsPage() {
       jobs = jobs.filter((j) => j.service.code === serviceFilter);
     }
 
-    // Vendor filter
-    if (vendorFilter) {
-      jobs = jobs.filter((j) => j.vendor.name.toLowerCase().includes(vendorFilter.toLowerCase()));
-    }
-
-    // Job search (trip ID, job ID, customer name)
-    if (jobSearch) {
-      const q = jobSearch.toLowerCase();
+    // Unified search
+    if (search) {
+      const q = search.toLowerCase();
       jobs = jobs.filter((j) =>
         j.trip.id.toLowerCase().includes(q) ||
         j.id.toLowerCase().includes(q) ||
-        j.trip.customer.name.toLowerCase().includes(q)
+        j.trip.customer.name.toLowerCase().includes(q) ||
+        j.vendor.name.toLowerCase().includes(q) ||
+        (j.trip.mawb ?? '').toLowerCase().includes(q)
       );
     }
 
@@ -197,45 +220,26 @@ export default function JobsPage() {
       });
     }
 
-    // Sort
-    if (statusFilter === 'active') {
-      jobs = [...jobs].sort(sortActiveJobs);
+    // Sort: All uses stateSortRank as primary; specific segments sort by pickup date
+    if (segment === 'All') {
+      jobs = [...jobs].sort((a, b) => {
+        const ra = stateSortRank(a);
+        const rb = stateSortRank(b);
+        if (ra !== rb) return ra - rb;
+        const dateA = a.origin.date || '';
+        const dateB = b.origin.date || '';
+        return dateA.localeCompare(dateB);
+      });
     } else {
-      jobs = [...jobs].sort(sortDefaultJobs);
+      jobs = [...jobs].sort((a, b) => {
+        const dateA = a.origin.date || '';
+        const dateB = b.origin.date || '';
+        return dateA.localeCompare(dateB);
+      });
     }
 
     return jobs;
-  }, [allJobs, statusFilter, serviceFilter, vendorFilter, jobSearch, dateStart, dateEnd]);
-
-  // Status pill counts (from allJobs filtered only by service/vendor/date, NOT status)
-  const pillCounts = useMemo(() => {
-    let jobs = allJobs;
-    if (serviceFilter) jobs = jobs.filter((j) => j.service.code === serviceFilter);
-    if (vendorFilter) jobs = jobs.filter((j) => j.vendor.name.toLowerCase().includes(vendorFilter.toLowerCase()));
-    if (jobSearch) {
-      const q = jobSearch.toLowerCase();
-      jobs = jobs.filter((j) =>
-        j.trip.id.toLowerCase().includes(q) ||
-        j.id.toLowerCase().includes(q) ||
-        j.trip.customer.name.toLowerCase().includes(q)
-      );
-    }
-    if (dateStart || dateEnd) {
-      jobs = jobs.filter((j) => {
-        const d = j.origin.date ? j.origin.date.slice(0, 10) : null;
-        if (!d) return false;
-        if (dateStart && d < dateStart) return false;
-        if (dateEnd && d > dateEnd) return false;
-        return true;
-      });
-    }
-    return {
-      active: jobs.filter((j) => j.status === 'Pending' || j.status === 'In Progress' || j.status === 'Cancelled').length,
-      completed: jobs.filter((j) => j.status === 'Completed').length,
-      verified: jobs.filter((j) => j.status === 'Verified').length,
-      all: jobs.length,
-    };
-  }, [allJobs, serviceFilter, vendorFilter, jobSearch, dateStart, dateEnd]);
+  }, [allJobs, segment, serviceFilter, search, dateStart, dateEnd]);
 
   // Unique vendors in filtered results
   const activeVendorCount = useMemo(() => {
@@ -252,6 +256,16 @@ export default function JobsPage() {
   const panelTrip = panelIds ? trips.find((t) => t.id === panelIds.tripId) : null;
   const panelJob = panelTrip ? panelTrip.jobs.find((j) => j.id === panelIds.jobId) : null;
   const panelJobIdx = panelTrip && panelJob ? panelTrip.jobs.indexOf(panelJob) : -1;
+
+  // Clear filters
+  const clearFilters = useCallback(() => {
+    setSearch('');
+    setServiceFilter('');
+    setSegment('All');
+    setDateStart(null);
+    setDateEnd(null);
+    setPage(1);
+  }, []);
 
   // -- Handlers --
 
@@ -291,7 +305,7 @@ export default function JobsPage() {
     const newJob: Job = {
       id: newId, vendor: { code: v.code, name: v.name },
       origin: { ...job.origin }, destination: { ...job.destination },
-      service: { ...job.service }, status: 'Pending', duration: null, execution: null,
+      service: { ...job.service }, status: 'Pending', verificationStatus: 'Pending', statusChangedAt: now, duration: null, execution: null,
       activityLog: [{ id: `log-${Date.now()}`, timestamp: now, action: `Job created — replaces ${job.id} (${job.vendor.name}, cancelled)`, user: 'Ops Admin' }],
       proofDocuments: [], fees: [],
       replacesJobId: job.id,
@@ -311,7 +325,7 @@ export default function JobsPage() {
     const newJob: Job = {
       id: newId, vendor: { code: v.code, name: v.name },
       origin: { ...job.origin }, destination: { ...job.destination },
-      service: { ...job.service }, status: 'Pending', duration: null, execution: null,
+      service: { ...job.service }, status: 'Pending', verificationStatus: 'Pending', statusChangedAt: now, duration: null, execution: null,
       activityLog: [{ id: `log-${Date.now()}`, timestamp: now, action: `Job created — follows ${job.id} (${job.completionRemark || 'partial'})`, user: 'Ops Admin' }],
       proofDocuments: [], fees: [],
       replacesJobId: job.id,
@@ -319,15 +333,6 @@ export default function JobsPage() {
     createFollowup(tripId, jobId, newJob);
     toast.success(`Follow-up created — ${newId}`);
   }, [trips, createFollowup, toast]);
-
-  const toggleGroup = useCallback((key: string) => {
-    setCollapsedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }, []);
 
   // -- Grouped data --
 
@@ -345,12 +350,11 @@ export default function JobsPage() {
         case 'vendor':
           key = job.vendor.code;
           label = job.vendor.name;
-          sortKey = 0; // will be overridden
+          sortKey = 0;
           break;
         case 'service':
           key = job.service.code;
           label = job.service.label;
-          // Fixed order: FM, EC, CS, CR, OH
           sortKey = ['FM', 'EC', 'CS', 'CR', 'OH'].indexOf(job.service.code);
           break;
         case 'date': {
@@ -377,10 +381,8 @@ export default function JobsPage() {
       groups.get(key)!.jobs.push(job);
     }
 
-    // Sort groups
     let sorted = Array.from(groups.entries());
     if (groupBy === 'vendor') {
-      // Rejected vendors first, then by most active jobs
       sorted.sort(([, a], [, b]) => {
         const aRej = a.jobs.some((j) => j.status === 'Cancelled') ? 0 : 1;
         const bRej = b.jobs.some((j) => j.status === 'Cancelled') ? 0 : 1;
@@ -396,20 +398,10 @@ export default function JobsPage() {
     return sorted;
   }, [filtered, groupBy]);
 
-  // Initialize all groups as collapsed when groupBy changes
-  const effectiveCollapsed = useMemo(() => {
-    if (!groupedData) return new Set<string>();
-    // All groups collapsed by default unless user has toggled them open
-    const allKeys = new Set(groupedData.map(([key]) => key));
-    // If collapsedGroups is empty (first render after groupBy change), collapse all
-    // We track "expanded" groups instead — a group is collapsed unless explicitly expanded
-    return allKeys;
-  }, [groupedData]);
-
-  // Track expanded groups (inverse of collapsed)
+  // Track expanded groups
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
-  const toggleGroupExpand = useCallback((key: string) => {
+  const toggleGroupExpanded = useCallback((key: string) => {
     setExpandedGroups((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
@@ -424,32 +416,21 @@ export default function JobsPage() {
 
   // -- Render helpers --
 
-  function renderStatusChip(status: JobStatus) {
-    const c = getStatusChipStyle(status);
-    return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600, border: `1px solid ${c.border}`, background: c.bg, color: c.text }}>
-        <span style={{ width: 5, height: 5, borderRadius: '50%', background: c.dot, display: 'inline-block' }} />
-        {status}
-      </span>
-    );
-  }
-
   function renderJobRow(job: FlatJob, hideColumn?: 'vendor' | 'service' | 'pickup') {
-    const isRejected = job.status === 'Cancelled';
     return (
       <tr
         key={`${job.trip.id}-${job.id}`}
         onClick={() => setPanelIds({ tripId: job.trip.id, jobId: job.id })}
-        style={{ cursor: 'pointer', background: isRejected ? '#fefafa' : undefined, transition: 'background 0.1s' }}
-        onMouseEnter={(e) => { if (!isRejected) e.currentTarget.style.background = '#f9fafb'; }}
-        onMouseLeave={(e) => { if (!isRejected) e.currentTarget.style.background = ''; }}
+        style={{ cursor: 'pointer', transition: 'background 0.1s' }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = '#f9fafb'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
       >
         {/* Trip ID */}
         <td style={{ padding: '8px 12px', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' }}>
           <Link
             to="/trips"
             onClick={(e) => e.stopPropagation()}
-            style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#152CFF', background: 'rgba(21,44,255,0.04)', padding: '1px 5px', borderRadius: 3, border: '1px solid rgba(21,44,255,0.1)', textDecoration: 'none', cursor: 'pointer' }}
+            style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#111827', fontWeight: 500, textDecoration: 'none' }}
           >
             {job.trip.id}
           </Link>
@@ -506,7 +487,12 @@ export default function JobsPage() {
 
         {/* Status */}
         <td style={{ padding: '8px 12px', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' }}>
-          {renderStatusChip(job.status)}
+          <StatusCell job={job} showReason />
+        </td>
+
+        {/* Verification */}
+        <td style={{ padding: '8px 12px', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' }}>
+          <VerificationCell job={job} showReason />
         </td>
 
       </tr>
@@ -514,29 +500,28 @@ export default function JobsPage() {
   }
 
   function renderGroupStatusBadges(jobs: FlatJob[]) {
-    const counts: { label: string; count: number; style: React.CSSProperties }[] = [];
+    const badgeCounts: { label: string; count: number; style: React.CSSProperties }[] = [];
     const cancelled = jobs.filter((j) => j.status === 'Cancelled').length;
     const inProgress = jobs.filter((j) => j.status === 'In Progress').length;
     const pending = jobs.filter((j) => j.status === 'Pending').length;
     const completed = jobs.filter((j) => j.status === 'Completed').length;
-    const verified = jobs.filter((j) => j.status === 'Verified').length;
+    const verified = jobs.filter((j) => j.verificationStatus === 'Verified').length;
 
-    if (cancelled > 0) counts.push({ label: `${cancelled} cancelled`, count: cancelled, style: { background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' } });
-    if (inProgress > 0) counts.push({ label: `${inProgress} in progress`, count: inProgress, style: { background: 'rgba(21,44,255,0.04)', color: '#152CFF', border: '1px solid rgba(21,44,255,0.12)' } });
-    if (pending > 0) counts.push({ label: `${pending} pending`, count: pending, style: { background: '#f9fafb', color: '#9ca3af', border: '1px solid #e5e7eb' } });
-    if (completed > 0) counts.push({ label: `${completed} completed`, count: completed, style: { background: '#fefce8', color: '#a16207', border: '1px solid #fde68a' } });
-    if (verified > 0) counts.push({ label: `${verified} verified`, count: verified, style: { background: '#f0fdf4', color: '#059669', border: '1px solid #a7f3d0' } });
+    if (cancelled > 0) badgeCounts.push({ label: `${cancelled} cancelled`, count: cancelled, style: { background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' } });
+    if (inProgress > 0) badgeCounts.push({ label: `${inProgress} in progress`, count: inProgress, style: { background: 'rgba(21,44,255,0.04)', color: '#152CFF', border: '1px solid rgba(21,44,255,0.12)' } });
+    if (pending > 0) badgeCounts.push({ label: `${pending} pending`, count: pending, style: { background: '#f9fafb', color: '#9ca3af', border: '1px solid #e5e7eb' } });
+    if (completed > 0) badgeCounts.push({ label: `${completed} completed`, count: completed, style: { background: '#fefce8', color: '#a16207', border: '1px solid #fde68a' } });
+    if (verified > 0) badgeCounts.push({ label: `${verified} verified`, count: verified, style: { background: '#f0fdf4', color: '#059669', border: '1px solid #a7f3d0' } });
 
     return (
       <div style={{ display: 'flex', gap: 4 }}>
-        {counts.map(({ label, style: badgeStyle }) => (
+        {badgeCounts.map(({ label, style: badgeStyle }) => (
           <span key={label} style={{ fontSize: 9, padding: '2px 7px', borderRadius: 99, fontWeight: 600, whiteSpace: 'nowrap', ...badgeStyle }}>{label}</span>
         ))}
       </div>
     );
   }
 
-  // Table columns for grouped modes
   function getHideColumn(): 'vendor' | 'service' | 'pickup' | undefined {
     switch (groupBy) {
       case 'vendor': return 'vendor';
@@ -548,35 +533,10 @@ export default function JobsPage() {
 
   const hideColumn = getHideColumn();
 
-  // Right-aligned count text
-  const rightCountText = useMemo(() => {
-    if (statusFilter === 'active') return `${filtered.length} active \u00b7 ${activeVendorCount} vendors`;
-    if (statusFilter === 'completed') return `${filtered.length} completed \u00b7 needs verification`;
-    if (statusFilter === 'verified') return `${filtered.length} verified`;
-    return `${filtered.length} jobs \u00b7 ${activeVendorCount} vendors`;
-  }, [statusFilter, filtered.length, activeVendorCount]);
+  const rightCountText = `${filtered.length} jobs \u00b7 ${activeVendorCount} vendors`;
 
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-
-      {/* -- Stats bar -- */}
-      <div style={{ display: 'flex', alignItems: 'center', padding: '8px 16px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontSize: 12, gap: 0 }}>
-        <span style={{ color: '#111827', fontWeight: 600 }}>{stats.total} jobs</span>
-        <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-        <span style={{ color: '#9ca3af', fontWeight: 600 }}>{stats.pending} pending</span>
-        <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-        <span style={{ color: '#152CFF', fontWeight: 600 }}>{stats.inProgress} in progress</span>
-        <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-        <span style={{ color: '#a16207', fontWeight: 600 }}>{stats.completed} completed</span>
-        <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-        <span style={{ color: '#059669', fontWeight: 600 }}>{stats.verified} verified</span>
-        {stats.cancelled > 0 && (
-          <>
-            <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-            <span style={{ color: '#dc2626', fontWeight: 600 }}>{stats.cancelled} cancelled</span>
-          </>
-        )}
-      </div>
 
       {/* -- Page header -- */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: '16px 16px 0 16px' }}>
@@ -585,187 +545,170 @@ export default function JobsPage() {
           <p style={{ fontSize: 11, color: '#9ca3af', margin: '2px 0 0 0' }}>All vendor assignments across shipments</p>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button onClick={() => exportJobsCSV(filtered, locationMap)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#fff', color: '#374151', border: '1px solid #e5e7eb', cursor: 'pointer', fontFamily: 'inherit' }}>
+          <button onClick={() => exportJobsCSV(filtered, locationMap, zoneMap)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#fff', color: '#374151', border: '1px solid #e5e7eb', cursor: 'pointer', fontFamily: 'inherit' }}>
             <Download size={12} /> Export
           </button>
         </div>
       </div>
 
       {/* -- Filter bar -- */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 16px', borderBottom: '1px solid #e5e7eb', flexWrap: 'wrap' }}>
-        {/* Status pills */}
-        {([
-          ['active', 'Active', pillCounts.active] as const,
-          ['completed', 'Completed', pillCounts.completed] as const,
-          ['verified', 'Verified', pillCounts.verified] as const,
-          ['all', 'All', pillCounts.all] as const,
-        ]).map(([key, label, count]) => {
-          const isOn = statusFilter === key;
-          // Verified pill uses green style when selected
-          const isVerifiedPill = key === 'verified';
-          const isCompletedPill = key === 'completed';
-          let pillStyle: React.CSSProperties;
-          if (isOn && isVerifiedPill) {
-            pillStyle = { border: '1px solid #059669', background: '#f0fdf4', color: '#059669' };
-          } else if (isOn && isCompletedPill) {
-            pillStyle = { border: '1px solid #a16207', background: '#fefce8', color: '#a16207' };
-          } else if (isOn) {
-            pillStyle = { border: '1px solid #152CFF', background: 'rgba(21,44,255,0.06)', color: '#152CFF' };
-          } else {
-            pillStyle = { border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280' };
-          }
-          // Badge style
-          let badgeStyle: React.CSSProperties;
-          if (isOn && isVerifiedPill) {
-            badgeStyle = { background: '#f0fdf4', color: '#059669', border: '1px solid #a7f3d0' };
-          } else if (isOn && isCompletedPill) {
-            badgeStyle = { background: '#fefce8', color: '#a16207', border: '1px solid #fde68a' };
-          } else if (isOn) {
-            badgeStyle = { background: 'rgba(21,44,255,0.1)', color: '#152CFF', border: '1px solid rgba(21,44,255,0.2)' };
-          } else {
-            badgeStyle = { background: '#f3f4f6', color: '#6b7280', border: '1px solid #e5e7eb' };
-          }
+      <div style={{ padding: '8px 16px', borderBottom: '1px solid #e5e7eb', background: '#fff' }}>
+        {/* Segment pills + inline exception alert */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+          {SEGMENTS.map((k) => {
+            const active = segment === k;
+            return (
+              <button
+                key={k}
+                onClick={() => { setSegment(k); setPage(1); }}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '5px 10px', borderRadius: 4,
+                  fontSize: 11, fontWeight: active ? 600 : 500,
+                  border: `1px solid ${active ? '#111827' : '#e5e7eb'}`,
+                  background: active ? '#111827' : '#fff',
+                  color: active ? '#fff' : '#374151',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                <span>{k}</span>
+                <span
+                  style={{
+                    fontSize: 10, padding: '0 5px', borderRadius: 8, fontWeight: 700,
+                    background: active ? 'rgba(255,255,255,0.16)' : '#f3f4f6',
+                    color: active ? '#fff' : '#6b7280',
+                    minWidth: 14, textAlign: 'center',
+                  }}
+                >
+                  {pillCounts[k] ?? 0}
+                </span>
+              </button>
+            );
+          })}
 
-          return (
+          {(pillCounts.Cancelled > 0 || pillCounts.Rejected > 0) && (
             <button
-              key={key}
-              onClick={() => { setStatusFilter(key); setPage(1); }}
+              onClick={() => { setSegment('All'); setPage(1); }}
               style={{
-                padding: '3px 10px', borderRadius: 99, fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                display: 'inline-flex', alignItems: 'center', gap: 4,
-                ...pillStyle,
+                marginLeft: 'auto',
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                fontSize: 11, color: '#dc2626', fontWeight: 500,
+                fontFamily: 'inherit',
               }}
             >
-              {label}
-              <span style={{ fontSize: 9, padding: '0 5px', borderRadius: 99, fontWeight: 700, minWidth: 16, textAlign: 'center', ...badgeStyle }}>{count}</span>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#dc2626', display: 'inline-block' }} />
+              {pillCounts.Cancelled > 0 && <>{pillCounts.Cancelled} cancelled</>}
+              {pillCounts.Cancelled > 0 && pillCounts.Rejected > 0 && <> &middot; </>}
+              {pillCounts.Rejected > 0 && <>{pillCounts.Rejected} rejected</>}
+              <span style={{ color: '#152CFF', marginLeft: 4 }}>view &rarr;</span>
             </button>
-          );
-        })}
-
-        <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
-
-        {/* Date range */}
-        <DateRangePopover
-          startDate={dateStart}
-          endDate={dateEnd}
-          onChange={(s, e) => { setDateStart(s); setDateEnd(e); setPage(1); }}
-        />
-
-        <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
-
-        {/* Service dropdown */}
-        <select
-          value={serviceFilter ?? ''}
-          onChange={(e) => { setServiceFilter(e.target.value || null); setPage(1); }}
-          style={{
-            fontSize: 11, borderRadius: 4, padding: '4px 8px', fontFamily: 'inherit',
-            border: serviceFilter ? '1px solid #152CFF' : '1px solid #e5e7eb',
-            color: serviceFilter ? '#152CFF' : '#6b7280',
-            fontWeight: serviceFilter ? 600 : undefined,
-            background: serviceFilter ? 'rgba(21,44,255,0.04)' : '#fff',
-          }}
-        >
-          <option value="">Service</option>
-          <option value="FM">FM</option>
-          <option value="EC">EC</option>
-          <option value="CS">CS</option>
-          <option value="CR">CR</option>
-          <option value="OH">OH</option>
-        </select>
-
-        <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
-
-        {/* Text search inputs */}
-        <div style={{ position: 'relative' }}>
-          <Search size={11} style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', color: '#d1d5db', pointerEvents: 'none' }} />
-          <input
-            type="text"
-            placeholder="Trip, job, customer…"
-            value={jobSearch}
-            onChange={(e) => { setJobSearch(e.target.value); setPage(1); }}
-            style={{ fontFamily: 'var(--font-mono)', fontSize: 11, borderRadius: 4, padding: '4px 8px 4px 22px', border: '1px solid #e5e7eb', outline: 'none', width: 155 }}
-          />
-        </div>
-        <div style={{ position: 'relative' }}>
-          <Search size={11} style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', color: '#d1d5db', pointerEvents: 'none' }} />
-          <input
-            type="text"
-            placeholder="Vendor"
-            value={vendorFilter}
-            onChange={(e) => { setVendorFilter(e.target.value); setPage(1); }}
-            style={{ fontSize: 11, borderRadius: 4, padding: '4px 8px 4px 22px', border: '1px solid #e5e7eb', outline: 'none', width: 110 }}
-          />
+          )}
         </div>
 
-        <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
+        {/* Single search + service select + date range + group by + right count */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', flex: '1 1 220px' }}>
+            <Search size={11} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#d1d5db', pointerEvents: 'none' }} />
+            <input
+              type="text"
+              placeholder="Search by trip, customer, vendor, or MAWB…"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              style={{ width: '100%', fontFamily: 'var(--font-mono)', fontSize: 11, borderRadius: 4, padding: '5px 8px 5px 26px', border: '1px solid #e5e7eb', outline: 'none', boxSizing: 'border-box' }}
+            />
+          </div>
 
-        {/* Group by dropdown */}
-        <span style={{ fontSize: 11, color: '#9ca3af' }}>Group</span>
-        <select
-          value={groupBy}
-          onChange={(e) => { setGroupBy(e.target.value as GroupBy); setExpandedGroups(new Set()); setPage(1); }}
-          style={{
-            fontSize: 11, borderRadius: 4, padding: '4px 8px', fontFamily: 'inherit',
-            border: groupBy !== 'none' ? '1px solid #152CFF' : '1px solid #e5e7eb',
-            color: groupBy !== 'none' ? '#152CFF' : undefined,
-            fontWeight: groupBy !== 'none' ? 600 : undefined,
-            background: groupBy !== 'none' ? 'rgba(21,44,255,0.04)' : undefined,
-          }}
-        >
-          <option value="none">None</option>
-          <option value="vendor">Vendor</option>
-          <option value="service">Service</option>
-          <option value="date">Date</option>
-        </select>
+          <select
+            value={serviceFilter}
+            onChange={(e) => { setServiceFilter(e.target.value); setPage(1); }}
+            style={{
+              fontSize: 11, borderRadius: 4, padding: '5px 8px', fontFamily: 'inherit',
+              border: serviceFilter ? '1px solid #152CFF' : '1px solid #e5e7eb',
+              color: serviceFilter ? '#152CFF' : '#6b7280',
+              fontWeight: serviceFilter ? 600 : undefined,
+              background: serviceFilter ? 'rgba(21,44,255,0.04)' : '#fff',
+            }}
+          >
+            <option value="">Service · All</option>
+            <option value="FM">FM · Trucking</option>
+            <option value="CS">CS · Cargo Submission</option>
+            <option value="EC">EC · Export Customs</option>
+            <option value="OH">OH · Origin Handling</option>
+            <option value="CR">CR · Cargo Retrieval</option>
+          </select>
 
-        {/* Right count */}
-        <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 11, color: '#9ca3af', whiteSpace: 'nowrap' }}>
-          {rightCountText}
-        </span>
+          <DateRangePopover
+            startDate={dateStart}
+            endDate={dateEnd}
+            onChange={(s, e) => { setDateStart(s); setDateEnd(e); setPage(1); }}
+          />
+
+          <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
+
+          <span style={{ fontSize: 11, color: '#9ca3af' }}>Group</span>
+          <select
+            value={groupBy}
+            onChange={(e) => { setGroupBy(e.target.value as GroupBy); setExpandedGroups(new Set()); setPage(1); }}
+            style={{
+              fontSize: 11, borderRadius: 4, padding: '5px 8px', fontFamily: 'inherit',
+              border: groupBy !== 'none' ? '1px solid #152CFF' : '1px solid #e5e7eb',
+              color: groupBy !== 'none' ? '#152CFF' : undefined,
+              fontWeight: groupBy !== 'none' ? 600 : undefined,
+              background: groupBy !== 'none' ? 'rgba(21,44,255,0.04)' : undefined,
+            }}
+          >
+            <option value="none">None</option>
+            <option value="vendor">Vendor</option>
+            <option value="service">Service</option>
+            <option value="date">Date</option>
+          </select>
+
+          <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 11, color: '#9ca3af', whiteSpace: 'nowrap' }}>
+            {rightCountText}
+          </span>
+        </div>
       </div>
 
       {/* -- Table -- */}
       <div style={{ padding: '0 16px 24px 16px' }}>
         {groupBy === 'none' ? (
-          /* Flat table */
           <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, overflow: 'hidden' }}>
             <thead>
               <tr>
                 <th style={{ ...th, width: '7%' }}>Trip ID</th>
                 <th style={{ ...th, width: '7%' }}>Pickup</th>
                 <th style={{ ...th, width: '7%' }}>Job ID</th>
-                <th style={{ ...th, width: '10%' }}>Customer</th>
-                <th style={{ ...th, width: '10%' }}>Vendor</th>
+                <th style={{ ...th, width: '9%' }}>Customer</th>
+                <th style={{ ...th, width: '9%' }}>Vendor</th>
                 <th style={{ ...th, width: '6%' }}>Service</th>
-                <th style={{ ...th, width: '20%' }}>Origin</th>
-                <th style={{ ...th, width: '20%' }}>Destination</th>
-                <th style={{ ...th, width: '10%' }}>Status</th>
+                <th style={{ ...th, width: '15%' }}>Origin</th>
+                <th style={{ ...th, width: '15%' }}>Destination</th>
+                <th style={{ ...th, width: '9%' }}>Status</th>
+                <th style={{ ...th, width: '9%' }}>Verification</th>
               </tr>
             </thead>
             <tbody>
               {paginatedJobs.length > 0 ? paginatedJobs.map((job) => renderJobRow(job)) : (
                 <tr>
-                  <td colSpan={9} style={{ padding: '60px 12px', textAlign: 'center' }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 6, background: 'rgba(21,44,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                      <Ship size={18} style={{ color: '#152CFF' }} />
+                  <td colSpan={10}>
+                    <div style={{ textAlign: 'center', padding: '40px 16px', color: '#6b7280', fontSize: 12 }}>
+                      No jobs match &middot; <button onClick={clearFilters} style={{ color: '#152CFF', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, padding: 0 }}>clear filters</button>
                     </div>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>No jobs match your filters</p>
-                    <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>Try adjusting your search or filters above</p>
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         ) : (
-          /* Grouped table */
           <div style={{ border: '1px solid #e5e7eb', borderRadius: 6, overflow: 'hidden', background: '#fff' }}>
             {groupedData && groupedData.length > 0 ? groupedData.map(([key, group]) => {
               const isExpanded = expandedGroups.has(key);
               return (
                 <div key={key}>
-                  {/* Group header */}
                   <div
-                    onClick={() => toggleGroupExpand(key)}
+                    onClick={() => toggleGroupExpanded(key)}
                     style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', cursor: 'pointer', transition: 'background 0.1s' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f6'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = '#f9fafb'; }}
@@ -779,7 +722,6 @@ export default function JobsPage() {
                     </span>
                     {renderGroupStatusBadges(group.jobs)}
                   </div>
-                  {/* Group body */}
                   {isExpanded && (
                     <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
                       <thead>
@@ -787,12 +729,13 @@ export default function JobsPage() {
                           <th style={{ ...th, width: '7%' }}>Trip ID</th>
                           {hideColumn !== 'pickup' && <th style={{ ...th, width: '7%' }}>Pickup</th>}
                           <th style={{ ...th, width: '7%' }}>Job ID</th>
-                          <th style={{ ...th, width: '10%' }}>Customer</th>
-                          {hideColumn !== 'vendor' && <th style={{ ...th, width: '10%' }}>Vendor</th>}
+                          <th style={{ ...th, width: '9%' }}>Customer</th>
+                          {hideColumn !== 'vendor' && <th style={{ ...th, width: '9%' }}>Vendor</th>}
                           {hideColumn !== 'service' && <th style={{ ...th, width: '6%' }}>Service</th>}
-                          <th style={{ ...th, width: '20%' }}>Origin</th>
-                          <th style={{ ...th, width: '20%' }}>Destination</th>
-                          <th style={{ ...th, width: '10%' }}>Status</th>
+                          <th style={{ ...th, width: '15%' }}>Origin</th>
+                          <th style={{ ...th, width: '15%' }}>Destination</th>
+                          <th style={{ ...th, width: '9%' }}>Status</th>
+                          <th style={{ ...th, width: '9%' }}>Verification</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -803,12 +746,8 @@ export default function JobsPage() {
                 </div>
               );
             }) : (
-              <div style={{ padding: '60px 12px', textAlign: 'center' }}>
-                <div style={{ width: 40, height: 40, borderRadius: 6, background: 'rgba(21,44,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                  <Ship size={18} style={{ color: '#152CFF' }} />
-                </div>
-                <p style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>No jobs match your filters</p>
-                <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>Try adjusting your search or filters above</p>
+              <div style={{ textAlign: 'center', padding: '40px 16px', color: '#6b7280', fontSize: 12 }}>
+                No jobs match &middot; <button onClick={clearFilters} style={{ color: '#152CFF', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, padding: 0 }}>clear filters</button>
               </div>
             )}
           </div>

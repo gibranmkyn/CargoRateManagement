@@ -1,26 +1,33 @@
-import { useState, useCallback } from 'react';
-import { Search, Download, Plus, Ship, Copy, Pencil } from 'lucide-react';
+import { useState, useCallback, useMemo } from 'react';
+import { Search, Download, Plus, Copy, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { vendors, getTripVerification, deriveTripStatus, getTripPickupDate } from '@shared/mockData';
-import type { Trip, Job, JobStatus } from '@shared/mockData';
+import { vendors, getTripPickupDate } from '@shared/mockData';
+import type { Trip, Job } from '@shared/mockData';
+import { deriveTripStatus, tripHasRejectedJob, isTripCancelled, getTripVerificationDisplay } from '@shared/statusStyles';
 import { useTrips, generateJobId } from '@shared/TripContext';
 import { useToast } from '@shared/Toast';
 import SlideOutPanel from '../components/SlideOutPanel';
 import JobSlideOut from '../components/trips/JobSlideOut';
 import ServiceTag from '../components/trips/ServiceTag';
+import StatusCell from '../components/trips/StatusCell';
+import VerificationCell from '../components/trips/VerificationCell';
+import TripStatusCell from '../components/trips/TripStatusCell';
+import TripVerificationCell from '../components/trips/TripVerificationCell';
 import DateRangePopover from '../components/shared/DateRangePopover';
-import { getStatusChipStyle } from '@shared/statusStyles';
+
+// -- Types --
+
+type SegmentKey = 'All' | 'Pending' | 'In Progress' | 'Completed' | 'Cancelled';
 
 // -- Helpers --
 
 function exportTripsCSV(trips: Trip[]) {
-  const header = ['Trip ID', 'Customer', 'MAWB', 'Origin', 'Destination', 'Pickup Date', 'Verification', 'Status', 'Jobs'];
+  const header = ['Trip ID', 'Customer', 'MAWB', 'Origin', 'Destination', 'Pickup Date', 'Status', 'Verification', 'Jobs'];
   const rows = trips.map((t) => {
     const pickup = getTripPickupDate(t) || '-';
-    const { verified, total } = getTripVerification(t);
-    const verificationStr = total > 0 ? `${verified}/${total}` : '-';
-    const status = deriveTripStatus(t);
-    return [t.id, t.customer.name, t.mawb, t.origin, t.destination, pickup, verificationStr, status, String(t.jobs.length)];
+    const statusLabel = isTripCancelled(t) ? 'Cancelled' : deriveTripStatus(t);
+    const verifLabel = getTripVerificationDisplay(t);
+    return [t.id, t.customer.name, t.mawb, t.origin, t.destination, pickup, statusLabel, verifLabel, String(t.jobs.length)];
   });
   const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
@@ -37,14 +44,12 @@ function exportTripsCSV(trips: Trip[]) {
 export default function TripsPage() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { trips, updateJobStatus, addProofDocument, removeProofDocument, addActivityLog, updateJob, startJob, verifyJob, cancelJob, cancelAndReplace, createFollowup, setCompletionRemark } = useTrips();
-  const [statusFilter, setStatusFilter] = useState<'active' | 'completed' | 'verified' | 'all'>('active');
+  const { trips, addProofDocument, removeProofDocument, addActivityLog, startJob, verifyJob, cancelJob, cancelAndReplace, createFollowup, setCompletionRemark } = useTrips();
+  const [segment, setSegment] = useState<SegmentKey>('All');
+  const [search, setSearch] = useState('');
   const [dateStart, setDateStart] = useState<string | null>(null);
   const [dateEnd, setDateEnd] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [mawbSearch, setMawbSearch] = useState('');
-  const [customerFilter, setCustomerFilter] = useState('');
-  const [vendorFilter, setVendorFilter] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [panelIds, setPanelIds] = useState<{ tripId: string; jobId: string } | null>(null);
   const PAGE_SIZE = 50;
@@ -54,52 +59,99 @@ export default function TripsPage() {
   const panelJob = panelTrip ? panelTrip.jobs.find((j) => j.id === panelIds.jobId) : null;
   const panelJobIdx = panelTrip && panelJob ? panelTrip.jobs.indexOf(panelJob) : -1;
 
-  // Status counts — derived from trip status
-  const activeCount = trips.filter((t) => deriveTripStatus(t) === 'Active').length;
-  const completedCount = trips.filter((t) => deriveTripStatus(t) === 'Completed').length;
-  const verifiedCount = trips.filter((t) => deriveTripStatus(t) === 'Verified').length;
+  // -- Segment counts (computed from ALL trips) --
+  const segmentCounts = useMemo(() => {
+    const counts = { All: 0, Pending: 0, 'In Progress': 0, Completed: 0, Cancelled: 0, Rejected: 0 };
+    for (const t of trips) {
+      const status = deriveTripStatus(t);
+      const cancelled = isTripCancelled(t);
+      counts.All++;
+      if (cancelled) {
+        counts.Cancelled++;
+      } else if (status === 'Completed') {
+        counts.Completed++;
+      } else if (status === 'In Progress') {
+        counts['In Progress']++;
+      } else {
+        counts.Pending++;
+      }
+      if (tripHasRejectedJob(t)) {
+        counts.Rejected++;
+      }
+    }
+    return counts;
+  }, [trips]);
 
-  const filtered = trips.filter((t) => {
-    // Status filter
-    if (statusFilter !== 'all') {
-      const tripStatus = deriveTripStatus(t);
-      if (statusFilter === 'active' && tripStatus !== 'Active') return false;
-      if (statusFilter === 'completed' && tripStatus !== 'Completed') return false;
-      if (statusFilter === 'verified' && tripStatus !== 'Verified') return false;
-    }
-    // Date filter — by pickup date, works on all tabs
-    if (dateStart || dateEnd) {
-      const pickupDate = getTripPickupDate(t);
-      if (!pickupDate) return false;
-      if (dateStart && pickupDate < dateStart) return false;
-      if (dateEnd && pickupDate > dateEnd) return false;
-    }
-    // Text / dropdown filters
-    if (mawbSearch && !t.mawb.toLowerCase().includes(mawbSearch.toLowerCase()) && !t.id.toLowerCase().includes(mawbSearch.toLowerCase())) return false;
-    if (customerFilter && !t.customer.name.toLowerCase().includes(customerFilter.toLowerCase())) return false;
-    if (vendorFilter && !t.jobs.some((j) => j.vendor.name.toLowerCase().includes(vendorFilter.toLowerCase()))) return false;
-    return true;
-  });
+  // -- Filter logic --
+  const filtered = useMemo(() => {
+    return trips.filter((t) => {
+      const status = deriveTripStatus(t);
+      const cancelled = isTripCancelled(t);
+
+      // Segment filter
+      switch (segment) {
+        case 'Pending':
+          if (status !== 'Pending' || cancelled) return false;
+          break;
+        case 'In Progress':
+          if (status !== 'In Progress') return false;
+          break;
+        case 'Completed':
+          if (status !== 'Completed' || cancelled) return false;
+          break;
+        case 'Cancelled':
+          if (!cancelled) return false;
+          break;
+        case 'All':
+        default:
+          break;
+      }
+
+      // Date filter — by pickup date
+      if (dateStart || dateEnd) {
+        const pickupDate = getTripPickupDate(t);
+        if (!pickupDate) return false;
+        if (dateStart && pickupDate < dateStart) return false;
+        if (dateEnd && pickupDate > dateEnd) return false;
+      }
+
+      // Unified search
+      if (search) {
+        const q = search.toLowerCase();
+        const matchesId = t.id.toLowerCase().includes(q);
+        const matchesMawb = t.mawb.toLowerCase().includes(q);
+        const matchesCustomer = t.customer.name.toLowerCase().includes(q);
+        const matchesVendor = t.jobs.some((j) => j.vendor.name.toLowerCase().includes(q));
+        if (!matchesId && !matchesMawb && !matchesCustomer && !matchesVendor) return false;
+      }
+
+      return true;
+    });
+  }, [trips, segment, search, dateStart, dateEnd]);
 
   const totalFiltered = filtered.length;
   const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
 
-  filtered.sort((a, b) => {
-    const aDate = a.jobs[0]?.origin.date || '';
-    const bDate = b.jobs[0]?.origin.date || '';
-    return bDate.localeCompare(aDate); // newest first
-  });
+  const sortedFiltered = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const aDate = a.jobs[0]?.origin.date || '';
+      const bDate = b.jobs[0]?.origin.date || '';
+      return bDate.localeCompare(aDate); // newest first
+    });
+  }, [filtered]);
 
-  // Paginate uniformly across all tabs
-  const paginatedFiltered = totalFiltered > PAGE_SIZE ? filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : filtered;
+  const paginatedFiltered = totalFiltered > PAGE_SIZE ? sortedFiltered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : sortedFiltered;
+
+  // -- Clear filters helper --
+  function clearFilters() {
+    setSegment('All');
+    setSearch('');
+    setDateStart(null);
+    setDateEnd(null);
+    setPage(1);
+  }
 
   // -- Handlers --
-
-  const onStatus = useCallback((tripId: string, jobId: string, s: JobStatus) => {
-    updateJobStatus(tripId, jobId, s);
-    addActivityLog(tripId, jobId, { id: `l${Date.now()}`, timestamp: new Date().toISOString().replace('T',' ').slice(0,16), action: `Status \u2192 ${s}`, user: 'Ops Admin' });
-    toast.success(`Status \u2192 ${s}`);
-  }, [updateJobStatus, addActivityLog, toast]);
 
   const onUpload = useCallback((tripId: string, jobId: string, file: File) => {
     addProofDocument(tripId, jobId, { id: `d${Date.now()}`, name: file.name, type: file.type, uploadedAt: new Date().toISOString().replace('T',' ').slice(0,16), uploadedBy: 'Ops Admin', url: URL.createObjectURL(file) });
@@ -119,7 +171,7 @@ export default function TripsPage() {
     return {
       id: newId, vendor: { code: v.code, name: v.name },
       origin: { ...sourceJob.origin }, destination: { ...sourceJob.destination },
-      service: { ...sourceJob.service }, status: 'Pending', duration: null, execution: null,
+      service: { ...sourceJob.service }, status: 'Pending', verificationStatus: 'Pending' as const, statusChangedAt: now, duration: null, execution: null,
       activityLog: [{ id: `log-${Date.now()}`, timestamp: now, action: `Job created — replaces ${sourceJob.id} (${sourceJob.vendor.name}, cancelled)`, user: 'Ops Admin' }],
       proofDocuments: [], fees: [],
       replacesJobId: sourceJob.id,
@@ -152,7 +204,7 @@ export default function TripsPage() {
     const newJob: Job = {
       id: newId, vendor: { code: v.code, name: v.name },
       origin: { ...job.origin }, destination: { ...job.destination },
-      service: { ...job.service }, status: 'Pending', duration: null, execution: null,
+      service: { ...job.service }, status: 'Pending', verificationStatus: 'Pending' as const, statusChangedAt: now, duration: null, execution: null,
       activityLog: [{ id: `log-${Date.now()}`, timestamp: now, action: `Job created — follows ${job.id} (${job.completionRemark || 'partial'})`, user: 'Ops Admin' }],
       proofDocuments: [], fees: [],
       replacesJobId: job.id,
@@ -161,23 +213,14 @@ export default function TripsPage() {
     toast.success(`Follow-up created — ${newId}`);
   }, [trips, createFollowup, toast]);
 
-
   // -- Table header style --
   const th: React.CSSProperties = { textAlign: 'left', padding: '6px 12px', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' };
 
+  // -- Segment pill labels --
+  const SEGMENTS: SegmentKey[] = ['All', 'Pending', 'In Progress', 'Completed', 'Cancelled'];
+
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-
-      {/* -- Stats bar -- */}
-      <div style={{ display: 'flex', alignItems: 'center', padding: '8px 16px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontSize: 12, gap: 0 }}>
-        <span style={{ color: '#111827', fontWeight: 600 }}>{filtered.length} trips</span>
-        <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-        <span style={{ color: '#152CFF', fontWeight: 600 }}>{activeCount} active</span>
-        <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-        <span style={{ color: '#a16207', fontWeight: 600 }}>{completedCount} completed</span>
-        <span style={{ width: 1, height: 14, background: '#e5e7eb', margin: '0 12px' }} />
-        <span style={{ color: '#059669', fontWeight: 600 }}>{verifiedCount} verified</span>
-      </div>
 
       {/* -- Page header -- */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: '16px 16px 0 16px' }}>
@@ -198,58 +241,73 @@ export default function TripsPage() {
         </div>
       </div>
 
-      {/* -- Filter bar -- */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 16px', borderBottom: '1px solid #e5e7eb' }}>
-        {/* Status filter chips — 4-way */}
-        {([
-          ['active', 'Active', activeCount, '#152CFF', 'rgba(21,44,255,0.06)', 'rgba(21,44,255,0.15)'],
-          ['completed', 'Completed', completedCount, '#a16207', '#fefce8', '#fde68a'],
-          ['verified', 'Verified', verifiedCount, '#059669', '#f0fdf4', '#a7f3d0'],
-          ['all', 'All', trips.length, '#152CFF', 'rgba(21,44,255,0.06)', 'rgba(21,44,255,0.15)'],
-        ] as const).map(([key, label, count, activeColor, activeBg, activeBorder]) => {
-          const isOn = statusFilter === key;
-          const isBlue = key === 'active' || key === 'all';
-          const badgeBg = isOn ? (isBlue ? 'rgba(21,44,255,0.1)' : activeBg) : '#f3f4f6';
-          const badgeBorder = isOn ? (isBlue ? 'rgba(21,44,255,0.2)' : activeBorder) : '#e5e7eb';
+      {/* -- Filter bar — row 1: segment pills + alert -- */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '10px 16px 0 16px' }}>
+        {SEGMENTS.map((s) => {
+          const isActive = segment === s;
+          const count = segmentCounts[s];
           return (
-            <button key={key} onClick={() => { setStatusFilter(key); setPage(1); }} style={{
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-              padding: '3px 10px', borderRadius: 99, fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-              border: isOn ? `1px solid ${activeBorder}` : '1px solid #e5e7eb',
-              background: isOn ? activeBg : '#fff',
-              color: isOn ? activeColor : '#6b7280',
-            }}>
-              {label}
+            <button
+              key={s}
+              onClick={() => { setSegment(s); setPage(1); }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: isActive ? 600 : 500,
+                cursor: 'pointer', fontFamily: 'inherit', border: 'none',
+                background: isActive ? '#111827' : 'transparent',
+                color: isActive ? '#fff' : '#6b7280',
+                transition: 'background 0.1s, color 0.1s',
+              }}
+            >
+              {s}
               <span style={{
-                fontSize: 9, padding: '0 5px', borderRadius: 99, fontWeight: 700, minWidth: 16, textAlign: 'center',
-                background: badgeBg,
-                border: `1px solid ${badgeBorder}`,
-                color: isOn ? activeColor : '#9ca3af',
-              }}>{count}</span>
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                minWidth: 16, height: 16, borderRadius: 8, padding: '0 4px',
+                fontSize: 9, fontWeight: 700,
+                background: isActive ? 'rgba(255,255,255,0.2)' : '#f3f4f6',
+                color: isActive ? '#fff' : '#6b7280',
+              }}>
+                {count}
+              </span>
             </button>
           );
         })}
 
-        <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
+        {/* Inline alert for cancelled / rejected */}
+        {(segmentCounts.Cancelled > 0 || segmentCounts.Rejected > 0) && (
+          <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#dc2626' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#dc2626', display: 'inline-block' }} />
+            {segmentCounts.Cancelled > 0 && `${segmentCounts.Cancelled} cancelled`}
+            {segmentCounts.Cancelled > 0 && segmentCounts.Rejected > 0 && ' · '}
+            {segmentCounts.Rejected > 0 && `${segmentCounts.Rejected} has rejected`}
+            {' · '}
+            <button
+              onClick={() => { setSegment('All'); setPage(1); }}
+              style={{ color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, padding: 0, textDecoration: 'underline', fontFamily: 'inherit' }}
+            >
+              view
+            </button>
+          </span>
+        )}
+      </div>
+
+      {/* -- Filter bar — row 2: search + date range -- */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 16px 8px 16px', borderBottom: '1px solid #e5e7eb' }}>
+        <div style={{ position: 'relative', flex: 1, maxWidth: 380 }}>
+          <Search size={11} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#d1d5db', pointerEvents: 'none' }} />
+          <input
+            type="text"
+            placeholder="Search by trip, customer, vendor, or MAWB…"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            style={{ fontFamily: 'inherit', fontSize: 11, borderRadius: 4, padding: '5px 8px 5px 26px', border: '1px solid #e5e7eb', outline: 'none', width: '100%', boxSizing: 'border-box' }}
+          />
+        </div>
         <DateRangePopover
           startDate={dateStart}
           endDate={dateEnd}
           onChange={(s, e) => { setDateStart(s); setDateEnd(e); setPage(1); }}
         />
-
-        <span style={{ width: 1, height: 16, background: '#e5e7eb' }} />
-        <div style={{ position: 'relative' }}>
-          <Search size={11} style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', color: '#d1d5db', pointerEvents: 'none' }} />
-          <input type="text" placeholder="Trip or MAWB" value={mawbSearch} onChange={(e) => { setMawbSearch(e.target.value); setPage(1); }} style={{ fontFamily: 'var(--font-mono)', fontSize: 11, borderRadius: 4, padding: '4px 8px 4px 22px', border: '1px solid #e5e7eb', outline: 'none', width: 130 }} />
-        </div>
-        <div style={{ position: 'relative' }}>
-          <Search size={11} style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', color: '#d1d5db', pointerEvents: 'none' }} />
-          <input type="text" placeholder="Customer" value={customerFilter} onChange={(e) => { setCustomerFilter(e.target.value); setPage(1); }} style={{ fontSize: 11, borderRadius: 4, padding: '4px 8px 4px 22px', border: '1px solid #e5e7eb', outline: 'none', width: 110 }} />
-        </div>
-        <div style={{ position: 'relative' }}>
-          <Search size={11} style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', color: '#d1d5db', pointerEvents: 'none' }} />
-          <input type="text" placeholder="Vendor" value={vendorFilter} onChange={(e) => { setVendorFilter(e.target.value); setPage(1); }} style={{ fontSize: 11, borderRadius: 4, padding: '4px 8px 4px 22px', border: '1px solid #e5e7eb', outline: 'none', width: 100 }} />
-        </div>
         <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 11, color: '#9ca3af' }}>
           {filtered.length} trips
         </span>
@@ -269,27 +327,30 @@ export default function TripsPage() {
               <th style={th}>Origin</th>
               <th style={th}>Destination</th>
               <th style={th}>Load</th>
-              <th style={{ ...th, width: 110 }}>Verification</th>
+              <th style={{ ...th, width: 140 }}>Status</th>
+              <th style={{ ...th, width: 140 }}>Verification</th>
               <th style={{ ...th, width: 60 }} />
             </tr>
           </thead>
           <tbody>
             {paginatedFiltered.length > 0 ? paginatedFiltered.flatMap((trip) => {
               const isExpanded = expandedId === trip.id;
+              const expandedBg = '#f9fafb';
+              const rowBg = isExpanded ? expandedBg : undefined;
 
               const rows = [
                 <tr
                   key={trip.id}
                   onClick={() => setExpandedId(isExpanded ? null : trip.id)}
-                  style={{ cursor: 'pointer', background: isExpanded ? '#f9fafb' : undefined, transition: 'background 0.1s' }}
-                  onMouseEnter={(e) => { if (!isExpanded) e.currentTarget.style.background = '#f9fafb'; }}
+                  style={{ cursor: 'pointer', background: rowBg, transition: 'background 0.1s' }}
+                  onMouseEnter={(e) => { if (!isExpanded) e.currentTarget.style.background = expandedBg; }}
                   onMouseLeave={(e) => { if (!isExpanded) e.currentTarget.style.background = ''; }}
                 >
                   <td style={{ padding: '8px 4px 8px 12px', verticalAlign: 'middle', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6', color: isExpanded ? '#152CFF' : '#d1d5db', fontSize: 12, fontWeight: isExpanded ? 700 : 400 }}>
                     {isExpanded ? '\u25be' : '\u25b8'}
                   </td>
                   <td style={{ padding: '8px 12px', verticalAlign: 'middle', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, color: '#152CFF' }}>{trip.id}</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, color: '#111827' }}>{trip.id}</span>
                   </td>
                   <td style={{ padding: '8px 12px', verticalAlign: 'middle', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
                     <span style={{ fontSize: 11, fontWeight: 600, color: '#111827' }}>{trip.customer.name}</span>
@@ -327,22 +388,10 @@ export default function TripsPage() {
                     <span style={{ fontSize: 11, color: '#9ca3af' }}>{trip.bags} bags &middot; {trip.weight} kg</span>
                   </td>
                   <td style={{ padding: '8px 12px', verticalAlign: 'middle', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
-                    {(() => {
-                      const { verified, total } = getTripVerification(trip);
-                      if (total === 0) return <span style={{ fontSize: 10, color: '#d1d5db' }}>—</span>;
-                      const pct = (verified / total) * 100;
-                      const color = verified === total ? '#059669' : verified > 0 ? '#a16207' : '#9ca3af';
-                      return (
-                        <div>
-                          <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 600, color, marginBottom: 3 }}>
-                            {verified}/{total} <span style={{ fontWeight: 400, fontSize: 9, color }}>verified</span>
-                          </div>
-                          <div style={{ height: 4, background: '#e5e7eb', borderRadius: 2, overflow: 'hidden', width: 60 }}>
-                            <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 2 }} />
-                          </div>
-                        </div>
-                      );
-                    })()}
+                    <TripStatusCell trip={trip} />
+                  </td>
+                  <td style={{ padding: '8px 12px', verticalAlign: 'middle', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6' }}>
+                    <TripVerificationCell trip={trip} />
                   </td>
                   <td style={{ padding: '8px 4px', verticalAlign: 'middle', borderBottom: isExpanded ? 'none' : '1px solid #f3f4f6', textAlign: 'center' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -370,8 +419,8 @@ export default function TripsPage() {
               if (isExpanded) {
                 const subTh: React.CSSProperties = { textAlign: 'left', padding: '4px 10px', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' };
                 rows.push(
-                  <tr key={`${trip.id}-exp`} style={{ background: '#f9fafb' }} onClick={(e) => e.stopPropagation()}>
-                    <td colSpan={11} style={{ padding: 0, borderBottom: '1px solid #e5e7eb' }}>
+                  <tr key={`${trip.id}-exp`} style={{ background: expandedBg }} onClick={(e) => e.stopPropagation()}>
+                    <td colSpan={12} style={{ padding: 0, borderBottom: '1px solid #e5e7eb' }}>
                       <div style={{ paddingLeft: 40, paddingRight: 12, paddingTop: 4, paddingBottom: 10 }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                           <thead>
@@ -381,20 +430,22 @@ export default function TripsPage() {
                               <th style={subTh}>Service</th>
                               <th style={subTh}>Origin</th>
                               <th style={subTh}>Destination</th>
-                              <th style={{ ...subTh, width: 120 }}>Status</th>
+                              <th style={{ ...subTh, width: 140 }}>Status</th>
+                              <th style={{ ...subTh, width: 140 }}>Verification</th>
                             </tr>
                           </thead>
                           <tbody>
                             {trip.jobs.map((job, i) => {
+                              const jobHoverBg = '#f3f4f6';
                               return (
                                 <tr
                                   key={job.id}
                                   onClick={(e) => { e.stopPropagation(); setPanelIds({ tripId: trip.id, jobId: job.id }); }}
                                   style={{ cursor: 'pointer', transition: 'background 0.1s' }}
-                                  onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f6'; }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.background = jobHoverBg; }}
                                   onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
                                 >
-                                  <td style={{ padding: '6px 10px', fontSize: 11, fontWeight: 600, color: '#152CFF' }}>
+                                  <td style={{ padding: '6px 10px', fontSize: 11, fontWeight: 600, color: '#111827' }}>
                                     J{String(i + 1).padStart(2, '0')}
                                   </td>
                                   <td style={{ padding: '6px 10px', fontSize: 11, fontWeight: 600, color: '#111827' }}>
@@ -410,19 +461,10 @@ export default function TripsPage() {
                                     {job.destination.location}
                                   </td>
                                   <td style={{ padding: '6px 10px' }}>
-                                    {(() => {
-                                      const sc = getStatusChipStyle(job.status);
-                                      return (
-                                        <span style={{
-                                          display: 'inline-flex', alignItems: 'center', gap: 4,
-                                          padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600,
-                                          border: `1px solid ${sc.border}`, background: sc.bg, color: sc.text,
-                                        }}>
-                                          <span style={{ width: 5, height: 5, borderRadius: '50%', background: sc.dot, display: 'inline-block' }} />
-                                          {job.status}
-                                        </span>
-                                      );
-                                    })()}
+                                    <StatusCell job={job} />
+                                  </td>
+                                  <td style={{ padding: '6px 10px' }}>
+                                    <VerificationCell job={job} showReason />
                                   </td>
                                 </tr>
                               );
@@ -438,24 +480,12 @@ export default function TripsPage() {
               return rows;
             }) : (
               <tr>
-                <td colSpan={11} style={{ padding: '60px 12px', textAlign: 'center' }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 6, background: 'rgba(21,44,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                    <Ship size={18} style={{ color: '#152CFF' }} />
+                <td colSpan={12} style={{ padding: 0, textAlign: 'center' }}>
+                  <div style={{ textAlign: 'center', padding: '40px 16px', color: '#6b7280', fontSize: 12 }}>
+                    {trips.length === 0 ? 'No trips yet. Create your first trip to start managing vendor assignments.' : 'No trips match · '}
+                    {trips.length > 0 && <button onClick={clearFilters} style={{ color: '#152CFF', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, padding: 0 }}>clear filters</button>}
+                    {trips.length === 0 && <button onClick={() => navigate('/create-trip')} style={{ marginLeft: 8, color: '#152CFF', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, padding: 0 }}>+ New Trip</button>}
                   </div>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>
-                    {trips.length === 0 ? 'No trips yet' : 'No trips match your filters'}
-                  </p>
-                  <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4, marginBottom: 16 }}>
-                    {trips.length === 0
-                      ? 'Create your first trip to start managing vendor assignments.'
-                      : 'Try adjusting your search or filters above.'}
-                  </p>
-                  <button
-                    onClick={() => navigate('/create-trip')}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#152CFF', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
-                  >
-                    <Plus size={12} /> New Trip
-                  </button>
                 </td>
               </tr>
             )}

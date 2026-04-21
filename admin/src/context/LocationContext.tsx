@@ -1,5 +1,6 @@
 import { createContext, useContext, useReducer, useEffect, useCallback, type ReactNode } from 'react';
 import type { Location } from '@shared/mockData';
+import type { Zone } from '@shared/types';
 import { seedLocations } from '@shared/mockData';
 
 // --- State ---
@@ -58,7 +59,7 @@ interface LocationContextValue {
   addLocation: (location: Location) => void;
   updateLocation: (locationId: string, updates: Partial<Omit<Location, 'id'>>) => void;
   deleteLocation: (locationId: string) => void;
-  getLocationsGroupedByZone: () => Map<string, Location[]>;
+  getLocationsGroupedByZone: (zones: Zone[]) => Map<string, Location[]>;
   getLocationById: (id: string) => Location | undefined;
   getLocationByName: (name: string) => Location | undefined;
 }
@@ -66,7 +67,7 @@ interface LocationContextValue {
 const LocationContext = createContext<LocationContextValue | null>(null);
 
 const STORAGE_KEY = 'tripmanager_locations';
-const SEED_VERSION = 'v3';
+const SEED_VERSION = 'v4';
 
 // --- Provider ---
 
@@ -102,12 +103,14 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   const updateLocation = useCallback((locationId: string, updates: Partial<Omit<Location, 'id'>>) => dispatch({ type: 'UPDATE_LOCATION', payload: { locationId, updates } }), []);
   const deleteLocation = useCallback((locationId: string) => dispatch({ type: 'DELETE_LOCATION', payload: { locationId } }), []);
 
-  const getLocationsGroupedByZone = useCallback((): Map<string, Location[]> => {
+  const getLocationsGroupedByZone = useCallback((zones: Zone[]): Map<string, Location[]> => {
+    const zoneNameById = new Map<string, string>(zones.map((z) => [z.id, z.name]));
     const map = new Map<string, Location[]>();
     for (const loc of state.locations) {
-      const group = map.get(loc.zone) ?? [];
+      const zoneName = zoneNameById.get(loc.zoneId) ?? 'Unassigned';
+      const group = map.get(zoneName) ?? [];
       group.push(loc);
-      map.set(loc.zone, group);
+      map.set(zoneName, group);
     }
     return map;
   }, [state.locations]);

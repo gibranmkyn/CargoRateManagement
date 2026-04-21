@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useEffect, useCallback, type ReactNode } from 'react';
-import type { Trip, Job, JobStatus, TripTemplate, ActivityLogEntry, ProofDocument, Currency, FeeLineItem } from './types';
+import type { Trip, Job, JobStatus, VerificationStatus, TripTemplate, ActivityLogEntry, ProofDocument, Currency, FeeLineItem } from './types';
 // ProofStatus import removed — unified status lifecycle (TODO-020)
 import { seedTrips, seedTemplates, calcFeeAmount } from './mockData';
 
@@ -40,7 +40,9 @@ type TripAction =
   | { type: 'UPDATE_FEE_QTY'; payload: { tripId: string; jobId: string; feeId: string; quantity: number } }
   | { type: 'TOGGLE_FEE'; payload: { tripId: string; jobId: string; feeId: string } }
   | { type: 'START_JOB'; payload: { tripId: string; jobId: string } }
-  | { type: 'VERIFY_JOB'; payload: { tripId: string; jobId: string } }
+  | { type: 'VERIFY_JOB'; payload: { tripId: string; jobId: string; actor: string } }
+  | { type: 'REJECT_JOB'; payload: { tripId: string; jobId: string; reason: string; actor: string } }
+  | { type: 'UNVERIFY_JOB'; payload: { tripId: string; jobId: string; actor: string } }
   | { type: 'CANCEL_JOB'; payload: { tripId: string; jobId: string; cancelReason: string } }
   | { type: 'CANCEL_AND_REPLACE'; payload: { tripId: string; jobId: string; cancelReason: string; newJob: Job } }
   | { type: 'CREATE_FOLLOWUP'; payload: { tripId: string; jobId: string; newJob: Job } }
@@ -100,20 +102,39 @@ function tripReducer(state: TripState, action: TripAction): TripState {
         ),
       };
 
-    case 'UPDATE_JOB_STATUS':
+    case 'UPDATE_JOB_STATUS': {
+      const nowIso = new Date().toISOString();
+      const nowLog = nowIso.replace('T', ' ').slice(0, 19);
+      const { status: nextStatus } = action.payload;
       return {
         ...state,
         trips: state.trips.map((t) =>
           t.id === action.payload.tripId
             ? {
                 ...t,
-                jobs: t.jobs.map((j) =>
-                  j.id === action.payload.jobId ? { ...j, status: action.payload.status } : j
-                ),
+                jobs: t.jobs.map((j) => {
+                  if (j.id !== action.payload.jobId) return j;
+                  if (j.status === nextStatus) return j;
+                  return {
+                    ...j,
+                    status: nextStatus,
+                    statusChangedAt: nowIso,
+                    activityLog: [
+                      ...j.activityLog,
+                      {
+                        id: `log-${Date.now()}`,
+                        timestamp: nowLog,
+                        action: `Status → ${nextStatus}`,
+                        user: 'Ops Admin',
+                      },
+                    ],
+                  };
+                }),
               }
             : t
         ),
       };
+    }
 
     case 'ADD_ACTIVITY_LOG':
       return {
@@ -132,27 +153,49 @@ function tripReducer(state: TripState, action: TripAction): TripState {
         ),
       };
 
-    case 'ADD_PROOF_DOCUMENT':
+    case 'ADD_PROOF_DOCUMENT': {
+      const now = new Date().toISOString();
+      const nowLog = now.replace('T', ' ').slice(0, 19);
       return {
         ...state,
         trips: state.trips.map((t) =>
           t.id === action.payload.tripId
             ? {
                 ...t,
-                jobs: t.jobs.map((j) =>
-                  j.id === action.payload.jobId
-                    ? {
-                        ...j,
-                        proofDocuments: [...j.proofDocuments, action.payload.doc],
-                        // Auto-transition to Completed when proof is uploaded (even from Pending, skipping In Progress)
-                        status: (j.status === 'Pending' || j.status === 'In Progress') ? 'Completed' as const : j.status,
-                      }
-                    : j
-                ),
+                jobs: t.jobs.map((j) => {
+                  if (j.id !== action.payload.jobId) return j;
+                  const wasRejected = j.verificationStatus === 'Rejected';
+                  const statusTransition = (j.status === 'Pending' || j.status === 'In Progress') ? 'Completed' as const : j.status;
+                  const updatedJob: typeof j = {
+                    ...j,
+                    proofDocuments: [...j.proofDocuments, action.payload.doc],
+                    // Auto-transition to Completed when proof is uploaded (even from Pending, skipping In Progress)
+                    status: statusTransition,
+                    statusChangedAt: (j.status === 'Pending' || j.status === 'In Progress') ? now : j.statusChangedAt,
+                  };
+                  if (wasRejected) {
+                    // Vendor re-upload auto-flips verification from Rejected → Pending
+                    const vendorName = action.payload.doc.uploadedBy ?? 'Vendor';
+                    updatedJob.verificationStatus = 'Pending';
+                    updatedJob.rejectionReason = undefined;
+                    updatedJob.verificationChangedAt = now;
+                    updatedJob.activityLog = [
+                      ...j.activityLog,
+                      {
+                        id: `log-${Date.now()}`,
+                        timestamp: nowLog,
+                        action: 'Verification → Pending (vendor re-uploaded)',
+                        user: vendorName,
+                      },
+                    ];
+                  }
+                  return updatedJob;
+                }),
               }
             : t
         ),
       };
+    }
 
     case 'REMOVE_PROOF_DOCUMENT':
       return {
@@ -260,29 +303,119 @@ function tripReducer(state: TripState, action: TripAction): TripState {
       };
     }
 
-    case 'START_JOB':
+    case 'START_JOB': {
+      const now = new Date().toISOString();
       return {
         ...state,
         trips: state.trips.map((t) =>
           t.id === action.payload.tripId
-            ? { ...t, jobs: t.jobs.map((j) => j.id === action.payload.jobId && j.status === 'Pending' ? { ...j, status: 'In Progress' as const } : j) }
+            ? {
+                ...t,
+                jobs: t.jobs.map((j) =>
+                  j.id === action.payload.jobId && j.status === 'Pending'
+                    ? { ...j, status: 'In Progress' as const, statusChangedAt: now }
+                    : j
+                ),
+              }
             : t
         ),
       };
+    }
 
-    case 'VERIFY_JOB':
+    case 'VERIFY_JOB': {
+      const now = new Date().toISOString();
+      const nowLog = now.replace('T', ' ').slice(0, 19);
+      const { actor: verifyActor } = action.payload;
       return {
         ...state,
         trips: state.trips.map((t) =>
           t.id === action.payload.tripId
-            ? { ...t, jobs: t.jobs.map((j) => j.id === action.payload.jobId ? { ...j, status: 'Verified' as const } : j) }
+            ? {
+                ...t,
+                jobs: t.jobs.map((j) =>
+                  j.id === action.payload.jobId
+                    ? {
+                        ...j,
+                        verificationStatus: 'Verified' as VerificationStatus,
+                        verificationChangedAt: now,
+                        rejectionReason: undefined,
+                        activityLog: [
+                          ...j.activityLog,
+                          { id: `log-${Date.now()}`, timestamp: nowLog, action: 'Verification → Verified', user: verifyActor },
+                        ],
+                      }
+                    : j
+                ),
+              }
             : t
         ),
       };
+    }
+
+    case 'REJECT_JOB': {
+      const now = new Date().toISOString();
+      const nowLog = now.replace('T', ' ').slice(0, 19);
+      const { reason, actor: rejectActor } = action.payload;
+      return {
+        ...state,
+        trips: state.trips.map((t) =>
+          t.id === action.payload.tripId
+            ? {
+                ...t,
+                jobs: t.jobs.map((j) =>
+                  j.id === action.payload.jobId
+                    ? {
+                        ...j,
+                        verificationStatus: 'Rejected' as VerificationStatus,
+                        rejectionReason: reason,
+                        verificationChangedAt: now,
+                        activityLog: [
+                          ...j.activityLog,
+                          { id: `log-${Date.now()}`, timestamp: nowLog, action: `Verification → Rejected: "${reason}"`, user: rejectActor },
+                        ],
+                      }
+                    : j
+                ),
+              }
+            : t
+        ),
+      };
+    }
+
+    case 'UNVERIFY_JOB': {
+      const now = new Date().toISOString();
+      const nowLog = now.replace('T', ' ').slice(0, 19);
+      const { actor: unverifyActor } = action.payload;
+      return {
+        ...state,
+        trips: state.trips.map((t) =>
+          t.id === action.payload.tripId
+            ? {
+                ...t,
+                jobs: t.jobs.map((j) =>
+                  j.id === action.payload.jobId
+                    ? {
+                        ...j,
+                        verificationStatus: 'Pending' as VerificationStatus,
+                        rejectionReason: undefined,
+                        verificationChangedAt: now,
+                        activityLog: [
+                          ...j.activityLog,
+                          { id: `log-${Date.now()}`, timestamp: nowLog, action: 'Verification → Pending (unverified)', user: unverifyActor },
+                        ],
+                      }
+                    : j
+                ),
+              }
+            : t
+        ),
+      };
+    }
 
     case 'CANCEL_JOB': {
       const { tripId, jobId, cancelReason } = action.payload;
-      const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+      const nowIso = new Date().toISOString();
+      const now = nowIso.replace('T', ' ').slice(0, 19);
       return {
         ...state,
         trips: state.trips.map((t) =>
@@ -290,6 +423,7 @@ function tripReducer(state: TripState, action: TripAction): TripState {
             ? { ...t, jobs: t.jobs.map((j) => j.id === jobId ? {
                 ...j,
                 status: 'Cancelled' as const,
+                statusChangedAt: nowIso,
                 cancelReason,
                 activityLog: [...j.activityLog, { id: `log-${Date.now()}`, timestamp: now, action: `Cancelled`, user: 'Ops Admin', details: cancelReason }],
               } : j) }
@@ -300,7 +434,8 @@ function tripReducer(state: TripState, action: TripAction): TripState {
 
     case 'CANCEL_AND_REPLACE': {
       const { tripId, jobId, cancelReason, newJob } = action.payload;
-      const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+      const nowIso = new Date().toISOString();
+      const now = nowIso.replace('T', ' ').slice(0, 19);
       return {
         ...state,
         trips: state.trips.map((t) =>
@@ -311,6 +446,7 @@ function tripReducer(state: TripState, action: TripAction): TripState {
                   ...t.jobs.map((j) => j.id === jobId ? {
                     ...j,
                     status: 'Cancelled' as const,
+                    statusChangedAt: nowIso,
                     cancelReason,
                     replacedByJobId: newJob.id,
                     activityLog: [...j.activityLog, { id: `log-${Date.now()}`, timestamp: now, action: `Cancelled — replaced by ${newJob.id} (${newJob.vendor.name})`, user: 'Ops Admin', details: cancelReason }],
@@ -401,6 +537,8 @@ interface TripContextValue {
   toggleFee: (tripId: string, jobId: string, feeId: string) => void;
   startJob: (tripId: string, jobId: string) => void;
   verifyJob: (tripId: string, jobId: string) => void;
+  rejectJob: (tripId: string, jobId: string, reason: string) => void;
+  unverifyJob: (tripId: string, jobId: string) => void;
   cancelJob: (tripId: string, jobId: string, cancelReason: string) => void;
   cancelAndReplace: (tripId: string, jobId: string, cancelReason: string, newJob: Job) => void;
   createFollowup: (tripId: string, jobId: string, newJob: Job) => void;
@@ -418,7 +556,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
 
   // Hydrate from localStorage on mount
   // Version key: bump this to force reseed when seed data changes
-  const SEED_VERSION = 'v16-pickup-dates';
+  const SEED_VERSION = 'v17-verification-lifecycle';
 
   useEffect(() => {
     try {
@@ -465,7 +603,10 @@ export function TripProvider({ children }: { children: ReactNode }) {
   const updateFeeQty = useCallback((tripId: string, jobId: string, feeId: string, quantity: number) => dispatch({ type: 'UPDATE_FEE_QTY', payload: { tripId, jobId, feeId, quantity } }), []);
   const toggleFee = useCallback((tripId: string, jobId: string, feeId: string) => dispatch({ type: 'TOGGLE_FEE', payload: { tripId, jobId, feeId } }), []);
   const startJob = useCallback((tripId: string, jobId: string) => dispatch({ type: 'START_JOB', payload: { tripId, jobId } }), []);
-  const verifyJob = useCallback((tripId: string, jobId: string) => dispatch({ type: 'VERIFY_JOB', payload: { tripId, jobId } }), []);
+  // Actor convention: admin-originated actions use 'Ops Admin'. Hook fills this in so pages don't have to pass it.
+  const verifyJob = useCallback((tripId: string, jobId: string) => dispatch({ type: 'VERIFY_JOB', payload: { tripId, jobId, actor: 'Ops Admin' } }), []);
+  const rejectJob = useCallback((tripId: string, jobId: string, reason: string) => dispatch({ type: 'REJECT_JOB', payload: { tripId, jobId, reason, actor: 'Ops Admin' } }), []);
+  const unverifyJob = useCallback((tripId: string, jobId: string) => dispatch({ type: 'UNVERIFY_JOB', payload: { tripId, jobId, actor: 'Ops Admin' } }), []);
   const cancelJob = useCallback((tripId: string, jobId: string, cancelReason: string) => dispatch({ type: 'CANCEL_JOB', payload: { tripId, jobId, cancelReason } }), []);
   const cancelAndReplace = useCallback((tripId: string, jobId: string, cancelReason: string, newJob: Job) => dispatch({ type: 'CANCEL_AND_REPLACE', payload: { tripId, jobId, cancelReason, newJob } }), []);
   const createFollowup = useCallback((tripId: string, jobId: string, newJob: Job) => dispatch({ type: 'CREATE_FOLLOWUP', payload: { tripId, jobId, newJob } }), []);
@@ -481,7 +622,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
     saveTemplate, deleteTemplate,
     setJobInvoice, bulkApplyAgreedRates,
     addFee, removeFee, updateFeeQty, toggleFee,
-    startJob, verifyJob,
+    startJob, verifyJob, rejectJob, unverifyJob,
     cancelJob, cancelAndReplace, createFollowup, setCompletionRemark,
   };
 

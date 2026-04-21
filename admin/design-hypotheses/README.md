@@ -202,6 +202,26 @@ Every design decision starts with a **"How Might We"** question. We generate 2-3
 **Decision:** PENDING
 **File:** `59-hmw-table-simplification.html`
 
+### HMW-64: How might we let ops verify or reject a job without stacking three colored containers and multiple filled buttons in the slide-out?
+**Decision:** Collapse the Verification Action Bar into a single text-only inline row separated from the Status Action Bar by a 1px top divider. State shown as colored dot + label (Pending gray / Verified green / Rejected red) — no container tint, no secondary filled pill. Primary action Verify is a filled green button; Reject is a ghost button with red text only. Rejection reason appears inline in gray below the row. Reject form drops its red container and becomes a plain textarea; red only returns on the Confirm Reject button at the commit moment. Net: exactly ONE filled colored container in the panel top area across every verification state (the existing Status Action Bar).
+**Rejected alternatives:** keep filled verification bars (too many stacked colors), inline chip variants mirroring Status pill styling (breaks HMW-60 text-only discipline).
+**File:** `64-hmw-slideout-verification-simplification.html`
+
+### HMW-63: How might we add trip-level Status and Verification columns to the Trips table — simply enough that ops planners understand at a glance?
+**Decision:** Trip row shows two new columns only — **Status** (filled pill: Pending/In Progress/Completed, auto-derived) and **Verification** (text-only tag: Pending/Verified, binary auto-derived). No timestamps, no progress counts, no per-row rejected callouts. Rejected-job signal surfaced via (1) subtle red row tint on trips containing any rejected job (existing `.rj` pattern) and (2) a "Has Rejected" filter chip in the Verification filter group. All secondary detail lives in expanded sub-rows using HMW-60/61 conventions unchanged.
+**Rejected alternatives:** trip-level timestamps (aggregation ambiguous), "N/M verified" sub-stat (forces arithmetic), red rejected-job count on row (breaks scannability), HMW-54 progress bar (re-adds secondary color, diverges from Jobs page).
+**File:** `63-hmw-trips-status-and-verification-columns.html`
+
+### HMW-61: How might we show when a job or trip last changed state, without adding another colored element or crowding dense rows?
+**Options:** A) Inline relative under chip + tooltip absolute, B) Dedicated "Updated" column (sortable), C) Tooltip only (no inline time)
+**Decision:** Option A — Inline mono gray timestamp under each Status/Verification chip + tooltip on hover. Relative for <7 days ("3h ago", "2d ago"), absolute thereafter ("Apr 12"). Tooltip always shows absolute + attribution ("Apr 20, 2026 · 14:32 · by Ops Admin"). Two backing fields: `statusChangedAt`, `verificationChangedAt`. Activity log remains authoritative for full transition history.
+**File:** `61-hmw-timestamp-surfacing.html`
+
+### HMW-60: How might we surface verification as a first-class state on the Jobs table — separate from job status — while keeping reject discoverable without crowding the row?
+**Options:** A) Dual Columns (Status + Verification), B) Stacked Pill (single column, two lines), C) Absorbed Status (Verified/Rejected replace Completed — current behavior)
+**Decision:** Option A — Dual Columns. Verification column uses **text-only** treatment (no filled pill background) so Status stays the dominant colored pill per row. Small dot + label: gray Pending, green Verified, red bold Rejected. Reject via slide-out with required reason field; Unverify kept as distinct admin self-correction (no reason). Vendor sees red rejection callout with reason on Job Detail.
+**File:** `60-hmw-verification-column-and-reject.html`
+
 ## Open (backlog)
 
 ### HMW-03: How might we make the "assign vendors to services" step feel natural instead of like filling a form?

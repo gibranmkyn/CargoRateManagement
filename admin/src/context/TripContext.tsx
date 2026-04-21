@@ -271,7 +271,7 @@ function tripReducer(state: TripState, action: TripAction): TripState {
         ...state,
         trips: state.trips.map((t) =>
           t.id === action.payload.tripId
-            ? { ...t, jobs: t.jobs.map((j) => j.id === action.payload.jobId ? { ...j, status: 'Verified' as const } : j) }
+            ? { ...t, jobs: t.jobs.map((j) => j.id === action.payload.jobId ? { ...j, verificationStatus: 'Verified' as const } : j) }
             : t
         ),
       };

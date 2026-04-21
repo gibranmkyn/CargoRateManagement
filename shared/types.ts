@@ -1,4 +1,5 @@
-export type JobStatus = 'Pending' | 'In Progress' | 'Completed' | 'Verified' | 'Cancelled';
+export type JobStatus = 'Pending' | 'In Progress' | 'Completed' | 'Cancelled';
+export type VerificationStatus = 'Pending' | 'Verified' | 'Rejected';
 /** @deprecated Use JobStatus instead — unified status lifecycle (TODO-020) */
 export type ProofStatus = 'awaiting' | 'uploaded' | 'validated';
 
@@ -70,6 +71,10 @@ export interface Job {
   destination: { location: string; date: string };
   service: ServiceType;
   status: JobStatus;
+  verificationStatus: VerificationStatus;
+  rejectionReason?: string;
+  statusChangedAt: string;           // ISO — updated on every status transition
+  verificationChangedAt?: string;    // ISO — updated on every verification transition
   duration: string | null;
   execution: string | null;
   cancelReason?: string;
@@ -221,15 +226,18 @@ export type Currency = 'MYR' | 'CNY' | 'USD';
 export type RateUnit = 'flat' | 'per-kg' | 'per-bag' | 'per-cbm' | 'per-km';
 export type RateType = 'route' | 'location';
 
+export interface Zone {
+  id: string;
+  name: string;
+  code: string;
+}
+
 export interface Location {
   id: string;
   name: string;
   code: string;
-  zone: string;
   type: LocationType;
-  city: string;           // city name (e.g., "Shenzhen", "Guangzhou")
-  district: string;       // district name (e.g., "Bao'an District", "Nanshan District")
-  districtCode?: string;  // GB/T 2260 code for auto-resolution to district
+  zoneId: string;
 }
 
 export const SERVICE_CONFIG: Record<string, { rateType: RateType; label: string }> = {
@@ -320,23 +328,40 @@ export function formatCurrency(currency: Currency, amount: number): string {
   return `${CURRENCY_SYMBOLS[currency]} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-// --- Trip-level status derivation (HMW-54) ---
+// --- Trip-level status derivation (HMW-54 / HMW-63) ---
 
-export type TripStatus = 'Active' | 'Completed' | 'Verified';
+export type TripStatus = 'Pending' | 'In Progress' | 'Completed';
 
-/** Count verified vs total non-cancelled jobs for a trip */
+/** Count verified vs total non-cancelled jobs for a trip (uses verificationStatus, not status) */
 export function getTripVerification(trip: Trip): { verified: number; total: number } {
   const nonCancelled = trip.jobs.filter((j) => j.status !== 'Cancelled');
-  return { verified: nonCancelled.filter((j) => j.status === 'Verified').length, total: nonCancelled.length };
+  return { verified: nonCancelled.filter((j) => j.verificationStatus === 'Verified').length, total: nonCancelled.length };
 }
 
-/** Derive trip status: Active (any Pending/InProgress), Completed (all Completed or mixed, but not all Verified), Verified (all non-cancelled jobs are Verified) */
+/** Derive trip status per HMW-63 rules:
+ *  - In Progress if any non-cancelled job is In Progress
+ *  - Completed if all non-cancelled jobs are Completed (regardless of verification)
+ *  - Pending otherwise
+ */
 export function deriveTripStatus(trip: Trip): TripStatus {
   const nonCancelled = trip.jobs.filter((j) => j.status !== 'Cancelled');
+  if (nonCancelled.length === 0) return 'Completed';
+  if (nonCancelled.some((j) => j.status === 'In Progress')) return 'In Progress';
+  if (nonCancelled.every((j) => j.status === 'Completed')) return 'Completed';
+  return 'Pending';
+}
+
+/** Derive trip verification (binary): Verified iff all non-cancelled jobs have verificationStatus === 'Verified' */
+export function deriveTripVerification(trip: Trip): 'Pending' | 'Verified' {
+  const nonCancelled = trip.jobs.filter((j) => j.status !== 'Cancelled');
   if (nonCancelled.length === 0) return 'Verified';
-  if (nonCancelled.every((j) => j.status === 'Verified')) return 'Verified';
-  if (nonCancelled.some((j) => j.status === 'Pending' || j.status === 'In Progress')) return 'Active';
-  return 'Completed';
+  if (nonCancelled.every((j) => j.verificationStatus === 'Verified')) return 'Verified';
+  return 'Pending';
+}
+
+/** True iff any job has verificationStatus === 'Rejected' (for row tint and Has Rejected filter) */
+export function tripHasRejectedJob(trip: Trip): boolean {
+  return trip.jobs.some((j) => j.verificationStatus === 'Rejected');
 }
 
 /** Get earliest pickup date across a trip's non-cancelled jobs (YYYY-MM-DD or null) */

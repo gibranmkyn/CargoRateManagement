@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { TripProvider } from '@shared/TripContext';
+import { ZoneProvider } from '@shared/ZoneContext';
 import { LocationProvider } from './context/LocationContext';
 import { ToastProvider } from '@shared/Toast';
 import Navbar from './components/layout/Navbar';
@@ -13,8 +14,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <TripProvider>
-        <LocationProvider>
-          <ToastProvider>
+        <ZoneProvider>
+          <LocationProvider>
+            <ToastProvider>
             <div className="min-h-screen bg-[var(--color-surface-page)]">
               <Navbar />
               <Routes>
@@ -26,8 +28,9 @@ export default function App() {
                 <Route path="*" element={<Navigate to="/trips" replace />} />
               </Routes>
             </div>
-          </ToastProvider>
-        </LocationProvider>
+            </ToastProvider>
+          </LocationProvider>
+        </ZoneProvider>
       </TripProvider>
     </BrowserRouter>
   );

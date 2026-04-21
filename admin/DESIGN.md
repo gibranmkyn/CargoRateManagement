@@ -25,31 +25,63 @@
   - Chips / tags: 9-10px / 600
   - Monospace data: 10-11px
 
-## Color — 5-State Status System
+## Color — Status & Verification (Client Status Model)
 
-**Principle:** Only use color when it demands attention. Most of the UI is neutral.
+**Principle:** Status and Verification are independent signals rendered in separate columns.
+Each column uses the same `dot + label + timestamp` pattern at 11px. Color is a scarce asset — one accent per column, at most.
 
-| Status | Text | Background | Border | Dot | When |
-|--------|------|-----------|--------|-----|------|
-| **Pending** | `#9ca3af` | `#f9fafb` | `#e5e7eb` | `#9ca3af` | Assigned, work not started |
-| **In Progress** | `#152CFF` | `rgba(21,44,255,0.04)` | `rgba(21,44,255,0.15)` | `#152CFF` | Work underway (truck moving, customs processing) |
-| **Completed** | `#a16207` | `#fefce8` | `#fde68a` | `#a16207` | Proof uploaded, needs admin verification |
-| **Verified** | `#059669` | `#f0fdf4` | `#a7f3d0` | `#059669` | Proof reviewed, ready for billing |
-| **Cancelled** | `#dc2626` | `#fef2f2` | `#fecaca` | `#dc2626` | Admin cancelled — needs reassignment or removal |
+### Status lifecycle
+`Pending → In Progress → Completed`. Terminal: `Cancelled` (admin only).
 
-**Status lifecycle:** `Pending → In Progress → Completed → Verified` (+ Cancelled as terminal state)
-- "In Progress" not "In Transit" — works for all service types (customs isn't "in transit")
-- "Completed" not "Delivered" — works for all service types (customs isn't "delivered")
-- Proof upload triggers Completed → Verified is admin sign-off (billing gate)
-- 3PL vendors cannot reject — only admin can cancel jobs (no vendor portal)
+### Verification lifecycle
+`Pending → Verified` (admin sign-off). `Rejected` loops back (admin can re-verify after fix).
+
+> **Note:** The earlier "Slop Reduction" single-State merge (collapsing these into one `State` column) was reversed. The client explicitly requires separate Status + Verification columns with timestamps.
+
+### Status column style
+
+| Status | Text | Dot | Weight | Use |
+|---|---|---|---|---|
+| Pending | `#6b7280` | `#d1d5db` | 400 | Assigned, not started |
+| In Progress | `#111827` | `#152CFF` | 500 | Work underway |
+| Completed | `#374151` | `#a16207` | 500 | Proof uploaded, awaiting verification |
+| Cancelled | `#dc2626` | `#dc2626` | 600 | Terminal — cancel reason shown as subline |
+
+### Verification column style
+
+| Verification | Text | Dot | Weight | Use |
+|---|---|---|---|---|
+| Pending | `#6b7280` | `#d1d5db` | 400 | Not yet reviewed |
+| Verified | `#059669` | `#059669` | 600 | Admin sign-off, record locked |
+| Rejected | `#dc2626` | `#dc2626` | 600 | Needs fix — rejection reason shown as subline |
+
+**No filled chips on data rows.** Use `dot + label` at 11px with timestamp below in `#9ca3af`.
+
+**Containers** (tinted backgrounds) are reserved for the slide-out's labeled Status / Verification pair.
+
+### Trip-level auto-derived signals
+- **Trip Status** — derived from job statuses: all Cancelled → Cancelled; any In Progress → In Progress; any Pending → Pending; all Completed → Completed.
+- **Trip Verification** — derived from job verification: all non-cancelled jobs Verified → Verified; any Rejected → Rejected; otherwise Pending. Subline shows `X/Y verified` or `X rejected`.
 
 ### Other colors
-- **Accent (Future Blue):** `#152CFF` — interactive elements ONLY (buttons, links, active nav, job labels). From Teleport.it brand guidelines.
+- **Accent (Future Blue):** `#152CFF` — **interactive only**: primary buttons,
+  links, active nav, the In-Progress state dot. NOT used on: trip IDs, service
+  tags, proof-doc icons, empty-state squares, completed-chip background.
 - **Accent hover:** `#1024CC`
-- **Accent soft:** `rgba(21,44,255,0.06)` — active nav bg, service pill bg
+- **Accent soft:** `rgba(21,44,255,0.06)` — active nav bg only
 - **Ink:** `#111827` (primary), `#374151` (secondary), `#6b7280` (muted), `#9ca3af` (faint), `#d1d5db` (ghost/placeholder)
 - **Surfaces:** `#f3f4f6` (page), `#ffffff` (cards/table), `#f9fafb` (raised/headers/expanded)
 - **Borders:** `#e5e7eb` (default), `#f3f4f6` (subtle row dividers)
+
+### Color budget (enforce in code review)
+
+Per data row, maximum one accent color beyond Ink/Muted/Faint:
+- the state dot for In Progress rows → blue
+- the state text for Verified → green
+- the state text for Rejected / Cancelled → red
+- everything else on that row is `#111827 / #374151 / #6b7280 / #9ca3af`.
+
+If you find yourself reaching for a second accent, you're duplicating a signal.
 
 ## Spacing — Compact
 - Navbar height: **40px**
@@ -84,11 +116,11 @@
 - Nav links: 12px, padding 4px 10px, radius 4px
 - See `../vendor/DESIGN.md` for the vendor-side nav (same structure, different items + vendor identity)
 
-### Stats Bar (replaces dashboard cards)
-- Single line, #f9fafb bg, 1px border-bottom
-- **Trips page:** `5 trips | 6 in progress | 2 completed | 1 cancelled`
-- **Jobs page:** `82 jobs | 15 pending | 18 in progress | 9 completed | 37 verified | 2 cancelled`
-- Each status count uses its status color (gray/blue/amber/green/red)
+### ~~Stats Bar~~ Removed — segment pills carry counts
+
+The stats bar (`82 jobs · 15 pending · …`) is removed from Jobs and Trips.
+Segment pills above the table carry the counts. Exception markers (Cancelled,
+Rejected counts > 0) render as a muted inline alert right-aligned with the pills.
 
 ### Page Header
 - Title: 16px/800
@@ -96,9 +128,17 @@
 - Buttons: 5px 12px padding, 6px radius, 11px/600 font
 
 ### Filter Bar
-- Inline horizontal, 6px 16px padding, border-bottom
-- Labels: 11px #9ca3af inline with inputs
-- Inputs: 4px 8px padding, 4px radius, 11px font
+
+- Single search input — covers trip ID, job ID, customer, vendor, MAWB
+- Service select
+- Date range popover
+- Group-by select
+
+**Jobs page workflow pills:** `All | Pending | In Progress | To verify | Verified | Cancelled`
+- `To verify` = `status === 'Completed' && verificationStatus === 'Pending' || verificationStatus === 'Rejected'`
+- `Verified` = `verificationStatus === 'Verified'`
+
+**Trips page segment pills:** `All | Pending | In Progress | Completed | Cancelled` (no Verified pill — trip verification is tracked via the auto-derived Verification column, not a filter pill)
 
 ### Shipment Table
 - Actual `<table>` element, border-collapse: collapse
@@ -191,29 +231,38 @@
 
 ### Trips (demand-side — client requests)
 - **Max-width:** 1400px (must match Jobs page for consistent navigation feel)
-- **Active/All/Completed/Verified** filter chips (default: Active)
+- **Segment pills:** `All | Pending | In Progress | Completed | Cancelled` (default: All)
 - **Date range popover** (HMW-55): preset shortcuts + custom range, filters by pickup date, available on all tabs
 - **Pagination** at 50/page for historical views
-- **Sub-table columns:** Job | Vendor | Service | Route | Status
-- **Verification progress:** `N/M verified` fraction + thin progress bar per trip row (HMW-54). Trip = Verified only when all non-cancelled jobs are Verified.
-- **Slide-out panel:** Start Job → Upload proof → Verify → Activity log
+- **Trip-level columns:** Trip Status (auto-derived) + Trip Verification (auto-derived). Each as dot+label with subline (`X/Y completed` or `N cancelled`; `X rejected` or `Y/Z verified`).
+- **Sub-table columns:** Job | Vendor | Service | Route | Status | Verification
+  - Status cell: dot + label + relative timestamp; cancel reason shown as subline
+  - Verification cell: dot + label + timestamp; rejection reason shown as subline
+- **Slide-out panel:** Status (StatusCell + showReason) + Verification (VerificationCell + showReason) as labeled pair in header action row. All action buttons (Start/Upload/Reject/Verify/Unverify/Re-verify/Re-upload) + "Edit L2" entry preserved.
 - **Lock on verify:** proof uploads all read-only after job Verified (billing gate)
+- **CSV:** split into Status, Status Updated, Verification, Verification Updated columns
 
 ### Jobs (supply-side — vendor execution) (HMW-48)
 - **Max-width:** 1400px (same as Trips page — must match for consistent feel)
-- **Status pills:** Active (Pending + In Progress + Cancelled) | Completed | Verified | All
+- **Workflow pills:** `All | Pending | In Progress | To verify | Verified | Cancelled`
+  - `To verify` = `status === 'Completed' && (verificationStatus === 'Pending' || verificationStatus === 'Rejected')`
+  - `Verified` = `verificationStatus === 'Verified'`
 - **Service pills:** FM | EC | CS | CR | OH
 - **Vendor dropdown** with search (supports 30+ vendors)
 - **Group by toggle:** None (default) | Vendor | Service | Date
-- **Columns (percentage-based widths):** Trip·Customer 11% | Vendor 10% | Service 6% | Route 38% | Pickup 8% | Status 17%
+- **Columns (percentage-based widths):** Trip·Customer 11% | Vendor 10% | Service 6% | Route 15% | Origin 15% | Destination 15% | Pickup 8% | Status ~9% | Verification ~9%
+  - Status cell: dot + label + relative timestamp
+  - Verification cell: dot + label + timestamp
 - **Route cell:** `overflow: hidden; text-overflow: ellipsis; white-space: nowrap`
 - **Group by: Vendor** — collapsed headers sorted by most outstanding, status badges per vendor
 - **Default sort within Active:** Cancelled → In Progress → Pending (fires first)
 - Click job row → same slide-out panel. Click trip link → Trips view.
+- **CSV columns:** Status, Status Updated, Verification, Verification Updated
 
-### Unified Job Status Lifecycle
-Replaces old dual `status` + `proofStatus` model with single field:
-- **Pending** → In Progress → **Completed** (proof uploaded) → **Verified** (admin sign-off)
+### Job Status & Verification Lifecycle
+Two independent fields replace the old merged-state approach:
+- **`status`:** `Pending → In Progress → Completed` (proof uploaded). Terminal: `Cancelled` (admin only, mandatory reason).
+- **`verificationStatus`:** `Pending → Verified` (admin sign-off, locks record). `Rejected` loops back (admin can re-verify after fix). Unverify available.
 - **Cancelled** = admin cancels job with mandatory reason (3PL cannot reject — no vendor portal). Cancelled jobs are immutable. Reassignment = cancel original + create new linked job for new vendor. See PRD Iteration 11 / HMW-51.
 
 ### Master Data
@@ -224,7 +273,9 @@ Replaces old dual `status` + `proofStatus` model with single field:
 - **Customers** — coming soon
 
 ### Data Model (current)
-- `Job.status` — unified lifecycle: `'Pending' | 'In Progress' | 'Completed' | 'Verified' | 'Cancelled'`
+- `Job.status` — workflow signal: `'Pending' | 'In Progress' | 'Completed' | 'Cancelled'`
+- `Job.verificationStatus` — billing gate signal: `'Pending' | 'Verified' | 'Rejected'`
+- `Job.statusChangedAt` — ISO timestamp updated by `UPDATE_JOB_STATUS` reducer; also appends to `activityLog`
 - `FeeLineItem` — preserved on Job type for backward compatibility but not displayed (fees out of scope for this phase)
 - `completionRemark`, `replacedByJobId`, `replacesJobId` — cancellation + partial completion linkage (HMW-51)
 
@@ -321,3 +372,6 @@ Replaces old dual `status` + `proofStatus` model with single field:
 | 2026-04-14 | Fee display removed from all views | Client confirmed fees are out of scope for this project phase. All fee display removed: sub-table Total Cost column, slide-out Fee Breakdown section, Jobs Cost column, Create/Edit Trip fee previews, vendor fee breakdown and CSV cost column. `fees` field preserved on Job type for data model backward compatibility but not displayed. |
 | 2026-04-15 | Facility → District linking (HMW-56) | District search dropdown in Facilities add/edit form. Type-ahead searches 3,056 GB/T 2260 districts by Chinese + English name, grouped by Province · City. Auto-fills district, city, districtCode. City column read-only. Same picker in LocationDropdown inline add. |
 | 2026-04-15 | L2 Subservices per Job (HMW-58) | Scrollable checklist (max-height 80px) below each job's fields in create/edit trip. All unchecked by default — planner checks what applies. Stored as `l2CostIds: string[]` on Job. Displayed in slide-out between Route and Proof of Service. CSV export: 1 row per job × checked L2 (flatMap). Jobs with 0 checked → 0 export rows. `unit` removed from `L2SubService` — unit type no longer shown in master data Services tab. |
+| 2026-04-21 | ~~Slop reduction — single State column~~ **reversed** | The single-State merge (collapsing Status + Verification into one `State` column) was reversed. Client explicitly requires separate Status + Verification columns with timestamps. Parts (1), (3), (4) of the slop reduction remain in effect; only the State-merge (part 2) was undone. |
+| 2026-04-21 | Client status model reconciliation | Separate Status + Verification columns with dot+label+timestamp, on both Trips and Jobs pages. Trip-level status and verification are auto-derived from job aggregates. Supersedes the earlier Slop Reduction single-State merge. `UPDATE_JOB_STATUS` reducer now audit-logs to `activityLog` + sets `statusChangedAt`. |
+| 2026-04-21 | Workflow pills on Jobs page | `All / Pending / In Progress / To verify / Verified / Cancelled`. `To verify` surfaces Completed jobs that have Pending or Rejected verification — the ops planner's primary work queue. Verification `<select>` dropdown removed; pills replace it. |

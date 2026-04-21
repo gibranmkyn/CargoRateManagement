@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HMW-60: Verification Column & Reject UX</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .page { max-width: 1400px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 44px 0 6px; color: #152CFF; }
+  h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+  .context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 24px; font-size: 11px; color: #92400e; line-height: 1.6; }
+  .rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+  .rationale strong { color: #111827; }
+  .screen { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+  .label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+  .label-a { background: rgba(21,44,255,0.08); color: #152CFF; }
+  .label-b { background: #f5f3ff; color: #7c3aed; }
+  .label-c { background: #fefce8; color: #a16207; }
+  .verdict { background: #fff; border: 2px dashed #d1d5db; border-radius: 6px; padding: 16px; margin-top: 24px; }
+  .verdict h3 { color: #6b7280; font-size: 13px; margin-bottom: 8px; }
+
+  /* chrome */
+  .nav { height: 40px; background: #111827; display: flex; align-items: center; padding: 0 16px; gap: 12px; }
+  .nav .logo { display: flex; align-items: center; gap: 6px; color: #fff; font-size: 13px; font-weight: 700; }
+  .nav .logo-icon { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; }
+  .nav a { font-size: 12px; padding: 4px 10px; border-radius: 4px; color: #9ca3af; text-decoration: none; }
+  .nav a.on { color: #fff; background: rgba(255,255,255,0.1); }
+  .stats { display: flex; align-items: center; padding: 8px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 12px; }
+  .stats .sep { width: 1px; height: 14px; background: #e5e7eb; margin: 0 12px; }
+  .hdr { display: flex; align-items: flex-end; justify-content: space-between; padding: 16px 16px 0 16px; }
+  .hdr h3 { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; color: #111827; margin: 0; }
+  .hdr p { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+  /* filters */
+  .filters { display: flex; align-items: center; gap: 8px; padding: 6px 16px; border-bottom: 1px solid #e5e7eb; flex-wrap: wrap; }
+  .pill { padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 600; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 4px; }
+  .pill.on { border-color: #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; }
+  .pill .b { font-size: 9px; padding: 0 5px; border-radius: 99px; font-weight: 700; min-width: 16px; text-align: center; }
+  .b-n { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+  .pill.on .b-n { background: rgba(21,44,255,0.1); color: #152CFF; border-color: rgba(21,44,255,0.2); }
+  .fsep { width: 1px; height: 16px; background: #e5e7eb; }
+  .fl { font-size: 10px; color: #9ca3af; }
+  .fsel { font-size: 11px; border-radius: 4px; padding: 4px 8px; border: 1px solid #e5e7eb; font-family: inherit; background: #fff; }
+
+  /* table */
+  table.t { width: 100%; border-collapse: collapse; background: #fff; }
+  table.t th { text-align: left; padding: 6px 12px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+  table.t td { padding: 7px 12px; border-bottom: 1px solid #f3f4f6; font-size: 11px; vertical-align: middle; }
+  table.t tr.r:hover td { background: #f9fafb; }
+  table.t tr.rj td { background: #fefafa; }
+
+  /* service pills */
+  .sp { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 9px; font-weight: 600; letter-spacing: 0.04em; }
+  .sp-fm { background: rgba(21,44,255,0.06); color: #152CFF; border: 1px solid rgba(21,44,255,0.15); }
+  .sp-ec { background: #fefce8; color: #a16207; border: 1px solid #fde68a; }
+  .sp-cs { background: #f0fdf4; color: #059669; border: 1px solid #a7f3d0; }
+
+  /* status chips */
+  .st { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+  .st-pending { border: 1px solid #e5e7eb; background: #f9fafb; color: #9ca3af; }
+  .st-progress { border: 1px solid rgba(21,44,255,0.15); background: rgba(21,44,255,0.04); color: #152CFF; }
+  .st-completed { border: 1px solid #fde68a; background: #fefce8; color: #a16207; }
+  .st-verified { border: 1px solid #a7f3d0; background: #f0fdf4; color: #059669; }
+  .st-rejected { border: 1px solid #fecaca; background: #fef2f2; color: #dc2626; }
+  .st-cancelled { border: 1px solid #fecaca; background: #fef2f2; color: #dc2626; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+
+  /* verification variants — text-only, no pill background */
+  .v-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+  .v-tag .v-dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+  .v-pending { color: #9ca3af; }
+  .v-pending .v-dot { background: #d1d5db; }
+  .v-verified { color: #059669; }
+  .v-verified .v-dot { background: #059669; }
+  .v-rejected { color: #dc2626; font-weight: 700; }
+  .v-rejected .v-dot { background: #dc2626; }
+
+  .dl { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #152CFF; background: rgba(21,44,255,0.04); padding: 1px 5px; border-radius: 3px; border: 1px solid rgba(21,44,255,0.1); text-decoration: none; cursor: pointer; }
+
+  /* comparison grid */
+  .compare { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 16px; font-size: 11px; }
+  .compare .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px 14px; line-height: 1.6; }
+  .compare .card h4 { font-size: 12px; font-weight: 700; margin-bottom: 8px; color: #111827; }
+  .compare ul { list-style: none; }
+  .compare li { padding: 3px 0; color: #374151; }
+  .compare li.pro::before { content: "+ "; color: #059669; font-weight: 700; }
+  .compare li.con::before { content: "− "; color: #dc2626; font-weight: 700; }
+
+  /* slide-out mock */
+  .panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; max-width: 520px; overflow: hidden; box-shadow: -4px 0 24px rgba(0,0,0,0.05); margin: 10px 0; }
+  .panel-bar { padding: 10px 14px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; background: #fefce8; border-left: 3px solid #a16207; }
+  .panel-bar-verified { background: #f0fdf4; border-left-color: #059669; }
+  .panel-bar-rejected { background: #fef2f2; border-left-color: #dc2626; }
+  .panel-body { padding: 14px; }
+  .panel-row { padding: 8px 0; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; font-size: 11px; }
+  .panel-row .k { color: #9ca3af; }
+  .panel-row .v { color: #111827; font-weight: 500; text-align: right; }
+  .panel-actions { padding: 12px 14px; border-top: 1px solid #e5e7eb; background: #f9fafb; display: flex; gap: 6px; justify-content: flex-end; }
+  .btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; border: 1px solid #e5e7eb; background: #fff; color: #374151; }
+  .btn-primary { background: #152CFF; color: #fff; border-color: transparent; }
+  .btn-danger { background: #fff; color: #dc2626; border-color: #fecaca; }
+  .btn-ghost { background: transparent; border-color: transparent; color: #6b7280; }
+
+  /* reject reason form */
+  .reason-form { background: #fff; border: 1px solid #fecaca; border-radius: 6px; padding: 14px; margin-top: 8px; }
+  .reason-form label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; display: block; margin-bottom: 4px; }
+  .reason-form textarea { width: 100%; min-height: 60px; border: 1px solid #e5e7eb; border-radius: 4px; padding: 6px 8px; font-family: inherit; font-size: 11px; resize: vertical; }
+  .reason-form .hint { font-size: 10px; color: #6b7280; margin-top: 4px; }
+
+  /* proof card (vendor view preview) */
+  .proof-card { background: #fff; border: 1px solid #fecaca; border-left: 3px solid #dc2626; border-radius: 6px; padding: 12px 14px; margin: 10px 0; font-size: 11px; }
+  .proof-card .tag { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #dc2626; margin-bottom: 4px; }
+  .proof-card .reason { color: #374151; line-height: 1.5; margin-top: 4px; }
+  .proof-card .meta { font-size: 10px; color: #9ca3af; margin-top: 6px; font-family: 'JetBrains Mono', monospace; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-60: Verification Column & Reject UX</h1>
+<div class="hmw">"How might we surface verification as a first-class state on the Jobs table — separate from job status — while keeping the reject action discoverable without crowding the row?"</div>
+
+<div class="context">
+<strong>Context (from Kim's feedback, Apr 2026):</strong><br>
+• Job Status (Pending / In Progress / Completed / Cancelled) = vendor-driven lifecycle. Triggered by Start Job + proof upload.<br>
+• Verification Status (Pending / Verified / Rejected) = admin-driven sign-off on vendor's work. Independent of job status.<br>
+• A Completed job can be Pending verification, Verified, or Rejected — these are <em>two parallel states</em>, not one combined state.<br>
+• Reject is per-job (not per-document, simplified 2026-04-20). Rejection requires a reason. Vendor re-uploads any proofs and verification flips back to Pending. No round limit.<br>
+• Unverify ≠ Reject. Unverify is admin self-correction (no reason, keeps proofs). Reject is admin flagging bad vendor work (reason required).
+</div>
+
+<div class="rationale">
+<strong>What this HMW decides.</strong> (1) How job status and verification status coexist on the Jobs table without blowing up row density. (2) Where the Reject / Verify / Unverify actions live. (3) How rejection reason is captured. Timestamp placement is <em>out of scope</em> — deferred to HMW-61 so this mockup doesn't try to solve two problems at once.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- OPTION A — Dual Columns                                -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>Option A — Dual Columns</h2>
+<span class="label label-a">Recommended</span>
+
+<div class="rationale">
+<strong>One column for Status, one for Verification.</strong> Each state gets its own cell, its own filter, its own scan lane. Verification column is empty (em-dash) until a job reaches Completed — visually reinforcing that verification only begins once the vendor has done their part.
+</div>
+
+<div class="screen">
+<div class="nav">
+<div class="logo"><div class="logo-icon"></div> Teleport OS</div>
+<a href="#">Trips</a>
+<a class="on" href="#">Jobs</a>
+<a href="#">Master Data</a>
+</div>
+
+<div class="stats">
+<span style="color: #111827; font-weight: 600;">82 jobs</span>
+<span class="sep"></span>
+<span style="color: #9ca3af; font-weight: 600;">15 pending</span>
+<span class="sep"></span>
+<span style="color: #152CFF; font-weight: 600;">18 in progress</span>
+<span class="sep"></span>
+<span style="color: #a16207; font-weight: 600;">9 completed</span>
+<span class="sep"></span>
+<span style="color: #059669; font-weight: 600;">37 verified</span>
+<span class="sep"></span>
+<span style="color: #dc2626; font-weight: 600;">3 rejected</span>
+</div>
+
+<div class="hdr">
+<div><h3>Jobs</h3><p>Vendor assignments across trips</p></div>
+<div><button class="btn">↓ Export</button></div>
+</div>
+
+<div class="filters">
+<span class="fl">Status</span>
+<button class="pill on">All <span class="b b-n">82</span></button>
+<button class="pill">Pending <span class="b b-n">15</span></button>
+<button class="pill">In Progress <span class="b b-n">18</span></button>
+<button class="pill">Completed <span class="b b-n">9</span></button>
+<span class="fsep"></span>
+<span class="fl">Verification</span>
+<select class="fsel"><option>All</option><option>Pending</option><option>Verified</option><option>Rejected</option></select>
+<span class="fsep"></span>
+<span class="fl">Vendor</span>
+<select class="fsel"><option>All (30)</option></select>
+<span class="fl" style="margin-left: 4px;">Date</span>
+<select class="fsel"><option>This week</option></select>
+</div>
+
+<div style="padding: 0 16px 16px;">
+<table class="t" style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+<thead>
+<tr>
+<th style="width: 105px;">Trip · Customer</th>
+<th style="width: 110px;">Vendor</th>
+<th style="width: 50px;">Service</th>
+<th>Route</th>
+<th style="width: 70px;">Pickup</th>
+<th style="width: 100px;">Status</th>
+<th style="width: 100px;">Verification</th>
+<th style="width: 85px; text-align: right;">Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr class="r rj">
+<td><span class="dl">TRP-014</span><div style="font-size: 10px; color: #6b7280;">TikTok</div></td>
+<td style="font-weight: 600;">HaleSun</td>
+<td><span class="sp sp-fm">FM</span></td>
+<td style="font-size: 10px; color: #374151;">Qianhai WH → Huanggang</td>
+<td class="mono" style="font-size: 10px;">29 Mar</td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span></td>
+<td><span class="v-tag v-rejected"><span class="v-dot"></span> Rejected</span></td>
+<td class="mono" style="text-align: right; font-size: 10px; font-weight: 600;">CNY 780</td>
+</tr>
+<tr class="r">
+<td><span class="dl">TRP-011</span><div style="font-size: 10px; color: #6b7280;">TikTok</div></td>
+<td style="font-weight: 600;">Gonda</td>
+<td><span class="sp sp-ec">EC</span></td>
+<td style="font-size: 10px; color: #374151;">Shekou Terminal</td>
+<td class="mono" style="font-size: 10px;">28 Mar</td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span></td>
+<td><span class="v-tag v-pending"><span class="v-dot"></span> Pending</span></td>
+<td class="mono" style="text-align: right; font-size: 10px; font-weight: 600;">CNY 280</td>
+</tr>
+<tr class="r">
+<td><span class="dl">TRP-008</span><div style="font-size: 10px; color: #6b7280;">Shopee</div></td>
+<td style="font-weight: 600;">ThaiKee</td>
+<td><span class="sp sp-fm">FM</span></td>
+<td style="font-size: 10px; color: #374151;">Baoan WH → Futian</td>
+<td class="mono" style="font-size: 10px;">25 Mar</td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span></td>
+<td><span class="v-tag v-verified"><span class="v-dot"></span> Verified</span></td>
+<td class="mono" style="text-align: right; font-size: 10px; font-weight: 600;">CNY 520</td>
+</tr>
+<tr class="r">
+<td><span class="dl">TRP-012</span><div style="font-size: 10px; color: #6b7280;">Shopee</div></td>
+<td style="font-weight: 600;">HaleSun</td>
+<td><span class="sp sp-fm">FM</span></td>
+<td style="font-size: 10px; color: #374151;">Yantian Port → Shekou</td>
+<td class="mono" style="font-size: 10px;">28 Mar</td>
+<td><span class="st st-progress"><span class="dot" style="background: #152CFF;"></span> In Progress</span></td>
+<td style="color: #d1d5db;">—</td>
+<td class="mono" style="text-align: right; font-size: 10px; font-weight: 600;">MYR 520</td>
+</tr>
+<tr class="r">
+<td><span class="dl">TRP-016</span><div style="font-size: 10px; color: #6b7280;">AliExpress</div></td>
+<td style="font-weight: 600;">JinTong</td>
+<td><span class="sp sp-fm">FM</span></td>
+<td style="font-size: 10px; color: #374151;">Dongguan WH → Nanshan</td>
+<td class="mono" style="font-size: 10px;">29 Mar</td>
+<td><span class="st st-pending"><span class="dot" style="background: #9ca3af;"></span> Pending</span></td>
+<td style="color: #d1d5db;">—</td>
+<td class="mono" style="text-align: right; font-size: 10px; font-weight: 600;">CNY 1,200</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- OPTION B — Stacked Pill                                -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>Option B — Stacked Pill (single column)</h2>
+<span class="label label-b">Denser</span>
+
+<div class="rationale">
+<strong>One column, two lines.</strong> Status chip on top, verification tag below. Saves a column but adds ~8px row height. Verification tag hidden until relevant (Completed onward). Harder to sort/filter visually — two semantics in one cell.
+</div>
+
+<div class="screen">
+<div style="padding: 16px;">
+<table class="t" style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+<thead>
+<tr>
+<th style="width: 105px;">Trip · Customer</th>
+<th style="width: 110px;">Vendor</th>
+<th style="width: 50px;">Service</th>
+<th>Route</th>
+<th style="width: 70px;">Pickup</th>
+<th style="width: 110px;">Status</th>
+<th style="width: 85px; text-align: right;">Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr class="r rj">
+<td><span class="dl">TRP-014</span><div style="font-size: 10px; color: #6b7280;">TikTok</div></td>
+<td style="font-weight: 600;">HaleSun</td>
+<td><span class="sp sp-fm">FM</span></td>
+<td style="font-size: 10px; color: #374151;">Qianhai WH → Huanggang</td>
+<td class="mono" style="font-size: 10px;">29 Mar</td>
+<td>
+  <span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span>
+  <div style="margin-top: 3px;"><span class="v-tag v-rejected"><span class="v-dot"></span> Rejected</span></div>
+</td>
+<td class="mono" style="text-align: right; font-size: 10px; font-weight: 600;">CNY 780</td>
+</tr>
+<tr class="r">
+<td><span class="dl">TRP-011</span><div style="font-size: 10px; color: #6b7280;">TikTok</div></td>
+<td style="font-weight: 600;">Gonda</td>
+<td><span class="sp sp-ec">EC</span></td>
+<td style="font-size: 10px; color: #374151;">Shekou Terminal</td>
+<td class="mono" style="font-size: 10px;">28 Mar</td>
+<td>
+  <span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span>
+  <div style="margin-top: 3px;"><span class="v-tag v-pending"><span class="v-dot"></span> Pending</span></div>
+</td>
+<td class="mono" style="text-align: right; font-size: 10px; font-weight: 600;">CNY 280</td>
+</tr>
+<tr class="r">
+<td><span class="dl">TRP-008</span><div style="font-size: 10px; color: #6b7280;">Shopee</div></td>
+<td style="font-weight: 600;">ThaiKee</td>
+<td><span class="sp sp-fm">FM</span></td>
+<td style="font-size: 10px; color: #374151;">Baoan WH → Futian</td>
+<td class="mono" style="font-size: 10px;">25 Mar</td>
+<td>
+  <span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span>
+  <div style="margin-top: 3px;"><span class="v-tag v-verified"><span class="v-dot"></span> Verified</span></div>
+</td>
+<td class="mono" style="text-align: right; font-size: 10px; font-weight: 600;">CNY 520</td>
+</tr>
+<tr class="r">
+<td><span class="dl">TRP-012</span><div style="font-size: 10px; color: #6b7280;">Shopee</div></td>
+<td style="font-weight: 600;">HaleSun</td>
+<td><span class="sp sp-fm">FM</span></td>
+<td style="font-size: 10px; color: #374151;">Yantian Port → Shekou</td>
+<td class="mono" style="font-size: 10px;">28 Mar</td>
+<td><span class="st st-progress"><span class="dot" style="background: #152CFF;"></span> In Progress</span></td>
+<td class="mono" style="text-align: right; font-size: 10px; font-weight: 600;">MYR 520</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- OPTION C — Absorbed into Status                        -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>Option C — Absorbed into Status (single pill)</h2>
+<span class="label label-c">Clever but muddy</span>
+
+<div class="rationale">
+<strong>Verified and Rejected replace Completed in the status column.</strong> The pill shifts from "Completed" → "Verified" / "Rejected" based on verification state. This is how the prototype currently works (HMW-47). Simplest visually, but collapses two conceptual states into one — admin can't tell at a glance whether a "Completed" job is awaiting verification or was just done. Kim's feedback explicitly asks us to <em>separate</em> these, so this option exists mainly to show what we're moving away from.
+</div>
+
+<div class="screen">
+<div style="padding: 16px;">
+<table class="t" style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+<thead>
+<tr>
+<th style="width: 105px;">Trip · Customer</th>
+<th style="width: 110px;">Vendor</th>
+<th style="width: 50px;">Service</th>
+<th>Route</th>
+<th style="width: 70px;">Pickup</th>
+<th style="width: 100px;">Status</th>
+<th style="width: 85px; text-align: right;">Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr class="r rj">
+<td><span class="dl">TRP-014</span><div style="font-size: 10px; color: #6b7280;">TikTok</div></td>
+<td style="font-weight: 600;">HaleSun</td>
+<td><span class="sp sp-fm">FM</span></td>
+<td style="font-size: 10px; color: #374151;">Qianhai WH → Huanggang</td>
+<td class="mono" style="font-size: 10px;">29 Mar</td>
+<td><span class="st st-rejected"><span class="dot" style="background: #dc2626;"></span> Rejected</span></td>
+<td class="mono" style="text-align: right; font-size: 10px; font-weight: 600;">CNY 780</td>
+</tr>
+<tr class="r">
+<td><span class="dl">TRP-011</span><div style="font-size: 10px; color: #6b7280;">TikTok</div></td>
+<td style="font-weight: 600;">Gonda</td>
+<td><span class="sp sp-ec">EC</span></td>
+<td style="font-size: 10px; color: #374151;">Shekou Terminal</td>
+<td class="mono" style="font-size: 10px;">28 Mar</td>
+<td><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span></td>
+<td class="mono" style="text-align: right; font-size: 10px; font-weight: 600;">CNY 280</td>
+</tr>
+<tr class="r">
+<td><span class="dl">TRP-008</span><div style="font-size: 10px; color: #6b7280;">Shopee</div></td>
+<td style="font-weight: 600;">ThaiKee</td>
+<td><span class="sp sp-fm">FM</span></td>
+<td style="font-size: 10px; color: #374151;">Baoan WH → Futian</td>
+<td class="mono" style="font-size: 10px;">25 Mar</td>
+<td><span class="st st-verified"><span class="dot" style="background: #059669;"></span> Verified</span></td>
+<td class="mono" style="text-align: right; font-size: 10px; font-weight: 600;">CNY 520</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- COMPARISON                                              -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>Trade-offs</h2>
+<div class="compare">
+  <div class="card">
+    <h4>A · Dual Columns</h4>
+    <ul>
+      <li class="pro">Two filters map to two columns — mental model is clean</li>
+      <li class="pro">Verification column only populates at Completed+ — visual rhythm teaches the lifecycle</li>
+      <li class="pro">Sortable and scannable per axis</li>
+      <li class="con">+1 column on an already dense table</li>
+      <li class="con">Rejection + verification share visual weight with status</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>B · Stacked Pill</h4>
+    <ul>
+      <li class="pro">Column count unchanged</li>
+      <li class="pro">Groups related info spatially</li>
+      <li class="con">Row height grows — breaks Excel-density feel</li>
+      <li class="con">Two semantics in one cell; harder to filter/sort</li>
+      <li class="con">Verification tag disappears for non-Completed rows → visual inconsistency</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>C · Absorbed Status</h4>
+    <ul>
+      <li class="pro">Fewest pixels spent</li>
+      <li class="pro">Matches current prototype — zero migration cost</li>
+      <li class="con">Conflates job lifecycle with admin sign-off — exactly what Kim flagged</li>
+      <li class="con">"Completed" is ambiguous: awaiting review? unreviewed? nobody's looked?</li>
+      <li class="con">No place for separate Verification filter without adding column back</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- REJECT ACTION UX — applied to Option A                 -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>Reject / Verify / Unverify — action surface</h2>
+
+<div class="rationale">
+<strong>Actions live in the slide-out, not the row.</strong> The Jobs row remains scan-only. Clicking any row opens the existing slide-out (HMW-49 status action bar pattern). The action bar at the top adapts based on current status + verification state. Three scenarios shown below.
+</div>
+
+<h3 style="margin-top: 20px;">Slide-out · Completed, Verification Pending → admin decides</h3>
+<div class="panel">
+  <div class="panel-bar">
+    <div>
+      <div style="font-size: 10px; color: #a16207; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;">Awaiting Verification</div>
+      <div style="font-size: 12px; color: #111827; font-weight: 600; margin-top: 2px;">Review vendor's proofs and fees before approving.</div>
+    </div>
+    <div style="display: flex; gap: 6px;">
+      <button class="btn btn-danger">Reject</button>
+      <button class="btn btn-primary">✓ Verify</button>
+    </div>
+  </div>
+  <div class="panel-body">
+    <div class="panel-row"><span class="k">Trip</span><span class="v mono">TRP-011</span></div>
+    <div class="panel-row"><span class="k">Vendor</span><span class="v">Gonda</span></div>
+    <div class="panel-row"><span class="k">Service</span><span class="v">EC — Export Customs</span></div>
+    <div class="panel-row"><span class="k">Job Status</span><span class="v"><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span></span></div>
+    <div class="panel-row"><span class="k">Verification</span><span class="v"><span class="v-tag v-pending"><span class="v-dot"></span> Pending</span></span></div>
+    <div class="panel-row" style="border-bottom: none;"><span class="k">Proofs</span><span class="v">3 uploaded</span></div>
+  </div>
+</div>
+
+<h3 style="margin-top: 20px;">Clicking "Reject" — reason capture inline</h3>
+<div class="panel">
+  <div class="panel-bar panel-bar-rejected">
+    <div>
+      <div style="font-size: 10px; color: #dc2626; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;">Reject Job</div>
+      <div style="font-size: 12px; color: #111827; font-weight: 600; margin-top: 2px;">Vendor will be notified and asked to re-upload.</div>
+    </div>
+  </div>
+  <div class="panel-body">
+    <div class="reason-form">
+      <label>Rejection reason <span style="color: #dc2626;">*</span></label>
+      <textarea placeholder="e.g. Proof of delivery photo is blurry — license plate not readable. Please re-upload a clear photo taken at the delivery point."></textarea>
+      <div class="hint">Required. Shown to the vendor and logged in the audit trail. They'll re-upload whichever proofs they need, which resets verification to Pending.</div>
+    </div>
+  </div>
+  <div class="panel-actions">
+    <button class="btn btn-ghost">Cancel</button>
+    <button class="btn btn-danger">Confirm Reject</button>
+  </div>
+</div>
+
+<h3 style="margin-top: 20px;">Slide-out · already Verified → Unverify escape hatch</h3>
+<div class="panel">
+  <div class="panel-bar panel-bar-verified">
+    <div>
+      <div style="font-size: 10px; color: #059669; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;">Verified</div>
+      <div style="font-size: 12px; color: #111827; font-weight: 600; margin-top: 2px;">Locked for billing. Ops Admin · Apr 18, 14:32</div>
+    </div>
+    <div>
+      <button class="btn">Unverify to edit</button>
+    </div>
+  </div>
+  <div class="panel-body">
+    <div class="panel-row"><span class="k">Verification</span><span class="v"><span class="v-tag v-verified"><span class="v-dot"></span> Verified</span></span></div>
+    <div class="panel-row" style="border-bottom: none; color: #9ca3af;"><span class="k">Fees, quantities, and proofs are read-only.</span><span class="v"></span></div>
+  </div>
+</div>
+
+<div class="rationale" style="margin-top: 12px; background: #f9fafb;">
+<strong>Unverify vs Reject — different semantics.</strong>
+<ul style="margin-top: 6px; padding-left: 20px; line-height: 1.7;">
+<li><strong>Unverify</strong> = admin self-correction. No reason required. Keeps all proofs. Flips verification back to Pending so admin can edit fees/quantities or re-check. No vendor notification.</li>
+<li><strong>Reject</strong> = admin flags vendor's work as insufficient. Reason required. Vendor sees the reason and is expected to re-upload. Verification becomes Rejected (not Pending) so the admin knows "waiting on vendor," not "waiting on me."</li>
+</ul>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- VENDOR SIDE PREVIEW                                     -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>Vendor side — how a rejected job appears</h2>
+
+<div class="rationale">
+Vendor opens their Job Detail page. A rejection callout sits near the top, above proofs. The rejection reason is the first thing they see; the re-upload affordance is one click away. When they upload any new proof, verification flips back to <strong>Pending</strong> automatically and the callout disappears.
+</div>
+
+<div class="panel" style="max-width: 640px;">
+  <div class="panel-bar panel-bar-rejected">
+    <div>
+      <div style="font-size: 10px; color: #dc2626; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;">Job Rejected</div>
+      <div style="font-size: 12px; color: #111827; font-weight: 600; margin-top: 2px;">Re-upload required · Gonda</div>
+    </div>
+    <button class="btn btn-primary">Upload Proof</button>
+  </div>
+  <div class="panel-body">
+    <div class="proof-card">
+      <div class="tag">Rejection reason</div>
+      <div class="reason">Proof of delivery photo is blurry — license plate not readable. Please re-upload a clear photo taken at the delivery point.</div>
+      <div class="meta">Rejected by Ops Admin · Apr 19, 2026 · 14:32</div>
+    </div>
+    <div class="panel-row"><span class="k">Trip</span><span class="v mono">TRP-014</span></div>
+    <div class="panel-row"><span class="k">Job Status</span><span class="v"><span class="st st-completed"><span class="dot" style="background: #a16207;"></span> Completed</span></span></div>
+    <div class="panel-row" style="border-bottom: none;"><span class="k">Verification</span><span class="v"><span class="v-tag v-rejected"><span class="v-dot"></span> Rejected</span></span></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- VERDICT                                                 -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="verdict">
+<h3>Verdict — PENDING (awaiting user decision)</h3>
+<p style="font-size: 12px; color: #374151; line-height: 1.6;">
+<strong>Recommendation: Option A (Dual Columns).</strong> It's the only option that matches Kim's conceptual ask — separating job status (vendor) from verification status (admin). The +1 column cost is real but bounded: the verification column is narrow (~100px) and mostly empty em-dashes until Completed. Options B and C either blur the separation or add row height, both of which work against the Excel-density aesthetic.
+</p>
+<p style="font-size: 12px; color: #374151; line-height: 1.6; margin-top: 8px;">
+<strong>Reject UX:</strong> inline reason capture in the slide-out (not a separate modal), consistent with the HMW-51 cancel/replace pattern. Unverify kept as a distinct button with no reason input. Vendor sees a red callout with reason on re-upload.
+</p>
+<p style="font-size: 12px; color: #6b7280; line-height: 1.6; margin-top: 8px;">
+<strong>Open for HMW-61:</strong> where timestamps attach to status and verification chips — inline? tooltip? attribution?
+</p>
+</div>
+
+</div>
+</body>
+</html>

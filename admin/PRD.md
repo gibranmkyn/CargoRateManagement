@@ -378,6 +378,20 @@ Both Admin and Vendor apps should display:
 - [x] Update vendor My Jobs to show completion remarks
 - [x] Activity log entries for all cancellation/replacement/follow-up events
 
+### Iteration 12 — Client Status Model Reconciliation (completed 2026-04-21)
+
+The client explicitly requires **separate Status and Verification columns** (not merged). This iteration supersedes the "Slop Reduction" single-State merge from Iteration 11.
+
+- [x] **Separate Status + Verification columns** on both Trips page and Jobs page. Each rendered as `dot + label + timestamp` pair. Cancel reason / rejection reason shown as subline (`showReason`).
+- [x] **Trip-level auto-derived signals:** Trip Status derived from job statuses (all-cancelled → Cancelled; any In Progress → In Progress; etc.). Trip Verification derived from job verification (all-verified required; subline shows `X/Y verified` or `X rejected`).
+- [x] **New admin cell components:** `StatusCell`, `VerificationCell`, `TripStatusCell`, `TripVerificationCell`. Deleted: `StateCell`, `TripStateCell`.
+- [x] **Jobs page workflow pills:** `All / Pending / In Progress / To verify / Verified / Cancelled`. `To verify` = Completed status with Pending or Rejected verification. Verification `<select>` dropdown removed.
+- [x] **Trips page segment pills:** `All / Pending / In Progress / Completed / Cancelled`.
+- [x] **JobSlideOut header:** labeled pair — "Status" (StatusCell + showReason) + "Verification" (VerificationCell + showReason). All action buttons (Start/Upload/Reject/Verify/Unverify/Re-verify/Re-upload) and "Edit L2" entry preserved.
+- [x] **`UPDATE_JOB_STATUS` reducer** now appends `{ action: 'Status → <NewStatus>', user: 'Ops Admin' }` to `job.activityLog` and sets `statusChangedAt` on every status change.
+- [x] **CSV split:** both pages export Status, Status Updated, Verification, Verification Updated columns.
+- [x] **Netlify `_redirects`** (`/* /index.html 200`) added to admin/public, vendor/public, admin/dist, vendor/dist.
+
 ### Known Scaling Limitations (address in Phase 3)
 - **No vendor grouping** — if HaleSun has sub-entities (HaleSun-SZ, HaleSun-GZ), there's no hierarchy. Needs vendor groups.
 - **localStorage** — browser storage will hit size limits at scale. Needs a backend with server-side pagination.

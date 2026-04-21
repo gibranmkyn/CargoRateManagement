@@ -35,7 +35,7 @@ export default function VendorComparisonPopover({ serviceCode, locationId, curre
   // Group by vendor, show completion stats
   const vendorData = vendors.map((v) => {
     const allJobs = trips.flatMap((t) => t.jobs).filter((j) => j.vendor.code === v.code && j.service.code === serviceCode);
-    const completed = allJobs.filter((j) => j.status === 'Verified').length;
+    const completed = allJobs.filter((j) => j.verificationStatus === 'Verified').length;
     const total = allJobs.length;
     return { vendor: v, completed, total };
   });

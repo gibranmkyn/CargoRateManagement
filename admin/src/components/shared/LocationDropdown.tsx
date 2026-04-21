@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronDown, Plus, Check, X, MapPin } from 'lucide-react';
+import { ChevronDown, Plus, Check, X } from 'lucide-react';
 import { useLocations, generateLocationId } from '../../context/LocationContext';
+import { useZones } from '@shared/ZoneContext';
 import { useToast } from '@shared/Toast';
 import type { LocationType } from '@shared/mockData';
-import DistrictSearchDropdown from './DistrictSearchDropdown';
 
 const LOCATION_TYPES: LocationType[] = ['warehouse', 'airport', 'port', 'checkpoint', 'hub'];
 const TYPE_LABEL: Record<LocationType, string> = { warehouse: 'Warehouse', airport: 'Airport', port: 'Port', checkpoint: 'Checkpoint', hub: 'Hub' };
@@ -17,17 +17,15 @@ interface LocationDropdownProps {
 
 export default function LocationDropdown({ value, onChange, placeholder = 'Select location...', excludeId }: LocationDropdownProps) {
   const { locations, getLocationsGroupedByZone, getLocationById, addLocation } = useLocations();
+  const { zones } = useZones();
   const toast = useToast();
 
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newZone, setNewZone] = useState('');
+  const [newZoneId, setNewZoneId] = useState('');
   const [newType, setNewType] = useState<LocationType>('warehouse');
-  const [newDistrict, setNewDistrict] = useState('');
-  const [newDistrictCode, setNewDistrictCode] = useState('');
-  const [newCity, setNewCity] = useState('');
   const [addError, setAddError] = useState('');
   const [focusedIndex, setFocusedIndex] = useState(-1);
 
@@ -60,12 +58,12 @@ export default function LocationDropdown({ value, onChange, placeholder = 'Selec
   }, [showAddForm]);
 
   // Build flat list for keyboard nav
-  const grouped = getLocationsGroupedByZone();
+  const grouped = getLocationsGroupedByZone(zones);
   const flatOptions: { id: string; name: string; zone: string; type: LocationType }[] = [];
   for (const [zone, locs] of grouped) {
     for (const loc of locs) {
       if (excludeId && loc.id === excludeId) continue;
-      if (search && !loc.name.toLowerCase().includes(search.toLowerCase()) && !loc.zone.toLowerCase().includes(search.toLowerCase())) continue;
+      if (search && !loc.name.toLowerCase().includes(search.toLowerCase()) && !zone.toLowerCase().includes(search.toLowerCase())) continue;
       flatOptions.push({ id: loc.id, name: loc.name, zone, type: loc.type });
     }
   }
@@ -97,22 +95,23 @@ export default function LocationDropdown({ value, onChange, placeholder = 'Selec
   function handleAddLocation() {
     setAddError('');
     if (!newName.trim()) { setAddError('Name is required'); return; }
-    if (!newZone.trim()) { setAddError('Zone is required'); return; }
-    const dup = locations.find((l) => l.name.toLowerCase() === newName.trim().toLowerCase() && l.zone === newZone.trim());
-    if (dup) { setAddError(`"${newName}" already exists in ${newZone}`); return; }
+    if (!newZoneId) { setAddError('Zone is required'); return; }
+    const dup = locations.find((l) => l.name.toLowerCase() === newName.trim().toLowerCase() && l.zoneId === newZoneId);
+    if (dup) {
+      const zoneName = zones.find((z) => z.id === newZoneId)?.name ?? newZoneId;
+      setAddError(`"${newName}" already exists in ${zoneName}`);
+      return;
+    }
 
     const id = generateLocationId();
     const code = newName.trim().substring(0, 6).toUpperCase().replace(/\s/g, '-');
-    addLocation({ id, name: newName.trim(), code, zone: newZone.trim(), type: newType, district: newDistrict, districtCode: newDistrictCode, city: newCity });
+    addLocation({ id, name: newName.trim(), code, type: newType, zoneId: newZoneId });
     toast.success(`Location added: ${newName.trim()}`);
     onChange(id); // Auto-select
-    setNewName(''); setNewZone(''); setNewType('warehouse');
-    setNewDistrict(''); setNewDistrictCode(''); setNewCity('');
+    setNewName(''); setNewZoneId(''); setNewType('warehouse');
     setShowAddForm(false);
     setOpen(false);
   }
-
-  const zones = [...new Set(locations.map((l) => l.zone))].sort();
 
   // Group filtered options by zone
   const filteredGrouped = new Map<string, typeof flatOptions>();
@@ -147,30 +146,18 @@ export default function LocationDropdown({ value, onChange, placeholder = 'Selec
           <div style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#152CFF', marginBottom: 6 }}>Add new location</div>
           <input ref={nameRef} type="text" placeholder="Name" value={newName} onChange={(e) => setNewName(e.target.value)} style={{ width: '100%', fontSize: 11, padding: '4px 6px', border: '1px solid #e5e7eb', borderRadius: 4, marginBottom: 4, outline: 'none' }} />
           {addError && <div style={{ fontSize: 10, color: '#dc2626', marginBottom: 4 }}>{addError}</div>}
-          <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
-            <input type="text" list="ld-zones" placeholder="Zone" value={newZone} onChange={(e) => setNewZone(e.target.value)} style={{ flex: 1, fontSize: 11, padding: '4px 6px', border: '1px solid #e5e7eb', borderRadius: 4, outline: 'none' }} />
-            <datalist id="ld-zones">{zones.map((z) => <option key={z} value={z} />)}</datalist>
+          <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+            <select value={newZoneId} onChange={(e) => setNewZoneId(e.target.value)} style={{ flex: 1, fontSize: 11, padding: '4px 6px', border: '1px solid #e5e7eb', borderRadius: 4, outline: 'none' }}>
+              <option value="">Select zone…</option>
+              {zones.map((z) => <option key={z.id} value={z.id}>{z.name}</option>)}
+            </select>
             <select value={newType} onChange={(e) => setNewType(e.target.value as LocationType)} style={{ flex: 1, fontSize: 11, padding: '4px 6px', border: '1px solid #e5e7eb', borderRadius: 4, outline: 'none' }}>
               {LOCATION_TYPES.map((t) => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}
             </select>
           </div>
-          <div style={{ marginBottom: 6 }}>
-            <DistrictSearchDropdown
-              value={newDistrict}
-              onSelect={({ district, districtCode, city, zone }) => {
-                setNewDistrict(district);
-                setNewDistrictCode(districtCode);
-                setNewCity(city);
-                if (!newZone) setNewZone(zone); // auto-fill zone if not set
-              }}
-              placeholder="Type Shenzhen, 宝安, or 440306…"
-              extraStyle={{ fontSize: 11, padding: '4px 6px' }}
-            />
-            {newCity && <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>City: {newCity}</div>}
-          </div>
           <div style={{ display: 'flex', gap: 4 }}>
             <button onClick={handleAddLocation} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '4px 8px', borderRadius: 4, border: 'none', background: '#152CFF', color: '#fff', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}><Check size={10} /> Add</button>
-            <button onClick={() => { setShowAddForm(false); setAddError(''); setNewDistrict(''); setNewDistrictCode(''); setNewCity(''); }} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '4px 8px', borderRadius: 4, border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}><X size={10} /> Cancel</button>
+            <button onClick={() => { setShowAddForm(false); setAddError(''); setNewZoneId(''); }} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '4px 8px', borderRadius: 4, border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}><X size={10} /> Cancel</button>
           </div>
         </div>
       )}
