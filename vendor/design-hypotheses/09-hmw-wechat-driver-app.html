@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-V09: WeChat Mini Program — Driver Job Access</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+
+.page { max-width: 1320px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 16px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+.hmw { font-size: 14px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 20px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 12px; font-size: 11px; color: #374151; line-height: 1.6; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 9px 11px; border-radius: 6px; font-size: 11px; line-height: 1.7; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 36px; }
+.verdict h3 { color: #059669; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.verdict p { font-size: 11px; color: #374151; line-height: 1.7; margin-bottom: 6px; }
+.verdict p:last-child { margin-bottom: 0; }
+
+/* 3-column options layout */
+.options-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 12px 0 32px; align-items: start; }
+
+/* === WeChat phone chrome === */
+.wx-phone-wrap { display: flex; flex-direction: column; align-items: center; margin-top: 10px; }
+.wx-frame-label { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9ca3af; margin-bottom: 6px; text-align: center; }
+.wx-phone { width: 100%; max-width: 300px; border-radius: 18px; border: 7px solid #1a1a1a; background: #1a1a1a; box-shadow: 0 8px 32px rgba(0,0,0,0.35), inset 0 0 0 1px #333; overflow: hidden; margin: 0 auto; }
+.wx-phone-inner { background: #EDEDED; height: 560px; display: flex; flex-direction: column; position: relative; overflow: hidden; font-size: 12px; }
+
+/* WeChat status bar */
+.wx-sb { height: 22px; background: #EDEDED; display: flex; align-items: center; padding: 0 14px; flex-shrink: 0; }
+.wx-sb-time { font-size: 12px; font-weight: 700; color: #111; letter-spacing: -0.2px; }
+.wx-sb-right { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.wx-signal { display: flex; align-items: flex-end; gap: 1px; height: 9px; }
+.wx-signal span { width: 3px; background: #111; border-radius: 0.5px; }
+.wx-bat { width: 18px; height: 9px; border: 1.5px solid #111; border-radius: 2px; position: relative; }
+.wx-bat::after { content: ''; position: absolute; right: -4px; top: 50%; transform: translateY(-50%); width: 2px; height: 5px; background: #111; border-radius: 0 1px 1px 0; }
+.wx-bat::before { content: ''; position: absolute; left: 1px; top: 1px; bottom: 1px; right: 4px; background: #111; border-radius: 1px; }
+
+/* WeChat nav bar */
+.wx-nav { height: 44px; background: #F7F8FA; border-bottom: 0.5px solid #DADADA; display: flex; align-items: center; padding: 0 12px; flex-shrink: 0; position: relative; }
+.wx-nav-back { display: flex; align-items: center; gap: 1px; color: #1773EA; font-size: 13px; }
+.wx-nav-chevron { width: 7px; height: 12px; fill: none; stroke: #1773EA; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.wx-nav-back-text { font-size: 14px; }
+.wx-nav-title { position: absolute; left: 50%; transform: translateX(-50%); font-size: 15px; font-weight: 600; color: #111; white-space: nowrap; }
+.wx-nav-more { margin-left: auto; width: 24px; height: 24px; border-radius: 12px; background: rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; }
+.wx-nav-more svg { width: 16px; height: 16px; }
+
+/* WeChat page content area */
+.wx-content { flex: 1; overflow-y: auto; overflow-x: hidden; background: #EDEDED; }
+.wx-scroll { padding-bottom: 62px; }
+
+/* WeChat card */
+.wx-card { background: #fff; margin: 8px 10px 0; border-radius: 8px; overflow: hidden; }
+
+/* Card header */
+.wx-card-hdr { display: flex; align-items: center; justify-content: space-between; padding: 9px 13px; border-bottom: 0.5px solid #F3F3F3; }
+.wx-card-hdr-title { font-size: 12px; font-weight: 600; color: #111; }
+.wx-card-hdr-badge { font-family: 'JetBrains Mono', monospace; font-size: 10px; background: #F5F5F5; color: #888; padding: 1px 5px; border-radius: 4px; }
+
+/* Status banner card */
+.wx-status-card { background: #fff; margin: 8px 10px 0; border-radius: 8px; padding: 10px 13px; display: flex; align-items: flex-start; gap: 9px; }
+.wx-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
+.wx-status-label { font-size: 13px; font-weight: 600; line-height: 1.2; }
+.wx-hint-text { font-size: 11px; color: #888; margin-top: 3px; line-height: 1.4; }
+
+/* Route inside card */
+.wx-route-wrap { padding: 10px 13px; }
+.wx-rt { display: flex; gap: 10px; align-items: flex-start; }
+.wx-rt-marker { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+.wx-rt-dot { width: 10px; height: 10px; border-radius: 50%; }
+.wx-rt-stem { width: 1.5px; height: 22px; margin: 3px 0; }
+.wx-rt-name { font-size: 13px; font-weight: 600; color: #111; line-height: 1.2; }
+.wx-rt-meta { font-size: 10px; margin-top: 2px; display: flex; align-items: center; gap: 5px; }
+.wx-rt-time { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; }
+.wx-rt-done { font-size: 10px; font-weight: 600; }
+.wx-rt-now { font-size: 10px; font-weight: 600; }
+
+/* Cargo strip */
+.wx-cargo-strip { display: flex; padding: 10px 13px; gap: 0; }
+.wx-cargo-item { flex: 1; }
+.wx-cargo-item + .wx-cargo-item { border-left: 0.5px solid #F0F0F0; padding-left: 14px; }
+.wx-cargo-num { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 600; color: #111827; line-height: 1; }
+.wx-cargo-unit { font-size: 10px; color: #888; margin-top: 3px; }
+
+/* Progress steps strip */
+.wx-progress-strip { display: flex; align-items: flex-start; padding: 10px 13px; }
+.wx-ps-step { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.wx-ps-circle { width: 20px; height: 20px; border-radius: 50%; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.wx-ps-label { font-size: 9px; color: #888; margin-top: 3px; text-align: center; line-height: 1.3; max-width: 52px; }
+.wx-ps-connector { flex: 1; height: 1.5px; margin: 9px 0 0; min-width: 12px; }
+
+/* File list rows */
+.wx-file-row { display: flex; align-items: center; gap: 9px; padding: 7px 13px; border-top: 0.5px solid #F3F3F3; }
+.wx-file-icon { width: 28px; height: 28px; border-radius: 4px; background: #F0F4FF; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.wx-file-icon svg { width: 14px; height: 14px; }
+.wx-file-name { font-size: 11px; color: #111; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wx-file-time { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; white-space: nowrap; }
+
+/* Upload zone */
+.wx-upload-zone { margin: 6px 13px; border: 1.5px dashed rgba(21,44,255,0.25); border-radius: 6px; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; background: rgba(21,44,255,0.01); }
+.wx-upload-text { font-size: 11px; color: #9ca3af; }
+
+/* Bottom action bar */
+.wx-action-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #fff; border-top: 0.5px solid #E0E0E0; padding: 8px 12px 10px; }
+.wx-btn { width: 100%; padding: 11px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; }
+.wx-btn-blue { background: #152CFF; color: #fff; }
+.wx-btn-ghost { background: #fff; color: #152CFF; border: 1.5px solid #152CFF; margin-top: 5px; }
+.wx-btn-disabled { background: #e5e7eb; color: #9ca3af; cursor: default; }
+
+/* Activity log rows */
+.wx-log-row { display: flex; align-items: flex-start; gap: 8px; padding: 6px 13px; border-top: 0.5px solid #F3F3F3; }
+.wx-log-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
+.wx-log-action { font-size: 11px; color: #374151; flex: 1; }
+.wx-log-who { font-size: 10px; color: #9ca3af; }
+.wx-log-time { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; white-space: nowrap; margin-top: 1px; }
+
+/* ===== Option B: Wizard ===== */
+.wx-wizard-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 18px 70px; background: #fff; text-align: center; }
+.wx-wiz-steps { display: flex; align-items: center; gap: 4px; margin-bottom: 28px; }
+.wx-wiz-step { width: 28px; height: 4px; border-radius: 2px; }
+.wx-wiz-icon { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
+.wx-wiz-icon svg { width: 28px; height: 28px; }
+.wx-wiz-title { font-size: 17px; font-weight: 700; color: #111; margin-bottom: 6px; line-height: 1.3; }
+.wx-wiz-sub { font-size: 13px; color: #374151; font-weight: 500; margin-bottom: 4px; }
+.wx-wiz-meta { font-size: 11px; color: #9ca3af; margin-bottom: 28px; font-family: 'JetBrains Mono', monospace; }
+.wx-wiz-confirm { width: 100%; padding: 14px; background: #152CFF; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.wx-wiz-skip { margin-top: 10px; font-size: 12px; color: #9ca3af; background: none; border: none; cursor: pointer; display: block; width: 100%; text-align: center; padding: 6px; }
+.wx-wiz-context { position: absolute; bottom: 0; left: 0; right: 0; background: #FAFAFA; border-top: 0.5px solid #E8E8E8; padding: 8px 14px 10px; }
+.wx-wiz-ctx-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 3px; }
+.wx-wiz-ctx-value { font-size: 11px; color: #374151; }
+.wx-wiz-ctx-row { display: flex; gap: 16px; }
+.wx-wiz-ctx-item { }
+
+/* ===== Option C: Tab bar ===== */
+.wx-tabbar { position: absolute; bottom: 0; left: 0; right: 0; height: 50px; background: #fff; border-top: 0.5px solid #E0E0E0; display: flex; }
+.wx-tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; }
+.wx-tab svg { width: 20px; height: 20px; }
+.wx-tab-lbl { font-size: 9px; }
+.wx-tab-badge { width: 16px; height: 16px; border-radius: 8px; background: #dc2626; color: #fff; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; position: absolute; top: 4px; right: -4px; }
+.wx-tab-icon-wrap { position: relative; }
+
+/* Photo grid (option C) */
+.wx-photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 10px 13px; }
+.wx-photo-cell { aspect-ratio: 1; border-radius: 4px; overflow: hidden; background: #F5F5F5; display: flex; align-items: center; justify-content: center; position: relative; }
+.wx-photo-add { border: 1.5px dashed rgba(21,44,255,0.3); background: rgba(21,44,255,0.02); }
+.wx-photo-add svg { width: 20px; height: 20px; }
+
+/* Small spacer card top */
+.wx-first-card { margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-V09: WeChat Mini Program — Driver Job Access</h1>
+<div class="hmw">How might we design the driver's job execution experience as a WeChat Mini Program — balancing WeChat-native UX patterns with Teleport OS status consistency, for a driver who may be at a warehouse loading bay with gloved hands?</div>
+
+<div class="context">
+<strong>Context (TODO-049):</strong> This introduces a 3rd app in the Teleport OS platform: Admin (web) → Vendor (web) → Driver (WeChat). When an FM Trucking job is assigned to a driver, the driver receives a WeChat notification and opens the job in a Mini Program. The driver needs: pickup/delivery info, cargo details, action buttons for status milestones (arrived at pickup, departed, arrived at delivery), and proof photo upload from their phone camera. Their updates flow back to the Vendor and Admin apps via the shared state layer. WeChat Mini Programs run inside the WeChat app on a phone, constraining font choice (PingFang SC/Noto Sans SC), screen width (375–430px), and interaction patterns. The mockups here approximate the WeChat UI using Instrument Sans (the closest web proxy). Production would use WeChat's system font stack.<br><br>
+<strong>Key design tension:</strong> Should this app follow Teleport OS design conventions (4–6px radius, Instrument Sans, dense utilitarian) or WeChat native conventions (8–12px cards, system font, generous touch targets)? Drivers are warehouse workers, not ops planners — comfort and speed at a loading dock take priority over visual coherence with the admin tool. However, status signal colors (blue/amber/green/red dots) must remain identical so dispatchers reading the same job in the vendor app see the same language.
+</div>
+
+<!-- ============================================================ -->
+<!-- OPTION A: Single-Scroll Job Card + Sticky Action Bar -->
+<!-- ============================================================ -->
+<h2>Option A: Single-Scroll Card Layout + Sticky Action Bar</h2>
+<span class="label" style="background: #dbeafe; color: #1e40af;">Recommended</span>
+
+<div class="rationale">
+One scrollable page with tightly organized cards: Status banner → Route → Cargo → Proof files. A sticky bottom action bar always shows what to do next, adapting per status milestone. The driver sees all job context on one screen and the primary action is always reachable without scrolling.
+
+The status banner uses Teleport OS colors (blue dot for In Progress, amber for Completed, green for Verified) so dispatchers in the vendor app and drivers in WeChat see the same signal. Cards use 8px radius (WeChat standard) rather than the admin's 4–6px — this is an intentional exception for the WeChat native environment.
+
+Shown below: the driver has arrived at the delivery point and needs to upload proof photos.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• All job info visible in one place — no navigation<br>
+• Sticky action bar = primary action always reachable<br>
+• Context before action: driver sees pickup/delivery details, cargo, and current status in one scroll<br>
+• Natural for both desktop preview and phone usage<br>
+• Camera action is always the same place (bottom bar)</div>
+<div class="cons"><strong>Cons</strong><br>
+• Route + Cargo requires scrolling to reach Proof section<br>
+• No forced progression — driver could upload proof without marking arrival<br>
+• Less opinionated about step sequence than a wizard</div>
+</div>
+</div>
+
+<div class="options-row">
+<div>
+<!-- Option A: Arriving at delivery, ready to upload proof -->
+<div class="wx-phone-wrap">
+<div class="wx-frame-label">In Progress · Arrived at Delivery</div>
+<div class="wx-phone">
+<div class="wx-phone-inner">
+
+<!-- Status bar -->
+<div class="wx-sb">
+  <span class="wx-sb-time">14:02</span>
+  <div class="wx-sb-right">
+    <div class="wx-signal">
+      <span style="height:3px"></span><span style="height:5px"></span><span style="height:7px"></span><span style="height:9px"></span>
+    </div>
+    <div class="wx-bat"></div>
+  </div>
+</div>
+
+<!-- WeChat nav -->
+<div class="wx-nav">
+  <div class="wx-nav-back">
+    <svg viewBox="0 0 7 12" class="wx-nav-chevron"><polyline points="6,1 1,6 6,11"/></svg>
+    <span class="wx-nav-back-text">Back</span>
+  </div>
+  <span class="wx-nav-title">Job DO-2603-001</span>
+  <div class="wx-nav-more">
+    <svg viewBox="0 0 16 4" fill="#555"><circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/><circle cx="14" cy="2" r="1.5"/></svg>
+  </div>
+</div>
+
+<!-- Scrollable content -->
+<div class="wx-content">
+<div class="wx-scroll">
+
+  <!-- Status banner -->
+  <div class="wx-status-card wx-first-card" style="background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.12); margin: 8px 10px 0;">
+    <div class="wx-dot" style="background: #152CFF;"></div>
+    <div>
+      <div class="wx-status-label" style="color: #111827;">In Progress</div>
+      <div class="wx-hint-text">Upload proof photos to mark delivery complete</div>
+    </div>
+  </div>
+
+  <!-- Progress steps -->
+  <div class="wx-card wx-first-card">
+    <div class="wx-card-hdr">
+      <span class="wx-card-hdr-title">Progress</span>
+      <span class="wx-card-hdr-badge">3 steps</span>
+    </div>
+    <div class="wx-progress-strip">
+      <!-- Step 1: Picked up -->
+      <div class="wx-ps-step">
+        <div class="wx-ps-circle" style="background: #059669; color: #fff;">✓</div>
+        <div class="wx-ps-label" style="color: #059669;">Picked Up</div>
+      </div>
+      <div class="wx-ps-connector" style="background: #059669; margin-top: 9px;"></div>
+      <!-- Step 2: Departed -->
+      <div class="wx-ps-step">
+        <div class="wx-ps-circle" style="background: #059669; color: #fff;">✓</div>
+        <div class="wx-ps-label" style="color: #059669;">Departed</div>
+      </div>
+      <div class="wx-ps-connector" style="background: #152CFF; margin-top: 9px;"></div>
+      <!-- Step 3: Arrived delivery -->
+      <div class="wx-ps-step">
+        <div class="wx-ps-circle" style="background: #152CFF; color: #fff;">●</div>
+        <div class="wx-ps-label" style="color: #152CFF; font-weight: 600;">At Delivery</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Route card -->
+  <div class="wx-card">
+    <div class="wx-card-hdr">
+      <span class="wx-card-hdr-title">Route</span>
+    </div>
+    <div class="wx-route-wrap">
+      <!-- Origin (completed) -->
+      <div class="wx-rt">
+        <div class="wx-rt-marker">
+          <div class="wx-rt-dot" style="background: #059669;"></div>
+          <div class="wx-rt-stem" style="background: #e5e7eb;"></div>
+        </div>
+        <div style="padding-bottom: 10px; opacity: 0.65;">
+          <div class="wx-rt-name">Baoan WH, Shenzhen</div>
+          <div class="wx-rt-meta">
+            <span class="wx-rt-time" style="color: #9ca3af;">03 May 08:00</span>
+            <span class="wx-rt-done" style="color: #059669;">✓ Departed 08:47</span>
+          </div>
+        </div>
+      </div>
+      <!-- Destination (current) -->
+      <div class="wx-rt">
+        <div class="wx-rt-marker">
+          <div class="wx-rt-dot" style="background: #152CFF; box-shadow: 0 0 0 3px rgba(21,44,255,0.15);"></div>
+        </div>
+        <div>
+          <div class="wx-rt-name">HKIA Cargo Terminal</div>
+          <div class="wx-rt-meta">
+            <span class="wx-rt-time" style="color: #374151;">03 May 14:00</span>
+            <span class="wx-rt-now" style="color: #152CFF;">← You are here</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cargo card -->
+  <div class="wx-card">
+    <div class="wx-card-hdr">
+      <span class="wx-card-hdr-title">Cargo</span>
+    </div>
+    <div class="wx-cargo-strip">
+      <div class="wx-cargo-item">
+        <div class="wx-cargo-num">18</div>
+        <div class="wx-cargo-unit">bags</div>
+      </div>
+      <div class="wx-cargo-item">
+        <div class="wx-cargo-num">920</div>
+        <div class="wx-cargo-unit">kg</div>
+      </div>
+      <div class="wx-cargo-item">
+        <div class="wx-cargo-num" style="font-size: 14px; margin-top: 4px; color: #6b7280;">粤B·12345</div>
+        <div class="wx-cargo-unit">truck plate</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Proof card -->
+  <div class="wx-card">
+    <div class="wx-card-hdr">
+      <span class="wx-card-hdr-title">Proof Photos</span>
+      <span class="wx-card-hdr-badge">0 files</span>
+    </div>
+    <div style="padding: 10px 13px;">
+      <div class="wx-upload-zone">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(21,44,255,0.4)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+        <div class="wx-upload-text">No photos yet</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Customer / Trip info -->
+  <div class="wx-card" style="margin-bottom: 8px;">
+    <div class="wx-card-hdr">
+      <span class="wx-card-hdr-title">Trip Info</span>
+    </div>
+    <div style="padding: 8px 0;">
+      <div class="wx-log-row" style="border: none;">
+        <div style="font-size: 11px; color: #888; width: 52px; flex-shrink: 0;">Customer</div>
+        <div style="font-size: 11px; color: #111; font-weight: 600;">TikTok Global</div>
+      </div>
+      <div class="wx-log-row" style="border-top: 0.5px solid #F3F3F3;">
+        <div style="font-size: 11px; color: #888; width: 52px; flex-shrink: 0;">MAWB</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #374151;">160-12345678</div>
+      </div>
+      <div class="wx-log-row" style="border-top: 0.5px solid #F3F3F3;">
+        <div style="font-size: 11px; color: #888; width: 52px; flex-shrink: 0;">Vendor</div>
+        <div style="font-size: 11px; color: #374151;">HaleSun Logistics</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /wx-scroll -->
+</div><!-- /wx-content -->
+
+<!-- Sticky action bar -->
+<div class="wx-action-bar">
+  <button class="wx-btn wx-btn-blue">📷 Upload Proof Photos</button>
+</div>
+
+</div><!-- /wx-phone-inner -->
+</div><!-- /wx-phone -->
+</div><!-- /wx-phone-wrap -->
+</div>
+
+<!-- Option A: Pending state -->
+<div>
+<div class="wx-phone-wrap">
+<div class="wx-frame-label">Pending · Not yet started</div>
+<div class="wx-phone">
+<div class="wx-phone-inner">
+
+<div class="wx-sb">
+  <span class="wx-sb-time">07:48</span>
+  <div class="wx-sb-right">
+    <div class="wx-signal"><span style="height:3px"></span><span style="height:5px"></span><span style="height:7px"></span><span style="height:9px"></span></div>
+    <div class="wx-bat"></div>
+  </div>
+</div>
+<div class="wx-nav">
+  <div class="wx-nav-back">
+    <svg viewBox="0 0 7 12" class="wx-nav-chevron"><polyline points="6,1 1,6 6,11"/></svg>
+    <span class="wx-nav-back-text">Back</span>
+  </div>
+  <span class="wx-nav-title">Job DO-2603-001</span>
+  <div class="wx-nav-more">
+    <svg viewBox="0 0 16 4" fill="#555"><circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/><circle cx="14" cy="2" r="1.5"/></svg>
+  </div>
+</div>
+
+<div class="wx-content">
+<div class="wx-scroll">
+
+  <!-- Status banner: Pending -->
+  <div class="wx-status-card wx-first-card" style="background: #f9fafb; border: 1px solid #e5e7eb; margin: 8px 10px 0;">
+    <div class="wx-dot" style="background: #d1d5db;"></div>
+    <div>
+      <div class="wx-status-label" style="color: #6b7280;">Pending</div>
+      <div class="wx-hint-text">Tap "Start Job" when you arrive at pickup</div>
+    </div>
+  </div>
+
+  <!-- Progress steps (all pending) -->
+  <div class="wx-card wx-first-card">
+    <div class="wx-card-hdr"><span class="wx-card-hdr-title">Progress</span></div>
+    <div class="wx-progress-strip">
+      <div class="wx-ps-step">
+        <div class="wx-ps-circle" style="background: #f3f4f6; border: 1.5px solid #d1d5db; color: #9ca3af;">1</div>
+        <div class="wx-ps-label">Pick Up</div>
+      </div>
+      <div class="wx-ps-connector" style="background: #e5e7eb; margin-top: 9px;"></div>
+      <div class="wx-ps-step">
+        <div class="wx-ps-circle" style="background: #f3f4f6; border: 1.5px solid #d1d5db; color: #9ca3af;">2</div>
+        <div class="wx-ps-label">Depart</div>
+      </div>
+      <div class="wx-ps-connector" style="background: #e5e7eb; margin-top: 9px;"></div>
+      <div class="wx-ps-step">
+        <div class="wx-ps-circle" style="background: #f3f4f6; border: 1.5px solid #d1d5db; color: #9ca3af;">3</div>
+        <div class="wx-ps-label">Deliver</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Route card -->
+  <div class="wx-card">
+    <div class="wx-card-hdr"><span class="wx-card-hdr-title">Route</span></div>
+    <div class="wx-route-wrap">
+      <div class="wx-rt">
+        <div class="wx-rt-marker">
+          <div class="wx-rt-dot" style="background: #152CFF; box-shadow: 0 0 0 3px rgba(21,44,255,0.15);"></div>
+          <div class="wx-rt-stem" style="background: #e5e7eb;"></div>
+        </div>
+        <div style="padding-bottom: 10px;">
+          <div class="wx-rt-name">Baoan WH, Shenzhen</div>
+          <div class="wx-rt-meta">
+            <span class="wx-rt-time" style="color: #374151;">03 May 08:00</span>
+            <span class="wx-rt-now" style="color: #152CFF; font-weight: 600;">← Pickup here</span>
+          </div>
+        </div>
+      </div>
+      <div class="wx-rt">
+        <div class="wx-rt-marker">
+          <div class="wx-rt-dot" style="background: #d1d5db;"></div>
+        </div>
+        <div style="opacity: 0.65;">
+          <div class="wx-rt-name">HKIA Cargo Terminal</div>
+          <div class="wx-rt-meta">
+            <span class="wx-rt-time" style="color: #9ca3af;">03 May 14:00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cargo -->
+  <div class="wx-card" style="margin-bottom: 8px;">
+    <div class="wx-card-hdr"><span class="wx-card-hdr-title">Cargo</span></div>
+    <div class="wx-cargo-strip">
+      <div class="wx-cargo-item">
+        <div class="wx-cargo-num">18</div>
+        <div class="wx-cargo-unit">bags</div>
+      </div>
+      <div class="wx-cargo-item">
+        <div class="wx-cargo-num">920</div>
+        <div class="wx-cargo-unit">kg</div>
+      </div>
+      <div class="wx-cargo-item">
+        <div class="wx-cargo-num" style="font-size: 14px; margin-top: 4px; color: #6b7280;">粤B·12345</div>
+        <div class="wx-cargo-unit">truck plate</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- Sticky action bar: Start Job -->
+<div class="wx-action-bar">
+  <button class="wx-btn wx-btn-blue">Start Job →</button>
+</div>
+
+</div></div></div></div>
+
+<!-- Option A: Completed state -->
+<div>
+<div class="wx-phone-wrap">
+<div class="wx-frame-label">Completed · Awaiting Verification</div>
+<div class="wx-phone">
+<div class="wx-phone-inner">
+
+<div class="wx-sb">
+  <span class="wx-sb-time">14:31</span>
+  <div class="wx-sb-right">
+    <div class="wx-signal"><span style="height:3px"></span><span style="height:5px"></span><span style="height:7px"></span><span style="height:9px"></span></div>
+    <div class="wx-bat"></div>
+  </div>
+</div>
+<div class="wx-nav">
+  <div class="wx-nav-back">
+    <svg viewBox="0 0 7 12" class="wx-nav-chevron"><polyline points="6,1 1,6 6,11"/></svg>
+    <span class="wx-nav-back-text">Back</span>
+  </div>
+  <span class="wx-nav-title">Job DO-2603-001</span>
+  <div class="wx-nav-more">
+    <svg viewBox="0 0 16 4" fill="#555"><circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/><circle cx="14" cy="2" r="1.5"/></svg>
+  </div>
+</div>
+
+<div class="wx-content">
+<div class="wx-scroll">
+
+  <!-- Status banner: Completed (amber) -->
+  <div class="wx-status-card wx-first-card" style="background: #fefce8; border: 1px solid #fde68a; margin: 8px 10px 0;">
+    <div class="wx-dot" style="background: #a16207;"></div>
+    <div>
+      <div class="wx-status-label" style="color: #374151;">Completed</div>
+      <div class="wx-hint-text">Waiting for Teleport verification</div>
+    </div>
+  </div>
+
+  <!-- Progress steps (all done) -->
+  <div class="wx-card wx-first-card">
+    <div class="wx-card-hdr"><span class="wx-card-hdr-title">Progress</span></div>
+    <div class="wx-progress-strip">
+      <div class="wx-ps-step">
+        <div class="wx-ps-circle" style="background: #059669; color: #fff;">✓</div>
+        <div class="wx-ps-label" style="color: #059669;">Picked Up</div>
+      </div>
+      <div class="wx-ps-connector" style="background: #059669; margin-top: 9px;"></div>
+      <div class="wx-ps-step">
+        <div class="wx-ps-circle" style="background: #059669; color: #fff;">✓</div>
+        <div class="wx-ps-label" style="color: #059669;">Departed</div>
+      </div>
+      <div class="wx-ps-connector" style="background: #a16207; margin-top: 9px;"></div>
+      <div class="wx-ps-step">
+        <div class="wx-ps-circle" style="background: #a16207; color: #fff;">✓</div>
+        <div class="wx-ps-label" style="color: #a16207;">Delivered</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Proof files uploaded -->
+  <div class="wx-card">
+    <div class="wx-card-hdr">
+      <span class="wx-card-hdr-title">Proof Photos</span>
+      <span class="wx-card-hdr-badge">2 files</span>
+    </div>
+    <div class="wx-file-row" style="border-top: none;">
+      <div class="wx-file-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#152CFF" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+      </div>
+      <div style="flex: 1; min-width: 0;">
+        <div class="wx-file-name">pod-delivery-front.jpg</div>
+        <div class="wx-log-who">Zhang Wei</div>
+      </div>
+      <div class="wx-file-time">14:28</div>
+    </div>
+    <div class="wx-file-row">
+      <div class="wx-file-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#152CFF" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+      </div>
+      <div style="flex: 1; min-width: 0;">
+        <div class="wx-file-name">receipt-stamp.jpg</div>
+        <div class="wx-log-who">Zhang Wei</div>
+      </div>
+      <div class="wx-file-time">14:29</div>
+    </div>
+  </div>
+
+  <!-- Activity log -->
+  <div class="wx-card" style="margin-bottom: 8px;">
+    <div class="wx-card-hdr"><span class="wx-card-hdr-title">Activity</span></div>
+    <div class="wx-log-row" style="border: none;">
+      <div class="wx-log-dot" style="background: #a16207;"></div>
+      <div class="wx-log-action">Proof uploaded (2 files)<br><span class="wx-log-who">Zhang Wei</span></div>
+      <div class="wx-log-time">14:29</div>
+    </div>
+    <div class="wx-log-row">
+      <div class="wx-log-dot" style="background: #152CFF;"></div>
+      <div class="wx-log-action">Arrived at delivery<br><span class="wx-log-who">Zhang Wei</span></div>
+      <div class="wx-log-time">14:02</div>
+    </div>
+    <div class="wx-log-row">
+      <div class="wx-log-dot" style="background: #059669;"></div>
+      <div class="wx-log-action">Departed pickup<br><span class="wx-log-who">Zhang Wei</span></div>
+      <div class="wx-log-time">08:47</div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- Sticky action bar: read-only after completion -->
+<div class="wx-action-bar">
+  <button class="wx-btn wx-btn-disabled" disabled>Awaiting Teleport verification…</button>
+</div>
+
+</div></div></div></div>
+</div><!-- /options-row -->
+
+
+<!-- ============================================================ -->
+<!-- OPTION B: Step-by-Step Wizard -->
+<!-- ============================================================ -->
+<h2>Option B: Step-by-Step Milestone Wizard</h2>
+<span class="label" style="background: #fef3c7; color: #92400e;">Simplest</span>
+
+<div class="rationale">
+Each status milestone occupies a full screen. The driver has one thing to do: press the big confirmation button. No scrolling, no navigation, no reading. The driver's current action fills the entire screen with a large touch target (&gt;56px). Context about the delivery (location, time) appears in a compact footer strip. After confirmation, the screen automatically advances to the next step.
+
+Designed for maximum error-proofing: the driver cannot accidentally mark a wrong step, and the large button works even with gloved hands.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Zero ambiguity — one action per screen, full-size button<br>
+• Glove-friendly: single 56px+ tap target<br>
+• Enforced step sequence prevents out-of-order actions<br>
+• Works in bad lighting (minimal reading required)</div>
+<div class="cons"><strong>Cons</strong><br>
+• Driver cannot see full job context (cargo, MAWB, ETA) on the action screen<br>
+• Multi-screen flow is harder to navigate if driver needs to go back<br>
+• "View job details" link is an escape hatch that requires extra tap<br>
+• Doesn't work well for photo upload — camera handoff breaks the wizard pattern</div>
+</div>
+</div>
+
+<div class="options-row">
+
+<!-- B1: Step 1 — Confirm Pickup Arrival -->
+<div>
+<div class="wx-phone-wrap">
+<div class="wx-frame-label">Step 1/3 · Confirm Pickup Arrival</div>
+<div class="wx-phone">
+<div class="wx-phone-inner" style="background: #fff;">
+
+<div class="wx-sb" style="background: #fff;">
+  <span class="wx-sb-time">07:59</span>
+  <div class="wx-sb-right">
+    <div class="wx-signal"><span style="height:3px"></span><span style="height:5px"></span><span style="height:7px"></span><span style="height:9px"></span></div>
+    <div class="wx-bat"></div>
+  </div>
+</div>
+<div class="wx-nav" style="background: #fff; border-color: #F0F0F0;">
+  <div class="wx-nav-back">
+    <svg viewBox="0 0 7 12" class="wx-nav-chevron"><polyline points="6,1 1,6 6,11"/></svg>
+    <span class="wx-nav-back-text">Jobs</span>
+  </div>
+  <span class="wx-nav-title">DO-2603-001</span>
+  <div class="wx-nav-more">
+    <svg viewBox="0 0 16 4" fill="#555"><circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/><circle cx="14" cy="2" r="1.5"/></svg>
+  </div>
+</div>
+
+<div class="wx-wizard-body">
+  <!-- Step progress dots -->
+  <div class="wx-wiz-steps">
+    <div class="wx-wiz-step" style="background: #152CFF;"></div>
+    <div class="wx-wiz-step" style="background: #e5e7eb;"></div>
+    <div class="wx-wiz-step" style="background: #e5e7eb;"></div>
+  </div>
+  <!-- Icon -->
+  <div class="wx-wiz-icon" style="background: rgba(21,44,255,0.08);">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#152CFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+  </div>
+  <div class="wx-wiz-title">Arrived at pickup?</div>
+  <div class="wx-wiz-sub">Baoan WH, Shenzhen</div>
+  <div class="wx-wiz-meta">03 May 08:00 · 18 bags · 920 kg</div>
+  <button class="wx-wiz-confirm">✓ Confirm Pickup Arrival</button>
+  <button class="wx-wiz-skip">View full job details</button>
+</div>
+
+<div class="wx-wiz-context">
+  <div class="wx-wiz-ctx-row">
+    <div class="wx-wiz-ctx-item">
+      <div class="wx-wiz-ctx-label">Customer</div>
+      <div class="wx-wiz-ctx-value">TikTok Global</div>
+    </div>
+    <div class="wx-wiz-ctx-item">
+      <div class="wx-wiz-ctx-label">Destination</div>
+      <div class="wx-wiz-ctx-value">HKIA Cargo Terminal</div>
+    </div>
+  </div>
+</div>
+
+</div></div></div></div>
+
+<!-- B2: Step 2 — Confirm Departure -->
+<div>
+<div class="wx-phone-wrap">
+<div class="wx-frame-label">Step 2/3 · Confirm Departure</div>
+<div class="wx-phone">
+<div class="wx-phone-inner" style="background: #fff;">
+
+<div class="wx-sb" style="background: #fff;">
+  <span class="wx-sb-time">08:52</span>
+  <div class="wx-sb-right">
+    <div class="wx-signal"><span style="height:3px"></span><span style="height:5px"></span><span style="height:7px"></span><span style="height:9px"></span></div>
+    <div class="wx-bat"></div>
+  </div>
+</div>
+<div class="wx-nav" style="background: #fff; border-color: #F0F0F0;">
+  <div class="wx-nav-back">
+    <svg viewBox="0 0 7 12" class="wx-nav-chevron"><polyline points="6,1 1,6 6,11"/></svg>
+    <span class="wx-nav-back-text">Jobs</span>
+  </div>
+  <span class="wx-nav-title">DO-2603-001</span>
+  <div class="wx-nav-more"><svg viewBox="0 0 16 4" fill="#555"><circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/><circle cx="14" cy="2" r="1.5"/></svg></div>
+</div>
+
+<div class="wx-wizard-body">
+  <div class="wx-wiz-steps">
+    <div class="wx-wiz-step" style="background: #059669;"></div>
+    <div class="wx-wiz-step" style="background: #152CFF;"></div>
+    <div class="wx-wiz-step" style="background: #e5e7eb;"></div>
+  </div>
+  <div class="wx-wiz-icon" style="background: rgba(21,44,255,0.06);">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#152CFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16,8 20,8 23,11 23,16 16,16 16,8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+  </div>
+  <div class="wx-wiz-title">Ready to depart?</div>
+  <div class="wx-wiz-sub">Loading confirmed — 18 bags</div>
+  <div class="wx-wiz-meta">Next stop: HKIA Cargo Terminal</div>
+  <button class="wx-wiz-confirm">✓ Confirm Departure</button>
+  <button class="wx-wiz-skip">View full job details</button>
+</div>
+
+<div class="wx-wiz-context">
+  <div class="wx-wiz-ctx-row">
+    <div class="wx-wiz-ctx-item">
+      <div class="wx-wiz-ctx-label">Pickup confirmed</div>
+      <div class="wx-wiz-ctx-value" style="color: #059669;">✓ 08:11 AM</div>
+    </div>
+    <div class="wx-wiz-ctx-item">
+      <div class="wx-wiz-ctx-label">ETA Delivery</div>
+      <div class="wx-wiz-ctx-value" style="font-family: 'JetBrains Mono', monospace; font-size: 11px;">14:00</div>
+    </div>
+  </div>
+</div>
+
+</div></div></div></div>
+
+<!-- B3: Step 3 — Upload Proof (wizard breaks here) -->
+<div>
+<div class="wx-phone-wrap">
+<div class="wx-frame-label">Step 3/3 · Upload Proof at Delivery</div>
+<div class="wx-phone">
+<div class="wx-phone-inner" style="background: #fff;">
+
+<div class="wx-sb" style="background: #fff;">
+  <span class="wx-sb-time">14:09</span>
+  <div class="wx-sb-right">
+    <div class="wx-signal"><span style="height:3px"></span><span style="height:5px"></span><span style="height:7px"></span><span style="height:9px"></span></div>
+    <div class="wx-bat"></div>
+  </div>
+</div>
+<div class="wx-nav" style="background: #fff; border-color: #F0F0F0;">
+  <div class="wx-nav-back">
+    <svg viewBox="0 0 7 12" class="wx-nav-chevron"><polyline points="6,1 1,6 6,11"/></svg>
+    <span class="wx-nav-back-text">Jobs</span>
+  </div>
+  <span class="wx-nav-title">DO-2603-001</span>
+  <div class="wx-nav-more"><svg viewBox="0 0 16 4" fill="#555"><circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/><circle cx="14" cy="2" r="1.5"/></svg></div>
+</div>
+
+<div class="wx-wizard-body">
+  <div class="wx-wiz-steps">
+    <div class="wx-wiz-step" style="background: #059669;"></div>
+    <div class="wx-wiz-step" style="background: #059669;"></div>
+    <div class="wx-wiz-step" style="background: #152CFF;"></div>
+  </div>
+  <div class="wx-wiz-icon" style="background: rgba(21,44,255,0.06);">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#152CFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+  </div>
+  <div class="wx-wiz-title">Upload proof photos</div>
+  <div class="wx-wiz-sub">HKIA Cargo Terminal</div>
+  <div class="wx-wiz-meta" style="color: #a16207;">Delivery receipt + cargo stamp required</div>
+  <button class="wx-wiz-confirm" style="background: #152CFF;">📷 Take Photo</button>
+  <button class="wx-wiz-skip" style="color: #374151; margin-top: 6px;">Choose from album</button>
+</div>
+
+<!-- Note about wizard limitation -->
+<div class="wx-wiz-context" style="background: #fff8f0; border-color: #fde68a;">
+  <div style="font-size: 10px; color: #a16207; line-height: 1.5;">
+    <strong>Design note:</strong> After "Take Photo," user enters the camera app and returns. The wizard pattern breaks here — multi-photo upload requires a different UI (file list + add more). Option A handles this more naturally.
+  </div>
+</div>
+
+</div></div></div></div>
+</div><!-- /options-row -->
+
+
+<!-- ============================================================ -->
+<!-- OPTION C: Tab-Based Navigation (Job / Progress / Photos) -->
+<!-- ============================================================ -->
+<h2>Option C: Tab-Based Navigation — Job · Progress · Photos</h2>
+<span class="label" style="background: #f3e8ff; color: #6b21a8;">Most organized</span>
+
+<div class="rationale">
+Three tabs organize information by type: <strong>Job</strong> (route, cargo, trip info), <strong>Progress</strong> (milestone timeline, status), <strong>Photos</strong> (upload and view proofs). A WeChat-style tab bar at the bottom matches the native navigation pattern that drivers use in dozens of other apps. The primary action button lives inside the active tab — no sticky bar, context-specific.
+
+Best suited for drivers who want to review trip details separately from taking actions. Photo upload gets a full dedicated screen.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Cleanly separates information types: info vs. actions vs. proofs<br>
+• Photos tab gives full screen for upload — natural camera workflow<br>
+• Familiar WeChat tab bar — no explanation needed<br>
+• Badge on Photos tab can show upload count / pending state</div>
+<div class="cons"><strong>Cons</strong><br>
+• Action is buried in a tab — no persistent "what to do next" signal<br>
+• Switching tabs adds friction for the main workflow<br>
+• 3 tabs may be overkill for a simple pickup-drive-deliver loop<br>
+• Tab bar competes with WeChat's own bottom navigation</div>
+</div>
+</div>
+
+<div class="options-row">
+
+<!-- C1: Job tab (route + cargo info) -->
+<div>
+<div class="wx-phone-wrap">
+<div class="wx-frame-label">Tab: Job · In Progress</div>
+<div class="wx-phone">
+<div class="wx-phone-inner">
+
+<div class="wx-sb">
+  <span class="wx-sb-time">09:15</span>
+  <div class="wx-sb-right">
+    <div class="wx-signal"><span style="height:3px"></span><span style="height:5px"></span><span style="height:7px"></span><span style="height:9px"></span></div>
+    <div class="wx-bat"></div>
+  </div>
+</div>
+<div class="wx-nav">
+  <div class="wx-nav-back">
+    <svg viewBox="0 0 7 12" class="wx-nav-chevron"><polyline points="6,1 1,6 6,11"/></svg>
+    <span class="wx-nav-back-text">Back</span>
+  </div>
+  <span class="wx-nav-title">DO-2603-001</span>
+  <div class="wx-nav-more"><svg viewBox="0 0 16 4" fill="#555"><circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/><circle cx="14" cy="2" r="1.5"/></svg></div>
+</div>
+
+<div class="wx-content">
+<div class="wx-scroll">
+
+  <div class="wx-card wx-first-card">
+    <div class="wx-card-hdr"><span class="wx-card-hdr-title">Route</span></div>
+    <div class="wx-route-wrap">
+      <div class="wx-rt">
+        <div class="wx-rt-marker">
+          <div class="wx-rt-dot" style="background: #059669;"></div>
+          <div class="wx-rt-stem" style="background: #d1fae5;"></div>
+        </div>
+        <div style="padding-bottom: 10px; opacity: 0.7;">
+          <div class="wx-rt-name">Baoan WH, Shenzhen</div>
+          <div class="wx-rt-meta">
+            <span class="wx-rt-time" style="color: #9ca3af;">03 May 08:00</span>
+            <span class="wx-rt-done" style="color: #059669;">✓ Departed</span>
+          </div>
+        </div>
+      </div>
+      <div class="wx-rt">
+        <div class="wx-rt-marker">
+          <div class="wx-rt-dot" style="background: #152CFF; box-shadow: 0 0 0 3px rgba(21,44,255,0.15);"></div>
+        </div>
+        <div>
+          <div class="wx-rt-name">HKIA Cargo Terminal</div>
+          <div class="wx-rt-meta">
+            <span class="wx-rt-time" style="color: #374151;">03 May 14:00</span>
+            <span style="font-size: 10px; color: #152CFF; font-weight: 600;">En route</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wx-card">
+    <div class="wx-card-hdr"><span class="wx-card-hdr-title">Cargo</span></div>
+    <div class="wx-cargo-strip">
+      <div class="wx-cargo-item">
+        <div class="wx-cargo-num">18</div>
+        <div class="wx-cargo-unit">bags</div>
+      </div>
+      <div class="wx-cargo-item">
+        <div class="wx-cargo-num">920</div>
+        <div class="wx-cargo-unit">kg</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wx-card" style="margin-bottom: 8px;">
+    <div class="wx-card-hdr"><span class="wx-card-hdr-title">Trip Info</span></div>
+    <div style="padding: 6px 0;">
+      <div class="wx-log-row" style="border: none;">
+        <div style="font-size: 11px; color: #888; width: 52px; flex-shrink: 0;">Customer</div>
+        <div style="font-size: 11px; color: #111; font-weight: 600;">TikTok Global</div>
+      </div>
+      <div class="wx-log-row">
+        <div style="font-size: 11px; color: #888; width: 52px; flex-shrink: 0;">MAWB</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #374151;">160-12345678</div>
+      </div>
+      <div class="wx-log-row">
+        <div style="font-size: 11px; color: #888; width: 52px; flex-shrink: 0;">Truck</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #374151;">粤B·12345 · 5T</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- Tab bar -->
+<div class="wx-tabbar">
+  <div class="wx-tab" style="color: #152CFF;">
+    <div class="wx-tab-icon-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#152CFF" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+    </div>
+    <div class="wx-tab-lbl" style="color: #152CFF; font-weight: 600;">Job</div>
+  </div>
+  <div class="wx-tab" style="color: #9ca3af;">
+    <div class="wx-tab-icon-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>
+    </div>
+    <div class="wx-tab-lbl" style="color: #9ca3af;">Progress</div>
+  </div>
+  <div class="wx-tab" style="color: #9ca3af;">
+    <div class="wx-tab-icon-wrap" style="position: relative;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    </div>
+    <div class="wx-tab-lbl" style="color: #9ca3af;">Photos</div>
+  </div>
+</div>
+
+</div></div></div></div>
+
+<!-- C2: Progress tab -->
+<div>
+<div class="wx-phone-wrap">
+<div class="wx-frame-label">Tab: Progress · Milestone Timeline</div>
+<div class="wx-phone">
+<div class="wx-phone-inner">
+
+<div class="wx-sb">
+  <span class="wx-sb-time">09:15</span>
+  <div class="wx-sb-right">
+    <div class="wx-signal"><span style="height:3px"></span><span style="height:5px"></span><span style="height:7px"></span><span style="height:9px"></span></div>
+    <div class="wx-bat"></div>
+  </div>
+</div>
+<div class="wx-nav">
+  <div class="wx-nav-back">
+    <svg viewBox="0 0 7 12" class="wx-nav-chevron"><polyline points="6,1 1,6 6,11"/></svg>
+    <span class="wx-nav-back-text">Back</span>
+  </div>
+  <span class="wx-nav-title">DO-2603-001</span>
+  <div class="wx-nav-more"><svg viewBox="0 0 16 4" fill="#555"><circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/><circle cx="14" cy="2" r="1.5"/></svg></div>
+</div>
+
+<div class="wx-content">
+<div class="wx-scroll">
+
+  <!-- Status banner -->
+  <div class="wx-status-card wx-first-card" style="background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.12); margin: 8px 10px 0;">
+    <div class="wx-dot" style="background: #152CFF;"></div>
+    <div>
+      <div class="wx-status-label" style="color: #111;">In Progress</div>
+      <div class="wx-hint-text">En route · Departed at 08:47</div>
+    </div>
+  </div>
+
+  <!-- Timeline milestones card -->
+  <div class="wx-card wx-first-card" style="margin-bottom: 8px;">
+    <div class="wx-card-hdr"><span class="wx-card-hdr-title">Milestones</span></div>
+    <div style="padding: 10px 13px; display: flex; flex-direction: column; gap: 0;">
+
+      <!-- Milestone 1: Arrived pickup -->
+      <div style="display: flex; gap: 10px; align-items: flex-start;">
+        <div style="display: flex; flex-direction: column; align-items: center; width: 20px; flex-shrink: 0;">
+          <div style="width: 20px; height: 20px; border-radius: 50%; background: #059669; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; flex-shrink: 0;">✓</div>
+          <div style="width: 1.5px; height: 24px; background: #d1fae5; margin: 2px 0;"></div>
+        </div>
+        <div style="padding-bottom: 10px;">
+          <div style="font-size: 12px; font-weight: 600; color: #059669;">Arrived at Pickup</div>
+          <div style="font-size: 10px; color: #9ca3af; margin-top: 1px;">Baoan WH, Shenzhen</div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #374151; margin-top: 2px;">08:11</div>
+        </div>
+      </div>
+
+      <!-- Milestone 2: Departed pickup -->
+      <div style="display: flex; gap: 10px; align-items: flex-start;">
+        <div style="display: flex; flex-direction: column; align-items: center; width: 20px; flex-shrink: 0;">
+          <div style="width: 20px; height: 20px; border-radius: 50%; background: #059669; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; flex-shrink: 0;">✓</div>
+          <div style="width: 1.5px; height: 24px; background: rgba(21,44,255,0.25); margin: 2px 0;"></div>
+        </div>
+        <div style="padding-bottom: 10px;">
+          <div style="font-size: 12px; font-weight: 600; color: #059669;">Departed Pickup</div>
+          <div style="font-size: 10px; color: #9ca3af; margin-top: 1px;">All 18 bags loaded</div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #374151; margin-top: 2px;">08:47</div>
+        </div>
+      </div>
+
+      <!-- Milestone 3: Arrived delivery (pending) -->
+      <div style="display: flex; gap: 10px; align-items: flex-start;">
+        <div style="display: flex; flex-direction: column; align-items: center; width: 20px; flex-shrink: 0;">
+          <div style="width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 2px solid #152CFF; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <div style="width: 6px; height: 6px; border-radius: 50%; background: #152CFF;"></div>
+          </div>
+          <div style="width: 1.5px; height: 24px; background: #e5e7eb; margin: 2px 0;"></div>
+        </div>
+        <div style="padding-bottom: 10px;">
+          <div style="font-size: 12px; font-weight: 600; color: #152CFF;">Arrived at Delivery</div>
+          <div style="font-size: 10px; color: #9ca3af; margin-top: 1px;">HKIA Cargo Terminal</div>
+          <div style="font-size: 10px; color: #9ca3af; margin-top: 2px;">ETA 14:00 · tap to confirm</div>
+        </div>
+      </div>
+
+      <!-- Milestone 4: Upload proof (pending) -->
+      <div style="display: flex; gap: 10px; align-items: flex-start;">
+        <div style="display: flex; flex-direction: column; align-items: center; width: 20px; flex-shrink: 0;">
+          <div style="width: 20px; height: 20px; border-radius: 50%; background: #f3f4f6; border: 1.5px solid #d1d5db; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 9px; color: #9ca3af; font-weight: 700;">4</div>
+        </div>
+        <div>
+          <div style="font-size: 12px; font-weight: 600; color: #9ca3af;">Upload Proof Photos</div>
+          <div style="font-size: 10px; color: #d1d5db; margin-top: 1px;">After delivery confirmation</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- Tab bar -->
+<div class="wx-tabbar">
+  <div class="wx-tab" style="color: #9ca3af;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+    <div class="wx-tab-lbl" style="color: #9ca3af;">Job</div>
+  </div>
+  <div class="wx-tab" style="color: #152CFF;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#152CFF" stroke-width="2"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>
+    <div class="wx-tab-lbl" style="color: #152CFF; font-weight: 600;">Progress</div>
+  </div>
+  <div class="wx-tab" style="color: #9ca3af;">
+    <div class="wx-tab-icon-wrap" style="position: relative;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    </div>
+    <div class="wx-tab-lbl" style="color: #9ca3af;">Photos</div>
+  </div>
+</div>
+
+</div></div></div></div>
+
+<!-- C3: Photos tab -->
+<div>
+<div class="wx-phone-wrap">
+<div class="wx-frame-label">Tab: Photos · Upload Proof</div>
+<div class="wx-phone">
+<div class="wx-phone-inner">
+
+<div class="wx-sb">
+  <span class="wx-sb-time">14:10</span>
+  <div class="wx-sb-right">
+    <div class="wx-signal"><span style="height:3px"></span><span style="height:5px"></span><span style="height:7px"></span><span style="height:9px"></span></div>
+    <div class="wx-bat"></div>
+  </div>
+</div>
+<div class="wx-nav">
+  <div class="wx-nav-back">
+    <svg viewBox="0 0 7 12" class="wx-nav-chevron"><polyline points="6,1 1,6 6,11"/></svg>
+    <span class="wx-nav-back-text">Back</span>
+  </div>
+  <span class="wx-nav-title">DO-2603-001</span>
+  <div class="wx-nav-more"><svg viewBox="0 0 16 4" fill="#555"><circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/><circle cx="14" cy="2" r="1.5"/></svg></div>
+</div>
+
+<div class="wx-content">
+<div class="wx-scroll">
+
+  <!-- Upload zone -->
+  <div style="margin: 8px 10px 0; background: #fff; border-radius: 8px; overflow: hidden;">
+    <div class="wx-card-hdr">
+      <span class="wx-card-hdr-title">Proof Photos</span>
+      <span class="wx-card-hdr-badge">1 file</span>
+    </div>
+    <!-- Photo grid: 1 uploaded + add button -->
+    <div class="wx-photo-grid">
+      <!-- Uploaded photo (simulated) -->
+      <div class="wx-photo-cell" style="background: #e8f4e8;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.5" style="width: 24px; height: 24px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      </div>
+      <!-- Add button -->
+      <div class="wx-photo-cell wx-photo-add">
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(21,44,255,0.4)" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </div>
+      <!-- Empty slots -->
+      <div class="wx-photo-cell" style="background: #fafafa;"></div>
+    </div>
+    <div style="padding: 8px 13px 10px; font-size: 10px; color: #9ca3af;">
+      pod-delivery-front.jpg · 14:06
+    </div>
+  </div>
+
+  <!-- Helper text -->
+  <div style="margin: 8px 10px 0; background: #fff; border-radius: 8px; padding: 10px 13px;">
+    <div style="font-size: 11px; color: #374151; line-height: 1.6;">
+      Required: <span style="font-weight: 600;">Delivery receipt</span> with recipient stamp and <span style="font-weight: 600;">cargo photo</span> showing bag count.
+    </div>
+    <div style="margin-top: 6px; font-size: 10px; color: #9ca3af;">
+      Min 1 photo required. Upload triggers job completion.
+    </div>
+  </div>
+
+  <!-- File list -->
+  <div class="wx-card" style="margin-bottom: 8px;">
+    <div class="wx-file-row" style="border: none;">
+      <div class="wx-file-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+      </div>
+      <div style="flex: 1; min-width: 0;">
+        <div class="wx-file-name">pod-delivery-front.jpg</div>
+        <div class="wx-log-who">Zhang Wei · 14:06</div>
+      </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" stroke-width="2" style="width: 16px; height: 16px;"><polyline points="6,9 12,15 18,9"/></svg>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- Bottom bar: take photo -->
+<div class="wx-action-bar">
+  <button class="wx-btn wx-btn-blue">📷 Take Another Photo</button>
+</div>
+
+<!-- Tab bar -->
+<div class="wx-tabbar" style="bottom: 50px;">
+  <div class="wx-tab" style="color: #9ca3af;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+    <div class="wx-tab-lbl" style="color: #9ca3af;">Job</div>
+  </div>
+  <div class="wx-tab" style="color: #9ca3af;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>
+    <div class="wx-tab-lbl" style="color: #9ca3af;">Progress</div>
+  </div>
+  <div class="wx-tab" style="color: #152CFF;">
+    <div class="wx-tab-icon-wrap" style="position: relative;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#152CFF" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <!-- Badge -->
+      <div style="position: absolute; top: -4px; right: -6px; width: 14px; height: 14px; border-radius: 7px; background: #059669; color: #fff; font-size: 8px; font-weight: 700; display: flex; align-items: center; justify-content: center;">1</div>
+    </div>
+    <div class="wx-tab-lbl" style="color: #152CFF; font-weight: 600;">Photos</div>
+  </div>
+</div>
+
+</div></div></div></div>
+</div><!-- /options-row -->
+
+
+<!-- ============================================================ -->
+<!-- DESIGN CONSTRAINTS REFERENCE -->
+<!-- ============================================================ -->
+<div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; margin-top: 24px;">
+<h3 style="font-size: 12px; font-weight: 700; color: #111827; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.06em;">WeChat Mini Program Design Constraints</h3>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 11px; color: #374151; line-height: 1.7;">
+<div>
+<strong>What stays identical to Teleport OS:</strong><br>
+• Status dot colors — Pending #d1d5db, In Progress #152CFF, Completed #a16207, Verified #059669, Rejected/Cancelled #dc2626<br>
+• Status labels (Pending / In Progress / Completed / Verified)<br>
+• Data typography: JetBrains Mono for IDs, times, plates<br>
+• Accent #152CFF for all interactive elements (buttons, links, active nav)
+</div>
+<div>
+<strong>WeChat-adapted (intentional exceptions):</strong><br>
+• Card border radius: 8px instead of 4–6px (WeChat UI standard)<br>
+• Font: PingFang SC (iOS) / Noto Sans SC (Android) — system font, not Instrument Sans. Mockup shows Instrument Sans as proxy.<br>
+• Touch targets: min 44–56px (glove-friendly), larger than the admin's 28–32px rows<br>
+• Nav bar: WeChat native (back arrow left, title center, ··· right) — not customizable
+</div>
+</div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- VERDICT -->
+<!-- ============================================================ -->
+<div class="verdict">
+<h3>✓ Recommendation: Option A — Single-Scroll + Sticky Action Bar</h3>
+<p><strong>Why A over B (wizard):</strong> The wizard pattern fails at proof upload — after "Take Photo" the user goes into the camera app and returns, breaking the step sequence. Option B also hides all job context (cargo, MAWB, ETA) behind a "View details" escape hatch, which drivers need for reference while at the warehouse. Option A keeps context always visible, and the sticky action bar gives the same "one thing to do" clarity as a wizard without forcing navigation.</p>
+<p><strong>Why A over C (tabs):</strong> Three tabs add navigation overhead for a workflow that is fundamentally linear (pickup → drive → deliver → photo). The tab bar competes visually with the WeChat nav bar and creates ambiguity about where the primary action lives. Option A's sticky action bar is always present and always contextual — zero navigation required to act.</p>
+<p><strong>Key design decisions for Option A implementation:</strong></p>
+<p>1. <strong>Progress strip at top</strong> (not bottom): the 3-step progress strip (Picked Up → Departed → Delivered) should live in a card near the top, not in a tab. Drivers orient by "what step am I on" before reading route details.<br>
+2. <strong>Fade completed route points</strong>: Origin at 65% opacity once departed — keeps focus on the destination.<br>
+3. <strong>Status banner uses Teleport OS per-state tinted backgrounds</strong>: Pending=`#f9fafb`, In Progress=`rgba(21,44,255,0.04)`, Completed=`#fefce8`, Verified=`#f0fdf4`. Identical to the vendor app Status Action Bar spec — same signal, same color.<br>
+4. <strong>Camera button is primary action</strong>: At the delivery stage, the button says "📷 Upload Proof Photos" and opens the native camera (WeChat `wx.chooseImage` API with `sourceType: ['camera']`). Multi-photo supported.<br>
+5. <strong>Data flows back</strong>: Driver milestone taps and photo uploads append to `activityLog` with `user: driver.name` (e.g., "Zhang Wei"), same field the vendor/admin see. Proof uploads use the same `ADD_PROOF_DOCUMENT` reducer action — no separate driver-only data model needed.<br>
+6. <strong>Notification entry point</strong>: Driver receives a WeChat service message when assigned: "New job: Baoan WH → HKIA, 03 May 08:00. Tap to open." Deep-links directly to this job detail screen.</p>
+<p><strong>Open question for user:</strong> Should the "Arrived at Pickup" / "Departed" / "Arrived at Delivery" milestone buttons be part of the sticky action bar (sequential, one at a time), or should they be inline buttons within the Progress card that can be tapped in any order? The sticky bar enforces sequence; the inline buttons give flexibility for cases where milestones happen out of order at the warehouse.</p>
+</div>
+
+</div><!-- /page -->
+</body>
+</html>

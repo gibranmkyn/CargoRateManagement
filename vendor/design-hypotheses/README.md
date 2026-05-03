@@ -2,7 +2,11 @@
 
 ## Open
 
-(none)
+### HMW-V09: How might we design the driver's job execution experience as a WeChat Mini Program?
+**Options:** A) Single-scroll card + sticky action bar, B) Step-by-step wizard (one action per screen), C) Tab-based navigation (Job / Progress / Photos)
+**Leaning toward:** A) Single-scroll — sticky action bar always shows what to do next, all job context visible without navigation, proof upload handled naturally in the action bar. Wizard (B) breaks at photo upload step; tabs (C) add navigation overhead for a linear workflow.
+**Open question:** Should the milestone buttons (Arrived at Pickup / Departed / Arrived at Delivery) live in the sticky action bar (enforced sequence) or inline within the Progress card (flexible)? Sticky bar is safer; inline gives flexibility for out-of-order warehouse scenarios.
+**File:** `09-hmw-wechat-driver-app.html`
 
 ## Resolved
 
