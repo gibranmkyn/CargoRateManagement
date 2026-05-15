@@ -2,6 +2,12 @@
 
 ## Open
 
+### HMW-V10: How might we surface driver-reported milestones in the vendor and admin job views?
+**Options:** A) Named actor in activity log only ("Driver Zhang Wei"), B) FM milestone progress strip on job detail (3-step horizontal strip for full-page, vertical compact list for admin slide-out), C) Current milestone as sub-line in My Jobs "Where" column
+**Leaning toward:** B) Milestone strip + named actor in log — the strip gives dispatchers glanceable execution state without scrolling to the log. Option A alone buries progress in a long log; Option C overloads the already-dense "Where" sub-line. Admin slide-out renders the strip as a vertical 3-row list to fit 380px width.
+**Open question:** Should "Departed" be required before "Arrived Delivery" (enforced WeChat sequencing), or can milestones be skipped/reported out-of-order? If out-of-order, the strip must handle gaps gracefully (e.g., both Arrived Pickup and Arrived Delivery green with Departed still gray).
+**File:** `10-hmw-driver-status-updates.html`
+
 ### HMW-V09: How might we design the driver's job execution experience as a WeChat Mini Program?
 **Options:** A) Single-scroll card + sticky action bar, B) Step-by-step wizard (one action per screen), C) Tab-based navigation (Job / Progress / Photos)
 **Leaning toward:** A) Single-scroll — sticky action bar always shows what to do next, all job context visible without navigation, proof upload handled naturally in the action bar. Wizard (B) breaks at photo upload step; tabs (C) add navigation overhead for a linear workflow.

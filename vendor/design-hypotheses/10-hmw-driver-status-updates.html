@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-V10: Driver Milestone Updates — Vendor & Admin Visibility</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.page { max-width: 1320px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 16px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+.hmw { font-size: 14px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 20px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 12px; font-size: 11px; color: #374151; line-height: 1.6; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 9px 11px; border-radius: 6px; font-size: 11px; line-height: 1.7; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.screen { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 36px; }
+.verdict h3 { color: #059669; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.verdict p { font-size: 11px; color: #374151; line-height: 1.7; margin-bottom: 6px; }
+.verdict p:last-child { margin-bottom: 0; }
+
+/* ─── Shared Mockup: Vendor Navbar ─── */
+.mock-nav { height: 40px; padding: 0 16px; background: #111827; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.mock-logo-sq { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; }
+.mock-logo-text { font-weight: 700; font-size: 13px; color: #fff; letter-spacing: -0.3px; }
+.mock-logo-sub { font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.35); }
+.mock-nav-link { font-size: 12px; padding: 4px 10px; border-radius: 4px; color: rgba(255,255,255,0.5); text-decoration: none; font-weight: 400; }
+.mock-nav-link.active { color: #fff; background: rgba(255,255,255,0.1); font-weight: 600; }
+.mock-vendor-name { margin-left: auto; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); }
+.mock-avatar { width: 22px; height: 22px; border-radius: 4px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.7); }
+
+/* ─── Shared: section chrome ─── */
+.sec-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px; }
+.sec-wrap { padding: 12px 16px; border-top: 1px solid #f3f4f6; }
+
+/* ─── Shared: header bar ─── */
+.detail-hdr { padding: 12px 16px; border-bottom: 1px solid #e5e7eb; background: #fff; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.back-link { font-size: 12px; font-weight: 500; color: #152CFF; display: inline-flex; align-items: center; gap: 4px; }
+.job-id-chip { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 1px 6px; border-radius: 4px; background: #f3f4f6; border: 1px solid #e5e7eb; color: #9ca3af; }
+.job-svc-name { font-size: 14px; font-weight: 700; color: #111827; }
+.job-svc-code { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #6b7280; }
+.trip-meta { font-size: 11px; display: flex; align-items: center; gap: 6px; }
+.trip-meta .mono { font-size: 10px; color: #9ca3af; }
+.divider { color: #d1d5db; }
+
+/* ─── Status Action Bar (tinted per spec) ─── */
+.action-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; }
+.action-bar-inprogress { background: rgba(21,44,255,0.04); border-bottom: 1px solid rgba(21,44,255,0.1); }
+.action-bar-completed { background: #fefce8; border-bottom: 1px solid #fde68a; }
+.state-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.state-label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.btn-primary { padding: 5px 14px; border: none; border-radius: 4px; background: #152CFF; color: #fff; font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; }
+
+/* ─── Driver & Vehicle section ─── */
+.drv-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+.drv-name { font-size: 12px; font-weight: 600; color: #111827; }
+.drv-plate { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #374151; }
+.drv-phone { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9ca3af; }
+.drv-reassign { font-size: 9px; color: #6b7280; text-decoration: underline; cursor: pointer; margin-left: auto; }
+
+/* ─── Route section ─── */
+.route-row { display: flex; align-items: center; gap: 12px; }
+.route-point { flex: 1; }
+.route-lbl { font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 3px; }
+.route-name { font-size: 11px; font-weight: 600; color: #111827; }
+.route-date { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #374151; margin-top: 2px; }
+.route-arrow { font-size: 16px; color: #d1d5db; flex-shrink: 0; }
+
+/* ─── Cargo section ─── */
+.cargo-row { display: flex; align-items: center; gap: 20px; }
+.cargo-item { }
+.cargo-item-lbl { font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 2px; }
+.cargo-item-val { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: '#111827'; }
+
+/* ─── Proof section ─── */
+.proof-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid #f3f4f6; }
+.proof-row:last-child { border-bottom: none; }
+.proof-name { font-size: 12px; color: '#111827'; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proof-meta { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9ca3af; }
+
+/* ─── Activity log section ─── */
+.log-entry { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid #f3f4f6; font-size: 11px; }
+.log-entry:last-child { border-bottom: none; }
+.log-action { font-weight: 500; color: '#111827'; }
+.log-actor { color: #9ca3af; font-size: 11px; }
+.log-actor.driver { color: #374151; font-weight: 500; }
+.log-time { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9ca3af; flex-shrink: 0; white-space: nowrap; }
+
+/* ─── Option A: actor badge variant ─── */
+.actor-badge { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 8px; font-weight: 700; padding: 1px 4px; border-radius: 3px; margin-right: 4px; vertical-align: 2px; }
+.actor-badge-drv { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
+.actor-badge-ops { background: #f3f4f6; color: #9ca3af; border: 1px solid #e5e7eb; }
+
+/* ─── Option B: FM Milestone Strip ─── */
+.milestone-strip { display: flex; align-items: flex-start; padding: 10px 16px 12px; border-top: 1px solid #f3f4f6; }
+.ms-step { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; }
+.ms-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.ms-dot-done { background: #059669; }
+.ms-dot-next { background: #fff; border: 1.5px solid #152CFF; }
+.ms-dot-pending { background: #fff; border: 1.5px solid #d1d5db; }
+.ms-connector { flex: 1; height: 1.5px; margin-top: 4px; min-width: 20px; }
+.ms-connector-done { background: #059669; }
+.ms-connector-pending { background: #d1d5db; }
+.ms-label { font-size: 10px; font-weight: 600; color: #059669; margin-top: 5px; text-align: center; line-height: 1.3; }
+.ms-label-next { color: #152CFF; }
+.ms-label-pending { color: #9ca3af; font-weight: 400; }
+.ms-time { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; margin-top: 2px; text-align: center; }
+.ms-time-driver { color: #6b7280; font-size: 9px; }
+
+/* ─── Option C: My Jobs table ─── */
+.mock-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.mock-table thead th { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; padding: 6px 12px; text-align: left; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+.mock-table tbody td { padding: 7px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+.mock-table tbody tr.highlighted { background: #f9fafb; }
+.status-dot-inprog { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #152CFF; margin-right: 5px; vertical-align: 1px; }
+.status-dot-pending { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #d1d5db; margin-right: 5px; vertical-align: 1px; }
+.status-dot-done { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #a16207; margin-right: 5px; vertical-align: 1px; }
+.milestone-sub { font-size: 9px; margin-top: 2px; display: inline-flex; align-items: center; gap: 3px; }
+.ms-mini-dot-done { width: 6px; height: 6px; border-radius: 50%; background: #059669; display: inline-block; }
+.ms-mini-dot-next { width: 6px; height: 6px; border-radius: 50%; background: #fff; border: 1.5px solid #d1d5db; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-V10: Driver Milestone Updates — Vendor &amp; Admin Visibility</h1>
+<div class="hmw">How might we surface driver-reported milestones (Arrived at Pickup / Departed / Arrived at Delivery) in the vendor and admin views — so dispatchers can track live FM execution without drilling into the activity log every time?</div>
+
+<div class="context">
+<strong>Context (TODO-050):</strong> This is the third leg of the platform: Admin creates trip → Vendor dispatches driver → Driver executes in WeChat (TODO-049). When a driver taps "Arrived at Pickup" in WeChat, that event must: (1) update the job's state in shared storage, (2) append an activity log entry with "Driver Zhang Wei" as actor, (3) be visible in real time in both the Vendor app and Admin slide-out. The challenge is displaying this in the existing job detail UI without adding an entirely new data surface — the current layout is Status Bar → Driver &amp; Vehicle → Route → Cargo → Proof → Activity Log.<br><br>
+<strong>Key tensions:</strong> (A) The activity log already captures all events — is a new milestone strip redundant? (B) Dispatchers at a 3PL office need to know where a truck is <em>right now</em>, not just scroll to the bottom of a log. (C) The admin slide-out is 380px wide — a horizontal milestone strip must be compact. (D) The milestone sequence (Arrived Pickup → Departed → Arrived Delivery) is FM-only. Non-FM services don't have this concept.
+</div>
+
+<!-- ============================================================ -->
+<!-- OPTION A: Named Actor in Activity Log Only -->
+<!-- ============================================================ -->
+<h2>Option A: Named Actor in Activity Log Only</h2>
+<span class="label" style="background: #f3f4f6; color: #6b7280;">Low effort, minimal change</span>
+
+<div class="rationale">
+Driver WeChat actions appear in the activity log with "Driver Zhang Wei" as the actor — distinct from "HaleSun" (vendor) and "Ops Admin" (admin). No new UI section. The log becomes the single source of truth for all actors in the system. Dispatchers who want to know where the truck is must open the job detail and scroll to the activity log.
+
+An optional refinement: a small monochrome actor badge (DRV / OPS / VDR) prefixes each log entry, making it scannable in dense logs without color or weight changes.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Zero new UI surface — log already exists<br>
+• Actor names are self-explanatory<br>
+• Works identically in vendor full-page and admin 380px slide-out<br>
+• No new data model concept</div>
+<div class="cons"><strong>Cons</strong><br>
+• Dispatcher must scroll to log to know current location — not glanceable<br>
+• In a busy log (10+ entries) driver milestones are buried<br>
+• No indication on the job list that execution has progressed<br>
+• Easy to miss if vendor only checks Status column</div>
+</div>
+</div>
+
+<!-- Screen A: Activity log with driver actor entries -->
+<div class="screen">
+  <div class="mock-nav">
+    <div class="mock-logo-sq"></div>
+    <span class="mock-logo-text">Teleport OS</span>
+    <span class="mock-logo-sub">Vendor</span>
+    <span style="width: 24px;"></span>
+    <a class="mock-nav-link active">My Jobs</a>
+    <a class="mock-nav-link">Fleet</a>
+    <span class="mock-vendor-name">HaleSun Logistics</span>
+    <div class="mock-avatar" style="margin-left: 8px;">HS</div>
+  </div>
+
+  <div style="background: #fff;">
+    <!-- Header -->
+    <div class="detail-hdr">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="back-link">&#8592; My Jobs</span>
+        <span style="color: #d1d5db;">|</span>
+        <span class="job-id-chip">J03</span>
+        <span class="job-svc-name">FM Trucking</span>
+        <span class="job-svc-code">FM</span>
+      </div>
+      <div class="trip-meta">
+        <span class="mono">T-2026-042</span>
+        <span class="divider">·</span>
+        <span style="font-weight: 600;">TikTok</span>
+        <span class="divider">·</span>
+        <span class="mono">113-54321678</span>
+      </div>
+    </div>
+
+    <!-- Status Action Bar: In Progress (correct tinted bg per spec) -->
+    <div class="action-bar action-bar-inprogress">
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <span class="state-dot" style="background: #152CFF;"></span>
+        <span style="font-size: 12px; font-weight: 500; color: #111827;">In Progress</span>
+        <span style="font-size: 11px; color: #6b7280; margin-left: 4px;">Upload proof of service to mark complete</span>
+      </div>
+      <button class="btn-primary">&#8593; Upload Proof</button>
+    </div>
+
+    <!-- Driver & Vehicle section -->
+    <div class="sec-wrap">
+      <div class="sec-title">Driver &amp; Vehicle</div>
+      <div class="drv-row">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="drv-name">Zhang Wei</span>
+        <span class="drv-plate">粤B·12345</span>
+        <span class="drv-phone">+86 138****1234</span>
+        <span class="drv-reassign">Reassign</span>
+      </div>
+    </div>
+
+    <!-- Route section -->
+    <div class="sec-wrap">
+      <div class="sec-title">Route</div>
+      <div class="route-row">
+        <div class="route-point">
+          <div class="route-lbl">Pickup</div>
+          <div class="route-name">SZCTF — Shenzhen CT Freight</div>
+          <div class="route-date">15 May 2026 08:00</div>
+        </div>
+        <span class="route-arrow">&#8594;</span>
+        <div class="route-point">
+          <div class="route-lbl">Delivery</div>
+          <div class="route-name">HKIA — HK Airport Cargo</div>
+          <div class="route-date">15 May 2026 14:00</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cargo -->
+    <div class="sec-wrap">
+      <div class="sec-title">Cargo</div>
+      <div class="cargo-row">
+        <div class="cargo-item">
+          <div class="cargo-item-lbl">Bags</div>
+          <div class="cargo-item-val" style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #111827;">24</div>
+        </div>
+        <div class="cargo-item">
+          <div class="cargo-item-lbl">Weight</div>
+          <div class="cargo-item-val" style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #111827;">1,280 kg</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity Log — Option A focus: driver-named actor entries -->
+    <div class="sec-wrap">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+        <div class="sec-title" style="margin-bottom: 0;">Activity Log</div>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; background: #f3f4f6; color: #9ca3af; padding: 1px 5px; border-radius: 99px;">5</span>
+      </div>
+
+      <!-- Driver milestone entries — highlighted in dashed box to call attention -->
+      <div style="border: 1.5px dashed #a7f3d0; border-radius: 4px; padding: 6px 8px; margin-bottom: 6px; background: rgba(5,150,105,0.02);">
+        <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #059669; margin-bottom: 6px;">Driver milestone entries (new with TODO-050)</div>
+
+        <!-- Entry: Arrived at Pickup (driver) -->
+        <div class="log-entry">
+          <div>
+            <span class="actor-badge actor-badge-drv">DRV</span>
+            <span class="log-action">Arrived at Pickup</span>
+            <span class="log-actor driver"> · Driver Zhang Wei</span>
+          </div>
+          <div class="log-time">15 May · 08:47</div>
+        </div>
+      </div>
+
+      <!-- Existing vendor/admin entries -->
+      <div class="log-entry">
+        <div>
+          <span class="actor-badge actor-badge-ops">OPS</span>
+          <span class="log-action">Job started</span>
+          <span class="log-actor"> · HaleSun</span>
+        </div>
+        <div class="log-time">15 May · 07:54</div>
+      </div>
+      <div class="log-entry">
+        <div>
+          <span class="actor-badge actor-badge-ops">OPS</span>
+          <span class="log-action">Assigned Zhang Wei + 粤B·12345</span>
+          <span class="log-actor"> · HaleSun</span>
+        </div>
+        <div class="log-time">15 May · 07:30</div>
+      </div>
+      <div class="log-entry">
+        <div>
+          <span class="actor-badge actor-badge-ops">OPS</span>
+          <span class="log-action">Job created</span>
+          <span class="log-actor"> · Ops Admin</span>
+        </div>
+        <div class="log-time">14 May · 16:20</div>
+      </div>
+
+      <div style="margin-top: 10px; font-size: 10px; color: #9ca3af; font-style: italic; padding: 6px 0;">
+        ↑ When driver taps "Departed" in WeChat, a new DRV entry appears here automatically.
+      </div>
+    </div>
+  </div>
+</div><!-- /screen A -->
+
+
+<!-- ============================================================ -->
+<!-- OPTION B: FM Milestone Progress Strip — RECOMMENDED -->
+<!-- ============================================================ -->
+<h2>Option B: FM Milestone Progress Strip on Job Detail ⭐ Recommended</h2>
+<span class="label" style="background: #dbeafe; color: #1e40af;">Recommended</span>
+
+<div class="rationale">
+A compact 3-step progress strip is added to FM job detail pages, between the Driver &amp; Vehicle section and the Route section. It shows the three FM execution milestones (Arrived at Pickup → Departed → Arrived at Delivery) with timestamps as each is hit. The strip is 3 columns with connector lines — no cards, no padding excess. Width: full content width (~928px vendor, or 348px in admin slide-out).
+
+The activity log still records every milestone event with "Driver [Name]" as actor — the strip is additive, not a replacement. Dispatchers get a glanceable execution state; the log provides the audit trail.
+
+For the admin slide-out (380px), the strip stacks vertically into a compact 3-row list with right-aligned timestamps, rather than the horizontal 3-column layout used in the full vendor detail page.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Glanceable execution state without scrolling to log<br>
+• FM-specific section: non-FM jobs are unaffected<br>
+• Fits both vendor full-page and admin slide-out (adaptive layout)<br>
+• Colors use existing design tokens: green for done, blue for current, gray for pending<br>
+• Timestamp + actor name in each step ties back to WeChat source</div>
+<div class="cons"><strong>Cons</strong><br>
+• Adds a new UI section (FM jobs only — limited blast radius)<br>
+• Milestone data must be stored on Job type (3 new optional fields)<br>
+• Horizontal strip may feel spacious at narrow widths — needs truncation</div>
+</div>
+</div>
+
+<!-- Screen B1: Vendor full-page detail — milestone strip visible -->
+<div style="font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #9ca3af; margin-bottom: 6px;">Vendor App — Full Page (960px) — After driver taps "Arrived at Pickup"</div>
+<div class="screen">
+  <div class="mock-nav">
+    <div class="mock-logo-sq"></div>
+    <span class="mock-logo-text">Teleport OS</span>
+    <span class="mock-logo-sub">Vendor</span>
+    <span style="width: 24px;"></span>
+    <a class="mock-nav-link active">My Jobs</a>
+    <a class="mock-nav-link">Fleet</a>
+    <span class="mock-vendor-name">HaleSun Logistics</span>
+    <div class="mock-avatar" style="margin-left: 8px;">HS</div>
+  </div>
+
+  <div style="background: #fff;">
+    <!-- Header -->
+    <div class="detail-hdr">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="back-link">&#8592; My Jobs</span>
+        <span style="color: #d1d5db;">|</span>
+        <span class="job-id-chip">J03</span>
+        <span class="job-svc-name">FM Trucking</span>
+        <span class="job-svc-code">FM</span>
+      </div>
+      <div class="trip-meta">
+        <span class="mono">T-2026-042</span>
+        <span class="divider">·</span>
+        <span style="font-weight: 600;">TikTok</span>
+        <span class="divider">·</span>
+        <span class="mono">113-54321678</span>
+      </div>
+    </div>
+
+    <!-- Status Action Bar: In Progress -->
+    <div class="action-bar action-bar-inprogress">
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <span class="state-dot" style="background: #152CFF;"></span>
+        <span style="font-size: 12px; font-weight: 500; color: #111827;">In Progress</span>
+        <span style="font-size: 11px; color: #6b7280; margin-left: 4px;">Upload proof of service to mark complete</span>
+      </div>
+      <button class="btn-primary">&#8593; Upload Proof</button>
+    </div>
+
+    <!-- Driver & Vehicle section -->
+    <div class="sec-wrap">
+      <div class="sec-title">Driver &amp; Vehicle</div>
+      <div class="drv-row">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="drv-name">Zhang Wei</span>
+        <span class="drv-plate">粤B·12345</span>
+        <span class="drv-phone">+86 138****1234</span>
+        <span class="drv-reassign">Reassign</span>
+      </div>
+    </div>
+
+    <!-- ★ NEW: FM Milestone Progress Strip ★ -->
+    <div class="sec-wrap" style="background: #fafafa;">
+      <div class="sec-title">FM Execution · Zhang Wei</div>
+      <div class="milestone-strip" style="padding: 8px 0 4px;">
+
+        <!-- Step 1: Arrived Pickup (DONE) -->
+        <div class="ms-step">
+          <div class="ms-dot ms-dot-done"></div>
+          <div class="ms-label">Arrived Pickup</div>
+          <div class="ms-time">08:47</div>
+          <div class="ms-time ms-time-driver">Zhang Wei</div>
+        </div>
+
+        <!-- Connector 1→2: done segment -->
+        <div class="ms-connector ms-connector-done"></div>
+
+        <!-- Step 2: Departed (NEXT — blue = current expected action) -->
+        <div class="ms-step">
+          <div class="ms-dot ms-dot-next"></div>
+          <div class="ms-label ms-label-next">Departed</div>
+          <div class="ms-time" style="color: #d1d5db;">—</div>
+        </div>
+
+        <!-- Connector 2→3: pending -->
+        <div class="ms-connector ms-connector-pending"></div>
+
+        <!-- Step 3: Arrived Delivery (pending) -->
+        <div class="ms-step">
+          <div class="ms-dot ms-dot-pending"></div>
+          <div class="ms-label ms-label-pending">Arrived Delivery</div>
+          <div class="ms-time" style="color: #d1d5db;">—</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Route section -->
+    <div class="sec-wrap">
+      <div class="sec-title">Route</div>
+      <div class="route-row">
+        <div class="route-point">
+          <div class="route-lbl">Pickup</div>
+          <div class="route-name">SZCTF — Shenzhen CT Freight</div>
+          <div class="route-date">15 May 2026 08:00</div>
+        </div>
+        <span class="route-arrow">&#8594;</span>
+        <div class="route-point">
+          <div class="route-lbl">Delivery</div>
+          <div class="route-name">HKIA — HK Airport Cargo</div>
+          <div class="route-date">15 May 2026 14:00</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity Log — shows driver entries with named actor -->
+    <div class="sec-wrap">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+        <div class="sec-title" style="margin-bottom: 0;">Activity Log</div>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; background: #f3f4f6; color: #9ca3af; padding: 1px 5px; border-radius: 99px;">5</span>
+      </div>
+      <div class="log-entry">
+        <div><span class="log-action">Arrived at Pickup</span><span class="log-actor driver"> · Driver Zhang Wei</span></div>
+        <div class="log-time">15 May · 08:47</div>
+      </div>
+      <div class="log-entry">
+        <div><span class="log-action">Job started</span><span class="log-actor"> · HaleSun</span></div>
+        <div class="log-time">15 May · 07:54</div>
+      </div>
+      <div class="log-entry">
+        <div><span class="log-action">Assigned Zhang Wei + 粤B·12345</span><span class="log-actor"> · HaleSun</span></div>
+        <div class="log-time">15 May · 07:30</div>
+      </div>
+      <div class="log-entry">
+        <div><span class="log-action">Job created</span><span class="log-actor"> · Ops Admin</span></div>
+        <div class="log-time">14 May · 16:20</div>
+      </div>
+    </div>
+  </div>
+</div><!-- /screen B1 -->
+
+<!-- Screen B2: Admin slide-out — same milestone strip, vertical compact layout -->
+<div style="font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #9ca3af; margin: 16px 0 6px;">Admin Slide-Out (380px) — Milestone strip adapts to vertical compact list</div>
+<div class="screen" style="max-width: 440px;">
+  <!-- Admin slide-out chrome -->
+  <div style="height: 44px; background: #fff; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; padding: 0 16px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="font-size: 14px; font-weight: 700; color: #111827;">J03</span>
+      <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #6b7280;">FM</span>
+      <span style="font-size: 11px; color: #374151;">Zhang Wei · 粤B·12345</span>
+    </div>
+    <span style="font-size: 18px; color: #9ca3af; cursor: pointer;">&times;</span>
+  </div>
+
+  <!-- Status Action Bar (admin variant) -->
+  <div class="action-bar action-bar-inprogress" style="padding: 8px 12px;">
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <span class="state-dot" style="background: #152CFF;"></span>
+        <span style="font-size: 11px; font-weight: 600; color: #111827;">In Progress</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af;">15 May 07:54</span>
+      </div>
+    </div>
+    <div style="display: flex; gap: 6px;">
+      <button style="padding: 4px 10px; border: none; border-radius: 4px; background: #f3f4f6; color: #6b7280; font-size: 10px; cursor: pointer;">Reject</button>
+      <button style="padding: 4px 10px; border: none; border-radius: 4px; background: #059669; color: #fff; font-size: 10px; font-weight: 600; cursor: pointer;">&#10003; Verify</button>
+    </div>
+  </div>
+
+  <!-- FM Milestone: vertical compact (fits 380px) -->
+  <div class="sec-wrap" style="background: #fafafa; padding: 10px 12px;">
+    <div class="sec-title">FM Execution</div>
+    <!-- Vertical row layout for 380px -->
+    <div style="display: flex; flex-direction: column; gap: 0;">
+
+      <!-- Step 1: Arrived Pickup (done) -->
+      <div style="display: flex; align-items: center; gap: 10px; padding: 5px 0;">
+        <div style="display: flex; flex-direction: column; align-items: center; width: 12px; flex-shrink: 0;">
+          <div class="ms-dot ms-dot-done"></div>
+        </div>
+        <div style="flex: 1; font-size: 11px; font-weight: 600; color: #059669;">Arrived Pickup</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; white-space: nowrap;">08:47 · Zhang Wei</div>
+      </div>
+      <!-- Connector -->
+      <div style="margin-left: 5px; width: 1.5px; height: 12px; background: #d1d5db; margin-bottom: 0;"></div>
+
+      <!-- Step 2: Departed (next) -->
+      <div style="display: flex; align-items: center; gap: 10px; padding: 5px 0;">
+        <div style="display: flex; align-items: center; width: 12px; flex-shrink: 0;">
+          <div class="ms-dot ms-dot-next"></div>
+        </div>
+        <div style="flex: 1; font-size: 11px; color: #152CFF; font-weight: 500;">Departed</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #d1d5db;">—</div>
+      </div>
+      <!-- Connector -->
+      <div style="margin-left: 5px; width: 1.5px; height: 12px; background: #e5e7eb;"></div>
+
+      <!-- Step 3: Arrived Delivery (pending) -->
+      <div style="display: flex; align-items: center; gap: 10px; padding: 5px 0;">
+        <div style="display: flex; align-items: center; width: 12px; flex-shrink: 0;">
+          <div class="ms-dot ms-dot-pending"></div>
+        </div>
+        <div style="flex: 1; font-size: 11px; color: #9ca3af;">Arrived Delivery</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #d1d5db;">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Route section (compact) -->
+  <div class="sec-wrap" style="padding: 10px 12px;">
+    <div class="sec-title">Route</div>
+    <div class="route-row">
+      <div class="route-point">
+        <div class="route-lbl">Pickup</div>
+        <div class="route-name" style="font-size: 10px;">SZCTF</div>
+        <div class="route-date" style="font-size: 9px;">15 May 08:00</div>
+      </div>
+      <span class="route-arrow" style="font-size: 12px;">&#8594;</span>
+      <div class="route-point">
+        <div class="route-lbl">Delivery</div>
+        <div class="route-name" style="font-size: 10px;">HKIA</div>
+        <div class="route-date" style="font-size: 9px;">15 May 14:00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activity log (compact) -->
+  <div class="sec-wrap" style="padding: 10px 12px;">
+    <div class="sec-title">Activity Log</div>
+    <div class="log-entry" style="font-size: 10px;">
+      <div><span class="log-action">Arrived at Pickup</span><span class="log-actor driver"> · Driver Zhang Wei</span></div>
+      <div class="log-time" style="font-size: 9px;">08:47</div>
+    </div>
+    <div class="log-entry" style="font-size: 10px;">
+      <div><span class="log-action">Job started</span><span class="log-actor"> · HaleSun</span></div>
+      <div class="log-time" style="font-size: 9px;">07:54</div>
+    </div>
+    <div class="log-entry" style="font-size: 10px; border-bottom: none;">
+      <div><span class="log-action">Assigned Zhang Wei + 粤B·12345</span><span class="log-actor"> · HaleSun</span></div>
+      <div class="log-time" style="font-size: 9px;">07:30</div>
+    </div>
+  </div>
+</div><!-- /screen B2 -->
+
+
+<!-- ============================================================ -->
+<!-- OPTION C: Milestone Sub-line in My Jobs "Where" Column -->
+<!-- ============================================================ -->
+<h2>Option C: Current Milestone as Sub-line in Job List "Where" Column</h2>
+<span class="label" style="background: #f3f4f6; color: #6b7280;">List-first visibility</span>
+
+<div class="rationale">
+Driver milestones are surfaced in the My Jobs list view rather than the job detail page. For In Progress FM jobs, the "Where" sub-line changes from "Zhang Wei · 粤B·12345" (dispatch state) to "● Arrived Pickup · 08:47" (execution state) once the driver reports a milestone. No new section on the detail page.
+
+This gives dispatchers list-level visibility — they can scan 20 jobs and see which drivers are on-site, en route, etc. — without opening each job. The sub-line space is limited (~200px), so the milestone must be abbreviated.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• List-level visibility — no detail page required<br>
+• Uses existing "Where" sub-line real estate (no new columns)<br>
+• Dispatcher can monitor multiple jobs at once<br>
+• Most efficient for dispatchers tracking a fleet</div>
+<div class="cons"><strong>Cons</strong><br>
+• Sub-line switches from driver+plate → milestone, losing driver identity<br>
+• Limited space for milestone label + timestamp + driver name<br>
+• "Where" column already carries route + driver info — adding milestone overloads it<br>
+• Non-FM rows must show nothing, creating inconsistency in a mixed-service list<br>
+• No progression context (only current state, not all 3 milestones)</div>
+</div>
+</div>
+
+<!-- Screen C: My Jobs table with milestone sub-lines -->
+<div class="screen">
+  <div class="mock-nav">
+    <div class="mock-logo-sq"></div>
+    <span class="mock-logo-text">Teleport OS</span>
+    <span class="mock-logo-sub">Vendor</span>
+    <span style="width: 24px;"></span>
+    <a class="mock-nav-link active">My Jobs</a>
+    <a class="mock-nav-link">Fleet</a>
+    <span class="mock-vendor-name">HaleSun Logistics</span>
+    <div class="mock-avatar" style="margin-left: 8px;">HS</div>
+  </div>
+
+  <!-- Filter bar -->
+  <div style="padding: 8px 16px; border-bottom: 1px solid #e5e7eb; background: #fff; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+    <button style="display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 3px; font-size: 11px; font-weight: 600; background: #111827; color: #fff; border: 1px solid #111827; cursor: pointer;">All <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; opacity: 0.6; margin-left: 3px;">7</span></button>
+    <button style="padding: 4px 10px; border-radius: 3px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">In Progress <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; opacity: 0.6; margin-left: 3px;">3</span></button>
+    <button style="padding: 4px 10px; border-radius: 3px; font-size: 11px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer;">Pending <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; opacity: 0.6; margin-left: 3px;">2</span></button>
+    <span style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9ca3af;">7 jobs</span>
+  </div>
+
+  <!-- Table -->
+  <div style="padding: 0 16px 16px; background: #fff;">
+    <table class="mock-table" style="table-layout: fixed;">
+      <thead>
+        <tr>
+          <th style="width: 10%;">Trip</th>
+          <th style="width: 12%;">Customer</th>
+          <th style="width: 7%;">Service</th>
+          <th style="width: 29%;">Where</th>
+          <th style="width: 9%;">Pickup</th>
+          <th style="width: 14%;">Status</th>
+          <th style="width: 11%;">Verification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- FM job row — driver arrived at pickup -->
+        <tr class="highlighted">
+          <td><span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; color: #111827;">T-2026-042</span></td>
+          <td><span style="font-size: 11px; font-weight: 600; color: #111827;">TikTok</span></td>
+          <td><span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: #6b7280;">FM</span></td>
+          <td>
+            <div style="font-size: 10px; color: #374151; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">SZCTF → HKIA</div>
+            <!-- Milestone sub-line replaces driver+plate once driver reports arrival -->
+            <div class="milestone-sub" style="color: #059669;">
+              <span class="ms-mini-dot-done"></span>
+              <span style="font-weight: 600;">Arrived Pickup</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af;">· 08:47 · Zhang Wei</span>
+            </div>
+          </td>
+          <td style="font-family: 'JetBrains Mono', monospace; font-size: 10px;">
+            <div>15 May</div>
+            <div style="color: #9ca3af; font-size: 9px;">08:00</div>
+          </td>
+          <td>
+            <span class="status-dot-inprog"></span>
+            <span style="font-size: 11px; font-weight: 500; color: #111827;">In Progress</span>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; margin-top: 2px;">2h ago</div>
+          </td>
+          <td>
+            <span class="status-dot-pending"></span>
+            <span style="font-size: 11px; color: #6b7280;">Pending</span>
+          </td>
+        </tr>
+        <!-- FM job — no milestone yet (still showing driver+plate) -->
+        <tr>
+          <td><span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; color: #111827;">T-2026-039</span></td>
+          <td><span style="font-size: 11px; font-weight: 600; color: #111827;">Shopee</span></td>
+          <td><span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: #6b7280;">FM</span></td>
+          <td>
+            <div style="font-size: 10px; color: #374151; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">GZWH → HKIA</div>
+            <div style="font-size: 9px; color: #6b7280; display: inline-flex; align-items: center; gap: 3px; margin-top: 2px;">
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Li Ming · 粤B·67890
+            </div>
+          </td>
+          <td style="font-family: 'JetBrains Mono', monospace; font-size: 10px;">
+            <div>15 May</div>
+            <div style="color: #9ca3af; font-size: 9px;">09:30</div>
+          </td>
+          <td>
+            <span class="status-dot-inprog"></span>
+            <span style="font-size: 11px; font-weight: 500; color: #111827;">In Progress</span>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; margin-top: 2px;">45m ago</div>
+          </td>
+          <td>
+            <span class="status-dot-pending"></span>
+            <span style="font-size: 11px; color: #6b7280;">Pending</span>
+          </td>
+        </tr>
+        <!-- EC job — no sub-line milestone (non-FM, MAWB sub-line stays) -->
+        <tr>
+          <td><span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; color: #111827;">T-2026-042</span></td>
+          <td><span style="font-size: 11px; font-weight: 600; color: #111827;">TikTok</span></td>
+          <td><span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: #6b7280;">EC</span></td>
+          <td>
+            <div style="font-size: 10px; color: #374151; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">HKIA — HK Airport</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #6b7280; margin-top: 2px;">MAWB 113-54321678</div>
+          </td>
+          <td style="font-family: 'JetBrains Mono', monospace; font-size: 10px;">
+            <div>15 May</div>
+            <div style="color: #9ca3af; font-size: 9px;">14:00</div>
+          </td>
+          <td>
+            <span class="status-dot-pending"></span>
+            <span style="font-size: 11px; color: #6b7280;">Pending</span>
+          </td>
+          <td>
+            <span class="status-dot-pending"></span>
+            <span style="font-size: 11px; color: #6b7280;">Pending</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div><!-- /screen C -->
+
+
+<!-- ============================================================ -->
+<!-- VERDICT -->
+<!-- ============================================================ -->
+<div class="verdict">
+  <h3>&#10003; Verdict: Option B (Milestone Strip) + Named Actor in Log</h3>
+  <p><strong>Recommended approach:</strong> Add an FM Execution milestone strip on the job detail page (vendor full-page and admin slide-out), plus use "Driver [Name]" actor label in all activity log entries triggered by WeChat actions.</p>
+  <p><strong>Why not A alone:</strong> The activity log is the right audit trail, but it's not glanceable. A dispatcher tracking 10 FM jobs in parallel needs to open each job and scroll down to see current execution state. The milestone strip solves this without any new navigation.</p>
+  <p><strong>Why not C alone:</strong> The "Where" sub-line already carries driver+plate. Adding a milestone overwrites that data, creating a confusing flip-flop. Additionally, list-level is not the right place for this: the sub-line space is too narrow for three-state milestone progression. Option C is useful for dispatchers, but it works best as a complement to B, not a replacement.</p>
+  <p><strong>Implementation notes:</strong> (1) Add three optional fields to the Job type: <code>milestoneArrivedPickup?: string</code>, <code>milestoneDeparted?: string</code>, <code>milestoneArrivedDelivery?: string</code> (ISO timestamps). (2) The strip renders only when <code>job.service.code === 'FM'</code>. (3) Admin slide-out renders the strip as a vertical compact list (3 rows, right-aligned timestamps) rather than horizontal — same data, different layout constraint. (4) In the My Jobs list, the "Where" sub-line shows the current milestone in parentheses when present: "Zhang Wei · 粤B·12345 · ● Arrived Pickup" — milestone appended, not replaced, so driver identity is preserved.</p>
+  <p><strong>Open question:</strong> Should "Departed" be required before "Arrived Delivery" (enforced in WeChat sequencing), or can a driver skip directly to "Arrived Delivery" if they forgot to tap "Departed"? If milestones can be reported out-of-order, the progress strip must handle gaps gracefully (e.g., show both Arrived Pickup and Arrived Delivery green with Departed still gray).</p>
+</div>
+
+</div>
+</body>
+</html>

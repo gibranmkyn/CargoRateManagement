@@ -1,7 +1,7 @@
 # Design Audit — Teleport OS Vendor
 
 > Audited against `vendor/DESIGN.md` + `admin/DESIGN.md`.
-> Date: 2026-05-03
+> Date: 2026-05-15 (updated)
 
 ## Findings
 
@@ -80,6 +80,24 @@ function getActionBarBg(job: { status: string; verificationStatus: string }): st
 ```
 **Rule** (`admin/DESIGN.md` → Spacing): Section titles are `9px/700 uppercase` plain text — no icon components.  
 **Fix:** Remove the `<Truck />` import and icon from the section title. The label "DRIVER & VEHICLE" at 9px uppercase is already unambiguous.
+
+---
+
+### [LOW] JobDetailPage.tsx — Proof upload `+ Add` button visible in Completed state
+
+**File:** `vendor/src/pages/JobDetailPage.tsx` line 100  
+**Current:**
+```tsx
+const canUpload = job.status === 'Pending' || job.status === 'In Progress' || job.status === 'Completed';
+```
+**Spec** (`vendor/DESIGN.md` → Proof of Service): "Upload available in Pending and In Progress only. Hidden/disabled in Completed, Verified, Cancelled."
+
+The `canUpload` flag is used in `renderProofs()` to show the `+ Add` button. Including `'Completed'` lets vendors add more proof files after the job is already complete — a state where the admin is reviewing the existing proof. The re-upload path (when `verificationStatus === 'Rejected'`) is correctly handled separately in the action bar.
+
+**Fix:**
+```tsx
+const canUpload = job.status === 'Pending' || job.status === 'In Progress';
+```
 
 ---
 
