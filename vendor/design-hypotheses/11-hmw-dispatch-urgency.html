@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-V11: Dispatch Urgency in My Jobs</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+
+.page { max-width: 1200px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 16px; font-weight: 700; letter-spacing: -0.2px; margin: 40px 0 6px; color: #152CFF; }
+.hmw { font-size: 14px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 20px; font-size: 11px; color: #92400e; line-height: 1.7; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 12px; font-size: 11px; color: #374151; line-height: 1.7; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 9px 11px; border-radius: 6px; font-size: 11px; line-height: 1.7; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 40px; }
+.verdict h3 { color: #059669; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.verdict p { font-size: 11px; color: #374151; line-height: 1.7; margin-bottom: 6px; }
+.verdict p:last-child { margin-bottom: 0; }
+
+.screen { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 12px 0 24px; }
+.screen-label { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9ca3af; padding: 8px 12px 4px; }
+
+/* Mock nav */
+.mock-nav { height: 40px; padding: 0 16px; background: #111827; display: flex; align-items: center; gap: 8px; }
+.mock-nav .logo { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; flex-shrink: 0; }
+.mock-nav .logo-text { font-weight: 700; font-size: 13px; color: #fff; }
+.mock-nav .logo-sub { font-size: 10px; color: rgba(255,255,255,0.35); }
+.mock-nav .nav-link { font-size: 12px; padding: 4px 10px; border-radius: 4px; color: rgba(255,255,255,0.5); font-weight: 400; }
+.mock-nav .nav-active { font-size: 12px; padding: 4px 10px; border-radius: 4px; color: #fff; background: rgba(255,255,255,0.1); font-weight: 600; }
+.mock-nav .vendor { margin-left: auto; font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 600; }
+.mock-nav .avatar { width: 22px; height: 22px; border-radius: 4px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; font-size: 9px; color: rgba(255,255,255,0.7); font-weight: 700; }
+
+/* Page header */
+.mock-page-hd { padding: 16px 16px 0; display: flex; align-items: flex-end; justify-content: space-between; background: #f3f4f6; }
+.mock-page-hd h2 { font-size: 16px; font-weight: 800; color: #111827; letter-spacing: -0.3px; margin: 0; }
+.mock-page-hd .sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+/* Filter bar */
+.mock-filter { padding: 8px 16px; background: #fff; border-bottom: 1px solid #e5e7eb; }
+.mock-pills { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: 500; cursor: pointer; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; }
+.pill.active { background: #111827; color: #fff; border-color: #111827; font-weight: 600; }
+.pill .ct { font-family: 'JetBrains Mono', monospace; font-size: 9px; }
+.pill.active .ct { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.3); }
+.badge { padding: 0 5px; border-radius: 8px; min-width: 16px; text-align: center; font-weight: 700; }
+.mock-svc-row { display: flex; align-items: center; gap: 8px; }
+.svc-code { padding: 2px 6px; border-radius: 99px; font-size: 9px; font-weight: 600; font-family: 'JetBrains Mono', monospace; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer; }
+.svc-code.on { border-color: #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; }
+.sep { width: 1px; height: 16px; background: #e5e7eb; }
+.job-count { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9ca3af; }
+
+/* Table */
+.mock-table-wrap { padding: 0 16px 24px; background: #f3f4f6; }
+.mock-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; table-layout: fixed; margin-top: 0; }
+.mock-table thead th { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; padding: 6px 12px; text-align: left; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+.mock-table tbody td { padding: 7px 12px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: middle; }
+.mock-table tbody tr:last-child td { border-bottom: none; }
+.mock-table tbody tr:hover td { background: #f9fafb; }
+
+/* Status cell */
+.status-cell { display: inline-flex; flex-direction: column; gap: 2px; }
+.dot-label { display: inline-flex; align-items: center; gap: 6px; line-height: 1.2; }
+.dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.dot-pending { background: #d1d5db; }
+.dot-inprogress { background: #152CFF; }
+.dot-completed { background: #a16207; }
+.dot-verified { background: #059669; }
+.ts { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9ca3af; }
+
+/* Where column content */
+.where-route { font-size: 11px; color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.where-sub { font-size: 9px; margin-top: 2px; display: flex; align-items: center; gap: 3px; }
+.where-sub-driver { color: #6b7280; }
+.where-sub-nodriver { color: #d1d5db; }
+.where-sub-mawb { font-family: 'JetBrains Mono', monospace; color: #6b7280; }
+
+/* Trip/customer cell */
+.trip-id { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #111827; }
+.customer { font-size: 11px; font-weight: 600; color: #111827; }
+.svc-tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: #6b7280; }
+
+/* Pickup cell */
+.pickup-date { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #374151; }
+.pickup-time { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; margin-top: 1px; }
+
+/* === OPTION A: urgency annotation in pickup column === */
+.urgency-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #d97706; margin-right: 4px; vertical-align: middle; }
+.urgency-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #d97706; }
+
+/* === OPTION B: dispatch alert strip === */
+.dispatch-strip {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 16px;
+  background: #fffbeb;
+  border-bottom: 1px solid #fde68a;
+  font-size: 11px;
+  color: #92400e;
+}
+.dispatch-strip-icon {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #fde68a; color: #92400e;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 9px; flex-shrink: 0;
+}
+.dispatch-strip-cta {
+  margin-left: auto; font-size: 10px; font-weight: 600;
+  color: #152CFF; cursor: pointer; white-space: nowrap;
+}
+.dispatch-strip-dismiss { font-size: 10px; color: #9ca3af; cursor: pointer; padding: 0 2px; }
+
+/* === OPTION C: enriched sub-line === */
+.where-sub-urgent { font-size: 9px; margin-top: 2px; display: flex; align-items: center; gap: 3px; }
+.urgent-text { color: #d97706; font-weight: 500; }
+.urgent-time { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #d97706; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-V11: Dispatch Urgency in My Jobs</h1>
+<p style="font-size: 11px; color: #6b7280; margin-bottom: 4px;">Priority TODOs 046–049 are fully implemented. This explores the next unaddressed design gap: surfacing time-critical dispatch information within the existing My Jobs table.</p>
+
+<div class="hmw" style="margin-top: 16px;">How might we help vendor dispatchers identify FM jobs that need a driver assigned before pickup time passes — without restructuring the table or adding a separate dashboard?</div>
+
+<div class="context">
+  <strong>Dispatch scenario:</strong> It's 07:30. Zhang Wei (HaleSun dispatcher) opens My Jobs. 14 jobs are listed. He filters to Pending: 6 jobs appear. 4 are FM jobs, 2 of which have pickups at 09:15 and 11:30 with no driver assigned yet. Without a time-to-pickup signal, he has to mentally cross-reference the Pickup column (datetime) against the Where column (driver sub-line) to find the critical ones. One morning mistake — missing the 09:15 — means a delayed shipment for TikTok.<br><br>
+  <strong>Constraint:</strong> Admin removed pickup urgency coloring in 2026-03-25 ("visual noise without clear value" for ops planners managing 50+ shipments). Vendor dispatchers manage 5–30 jobs and have a specific, actionable need: "which FM job needs a driver right now?" This is a different user, a different scale, and a different stake.
+</div>
+
+<!-- ================================================================ -->
+<h2>Option A — Urgency Annotation in Pickup Column</h2>
+<!-- ================================================================ -->
+
+<div class="rationale">
+  <strong>Approach:</strong> When an FM job is Pending, has no driver assigned, and pickup is within 4 hours, add a small amber indicator to the Pickup cell: a dot + "in Xh Ym" in amber mono. Everything else stays unchanged — no new UI regions, no new filtering.<br><br>
+  The annotation is purely additive. It disappears once a driver is assigned or the pickup time passes the 4-hour threshold. Non-FM jobs are unaffected. The amber color uses the existing <em>completed/warning</em> color token (#d97706 — one step warmer than the Completed status amber #a16207), not a new color.
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <strong>Pros</strong><br>
+    · Information stays inside the row — no new layout regions<br>
+    · Zero learning curve: dispatch scans Pickup column anyway<br>
+    · Uses one existing color token (amber) in a new but coherent context<br>
+    · Annotation is conditional and time-bounded (disappears once resolved)<br>
+    · Works at tablet width — no horizontal overflow
+  </div>
+  <div class="cons">
+    <strong>Cons</strong><br>
+    · Urgency coloring was explicitly removed from admin ("visual noise")<br>
+    · Amber here conflicts with the Completed status dot — same hue, different meaning<br>
+    · Requires scanning every row — no summary or "X urgent" at a glance<br>
+    · Easy to miss when sorting by customer name or date<br>
+    · Pixel density: the Pickup cell is already 2 lines (date + time); a 3rd line adds height
+  </div>
+</div>
+
+<div class="screen">
+  <div class="screen-label">My Jobs — Pending · HaleSun · 07:30, 22 May 2026</div>
+
+  <!-- Nav -->
+  <div class="mock-nav">
+    <div class="logo"></div>
+    <span class="logo-text">Teleport OS</span><span class="logo-sub">Vendor</span>
+    <span style="width:16px"></span>
+    <span class="nav-active">My Jobs</span>
+    <span class="nav-link">Fleet</span>
+    <span class="vendor">HaleSun</span>
+    <div class="avatar">HL</div>
+  </div>
+
+  <!-- Page header -->
+  <div class="mock-page-hd" style="padding-bottom: 0;">
+    <div><div style="font-size:16px;font-weight:800;color:#111827;letter-spacing:-0.3px">My Jobs</div><div class="sub">Your assigned jobs</div></div>
+    <button style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;background:#fff;color:#374151;border:1px solid #e5e7eb;cursor:pointer;font-family:inherit">⬇ Export</button>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="mock-filter">
+    <div class="mock-pills">
+      <span class="pill">All <span class="badge" style="background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">14</span></span>
+      <span class="pill active">Pending <span class="badge" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);">6</span></span>
+      <span class="pill">In Progress <span class="badge" style="background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">4</span></span>
+      <span class="pill">To verify <span class="badge" style="background:#fefce8;color:#a16207;border:1px solid #fde68a;">3</span></span>
+      <span class="pill">Verified <span class="badge" style="background:#f0fdf4;color:#059669;border:1px solid #a7f3d0;">1</span></span>
+    </div>
+    <div class="mock-svc-row">
+      <span style="font-size:10px;color:#9ca3af;">Service</span>
+      <span class="svc-code on">FM</span>
+      <span class="svc-code">EC</span>
+      <span class="svc-code">CS</span>
+      <span class="svc-code">CR</span>
+      <span class="svc-code">OH</span>
+      <span class="sep"></span>
+      <span style="font-size:11px;color:#374151;padding:2px 8px;border-radius:4px;border:1px solid #e5e7eb;background:#fff;">22 May – 22 May</span>
+      <span class="job-count">6 jobs</span>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="mock-table-wrap" style="padding-top: 0;">
+    <table class="mock-table">
+      <thead>
+        <tr>
+          <th style="width:10%">Trip</th>
+          <th style="width:12%">Customer</th>
+          <th style="width:7%">Service</th>
+          <th style="width:30%">Where</th>
+          <th style="width:13%">Pickup</th>
+          <th style="width:15%">Status</th>
+          <th style="width:13%">Verification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Row 1: FM, no driver, URGENT (pickup in 1h 45m) -->
+        <tr>
+          <td><span class="trip-id">DO-001</span></td>
+          <td><span class="customer">TikTok</span></td>
+          <td><span class="svc-tag">FM</span></td>
+          <td>
+            <div class="where-route">Shenzhen Baoan Airport → Hong Kong CFS</div>
+            <div class="where-sub"><span class="where-sub-nodriver">No driver assigned</span></div>
+          </td>
+          <td>
+            <div class="pickup-date">22 May</div>
+            <!-- OPTION A: urgency annotation -->
+            <div class="pickup-time">09:15</div>
+            <div style="margin-top:3px;display:flex;align-items:center;">
+              <span class="urgency-dot"></span>
+              <span class="urgency-label">in 1h 45m</span>
+            </div>
+          </td>
+          <td>
+            <div class="status-cell">
+              <span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;">
+                <span class="dot dot-pending"></span> Pending
+              </span>
+              <span class="ts">2h ago</span>
+            </div>
+          </td>
+          <td>
+            <div class="status-cell">
+              <span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;">
+                <span class="dot dot-pending"></span> Pending
+              </span>
+            </div>
+          </td>
+        </tr>
+        <!-- Row 2: FM, driver assigned, pickup in 2h 30m — no annotation -->
+        <tr>
+          <td><span class="trip-id">DO-003</span></td>
+          <td><span class="customer">Shopee</span></td>
+          <td><span class="svc-tag">FM</span></td>
+          <td>
+            <div class="where-route">Guangzhou Nansha Port → Yantian Terminal</div>
+            <div class="where-sub">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:8px;height:8px;flex-shrink:0"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span class="where-sub-driver">Zhang Wei · 粤B·12345</span>
+            </div>
+          </td>
+          <td>
+            <div class="pickup-date">22 May</div>
+            <div class="pickup-time">10:00</div>
+          </td>
+          <td>
+            <div class="status-cell">
+              <span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;"><span class="dot dot-pending"></span> Pending</span>
+              <span class="ts">3h ago</span>
+            </div>
+          </td>
+          <td><div class="status-cell"><span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;"><span class="dot dot-pending"></span> Pending</span></div></td>
+        </tr>
+        <!-- Row 3: FM, no driver, pickup 11:30 (borderline) -->
+        <tr>
+          <td><span class="trip-id">DO-004</span></td>
+          <td><span class="customer">Shein</span></td>
+          <td><span class="svc-tag">FM</span></td>
+          <td>
+            <div class="where-route">Dongguan Humen → Shenzhen Yantian Port</div>
+            <div class="where-sub"><span class="where-sub-nodriver">No driver assigned</span></div>
+          </td>
+          <td>
+            <div class="pickup-date">22 May</div>
+            <div class="pickup-time">11:30</div>
+            <div style="margin-top:3px;display:flex;align-items:center;">
+              <span class="urgency-dot"></span>
+              <span class="urgency-label">in 4h 00m</span>
+            </div>
+          </td>
+          <td>
+            <div class="status-cell">
+              <span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;"><span class="dot dot-pending"></span> Pending</span>
+              <span class="ts">4h ago</span>
+            </div>
+          </td>
+          <td><div class="status-cell"><span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;"><span class="dot dot-pending"></span> Pending</span></div></td>
+        </tr>
+        <!-- Row 4: CS job, normal -->
+        <tr>
+          <td><span class="trip-id">DO-002</span></td>
+          <td><span class="customer">TikTok</span></td>
+          <td><span class="svc-tag">CS</span></td>
+          <td>
+            <div class="where-route">HKIA Terminal 1</div>
+            <div class="where-sub"><span class="where-sub-mawb">MAWB 180-12345001</span></div>
+          </td>
+          <td>
+            <div class="pickup-date">22 May</div>
+            <div class="pickup-time">14:00</div>
+          </td>
+          <td>
+            <div class="status-cell">
+              <span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;"><span class="dot dot-pending"></span> Pending</span>
+              <span class="ts">1d ago</span>
+            </div>
+          </td>
+          <td><div class="status-cell"><span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;"><span class="dot dot-pending"></span> Pending</span></div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="padding:4px 16px 12px;font-size:10px;color:#9ca3af;">
+    ↑ Option A: amber dot + "in Xh Ym" appended below pickup time for unassigned FM jobs within 4 hours. Disappears when driver is assigned.
+  </div>
+</div>
+
+
+<!-- ================================================================ -->
+<h2>Option B — Dispatch Alert Strip Above the Table</h2>
+<!-- ================================================================ -->
+
+<div class="rationale">
+  <strong>Approach:</strong> When the vendor has at least one FM job that is Pending, has no driver, and pickup is within 4 hours, show a thin amber-border strip between the filter bar and the table. Strip text: "N FM job(s) need a driver — pickup within 4h" with a right-aligned CTA: "Show me" (filters to Pending + FM service). One dismiss button per session. Strip disappears automatically when all qualifying jobs have drivers assigned.<br><br>
+  This mirrors the admin app's "exception marker" pattern (Cancelled/Rejected count alert right-aligned with the segment pills). Same design principle: surface an actionable exception without disrupting the main table.
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <strong>Pros</strong><br>
+    · Mirrors the existing "exception marker" pattern from admin DESIGN.md<br>
+    · Single glance: "2 FM jobs need driver" — no row-by-row scanning<br>
+    · CTA filters instantly to the urgent subset<br>
+    · No new color tokens: amber background matches Completed/To-verify tint<br>
+    · Does not add height to any existing table row<br>
+    · Dismissible if dispatcher has already seen it
+  </div>
+  <div class="cons">
+    <strong>Cons</strong><br>
+    · Introduces a new UI region not currently in the design system (a strip between filter bar and table)<br>
+    · Only surfaces the count — dispatcher still needs to scan to identify which rows<br>
+    · Could feel intrusive or "alert-y" — mild risk of "AI slop" if not kept extremely tight<br>
+    · Dismiss state needs storage (localStorage) to avoid re-appearing every click
+  </div>
+</div>
+
+<div class="screen">
+  <div class="screen-label">My Jobs — All · HaleSun · 07:30, 22 May 2026 (with dispatch strip)</div>
+
+  <div class="mock-nav">
+    <div class="logo"></div>
+    <span class="logo-text">Teleport OS</span><span class="logo-sub">Vendor</span>
+    <span style="width:16px"></span>
+    <span class="nav-active">My Jobs</span>
+    <span class="nav-link">Fleet</span>
+    <span class="vendor">HaleSun</span>
+    <div class="avatar">HL</div>
+  </div>
+
+  <div class="mock-page-hd" style="padding-bottom: 0;">
+    <div><div style="font-size:16px;font-weight:800;color:#111827;letter-spacing:-0.3px">My Jobs</div><div class="sub">Your assigned jobs</div></div>
+    <button style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;background:#fff;color:#374151;border:1px solid #e5e7eb;cursor:pointer;font-family:inherit">⬇ Export</button>
+  </div>
+
+  <div class="mock-filter">
+    <div class="mock-pills">
+      <span class="pill active">All <span class="badge" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);">14</span></span>
+      <span class="pill">Pending <span class="badge" style="background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">6</span></span>
+      <span class="pill">In Progress <span class="badge" style="background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">4</span></span>
+      <span class="pill">To verify <span class="badge" style="background:#fefce8;color:#a16207;border:1px solid #fde68a;">3</span></span>
+      <span class="pill">Verified <span class="badge" style="background:#f0fdf4;color:#059669;border:1px solid #a7f3d0;">1</span></span>
+    </div>
+    <div class="mock-svc-row">
+      <span style="font-size:10px;color:#9ca3af;">Service</span>
+      <span class="svc-code">FM</span><span class="svc-code">EC</span><span class="svc-code">CS</span><span class="svc-code">CR</span><span class="svc-code">OH</span>
+      <span class="sep"></span>
+      <span style="font-size:11px;color:#374151;padding:2px 8px;border-radius:4px;border:1px solid #e5e7eb;background:#fff;">All dates</span>
+      <span class="job-count">14 jobs</span>
+    </div>
+  </div>
+
+  <!-- OPTION B: Dispatch alert strip -->
+  <div class="dispatch-strip">
+    <div class="dispatch-strip-icon">!</div>
+    <span><strong>2 FM jobs</strong> need a driver assigned — pickup within 4 hours</span>
+    <span class="dispatch-strip-cta">Show me →</span>
+    <span class="dispatch-strip-dismiss">✕</span>
+  </div>
+
+  <div class="mock-table-wrap" style="padding-top: 0;">
+    <table class="mock-table">
+      <thead>
+        <tr>
+          <th style="width:10%">Trip</th>
+          <th style="width:12%">Customer</th>
+          <th style="width:7%">Service</th>
+          <th style="width:30%">Where</th>
+          <th style="width:13%">Pickup</th>
+          <th style="width:15%">Status</th>
+          <th style="width:13%">Verification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="trip-id">DO-001</span></td>
+          <td><span class="customer">TikTok</span></td>
+          <td><span class="svc-tag">FM</span></td>
+          <td>
+            <div class="where-route">Shenzhen Baoan Airport → Hong Kong CFS</div>
+            <div class="where-sub"><span class="where-sub-nodriver">No driver assigned</span></div>
+          </td>
+          <td><div class="pickup-date">22 May</div><div class="pickup-time">09:15</div></td>
+          <td><div class="status-cell"><span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;"><span class="dot dot-pending"></span> Pending</span><span class="ts">2h ago</span></div></td>
+          <td><div class="status-cell"><span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;"><span class="dot dot-pending"></span> Pending</span></div></td>
+        </tr>
+        <tr>
+          <td><span class="trip-id">DO-002</span></td>
+          <td><span class="customer">TikTok</span></td>
+          <td><span class="svc-tag">EC</span></td>
+          <td>
+            <div class="where-route">Shenzhen Yantian Port</div>
+            <div class="where-sub"><span class="where-sub-mawb">MAWB 265-58710299</span></div>
+          </td>
+          <td><div class="pickup-date">22 May</div><div class="pickup-time">10:30</div></td>
+          <td><div class="status-cell"><span class="dot-label" style="font-size:11px;color:#111827;font-weight:500;"><span class="dot dot-inprogress"></span> In Progress</span><span class="ts">45m ago</span></div></td>
+          <td><div class="status-cell"><span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;"><span class="dot dot-pending"></span> Pending</span></div></td>
+        </tr>
+        <tr>
+          <td><span class="trip-id">DO-003</span></td>
+          <td><span class="customer">Shopee</span></td>
+          <td><span class="svc-tag">FM</span></td>
+          <td>
+            <div class="where-route">Guangzhou Nansha Port → Yantian Terminal</div>
+            <div class="where-sub">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:8px;height:8px;flex-shrink:0"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span class="where-sub-driver">Zhang Wei · 粤B·12345</span>
+            </div>
+          </td>
+          <td><div class="pickup-date">22 May</div><div class="pickup-time">10:00</div></td>
+          <td><div class="status-cell"><span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;"><span class="dot dot-pending"></span> Pending</span><span class="ts">3h ago</span></div></td>
+          <td><div class="status-cell"><span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;"><span class="dot dot-pending"></span> Pending</span></div></td>
+        </tr>
+        <tr>
+          <td><span class="trip-id">DO-004</span></td>
+          <td><span class="customer">Shein</span></td>
+          <td><span class="svc-tag">FM</span></td>
+          <td>
+            <div class="where-route">Dongguan Humen → Shenzhen Yantian Port</div>
+            <div class="where-sub"><span class="where-sub-nodriver">No driver assigned</span></div>
+          </td>
+          <td><div class="pickup-date">22 May</div><div class="pickup-time">11:30</div></td>
+          <td><div class="status-cell"><span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;"><span class="dot dot-pending"></span> Pending</span><span class="ts">4h ago</span></div></td>
+          <td><div class="status-cell"><span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;"><span class="dot dot-pending"></span> Pending</span></div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="padding:4px 16px 12px;font-size:10px;color:#9ca3af;">
+    ↑ Option B: thin amber strip between filter bar and table. Appears only when ≥1 FM job is Pending, unassigned, pickup &lt;4h. "Show me →" filters to Pending+FM. ✕ dismisses for the session.
+  </div>
+</div>
+
+
+<!-- ================================================================ -->
+<h2>Option C — Enriched "No Driver" Sub-line in Where Column</h2>
+<!-- ================================================================ -->
+
+<div class="rationale">
+  <strong>Approach:</strong> For FM jobs that are Pending, have no driver, and have pickup within 4 hours, upgrade the Where column's sub-line from the current ghost gray "No driver assigned" to amber text: "No driver — in Xh Ym". No new UI regions, no new color tokens beyond reusing amber in a muted context.<br><br>
+  This approach treats the Where column as the right place for all FM-related info: the route is in the main line, the driver is in the sub-line, and the urgency is part of the driver context ("the driver position is unfilled, and here's why that matters"). It preserves the existing layout exactly while making the existing "No driver assigned" message do more work.
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <strong>Pros</strong><br>
+    · Zero structural change: no new layout elements, regions, or filters<br>
+    · Urgency is co-located with the assignment state (semantically correct)<br>
+    · Amber sub-line is visually distinct from ghost gray "No driver" — scans well<br>
+    · Works at tablet width without any adaptation<br>
+    · Disappears automatically when a driver is assigned (or pickup passes)
+  </div>
+  <div class="cons">
+    <strong>Cons</strong><br>
+    · 9px amber text in the sub-line can still be missed during a quick scan<br>
+    · No summary count — dispatcher must visually scan all rows<br>
+    · The "in Xh Ym" countdown needs to be live-updated (setInterval every minute) — small but real implementation overhead<br>
+    · Only actionable if dispatcher is already looking at that row; doesn't draw eye-from-afar
+  </div>
+</div>
+
+<div class="screen">
+  <div class="screen-label">My Jobs — Pending · HaleSun · 07:30, 22 May 2026 (enriched sub-line)</div>
+
+  <div class="mock-nav">
+    <div class="logo"></div>
+    <span class="logo-text">Teleport OS</span><span class="logo-sub">Vendor</span>
+    <span style="width:16px"></span>
+    <span class="nav-active">My Jobs</span>
+    <span class="nav-link">Fleet</span>
+    <span class="vendor">HaleSun</span>
+    <div class="avatar">HL</div>
+  </div>
+
+  <div class="mock-page-hd" style="padding-bottom: 0;">
+    <div><div style="font-size:16px;font-weight:800;color:#111827;letter-spacing:-0.3px">My Jobs</div><div class="sub">Your assigned jobs</div></div>
+    <button style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;background:#fff;color:#374151;border:1px solid #e5e7eb;cursor:pointer;font-family:inherit">⬇ Export</button>
+  </div>
+
+  <div class="mock-filter">
+    <div class="mock-pills">
+      <span class="pill">All <span class="badge" style="background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">14</span></span>
+      <span class="pill active">Pending <span class="badge" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);">6</span></span>
+      <span class="pill">In Progress <span class="badge" style="background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">4</span></span>
+      <span class="pill">To verify <span class="badge" style="background:#fefce8;color:#a16207;border:1px solid #fde68a;">3</span></span>
+      <span class="pill">Verified <span class="badge" style="background:#f0fdf4;color:#059669;border:1px solid #a7f3d0;">1</span></span>
+    </div>
+    <div class="mock-svc-row">
+      <span style="font-size:10px;color:#9ca3af;">Service</span>
+      <span class="svc-code">FM</span><span class="svc-code">EC</span><span class="svc-code">CS</span><span class="svc-code">CR</span><span class="svc-code">OH</span>
+      <span class="sep"></span>
+      <span style="font-size:11px;color:#374151;padding:2px 8px;border-radius:4px;border:1px solid #e5e7eb;background:#fff;">22 May – 22 May</span>
+      <span class="job-count">6 jobs</span>
+    </div>
+  </div>
+
+  <div class="mock-table-wrap" style="padding-top: 0;">
+    <table class="mock-table">
+      <thead>
+        <tr>
+          <th style="width:10%">Trip</th>
+          <th style="width:12%">Customer</th>
+          <th style="width:7%">Service</th>
+          <th style="width:30%">Where</th>
+          <th style="width:13%">Pickup</th>
+          <th style="width:15%">Status</th>
+          <th style="width:13%">Verification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Row 1: FM urgent, no driver — ENRICHED sub-line -->
+        <tr>
+          <td><span class="trip-id">DO-001</span></td>
+          <td><span class="customer">TikTok</span></td>
+          <td><span class="svc-tag">FM</span></td>
+          <td>
+            <div class="where-route">Shenzhen Baoan Airport → Hong Kong CFS</div>
+            <!-- OPTION C: enriched amber sub-line -->
+            <div class="where-sub-urgent">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:8px;height:8px;flex-shrink:0"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span class="urgent-text">No driver</span>
+              <span style="color:#d97706;font-size:9px;">—</span>
+              <span class="urgent-time">in 1h 45m</span>
+            </div>
+          </td>
+          <td><div class="pickup-date">22 May</div><div class="pickup-time">09:15</div></td>
+          <td><div class="status-cell"><span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;"><span class="dot dot-pending"></span> Pending</span><span class="ts">2h ago</span></div></td>
+          <td><div class="status-cell"><span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;"><span class="dot dot-pending"></span> Pending</span></div></td>
+        </tr>
+        <!-- Row 2: FM with driver assigned — standard gray sub-line -->
+        <tr>
+          <td><span class="trip-id">DO-003</span></td>
+          <td><span class="customer">Shopee</span></td>
+          <td><span class="svc-tag">FM</span></td>
+          <td>
+            <div class="where-route">Guangzhou Nansha Port → Yantian Terminal</div>
+            <div class="where-sub">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:8px;height:8px;flex-shrink:0"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span class="where-sub-driver">Zhang Wei · 粤B·12345</span>
+            </div>
+          </td>
+          <td><div class="pickup-date">22 May</div><div class="pickup-time">10:00</div></td>
+          <td><div class="status-cell"><span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;"><span class="dot dot-pending"></span> Pending</span><span class="ts">3h ago</span></div></td>
+          <td><div class="status-cell"><span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;"><span class="dot dot-pending"></span> Pending</span></div></td>
+        </tr>
+        <!-- Row 3: CS job, MAWB sub-line — unaffected -->
+        <tr>
+          <td><span class="trip-id">DO-002</span></td>
+          <td><span class="customer">TikTok</span></td>
+          <td><span class="svc-tag">CS</span></td>
+          <td>
+            <div class="where-route">HKIA Terminal 1</div>
+            <div class="where-sub"><span class="where-sub-mawb">MAWB 180-12345001</span></div>
+          </td>
+          <td><div class="pickup-date">22 May</div><div class="pickup-time">14:00</div></td>
+          <td><div class="status-cell"><span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;"><span class="dot dot-pending"></span> Pending</span><span class="ts">1d ago</span></div></td>
+          <td><div class="status-cell"><span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;"><span class="dot dot-pending"></span> Pending</span></div></td>
+        </tr>
+        <!-- Row 4: FM, no driver, pickup 11:30 (within 4h threshold) -->
+        <tr>
+          <td><span class="trip-id">DO-004</span></td>
+          <td><span class="customer">Shein</span></td>
+          <td><span class="svc-tag">FM</span></td>
+          <td>
+            <div class="where-route">Dongguan Humen → Shenzhen Yantian Port</div>
+            <div class="where-sub-urgent">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:8px;height:8px;flex-shrink:0"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span class="urgent-text">No driver</span>
+              <span style="color:#d97706;font-size:9px;">—</span>
+              <span class="urgent-time">in 4h 00m</span>
+            </div>
+          </td>
+          <td><div class="pickup-date">22 May</div><div class="pickup-time">11:30</div></td>
+          <td><div class="status-cell"><span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;"><span class="dot dot-pending"></span> Pending</span><span class="ts">4h ago</span></div></td>
+          <td><div class="status-cell"><span class="dot-label" style="font-size:11px;color:#6b7280;font-weight:400;"><span class="dot dot-pending"></span> Pending</span></div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="padding:4px 16px 12px;font-size:10px;color:#9ca3af;">
+    ↑ Option C: the Where sub-line for unassigned FM jobs within 4h changes from ghost-gray "No driver assigned" to amber "No driver — in Xh Ym". Non-FM rows are unaffected. Driver-assigned FM rows remain gray.
+  </div>
+</div>
+
+
+<!-- ================================================================ -->
+<div class="verdict">
+  <h3>Recommendation: Option C with a 2h threshold — enriched Where sub-line</h3>
+  <p>Option C is the lowest-friction approach that respects the design system's core principle: <em>all information lives in the table, not above it</em>. The "No driver assigned" sub-line is already present and already in the right semantic location (the Where cell owns both route and driver state). Upgrading it from ghost-gray to amber mono + countdown makes the existing information actionable without adding new UI regions.</p>
+  <p><strong>Why not A?</strong> Adding a third line to the Pickup cell is the wrong column semantically — the pickup time is already shown. The driver is the gap, not the time. Urgency belongs with the assignment, not the schedule.</p>
+  <p><strong>Why not B?</strong> The dispatch strip introduces a new layout region that appears and disappears conditionally — unpredictable for an operator who has already internalized the page layout. It also requires dismiss-state storage. Option C is always visible and always consistent.</p>
+  <p><strong>Threshold: 4h is too broad.** Use 2h.** At 4h, there's plenty of time to assign and the amber noise is unnecessary. At 2h, dispatching becomes genuinely urgent for most FM routes in South China / HK. The current 4h mockup uses a wider threshold for illustrative purposes only.</p>
+  <p><strong>Implementation note:</strong> Sub-line renders as amber text only when <code>job.service.code === 'FM' &amp;&amp; job.status === 'Pending' &amp;&amp; !job.driverAssignment &amp;&amp; timeToPickup &lt; 2h</code>. All other states (no driver but ≥2h, has driver, non-FM) keep the existing pattern unchanged. The countdown can re-render on a 60s interval — one effect per page mount.</p>
+  <p><strong>Open question:</strong> Should the urgency sub-line also appear on the job detail page (within the Dispatch Assignment section), or only in the list? The list is the triage surface; the detail page already shows the pickup time prominently. Lean toward list-only to avoid redundancy.</p>
+</div>
+
+</div><!-- .page -->
+</body>
+</html>

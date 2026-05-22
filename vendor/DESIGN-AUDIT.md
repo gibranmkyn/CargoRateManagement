@@ -1,7 +1,7 @@
 # Design Audit — Teleport OS Vendor
 
 > Audited against `vendor/DESIGN.md` + `admin/DESIGN.md`.
-> Date: 2026-05-15 (updated)
+> Date: 2026-05-22 (updated)
 
 ## Findings
 
@@ -107,6 +107,27 @@ const canUpload = job.status === 'Pending' || job.status === 'In Progress';
 **Current:** Service column shows both `job.service.code` (bold mono gray) and `job.service.label` (lighter mono gray) side by side, e.g., "FM FM Trucking".  
 **Spec** (`vendor/DESIGN.md` → Job List): "Service tag: mono gray (`#6b7280`, 10px JetBrains Mono) — no pill, no blue". Implies code only.  
 **Fix:** Remove the `{job.service.label && ...}` span. The code alone (FM / EC / CS / CR / OH) is sufficient; the label is visible in the job detail header and adds visual noise in the compact table.
+
+---
+
+### [LOW] JobDetailPage.tsx — Section sub-labels use 8px font (below 9px minimum)
+
+**File:** `vendor/src/pages/JobDetailPage.tsx` lines 175, 179, 339, 351  
+**Current:** Inline section labels ("Bags", "Weight", "Pickup", "Delivery") use `fontSize: 8`.
+```tsx
+<div style={{ fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' }}>Bags</div>
+```
+**Spec** (`admin/DESIGN.md` → Typography): "Table headers / labels: 9-10px / 600 / uppercase + 0.05-0.06em tracking". The 9px minimum applies to all uppercase labels, including inline section sub-labels.  
+**Fix:** Change `fontSize: 8` → `fontSize: 9` on the Cargo subsection labels (Bags, Weight) and the Route subsection labels (Pickup, Delivery). The existing `sectionTitle` style at 9px is already correct and should be used as the reference.
+
+---
+
+### [LOW] FleetPage.tsx — "+ Add" button font size below spec
+
+**File:** `vendor/src/pages/FleetPage.tsx` line 388  
+**Current:** The page-header "+ Add Driver / + Add Vehicle" button uses `fontSize: 9`.  
+**Spec** (`admin/DESIGN.md` → Page Header): "Buttons: 5px 12px padding, 6px radius, 11px/600 font". Page-header buttons should be 11px/600.  
+**Fix:** Change `fontSize: 9` → `fontSize: 11` on the Add button. The uppercase + letter-spacing styling can be retained or dropped — 11px without uppercase is the simpler, more consistent approach.
 
 ---
 

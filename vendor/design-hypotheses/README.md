@@ -2,6 +2,12 @@
 
 ## Open
 
+### HMW-V11: How might we help vendor dispatchers identify FM jobs that need a driver before pickup time passes?
+**Options:** A) Urgency dot + countdown in Pickup column, B) Dispatch alert strip above the table (amber, dismissible), C) Enriched "No driver — in Xh Ym" amber sub-line in the Where column
+**Leaning toward:** C) Enriched Where sub-line — zero structural change, urgency lives with the assignment state (semantically correct), no new layout regions, clears automatically when driver is assigned. Threshold: 2h (not 4h used in mockup). Option B introduces a conditional layout region that's harder to learn. Option A puts urgency in the wrong column.
+**Open question:** Should the amber countdown also appear on the Job Detail page within the Dispatch Assignment section, or only in the list? List-only is cleaner (detail page already shows pickup time prominently), but consistency across contexts is a valid counter-argument.
+**File:** `11-hmw-dispatch-urgency.html`
+
 ### HMW-V10: How might we surface driver-reported milestones in the vendor and admin job views?
 **Options:** A) Named actor in activity log only ("Driver Zhang Wei"), B) FM milestone progress strip on job detail (3-step horizontal strip for full-page, vertical compact list for admin slide-out), C) Current milestone as sub-line in My Jobs "Where" column
 **Leaning toward:** B) Milestone strip + named actor in log — the strip gives dispatchers glanceable execution state without scrolling to the log. Option A alone buries progress in a long log; Option C overloads the already-dense "Where" sub-line. Admin slide-out renders the strip as a vertical 3-row list to fit 380px width.
