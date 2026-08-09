@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Truck, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { TRUCK_TYPES } from '../../../shared/mockData';
 import type { Driver, Vehicle, TruckType } from '../../../shared/mockData';
 import { useVendorAuth } from '../context/VendorAuthContext';
@@ -383,10 +383,8 @@ export default function FleetPage() {
             gap: 4,
             padding: '5px 12px',
             borderRadius: 6,
-            fontSize: 9,
+            fontSize: 11,
             fontWeight: 600,
-            textTransform: 'uppercase',
-            letterSpacing: '0.04em',
             background: '#fff',
             color: '#152CFF',
             border: '1px solid rgba(21,44,255,0.3)',
@@ -427,7 +425,7 @@ export default function FleetPage() {
             <tbody>
               {/* Add row */}
               {showAddDriver && (
-                <tr style={{ background: '#fafbff' }}>
+                <tr style={{ background: '#f9fafb' }}>
                   <td style={td}>
                     <input
                       style={inputStyle}
@@ -487,7 +485,7 @@ export default function FleetPage() {
 
                 if (isEditing) {
                   return (
-                    <tr key={d.id} style={{ background: '#fafbff' }}>
+                    <tr key={d.id} style={{ background: '#f9fafb' }}>
                       <td style={td}>
                         <input
                           style={inputStyle}
@@ -603,12 +601,8 @@ export default function FleetPage() {
                 );
               }) : (
                 <tr>
-                  <td colSpan={6} style={{ padding: '60px 12px', textAlign: 'center' }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 6, background: 'rgba(21,44,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                      <Truck size={18} style={{ color: '#152CFF' }} />
-                    </div>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: '#111827', margin: 0 }}>No drivers yet</p>
-                    <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>Click "+ Add Driver" to get started</p>
+                  <td colSpan={6} style={{ padding: '40px 12px', textAlign: 'center', color: '#9ca3af', fontSize: 12 }}>
+                    No drivers yet &middot; click &ldquo;+ Add Driver&rdquo; to get started
                   </td>
                 </tr>
               )}
@@ -633,7 +627,7 @@ export default function FleetPage() {
             <tbody>
               {/* Add row */}
               {showAddVehicle && (
-                <tr style={{ background: '#fafbff' }}>
+                <tr style={{ background: '#f9fafb' }}>
                   <td style={td}>
                     <input
                       style={{ ...inputStyle, fontFamily: 'var(--font-mono)' }}
@@ -685,7 +679,7 @@ export default function FleetPage() {
 
                 if (isEditing) {
                   return (
-                    <tr key={v.id} style={{ background: '#fafbff' }}>
+                    <tr key={v.id} style={{ background: '#f9fafb' }}>
                       <td style={td}>
                         <input
                           style={{ ...inputStyle, fontFamily: 'var(--font-mono)' }}
@@ -788,12 +782,8 @@ export default function FleetPage() {
                 );
               }) : (
                 <tr>
-                  <td colSpan={5} style={{ padding: '60px 12px', textAlign: 'center' }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 6, background: 'rgba(21,44,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                      <Truck size={18} style={{ color: '#152CFF' }} />
-                    </div>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: '#111827', margin: 0 }}>No vehicles yet</p>
-                    <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>Click "+ Add Vehicle" to get started</p>
+                  <td colSpan={5} style={{ padding: '40px 12px', textAlign: 'center', color: '#9ca3af', fontSize: 12 }}>
+                    No vehicles yet &middot; click &ldquo;+ Add Vehicle&rdquo; to get started
                   </td>
                 </tr>
               )}

@@ -315,11 +315,6 @@ export default function MyJobsPage() {
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 600, color: '#6b7280', letterSpacing: '0.02em' }}>
             {job.service.code}
           </span>
-          {job.service.label && (
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#9ca3af', marginLeft: 4 }}>
-              {job.service.label}
-            </span>
-          )}
         </td>
 
         {/* Where */}

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Upload, FileText, Image, Clock, Truck, User, Phone, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Upload, FileText, Image, Clock, User, Phone, AlertTriangle, ExternalLink } from 'lucide-react';
 import { useTrips } from '../../../shared/TripContext';
 import { useToast } from '../../../shared/Toast';
 import { seedDrivers, seedVehicles } from '../../../shared/mockData';
@@ -97,7 +97,7 @@ export default function JobDetailPage() {
   const isOH = job.service.code === 'OH';
   const proofs = job.proofDocuments ?? [];
   const log = job.activityLog ?? [];
-  const canUpload = job.status === 'Pending' || job.status === 'In Progress' || job.status === 'Completed';
+  const canUpload = job.status === 'Pending' || job.status === 'In Progress';
   const canAssign = job.status === 'Pending' || job.status === 'In Progress';
   const isVerified = job.verificationStatus === 'Verified';
 
@@ -172,11 +172,11 @@ export default function JobDetailPage() {
       <div style={sectionTitle}>Cargo</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
         <div>
-          <div style={{ fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Bags</div>
+          <div style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Bags</div>
           <div style={{ ...mono, fontSize: 11, fontWeight: 600, color: '#111827' }}>{trip.bags.toLocaleString()}</div>
         </div>
         <div>
-          <div style={{ fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Weight</div>
+          <div style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Weight</div>
           <div style={{ ...mono, fontSize: 11, fontWeight: 600, color: '#111827' }}>{trip.weight.toLocaleString()} kg</div>
         </div>
       </div>
@@ -264,9 +264,8 @@ export default function JobDetailPage() {
   // ===== FM-only sections =====
 
   const renderDriverVehicle = () => (
-    <div style={sectionWrap}>
+    <div style={{ padding: '14px 16px', borderTop: '1px solid #f3f4f6', background: 'rgba(21,44,255,0.02)', border: '1px solid rgba(21,44,255,0.1)', borderRadius: 6, margin: '0 0 4px 0' }}>
       <div style={sectionTitle}>
-        <Truck size={10} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />
         Driver &amp; Vehicle
       </div>
       {job.driverAssignment ? (
@@ -336,7 +335,7 @@ export default function JobDetailPage() {
       <div style={sectionTitle}>Route</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 3 }}>Pickup</div>
+          <div style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 3 }}>Pickup</div>
           <div style={{ fontSize: 11, fontWeight: 600, color: '#111827' }}>{job.origin.location}</div>
           {(job.origin.date || trip.pickupDate) && (
             <div style={{ ...mono, fontSize: 9, color: '#374151', marginTop: 2 }}>
@@ -346,7 +345,7 @@ export default function JobDetailPage() {
         </div>
         <span style={{ fontSize: 16, color: '#d1d5db', flexShrink: 0 }}>&rarr;</span>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 3 }}>Delivery</div>
+          <div style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 3 }}>Delivery</div>
           <div style={{ fontSize: 11, fontWeight: 600, color: '#111827' }}>{job.destination.location}</div>
           {(job.destination.date || trip.deliveryDate) && (
             <div style={{ ...mono, fontSize: 9, color: '#374151', marginTop: 2 }}>
@@ -377,15 +376,15 @@ export default function JobDetailPage() {
         <div style={sectionTitle}>Hub Ops Progress</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <div>
-            <div style={{ fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Inbound</div>
+            <div style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Inbound</div>
             <div style={{ ...mono, fontSize: 11, fontWeight: 600, color: '#9ca3af' }}>0/24</div>
           </div>
           <div>
-            <div style={{ fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Processed</div>
+            <div style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Processed</div>
             <div style={{ ...mono, fontSize: 11, fontWeight: 600, color: '#9ca3af' }}>0/24</div>
           </div>
           <div>
-            <div style={{ fontSize: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Outbound</div>
+            <div style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 2 }}>Outbound</div>
             <div style={{ ...mono, fontSize: 11, fontWeight: 600, color: '#9ca3af' }}>0/24</div>
           </div>
         </div>
@@ -421,35 +420,52 @@ export default function JobDetailPage() {
       {/* Hidden file input — multi-file */}
       <input ref={fileRef} type="file" accept="image/*,.pdf" multiple style={{ display: 'none' }} onChange={handleUpload} />
 
-      {/* ===== ACTION ROW — state left, primary action right, no tint ===== */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: 4, marginBottom: 4 }}>
-        <StateCell job={job} fontSize={12} withSubline />
-
-        <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
-          {job.status === 'Pending' && (
-            <button style={btnPrimary} onClick={handleStartJob}>Start Job &rarr;</button>
-          )}
-          {job.status === 'In Progress' && (
-            <button style={btnPrimary} onClick={() => fileRef.current?.click()}>
-              <Upload size={11} /> Upload Proof
-            </button>
-          )}
-          {job.status === 'Completed' && job.verificationStatus === 'Pending' && (
-            <span style={{ fontSize: 11, color: '#9ca3af' }}>Awaiting admin verification</span>
-          )}
-          {job.verificationStatus === 'Verified' && (
-            <span style={{ fontSize: 11, color: '#9ca3af' }}>Verified &middot; locked</span>
-          )}
-          {job.verificationStatus === 'Rejected' && (
-            <button style={btnPrimary} onClick={() => fileRef.current?.click()}>
-              <Upload size={11} /> Re-upload Proof
-            </button>
-          )}
-          {job.status === 'Cancelled' && (
-            <span style={{ fontSize: 11, color: '#9ca3af' }}>Cancelled</span>
-          )}
-        </div>
-      </div>
+      {/* ===== STATUS ACTION BAR — tinted per status ===== */}
+      {(() => {
+        let barBg = '#f9fafb';
+        let barBorder = '#e5e7eb';
+        let hintText = 'Start this job when you begin work';
+        if (job.status === 'Cancelled') {
+          barBg = '#fef2f2'; barBorder = '#fecaca'; hintText = '';
+        } else if (job.verificationStatus === 'Verified') {
+          barBg = '#f0fdf4'; barBorder = '#a7f3d0'; hintText = 'Verified by Teleport — ready for billing';
+        } else if (job.verificationStatus === 'Rejected') {
+          barBg = '#fef2f2'; barBorder = '#fecaca'; hintText = 'Proof rejected — please re-upload';
+        } else if (job.status === 'Completed') {
+          barBg = '#fefce8'; barBorder = '#fde68a'; hintText = 'Waiting for Teleport verification';
+        } else if (job.status === 'In Progress') {
+          barBg = 'rgba(21,44,255,0.04)'; barBorder = 'rgba(21,44,255,0.12)'; hintText = 'Upload proof of service to mark complete';
+        }
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', border: `1px solid ${barBorder}`, borderRadius: 4, marginBottom: 4, background: barBg }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <StateCell job={job} fontSize={12} withSubline={false} />
+              {hintText && <span style={{ fontSize: 10, color: '#6b7280' }}>{hintText}</span>}
+            </div>
+            <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
+              {job.status === 'Pending' && (
+                <button style={btnPrimary} onClick={handleStartJob}>Start Job &rarr;</button>
+              )}
+              {job.status === 'In Progress' && (
+                <button style={btnPrimary} onClick={() => fileRef.current?.click()}>
+                  <Upload size={11} /> Upload Proof
+                </button>
+              )}
+              {job.status === 'Completed' && job.verificationStatus === 'Pending' && (
+                <span style={{ ...mono, fontSize: 10, color: '#9ca3af' }}>{job.statusChangedAt ? fmtDateTime(job.statusChangedAt) : ''}</span>
+              )}
+              {job.verificationStatus === 'Verified' && (
+                <span style={{ ...mono, fontSize: 10, color: '#059669' }}>{job.verificationChangedAt ? fmtDateTime(job.verificationChangedAt) : ''}</span>
+              )}
+              {job.verificationStatus === 'Rejected' && (
+                <button style={btnPrimary} onClick={() => fileRef.current?.click()}>
+                  <Upload size={11} /> Re-upload Proof
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Rejection reason — inline amber/red text, no tinted box */}
       {job.verificationStatus === 'Rejected' && job.rejectionReason && (
