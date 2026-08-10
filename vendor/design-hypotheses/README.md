@@ -2,6 +2,12 @@
 
 ## Open
 
+### HMW-V12: How might we show the trip's bag package list on the vendor job detail page for cargo verification at pickup?
+**Options:** A) Inline scrollable table below Cargo section (max-height: 200px, always visible), B) Collapsible accordion with count summary in the header (collapsed by default), C) Summary row + searchable bottom sheet triggered on tap
+**Leaning toward:** A) Inline scrollable table — the bag list is a verification instrument (driver physically cross-references bags against the screen while loading); hiding it behind an accordion or modal adds friction to the most critical moment. The fixed max-height keeps page length predictable. Aggregate (24 bags · 1,247 kg) in the Cargo section above is preserved; the table is the detailed breakdown.
+**Open question:** For the WeChat Mini Program (HMW-V09), should drivers see the same bag list for scan-as-you-load verification? This would close the verification loop: Teleport system → dispatcher briefs driver → driver scans at pickup. If yes, the data model already supports it (BagPackage.assignedTripId links bags to trips). Option C's search field becomes compelling primarily for WeChat, where 200+ bags require lookup by number.
+**File:** `12-hmw-bag-package-list.html`
+
 ### HMW-V11: How might we help vendor dispatchers identify FM jobs that need a driver before pickup time passes?
 **Options:** A) Urgency dot + countdown in Pickup column, B) Dispatch alert strip above the table (amber, dismissible), C) Enriched "No driver — in Xh Ym" amber sub-line in the Where column
 **Leaning toward:** C) Enriched Where sub-line — zero structural change, urgency lives with the assignment state (semantically correct), no new layout regions, clears automatically when driver is assigned. Threshold: 2h (not 4h used in mockup). Option B introduces a conditional layout region that's harder to learn. Option A puts urgency in the wrong column.

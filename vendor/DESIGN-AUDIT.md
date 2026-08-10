@@ -1,102 +1,75 @@
 # Design Audit — Teleport OS Vendor
+> Audited: 2026-08-10 · Against: admin/DESIGN.md + vendor/DESIGN.md
 
-> Audited against `vendor/DESIGN.md` + `admin/DESIGN.md`.
-> First audit: 2026-05-22 | Fixed: 2026-08-09
-
----
-
-## ✅ FIXED — [HIGH] JobDetailPage.tsx — Status Action Bar missing per-state tinted backgrounds
-
-**File:** `vendor/src/pages/JobDetailPage.tsx` line 425 (original)
-**Spec** (`vendor/DESIGN.md` → Status Action Bar table):
-
-| Status | Bar Background | Border |
-|--------|----------------|--------|
-| Pending | `#f9fafb` | `#e5e7eb` |
-| In Progress | `rgba(21,44,255,0.04)` | `rgba(21,44,255,0.12)` |
-| Completed | `#fefce8` | `#fde68a` |
-| Verified | `#f0fdf4` | `#a7f3d0` |
-| Cancelled | `#fef2f2` | `#fecaca` |
-
-**Violation:** The action row used a flat `border: 1px solid #e5e7eb` with no background tint and no hint text. Every status state looked identical except for the button.
-
-**Fix (2026-08-09):** Status Action Bar now derives background + border from `job.status` / `job.verificationStatus`. Verified takes precedence over status (e.g., Completed + Verified → green). Contextual hint text added between status chip and action button ("Start this job when you begin work", "Upload proof of service to mark complete", etc.). Completion timestamp and verification timestamp displayed on the right side.
+## Summary
+The vendor app is largely compliant with the design system. Service tags use mono gray (no pill, no blue), status cells use the dot+label+timestamp pattern, no shadow violations found, border radii are within spec, and accent blue is restricted to interactive elements. Two issues found.
 
 ---
 
-## ✅ FIXED — [HIGH] FleetPage.tsx — Non-standard blue-tinted surface `#fafbff`
+## Issues
 
-**File:** `vendor/src/pages/FleetPage.tsx` lines 430, 490, 636, 688
-**Approved surfaces:** `#ffffff` (cards/table), `#f9fafb` (raised/headers/expanded), `#f3f4f6` (page). No blue-tinted surface.
-**Violation:** Add/edit-form table rows used `background: '#fafbff'`.
-**Fix (2026-08-09):** Replaced all 4 occurrences with `#f9fafb`.
+### AUDIT-V01 — FM Route section: datetime displayed at wrong size, time field missing
 
----
+**File:** `vendor/src/pages/JobDetailPage.tsx` · function `renderRoute()` (line ~333)
 
-## ✅ FIXED — [MEDIUM] FleetPage.tsx — Blue icon container on empty states
+**Violation:** The `admin/DESIGN.md` spec for the FM Trucking detail page says: _"Pickup/Delivery Timeline — two-point layout: Origin (location + pickup datetime in big mono) → arrow → Destination (location + delivery datetime). Times are the most important data for FM."_ `vendor/DESIGN.md` confirms: _"Times are the most important data for FM dispatchers."_
 
-**File:** `vendor/src/pages/FleetPage.tsx` lines 607, 792
-**Rule** (`admin/DESIGN.md`): `#152CFF` is **interactive only**. Vendor DESIGN.md: "Empty state: plain muted text + `clear filters` link — no decorative icon, no tinted box."
-**Violation:** Empty states used a `40×40 rgba(21,44,255,0.08)` box with a `Truck` icon in `#152CFF`, plus a 13px/700 title — decorative chrome.
-**Fix (2026-08-09):** Replaced with a single muted text line at 12px. Truck import removed.
+The current implementation shows only the **date** at `fontSize: 9, color: '#374151'`:
+```tsx
+// renderRoute() — current
+<div style={{ ...mono, fontSize: 9, color: '#374151', marginTop: 2 }}>
+  {job.origin.date ? fmtDateMono(job.origin.date) : trip.pickupDate}
+</div>
+```
+`fmtDateMono` uses `toLocaleDateString(..., { day: '2-digit', month: 'short' })` — it discards the time component. For a pickup at `2026-08-10 09:00`, only `10 Aug` is shown, not `09:00`.
 
----
+**Expected:** Time should be shown in JetBrains Mono at a readable size (minimum 11px) alongside the date. The design spec says "big mono" — this implies the times should be visually prominent, not 9px faint.
 
-## ✅ FIXED — [LOW] JobDetailPage.tsx — Lucide Truck icon embedded in section title
+**Fix:** Use `fmtDateTime` (already imported from `statusStyles`) and split into date + time lines, or create a small helper that formats `"2026-08-10 09:00"` as two lines: `10 Aug` (10px) and `09:00` (13px/600 mono). Use `color: '#111827'` for the time, not `'#374151'`.
 
-**File:** `vendor/src/pages/JobDetailPage.tsx` line 269 (original)
-**Rule:** Section titles are `9px/700 uppercase` plain text — no icon components.
-**Fix (2026-08-09):** Removed `<Truck />` from section title. Label "DRIVER & VEHICLE" at 9px uppercase is unambiguous without it. Also: Dispatch Assignment section now gets the distinct blue-tint container per spec (`background: rgba(21,44,255,0.02)`, `border: 1px solid rgba(21,44,255,0.1)`, `borderRadius: 6`).
-
----
-
-## ✅ FIXED — [LOW] JobDetailPage.tsx — Proof upload `+ Add` button visible in Completed state
-
-**File:** `vendor/src/pages/JobDetailPage.tsx` line 100
-**Spec** (`vendor/DESIGN.md` → Proof of Service): "Upload available in Pending and In Progress only."
-**Fix (2026-08-09):** `canUpload = status === 'Pending' || status === 'In Progress'`. Re-upload for Rejected verification is handled separately in the action bar.
+**Severity:** Medium — dispatchers cannot see pickup time at a glance. They must navigate to the My Jobs table pickup column to find it.
 
 ---
 
-## ✅ FIXED — [LOW] MyJobsPage.tsx — Service label shown alongside service code
+### AUDIT-V02 — Hub Ops Progress section: hardcoded placeholder data with no backing model
 
-**File:** `vendor/src/pages/MyJobsPage.tsx` lines 319–323
-**Violation:** Service column showed both `job.service.code` (FM) and `job.service.label` (FM Trucking) side by side.
-**Fix (2026-08-09):** Removed the `{job.service.label && ...}` span. Code alone (FM / EC / CS / CR / OH) is sufficient in the compact table; full label is visible in the job detail header.
+**File:** `vendor/src/pages/JobDetailPage.tsx` · function `renderHubOpsProgress()` (line ~372)
 
----
+**Violation:** The section renders hardcoded `0/24` for Inbound, Processed, and Outbound counters:
+```tsx
+<div style={{ ...mono, fontSize: 11, fontWeight: 600, color: '#9ca3af' }}>0/24</div>
+```
+These values are not derived from any field on the `Trip` or `Job` types. The `Job` type has no `hubOpsInbound`, `hubOpsProcessed`, or `hubOpsOutbound` fields. The `24` is hardcoded — it happens to match `trip.bags` in seed data but would be wrong if this section renders for an OH job on a different trip.
 
-## ✅ FIXED — [LOW] JobDetailPage.tsx — Section sub-labels use 8px font (below 9px minimum)
+**Context:** `vendor/DESIGN.md` (HMW-V08 decision) specified _"OH gets one extra section [Hub Ops Progress: Inbound/Processed/Outbound counters]"_, but the data model to back these counters was never designed. The section is stubbed with placeholder output.
 
-**File:** `vendor/src/pages/JobDetailPage.tsx` lines 175, 179, 339, 351
-**Rule** (`admin/DESIGN.md` → Typography): "Table headers / labels: 9-10px / 600 / uppercase + 0.05-0.06em tracking."
-**Fix (2026-08-09):** Changed all `fontSize: 8` → `fontSize: 9` on Cargo sub-labels (Bags, Weight) and Route sub-labels (Pickup, Delivery).
+**Impact:** Any vendor logging into an OH job sees `0/24` for all counters — this looks like a real (broken) feature rather than an unimplemented placeholder. It could confuse OH vendors into thinking no cargo has been processed even if it has.
 
----
+**Fix options:**
+1. **Remove** the Hub Ops Progress section entirely until a data model is designed (cleanest for v1 — the DESIGN.md already notes this is stub territory)
+2. **Add** `hubOpsInbound`, `hubOpsProcessed`, `hubOpsOutbound` as optional fields on `Job`, derive the denominator from `trip.bags`, and render `—/—` instead of `0/24` when unset
+3. **Replace** with a simple note: _"Hub ops tracked via WeChat — status appears in the activity log"_
 
-## ✅ FIXED — [LOW] FleetPage.tsx — "+ Add" button font size below spec
-
-**File:** `vendor/src/pages/FleetPage.tsx` line 388
-**Rule** (`admin/DESIGN.md` → Page Header): "Buttons: 5px 12px padding, 6px radius, 11px/600 font."
-**Fix (2026-08-09):** `fontSize: 9` → `fontSize: 11`. Removed `textTransform: 'uppercase'` and `letterSpacing: '0.04em'` as redundant for a page-header button.
-
----
-
-## Non-Issues (confirmed correct)
-
-- **No shadow usage** — all three pages use borders only. ✓
-- **Segment pill border-radius: 4px** — correct per spec. ✓
-- **Service filter pills: 99px border-radius** — correct (the only full-round exception). ✓
-- **Status/Verification cells** — `StatusCell` + `VerificationCell` correctly implement dot + label + timestamp + optional reason subline. ✓
-- **No row tinting** — no background colors on table rows for status states. ✓
-- **Export button border-radius: 6px** — correct for buttons. ✓
-- **Fleet table border-radius: 6px** — correct for table containers. ✓
-- **Segment pill active states** — To verify/Verified/Cancelled use state-colored borders/backgrounds; All/Pending/In Progress use dark fill. ✓
-- **Old mockup CSS (`.svc` blue pill)** — Historical artefact in `01-hmw-responsive-job-table.html`. Live code renders service tags correctly as mono gray `#6b7280`. No action needed.
+**Severity:** Medium — renders misleading data to OH vendors.
 
 ---
 
-## Open — Minor: withSubline prop removed from StatusAction Bar StateCell
+## Non-Issues (verified clean)
 
-**File:** `vendor/src/pages/JobDetailPage.tsx`
-**Context:** The `StateCell` in the status action bar was changed from `withSubline={true}` to `withSubline={false}` because the bar now shows its own contextual hint text. The cancel/rejection/completion reason sublines are shown as separate inline text below the bar (existing code). This is intentional — the design guard says "do not reintroduce: Inline reason text for cancelled/rejected (no tinted reason boxes)". These sublines remain inline; only the hint text is now in the bar itself.
+| Check | Status | Notes |
+|-------|--------|-------|
+| Service code tags in My Jobs table | ✅ | Mono gray `#6b7280`, 10px, no pill chrome, no blue |
+| Trip ID in My Jobs table | ✅ | Ink mono `#111827`, 10px, no chip, no blue |
+| Status/Verification cells | ✅ | `StatusCell` + `VerificationCell` — dot + label + timestamp subline |
+| Accent blue restricted to interactive elements | ✅ | Buttons, links, active nav, selected service pills, active pagination page |
+| Segment pill border-radius | ✅ | `borderRadius: 4` (segments), `borderRadius: 99` (service codes = full round pills) |
+| Table container radius | ✅ | `borderRadius: 6` on table containers |
+| No shadows on nav, filter bar, or table | ✅ | Borders only throughout |
+| Dispatch Assignment section styling | ✅ | `rgba(21,44,255,0.02)` bg, `rgba(21,44,255,0.1)` border, `borderRadius: 6` — matches spec |
+| Fleet page driver/vehicle status | ✅ | Flat dot+text, green `#059669` for active, ghost `#d1d5db` for inactive — no filled badge |
+| Fleet page truck type display | ✅ | Mono gray `#6b7280` — no blue pill |
+| Fleet page "+ Add" button | ✅ | `color: #152CFF` border + text — interactive element, correct |
+| No row tints for cancelled/rejected rows | ✅ | Status cell carries the signal; row background unchanged |
+| Cancel/rejection reason display | ✅ | Inline text beneath status bar, no tinted box |
+| Empty state design | ✅ | Muted text + "clear filters" link — no decorative icon, no tinted box |
+| Pagination active page | ✅ | `rgba(21,44,255,0.06)` bg + `#152CFF` border/text — interactive element, correct |

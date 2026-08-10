@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-V12: Bag Package List on Vendor Job Detail</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+
+.page { max-width: 1200px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 16px; font-weight: 700; letter-spacing: -0.2px; margin: 40px 0 6px; color: #152CFF; }
+.hmw { font-size: 14px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 20px; font-size: 11px; color: #92400e; line-height: 1.7; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 12px; font-size: 11px; color: #374151; line-height: 1.7; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.label-a { background: rgba(21,44,255,0.08); color: #152CFF; border: 1px solid rgba(21,44,255,0.18); }
+.label-b { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
+.label-c { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 9px 11px; border-radius: 6px; font-size: 11px; line-height: 1.7; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 40px; }
+.verdict h3 { color: #059669; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.verdict p { font-size: 11px; color: #374151; line-height: 1.7; margin-bottom: 6px; }
+.verdict p:last-child { margin-bottom: 0; }
+
+.screen { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 12px 0 24px; }
+.screen-label { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9ca3af; padding: 8px 12px 4px; }
+
+/* ── Nav ─────────────────────────── */
+.mock-nav { height: 40px; padding: 0 16px; background: #111827; display: flex; align-items: center; gap: 8px; }
+.mock-nav .logo { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; flex-shrink: 0; }
+.mock-nav .logo-text { font-weight: 700; font-size: 13px; color: #fff; }
+.mock-nav .logo-sub { font-size: 10px; color: rgba(255,255,255,0.35); }
+.mock-nav .nav-link { font-size: 12px; padding: 4px 10px; border-radius: 4px; color: rgba(255,255,255,0.5); }
+.mock-nav .nav-active { font-size: 12px; padding: 4px 10px; border-radius: 4px; color: #fff; background: rgba(255,255,255,0.1); font-weight: 600; }
+.mock-nav .vendor { margin-left: auto; font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 600; }
+.mock-nav .avatar { width: 22px; height: 22px; border-radius: 4px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; font-size: 9px; color: rgba(255,255,255,0.7); font-weight: 700; }
+
+/* ── Page header (job detail) ─────── */
+.mock-page-hd { padding: 12px 16px; border-bottom: 1px solid #e5e7eb; background: #fff; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+.back-link { font-size: 12px; font-weight: 500; color: #152CFF; }
+.job-badge { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 1px 6px; border-radius: 4px; background: #f3f4f6; border: 1px solid #e5e7eb; color: #9ca3af; }
+.job-title { font-size: 14px; font-weight: 700; color: #111827; }
+.job-svc { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #6b7280; }
+.meta-line { font-size: 11px; color: #9ca3af; display: flex; align-items: center; gap: 6px; }
+.meta-line .mawb { font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+
+/* ── Status bar ───────────────────── */
+.status-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border: 1px solid #fde68a; border-radius: 4px; margin: 0 16px 4px; background: #fefce8; }
+.status-dot { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: #374151; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: #a16207; flex-shrink: 0; }
+.status-hint { font-size: 10px; color: #6b7280; margin-top: 2px; }
+.status-ts { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9ca3af; }
+
+/* ── Section ──────────────────────── */
+.section { padding: 14px 16px; border-top: 1px solid #f3f4f6; }
+.section-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px; }
+.section-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+
+/* ── Dispatch section ─────────────── */
+.dispatch-section { padding: 12px 14px; border-radius: 6px; margin: 4px 16px; background: rgba(21,44,255,0.02); border: 1px solid rgba(21,44,255,0.1); }
+
+/* ── Bag package table ─────────────── */
+.bag-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.bag-table th { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; padding: 5px 8px; text-align: left; border-bottom: 1px solid #e5e7eb; white-space: nowrap; background: #f9fafb; }
+.bag-table td { padding: 6px 8px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: top; }
+.bag-table tr:last-child td { border-bottom: none; }
+.bag-num { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: #111827; }
+.bag-wt { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #374151; }
+.bag-loc { font-size: 10px; color: #374151; }
+.bag-loc-sub { font-size: 9px; color: #9ca3af; margin-top: 1px; }
+.scroll-hint { font-size: 9px; color: #9ca3af; text-align: right; padding: 4px 8px 0; }
+
+/* Accordion chevron (Option B) */
+.acc-hd { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 14px 16px; }
+.acc-summary { font-size: 11px; color: '#374151'; }
+.acc-chev { font-size: 10px; color: #9ca3af; }
+
+/* Modal overlay (Option C) */
+.modal-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.25); display: flex; align-items: flex-end; }
+.modal-sheet { background: #fff; border-radius: 6px 6px 0 0; width: 100%; max-height: 75%; overflow-y: auto; border-top: 2px solid #e5e7eb; }
+.modal-hd { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; background: #fff; }
+.modal-title { font-size: 12px; font-weight: 700; color: #111827; }
+.modal-close { font-size: 10px; color: #152CFF; cursor: pointer; }
+.modal-search { padding: 6px 14px; border-bottom: 1px solid #e5e7eb; }
+.modal-search input { width: 100%; font-size: 11px; padding: 4px 8px; border: 1px solid #e5e7eb; border-radius: 4px; font-family: 'JetBrains Mono', monospace; outline: none; background: #f9fafb; }
+
+/* ── Utility ──────────────────────── */
+.chip-completed { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; color: #374151; }
+.chip-completed .dot-amber { width: 6px; height: 6px; border-radius: 50%; background: #a16207; }
+.view-link { font-size: 10px; color: '#152CFF'; text-decoration: none; }
+.summary-row { display: flex; align-items: baseline; gap: 16px; font-size: 11px; color: '#374151'; }
+.sum-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: #111827; margin-right: 3px; }
+.sum-lbl { font-size: 10px; color: #9ca3af; }
+.pill-btn { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; color: #152CFF; font-weight: 600; border: 1px solid rgba(21,44,255,0.2); background: rgba(21,44,255,0.04); padding: 2px 8px; border-radius: 4px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>HMW-V12: Bag Package List on Vendor Job Detail</h1>
+  <p style="font-size:12px;color:#6b7280;margin-bottom:16px">Design hypothesis — Teleport OS Vendor · 2026-08-10</p>
+
+  <div class="hmw">"How might we show a trip's bag package list on the vendor job detail page so dispatchers and drivers can verify cargo at pickup against the system of record?"</div>
+
+  <div class="context">
+    <strong>Context:</strong> When an FM driver arrives at the pickup warehouse, they need to verify that the bags they're loading match what Teleport's system expects — correct bag numbers, count, weights, origins. Currently vendors reconcile this from WhatsApp messages or their own spreadsheets. VUS-013 calls for showing the bag list on the job detail page. The data model already has <code>BagPackage</code> (bagNumber, weightKg, origin, destination, pickupDate, mawb, assignedTripId). A single trip typically has 6–80 bags; large cross-border shipments can reach 200+.
+  </div>
+
+  <!-- ====================== OPTION A ====================== -->
+  <h2>Option A — Inline scrollable bag table (below Cargo)</h2>
+  <div class="rationale">
+    A dedicated "Bag Packages" section inserted between Cargo and Proof of Service. Renders as a compact table with a fixed max-height and overflow scroll. The section header shows the bag count so users can see total at a glance without expanding. The driver physically cross-references bag numbers on screen against physical stickers as they load.
+  </div>
+  <div class="label label-a">Option A</div>
+
+  <div class="screen">
+    <div class="screen-label">FM Trucking — Completed — Job Detail (HaleSun, DO-008, 24 bags)</div>
+    <div style="background:#fff;max-width:800px;">
+
+      <!-- Nav -->
+      <div class="mock-nav">
+        <div class="logo"></div>
+        <span class="logo-text">Teleport OS</span>
+        <span class="logo-sub">Vendor</span>
+        <span style="color:#e5e7eb;margin:0 4px">|</span>
+        <span class="nav-active">My Jobs</span>
+        <span class="nav-link">Fleet</span>
+        <div class="vendor" style="margin-left:auto;display:flex;align-items:center;gap:6px">
+          HaleSun Logistics
+          <div class="avatar">HL</div>
+        </div>
+      </div>
+
+      <!-- Page header -->
+      <div class="mock-page-hd">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="back-link">← My Jobs</span>
+          <span style="color:#d1d5db">|</span>
+          <span class="job-badge">J03</span>
+          <span class="job-title">FM Trucking</span>
+          <span class="job-svc">FM</span>
+        </div>
+        <div class="meta-line">
+          <span class="mono mawb">DO-008</span>
+          <span>·</span>
+          <span style="font-weight:600;color:#111827">TikTok Commerce</span>
+          <span>·</span>
+          <span class="mono mawb">618-00918723</span>
+        </div>
+      </div>
+
+      <!-- Status bar: Completed -->
+      <div style="margin:12px 16px 4px">
+        <div class="status-bar">
+          <div>
+            <div class="status-dot"><span class="dot"></span> Completed</div>
+            <div class="status-hint">Waiting for Teleport verification</div>
+          </div>
+          <span class="status-ts">10 Aug · 14:32</span>
+        </div>
+      </div>
+
+      <!-- Dispatch section -->
+      <div class="dispatch-section">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:6px">Driver &amp; Vehicle</div>
+        <div style="display:flex;align-items:center;gap:10px;font-size:11px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;flex-shrink:0"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span style="font-weight:600;color:#111827">Zhang Wei</span>
+          <span class="mono" style="font-size:11px;font-weight:600;color:#374151">粤B·12345</span>
+          <span class="mono" style="font-size:10px;color:#9ca3af">+86 138****1234</span>
+          <span style="margin-left:auto;font-size:9px;color:#9ca3af">Locked — Completed</span>
+        </div>
+      </div>
+
+      <!-- Route section -->
+      <div class="section">
+        <div class="section-title">Route</div>
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <div style="flex:1">
+            <div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:3px">Pickup</div>
+            <div style="font-size:12px;font-weight:600;color:#111827">TikTok WH, Shenzhen</div>
+            <div class="mono" style="font-size:11px;font-weight:500;color:#374151;margin-top:2px">10 Aug · 09:00</div>
+          </div>
+          <span style="font-size:16px;color:#d1d5db;margin-top:14px">→</span>
+          <div style="flex:1">
+            <div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:3px">Delivery</div>
+            <div style="font-size:12px;font-weight:600;color:#111827">SZX Airport Cargo Terminal</div>
+            <div class="mono" style="font-size:11px;font-weight:500;color:#374151;margin-top:2px">10 Aug · 12:30</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cargo summary -->
+      <div class="section">
+        <div class="section-title">Cargo</div>
+        <div style="display:flex;align-items:center;gap:20px">
+          <div>
+            <div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:2px">Bags</div>
+            <div class="mono" style="font-size:12px;font-weight:600;color:#111827">24</div>
+          </div>
+          <div>
+            <div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:2px">Weight</div>
+            <div class="mono" style="font-size:12px;font-weight:600;color:#111827">1,247 kg</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BAG PACKAGES — Option A inline table -->
+      <div class="section">
+        <div class="section-title-row">
+          <span class="section-title" style="margin:0">Bag Packages &middot; <span class="mono" style="font-size:10px;font-weight:600;color:#374151">24</span></span>
+          <span class="mono" style="font-size:9px;color:#9ca3af">618-00918723</span>
+        </div>
+        <div style="border:1px solid #e5e7eb;border-radius:4px;overflow:hidden">
+          <div style="max-height:196px;overflow-y:auto">
+            <table class="bag-table">
+              <thead>
+                <tr>
+                  <th style="width:28%">Bag #</th>
+                  <th style="width:14%;text-align:right">Weight</th>
+                  <th style="width:29%">Origin</th>
+                  <th style="width:29%">Destination</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="bag-num">SHWK000001</span></td>
+                  <td style="text-align:right"><span class="bag-wt">52.4</span><span style="font-size:9px;color:#9ca3af"> kg</span></td>
+                  <td><div class="bag-loc">TikTok WH, SZ</div></td>
+                  <td><div class="bag-loc">SZX Airport</div></td>
+                </tr>
+                <tr>
+                  <td><span class="bag-num">SHWK000002</span></td>
+                  <td style="text-align:right"><span class="bag-wt">48.7</span><span style="font-size:9px;color:#9ca3af"> kg</span></td>
+                  <td><div class="bag-loc">TikTok WH, SZ</div></td>
+                  <td><div class="bag-loc">SZX Airport</div></td>
+                </tr>
+                <tr>
+                  <td><span class="bag-num">SHWK000003</span></td>
+                  <td style="text-align:right"><span class="bag-wt">63.1</span><span style="font-size:9px;color:#9ca3af"> kg</span></td>
+                  <td><div class="bag-loc">TikTok WH, SZ</div></td>
+                  <td><div class="bag-loc">SZX Airport</div></td>
+                </tr>
+                <tr>
+                  <td><span class="bag-num">SHWK000004</span></td>
+                  <td style="text-align:right"><span class="bag-wt">71.2</span><span style="font-size:9px;color:#9ca3af"> kg</span></td>
+                  <td><div class="bag-loc">TikTok WH, SZ</div></td>
+                  <td><div class="bag-loc">SZX Airport</div></td>
+                </tr>
+                <tr>
+                  <td><span class="bag-num">SHWK000005</span></td>
+                  <td style="text-align:right"><span class="bag-wt">55.8</span><span style="font-size:9px;color:#9ca3af"> kg</span></td>
+                  <td><div class="bag-loc">TikTok WH, SZ</div></td>
+                  <td><div class="bag-loc">SZX Airport</div></td>
+                </tr>
+                <tr>
+                  <td><span class="bag-num">SHWK000006</span></td>
+                  <td style="text-align:right"><span class="bag-wt">44.3</span><span style="font-size:9px;color:#9ca3af"> kg</span></td>
+                  <td><div class="bag-loc">TikTok WH, SZ</div></td>
+                  <td><div class="bag-loc">SZX Airport</div></td>
+                </tr>
+                <tr>
+                  <td><span class="bag-num">SHWK000007</span></td>
+                  <td style="text-align:right"><span class="bag-wt">68.9</span><span style="font-size:9px;color:#9ca3af"> kg</span></td>
+                  <td><div class="bag-loc">TikTok WH, SZ</div></td>
+                  <td><div class="bag-loc">SZX Airport</div></td>
+                </tr>
+                <tr>
+                  <td><span class="bag-num">SHWK000008</span></td>
+                  <td style="text-align:right"><span class="bag-wt">59.4</span><span style="font-size:9px;color:#9ca3af"> kg</span></td>
+                  <td><div class="bag-loc">TikTok WH, SZ</div></td>
+                  <td><div class="bag-loc">SZX Airport</div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="padding:5px 8px;border-top:1px solid #f3f4f6;font-size:9px;color:#9ca3af;display:flex;align-items:center;justify-content:space-between">
+            <span>Showing 8 of 24 bags — scroll to see all</span>
+            <span class="mono" style="font-weight:600;color:#374151">1,247.0 kg total</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Proof section (abbreviated) -->
+      <div class="section">
+        <div class="section-title">Proof of Service &middot; 2 files</div>
+        <div style="font-size:11px;color:#374151;padding:4px 0;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;gap:8px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;flex-shrink:0"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          pod-front.jpg
+          <span class="mono" style="font-size:9px;color:#9ca3af;margin-left:auto">10 Aug · 14:31 · Zhang Wei</span>
+        </div>
+        <div style="font-size:11px;color:#374151;padding:4px 0;display:flex;align-items:center;gap:8px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;flex-shrink:0"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          pod-back.jpg
+          <span class="mono" style="font-size:9px;color:#9ca3af;margin-left:auto">10 Aug · 14:31 · Zhang Wei</span>
+        </div>
+      </div>
+
+    </div><!-- /bg-white -->
+  </div><!-- /screen -->
+
+  <div class="pros-cons">
+    <div class="pros">
+      <strong>Pros</strong><br>
+      • Zero extra interaction — bag list is always visible when relevant<br>
+      • Fixed scroll area keeps page length predictable regardless of bag count<br>
+      • Works as a verification instrument: driver scans physical bags top-to-bottom, matching against the screen<br>
+      • Weight total in footer lets driver confirm aggregate without mental math<br>
+      • No new UI pattern — same table/section pattern used throughout the app
+    </div>
+    <div class="cons">
+      <strong>Cons</strong><br>
+      • Adds ~200px of height to the page even for small lists (6 bags)<br>
+      • No search or filter — finding a specific bag in a 200+ list requires scrolling<br>
+      • Scrollable table within a scrollable page is awkward on touch screens<br>
+      • Section will show as empty for non-FM or early-stage jobs with no bag data yet
+    </div>
+  </div>
+
+
+  <!-- ====================== OPTION B ====================== -->
+  <h2>Option B — Collapsible accordion, collapsed by default</h2>
+  <div class="rationale">
+    A collapsible section header showing aggregate: "Bag Packages · 24 bags · 1,247 kg". Collapsed by default. Expanding reveals the same table as Option A. Dispatchers who trust the count don't need to open it. Drivers at pickup expand it when physically loading bags.
+  </div>
+  <div class="label label-b">Option B</div>
+
+  <div class="screen">
+    <div class="screen-label">FM Trucking — Collapsed state (default) + Expanded state side-by-side</div>
+    <div style="background:#fff;display:grid;grid-template-columns:1fr 1fr;gap:0;max-width:900px">
+
+      <!-- Left: Collapsed -->
+      <div style="border-right:1px solid #e5e7eb">
+        <div style="padding:8px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af">
+          Collapsed (default)
+        </div>
+        <!-- Cargo section -->
+        <div class="section" style="border-top:none">
+          <div class="section-title">Cargo</div>
+          <div style="font-size:11px;color:#374151"><span class="mono" style="font-size:12px;font-weight:600;color:#111827">24</span> bags &nbsp;·&nbsp; <span class="mono" style="font-size:12px;font-weight:600;color:#111827">1,247</span> kg</div>
+        </div>
+
+        <!-- Bag packages — collapsed -->
+        <div style="border-top:1px solid #f3f4f6;cursor:pointer">
+          <div class="acc-hd">
+            <div>
+              <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af">Bag Packages</span>
+              <span class="mono" style="font-size:10px;color:#374151;font-weight:600;margin-left:6px">24</span>
+              <span style="font-size:10px;color:#9ca3af;margin-left:2px">bags</span>
+              <span class="mono" style="font-size:10px;color:#374151;font-weight:600;margin-left:8px">1,247</span>
+              <span style="font-size:10px;color:#9ca3af;margin-left:2px">kg</span>
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" style="width:12px;height:12px">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Proof section -->
+        <div class="section">
+          <div class="section-title">Proof of Service &middot; 2 files</div>
+          <div style="font-size:11px;color:#6b7280;font-size:10px">pod-front.jpg &middot; pod-back.jpg</div>
+        </div>
+      </div>
+
+      <!-- Right: Expanded -->
+      <div>
+        <div style="padding:8px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af">
+          Expanded state
+        </div>
+        <!-- Cargo section -->
+        <div class="section" style="border-top:none">
+          <div class="section-title">Cargo</div>
+          <div style="font-size:11px;color:#374151"><span class="mono" style="font-size:12px;font-weight:600;color:#111827">24</span> bags &nbsp;·&nbsp; <span class="mono" style="font-size:12px;font-weight:600;color:#111827">1,247</span> kg</div>
+        </div>
+
+        <!-- Bag packages — expanded -->
+        <div style="border-top:1px solid #f3f4f6;cursor:pointer">
+          <div class="acc-hd" style="padding-bottom:8px">
+            <div>
+              <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af">Bag Packages</span>
+              <span class="mono" style="font-size:10px;color:#374151;font-weight:600;margin-left:6px">24</span>
+              <span style="font-size:10px;color:#9ca3af;margin-left:2px">bags</span>
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" style="width:12px;height:12px">
+              <path d="M18 15l-6-6-6 6"/>
+            </svg>
+          </div>
+          <div style="padding:0 16px 12px">
+            <div style="border:1px solid #e5e7eb;border-radius:4px;overflow:hidden">
+              <div style="max-height:160px;overflow-y:auto">
+                <table class="bag-table">
+                  <thead>
+                    <tr>
+                      <th>Bag #</th>
+                      <th style="text-align:right">Weight</th>
+                      <th>Origin</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td><span class="bag-num">SHWK000001</span></td><td style="text-align:right"><span class="bag-wt">52.4 kg</span></td><td><span class="bag-loc">TikTok WH</span></td></tr>
+                    <tr><td><span class="bag-num">SHWK000002</span></td><td style="text-align:right"><span class="bag-wt">48.7 kg</span></td><td><span class="bag-loc">TikTok WH</span></td></tr>
+                    <tr><td><span class="bag-num">SHWK000003</span></td><td style="text-align:right"><span class="bag-wt">63.1 kg</span></td><td><span class="bag-loc">TikTok WH</span></td></tr>
+                    <tr><td><span class="bag-num">SHWK000004</span></td><td style="text-align:right"><span class="bag-wt">71.2 kg</span></td><td><span class="bag-loc">TikTok WH</span></td></tr>
+                    <tr><td><span class="bag-num">SHWK000005</span></td><td style="text-align:right"><span class="bag-wt">55.8 kg</span></td><td><span class="bag-loc">TikTok WH</span></td></tr>
+                    <tr><td><span class="bag-num">SHWK000006</span></td><td style="text-align:right"><span class="bag-wt">44.3 kg</span></td><td><span class="bag-loc">TikTok WH</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div style="padding:5px 8px;border-top:1px solid #f3f4f6;font-size:9px;color:#9ca3af">Scroll for all 24 bags</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Proof section -->
+        <div class="section">
+          <div class="section-title">Proof of Service &middot; 2 files</div>
+          <div style="font-size:11px;color:#6b7280;font-size:10px">pod-front.jpg &middot; pod-back.jpg</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <strong>Pros</strong><br>
+      • Page stays compact for users who only need the aggregate count<br>
+      • Summary header (24 bags · 1,247 kg) is enough for most reconciliation use cases<br>
+      • Proof section never pushed far below the fold<br>
+      • Can expand before physical pickup and collapse after confirming
+    </div>
+    <div class="cons">
+      <strong>Cons</strong><br>
+      • Hides the most critical verification data behind an extra click<br>
+      • Collapsed by default trains users not to look at it — "accordion blindness"<br>
+      • Aggregate in summary duplicates what the Cargo section already shows<br>
+      • Inconsistent with design system — no other sections on this page use an accordion pattern
+    </div>
+  </div>
+
+
+  <!-- ====================== OPTION C ====================== -->
+  <h2>Option C — Summary row + searchable bottom sheet</h2>
+  <div class="rationale">
+    The Cargo section shows "24 bags · 1,247 kg" as today plus a "[View List →]" link. Tapping opens a bottom sheet/drawer with a searchable bag table — allowing dispatch to find "SHWK000012" instantly in a 200-bag list. The sheet covers roughly 75% of the viewport and has a sticky header with a bag number search input.
+  </div>
+  <div class="label label-c">Option C</div>
+
+  <div class="screen">
+    <div class="screen-label">Cargo section with "View List" trigger + bottom sheet overlay (opened state)</div>
+    <div style="position:relative;background:#fff;max-width:600px;min-height:480px;overflow:hidden">
+
+      <!-- Nav (mocked) -->
+      <div class="mock-nav" style="height:36px">
+        <div class="logo" style="width:16px;height:16px"></div>
+        <span style="font-weight:700;font-size:12px;color:#fff">Teleport OS</span>
+        <span style="font-size:9px;color:rgba(255,255,255,.35)">Vendor</span>
+        <div class="vendor" style="margin-left:auto;font-size:10px">HaleSun</div>
+      </div>
+
+      <!-- Page content (blurred/dimmed behind modal) -->
+      <div style="opacity:0.4;pointer-events:none">
+        <!-- Status bar -->
+        <div style="margin:10px 16px 4px">
+          <div class="status-bar" style="padding:8px 12px">
+            <div class="status-dot"><span class="dot"></span> Completed</div>
+            <span class="status-ts" style="font-size:9px">10 Aug · 14:32</span>
+          </div>
+        </div>
+        <!-- Dispatch -->
+        <div style="margin:4px 16px;padding:10px 12px;border-radius:6px;background:rgba(21,44,255,.02);border:1px solid rgba(21,44,255,.1);font-size:10px;color:#374151">
+          Zhang Wei &nbsp;·&nbsp; <span class="mono" style="font-size:10px">粤B·12345</span>
+        </div>
+        <!-- Route -->
+        <div class="section" style="padding:10px 16px">
+          <div class="section-title">Route</div>
+          <div style="font-size:10px;color:#374151">TikTok WH, Shenzhen → SZX Airport Cargo Terminal</div>
+        </div>
+        <!-- Cargo + trigger -->
+        <div class="section" style="padding:10px 16px">
+          <div class="section-title">Cargo</div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:11px;color:#374151">
+              <span class="mono" style="font-size:12px;font-weight:600;color:#111827">24</span> bags &nbsp;·&nbsp;
+              <span class="mono" style="font-size:12px;font-weight:600;color:#111827">1,247</span> kg
+            </div>
+            <span class="pill-btn">View bag list →</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom sheet overlay -->
+      <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.25)">
+        <div class="modal-sheet" style="max-height:340px">
+          <!-- Sheet header -->
+          <div class="modal-hd">
+            <div>
+              <span class="modal-title">Bag Packages</span>
+              <span class="mono" style="font-size:10px;color:#9ca3af;margin-left:8px">618-00918723 &middot; 24 bags</span>
+            </div>
+            <span class="modal-close">Close ✕</span>
+          </div>
+          <!-- Search -->
+          <div class="modal-search">
+            <input placeholder="Search bag number, e.g. SHWK000012" type="text" />
+          </div>
+          <!-- Table -->
+          <div style="overflow-y:auto;max-height:230px">
+            <table class="bag-table">
+              <thead>
+                <tr>
+                  <th style="position:sticky;top:0;background:#f9fafb">Bag #</th>
+                  <th style="position:sticky;top:0;background:#f9fafb;text-align:right">Weight</th>
+                  <th style="position:sticky;top:0;background:#f9fafb">Origin</th>
+                  <th style="position:sticky;top:0;background:#f9fafb">Pickup Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td><span class="bag-num">SHWK000001</span></td><td style="text-align:right"><span class="bag-wt">52.4 kg</span></td><td>TikTok WH, SZ</td><td class="mono" style="font-size:9px;color:#9ca3af">10 Aug</td></tr>
+                <tr><td><span class="bag-num">SHWK000002</span></td><td style="text-align:right"><span class="bag-wt">48.7 kg</span></td><td>TikTok WH, SZ</td><td class="mono" style="font-size:9px;color:#9ca3af">10 Aug</td></tr>
+                <tr><td><span class="bag-num">SHWK000003</span></td><td style="text-align:right"><span class="bag-wt">63.1 kg</span></td><td>TikTok WH, SZ</td><td class="mono" style="font-size:9px;color:#9ca3af">10 Aug</td></tr>
+                <tr><td><span class="bag-num">SHWK000004</span></td><td style="text-align:right"><span class="bag-wt">71.2 kg</span></td><td>TikTok WH, SZ</td><td class="mono" style="font-size:9px;color:#9ca3af">10 Aug</td></tr>
+                <tr><td><span class="bag-num">SHWK000005</span></td><td style="text-align:right"><span class="bag-wt">55.8 kg</span></td><td>TikTok WH, SZ</td><td class="mono" style="font-size:9px;color:#9ca3af">10 Aug</td></tr>
+                <tr><td><span class="bag-num">SHWK000006</span></td><td style="text-align:right"><span class="bag-wt">44.3 kg</span></td><td>TikTok WH, SZ</td><td class="mono" style="font-size:9px;color:#9ca3af">10 Aug</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="padding:6px 14px;border-top:1px solid #e5e7eb;font-size:9px;color:#9ca3af;display:flex;justify-content:space-between">
+            <span>Showing 6 of 24 bags</span>
+            <span class="mono" style="font-weight:600;color:#374151">1,247.0 kg total</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <strong>Pros</strong><br>
+      • Search field solves the 200-bag problem — driver types partial bag number to jump directly<br>
+      • Page layout is clean and short — nothing pushes Proof section down<br>
+      • Bottom sheet pattern is familiar from mobile apps; works well on 768px tablets<br>
+      • Pickup date column fits naturally in the sheet without cluttering the detail page
+    </div>
+    <div class="cons">
+      <strong>Cons</strong><br>
+      • Introduces a modal pattern not used anywhere else in the vendor app (design inconsistency)<br>
+      • Closes if the user accidentally taps outside — frustrating mid-loading<br>
+      • "View bag list →" link is subtle — not obvious enough for high-urgency pickup verification<br>
+      • Admin slide-out panel is the only overlay pattern in the platform; a bottom sheet is a second overlay type
+    </div>
+  </div>
+
+
+  <!-- ====================== VERDICT ====================== -->
+  <div class="verdict">
+    <h3>Decision: Option A — Inline scrollable table</h3>
+    <p><strong>Recommendation:</strong> Implement the bag package list as an always-visible, inline scrollable table in a dedicated "Bag Packages" section between Cargo and Proof of Service. Use <code>max-height: 200px; overflow-y: auto</code> to contain long lists without introducing a separate interaction layer.</p>
+    <p><strong>Rationale:</strong> The bag list is a verification instrument — it has to be visible the moment a dispatcher opens the job detail to brief a driver or when a driver physically loads bags. Hiding it behind an accordion (Option B) trains users to ignore it. A bottom sheet (Option C) introduces an unrelated overlay pattern to an app that uses full-page detail, not modals. "Every pixel shows data" — if the data exists and is operationally relevant, show it.</p>
+    <p><strong>Placement:</strong> Between Cargo (aggregate) and Proof of Service. Placing it right after Cargo creates a logical narrative: aggregate summary → detailed breakdown → evidence of completion. For non-FM jobs or trips with no bag data, the section is omitted entirely (no empty-state noise).</p>
+    <p><strong>Columns: Bag # · Weight · Origin · Destination.</strong> Pickup date is omitted from the inline table (all bags in the trip share the same pickup date, shown in the Route section). MAWB is in the page header. Destination is typically the same for all bags on a trip but included so drivers can verify cross-destination splits if they exist.</p>
+    <p><strong>Open question:</strong> For the WeChat Mini Program (TODO-049/HMW-V09), should the driver see the same bag list on their screen for scan-as-you-load verification? If yes, the data model already supports it — the WeChat screen can mirror this section. This would close the verification loop: Teleport system → dispatcher sees list → driver scans at pickup → discrepancy surfaces in-app instead of at customs.</p>
+  </div>
+
+</div>
+</body>
+</html>
