@@ -1,75 +1,89 @@
-# Design Audit — Teleport OS Vendor
-> Audited: 2026-08-10 · Against: admin/DESIGN.md + vendor/DESIGN.md
+# Vendor App — Design Audit
+
+> Audited against `admin/DESIGN.md` and `vendor/DESIGN.md`.
+> Date: 2026-08-18
 
 ## Summary
-The vendor app is largely compliant with the design system. Service tags use mono gray (no pill, no blue), status cells use the dot+label+timestamp pattern, no shadow violations found, border radii are within spec, and accent blue is restricted to interactive elements. Two issues found.
+
+The vendor app implementation is largely compliant with the design system. No major color, shadow, or radius violations were found. Three minor issues and one open structural question are documented below.
 
 ---
 
-## Issues
+## Findings
 
-### AUDIT-V01 — FM Route section: datetime displayed at wrong size, time field missing
+### MINOR-01 — Dead `borderTop` declaration in `renderDriverVehicle`
 
-**File:** `vendor/src/pages/JobDetailPage.tsx` · function `renderRoute()` (line ~333)
+**File:** `vendor/src/pages/JobDetailPage.tsx`, line 267  
+**Severity:** Minor (no visual impact)
 
-**Violation:** The `admin/DESIGN.md` spec for the FM Trucking detail page says: _"Pickup/Delivery Timeline — two-point layout: Origin (location + pickup datetime in big mono) → arrow → Destination (location + delivery datetime). Times are the most important data for FM."_ `vendor/DESIGN.md` confirms: _"Times are the most important data for FM dispatchers."_
-
-The current implementation shows only the **date** at `fontSize: 9, color: '#374151'`:
-```tsx
-// renderRoute() — current
-<div style={{ ...mono, fontSize: 9, color: '#374151', marginTop: 2 }}>
-  {job.origin.date ? fmtDateMono(job.origin.date) : trip.pickupDate}
-</div>
+```jsx
+// Current — borderTop is silently overridden by the border shorthand
+style={{ padding: '14px 16px', borderTop: '1px solid #f3f4f6', background: '...', border: '1px solid rgba(21,44,255,0.1)', ... }}
 ```
-`fmtDateMono` uses `toLocaleDateString(..., { day: '2-digit', month: 'short' })` — it discards the time component. For a pickup at `2026-08-10 09:00`, only `10 Aug` is shown, not `09:00`.
 
-**Expected:** Time should be shown in JetBrains Mono at a readable size (minimum 11px) alongside the date. The design spec says "big mono" — this implies the times should be visually prominent, not 9px faint.
+In a React inline style object, `border` (shorthand) applied after `borderTop` overrides it. The `borderTop: '1px solid #f3f4f6'` declaration has no effect. The visual result is correct (all four sides use `rgba(21,44,255,0.1)`), but the dead property is confusing.
 
-**Fix:** Use `fmtDateTime` (already imported from `statusStyles`) and split into date + time lines, or create a small helper that formats `"2026-08-10 09:00"` as two lines: `10 Aug` (10px) and `09:00` (13px/600 mono). Use `color: '#111827'` for the time, not `'#374151'`.
-
-**Severity:** Medium — dispatchers cannot see pickup time at a glance. They must navigate to the My Jobs table pickup column to find it.
+**Fix:** Remove `borderTop: '1px solid #f3f4f6'` from `renderDriverVehicle`'s div style.
 
 ---
 
-### AUDIT-V02 — Hub Ops Progress section: hardcoded placeholder data with no backing model
+### MINOR-02 — Activity log count badge uses `borderRadius: 99` (reserved for service pills)
 
-**File:** `vendor/src/pages/JobDetailPage.tsx` · function `renderHubOpsProgress()` (line ~372)
+**File:** `vendor/src/pages/JobDetailPage.tsx`, line 210  
+**Severity:** Minor
 
-**Violation:** The section renders hardcoded `0/24` for Inbound, Processed, and Outbound counters:
-```tsx
-<div style={{ ...mono, fontSize: 11, fontWeight: 600, color: '#9ca3af' }}>0/24</div>
+```jsx
+// Current
+<span style={{ ..., borderRadius: 99 }}>{log.length}</span>
 ```
-These values are not derived from any field on the `Trip` or `Job` types. The `Job` type has no `hubOpsInbound`, `hubOpsProcessed`, or `hubOpsOutbound` fields. The `24` is hardcoded — it happens to match `trip.bags` in seed data but would be wrong if this section renders for an OH job on a different trip.
 
-**Context:** `vendor/DESIGN.md` (HMW-V08 decision) specified _"OH gets one extra section [Hub Ops Progress: Inbound/Processed/Outbound counters]"_, but the data model to back these counters was never designed. The section is stubbed with placeholder output.
+The design system reserves `borderRadius: 99px` for service type pills only (the only fully-round elements). A log count badge at 6px radius would be more consistent.
 
-**Impact:** Any vendor logging into an OH job sees `0/24` for all counters — this looks like a real (broken) feature rather than an unimplemented placeholder. It could confuse OH vendors into thinking no cargo has been processed even if it has.
-
-**Fix options:**
-1. **Remove** the Hub Ops Progress section entirely until a data model is designed (cleanest for v1 — the DESIGN.md already notes this is stub territory)
-2. **Add** `hubOpsInbound`, `hubOpsProcessed`, `hubOpsOutbound` as optional fields on `Job`, derive the denominator from `trip.bags`, and render `—/—` instead of `0/24` when unset
-3. **Replace** with a simple note: _"Hub ops tracked via WeChat — status appears in the activity log"_
-
-**Severity:** Medium — renders misleading data to OH vendors.
+**Fix:** Change to `borderRadius: 6` for the activity log count chip.
 
 ---
 
-## Non-Issues (verified clean)
+### MINOR-03 — `JobDetailPage` uses local `StateCell` + `getStateStyle` instead of shared `StatusCell`
 
-| Check | Status | Notes |
-|-------|--------|-------|
-| Service code tags in My Jobs table | ✅ | Mono gray `#6b7280`, 10px, no pill chrome, no blue |
-| Trip ID in My Jobs table | ✅ | Ink mono `#111827`, 10px, no chip, no blue |
-| Status/Verification cells | ✅ | `StatusCell` + `VerificationCell` — dot + label + timestamp subline |
-| Accent blue restricted to interactive elements | ✅ | Buttons, links, active nav, selected service pills, active pagination page |
-| Segment pill border-radius | ✅ | `borderRadius: 4` (segments), `borderRadius: 99` (service codes = full round pills) |
-| Table container radius | ✅ | `borderRadius: 6` on table containers |
-| No shadows on nav, filter bar, or table | ✅ | Borders only throughout |
-| Dispatch Assignment section styling | ✅ | `rgba(21,44,255,0.02)` bg, `rgba(21,44,255,0.1)` border, `borderRadius: 6` — matches spec |
-| Fleet page driver/vehicle status | ✅ | Flat dot+text, green `#059669` for active, ghost `#d1d5db` for inactive — no filled badge |
-| Fleet page truck type display | ✅ | Mono gray `#6b7280` — no blue pill |
-| Fleet page "+ Add" button | ✅ | `color: #152CFF` border + text — interactive element, correct |
-| No row tints for cancelled/rejected rows | ✅ | Status cell carries the signal; row background unchanged |
-| Cancel/rejection reason display | ✅ | Inline text beneath status bar, no tinted box |
-| Empty state design | ✅ | Muted text + "clear filters" link — no decorative icon, no tinted box |
-| Pagination active page | ✅ | `rgba(21,44,255,0.06)` bg + `#152CFF` border/text — interactive element, correct |
+**File:** `vendor/src/pages/JobDetailPage.tsx`, lines 49–68  
+**Severity:** Minor / maintenance
+
+`JobDetailPage` defines its own inline `StateCell` component using the `getStateStyle` helper (the pre-refactor combined-state API). `MyJobsPage` correctly uses the shared `StatusCell` + `VerificationCell` components. The Status Action Bar intentionally shows a single combined state (Verification takes priority over Status when Verified/Rejected), so the local component is functionally correct — but diverges from the shared component that will receive future updates.
+
+The local `StateCell` is used only in the Status Action Bar (which shows a single priority state, not two columns). This is contextually correct — the action bar is not a data table cell. However, if the shared `StatusCell` API changes, `JobDetailPage` would need a separate update.
+
+**Recommendation:** Accept as-is for now (the action bar pattern requires a single priority state). Document the intent: "Status Action Bar collapses both signals into a single priority state for the action context. This is intentional and distinct from the two-column Status+Verification pattern in the job list."
+
+---
+
+### OPEN — Old HMW mockups (V01) show service tags as blue pills
+
+**Files:** `vendor/design-hypotheses/01-hmw-responsive-job-table.html`, CSS line 60  
+**Severity:** Documentation inconsistency (no live code impact)
+
+The V01 mockup defines `.svc` as a blue pill (`background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF`). The current design system decision (2026-04-21 slop-reduction alignment) mandates mono gray for service tags: `#6b7280, 10px JetBrains Mono, no pill, no blue`. The live implementation is correct. The mockup is historical.
+
+**Recommendation:** Mockup files are historical records; do not update them. The live implementation and DESIGN.md are the source of truth. No action required.
+
+---
+
+## Compliant Areas (checked)
+
+| Area | Status |
+|------|--------|
+| Status/Verification dot+label+timestamp pattern | ✓ Correct |
+| No row tints for status (Cancelled/Rejected) | ✓ Correct (only Status Action Bar uses tints) |
+| Service tags: mono gray, no blue, no pill | ✓ Correct (MyJobsPage, JobDetailPage) |
+| Segment pills: 4px radius, correct state-colored variants | ✓ Correct |
+| Service filter pills: 99px radius, mono font | ✓ Correct |
+| Table: border-only, no shadows | ✓ Correct |
+| Nav: 40px height, #111827 bg, 4px radius links | ✓ Correct |
+| Avatar: 22x22, 4px radius, rgba bg | ✓ Correct |
+| Accent #152CFF: interactive-only (buttons, links, active nav, active pills) | ✓ Correct |
+| No decorative colors beyond ink/status/surfaces palette | ✓ Correct |
+| No shadows on table, cards, or filter bar | ✓ Correct |
+| Status Action Bar: per-state tinted bg (gray/blue/amber/green/red) | ✓ Correct |
+| Proof list: flat rows, not cards | ✓ Correct |
+| Dispatch Assignment section: subtle blue bg + border, 6px radius | ✓ Correct per DESIGN.md |
+| Typography: Instrument Sans + JetBrains Mono, correct scale | ✓ Correct |
+| Empty state: muted text + "clear filters" link, no decorative icon | ✓ Correct |

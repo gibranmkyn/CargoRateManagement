@@ -2,6 +2,12 @@
 
 ## Open
 
+### HMW-V13: How might we ensure vendors never miss a new job assignment or cancellation when they return to the app — without push notifications?
+**Options:** A) Dismissible "What's Changed" strip above the filter bar (red tint for cancellations, amber for mixed; row-level NEW/CANCELLED inline badges), B) Nav badge count + enriched pill sub-counts ("+2 new" on Pending, "+1 new" on Cancelled), C) Conditional "Alerts" segment pill that appears when there are unread changes
+**Leaning toward:** A) Inline strip — gives specific, actionable information (not just "something changed") and distinguishes cancellation urgency from new-assignment priority. Row-level badges close the loop without requiring the vendor to scan timestamps. Strip pattern is correct for transient session-specific information; a pill is a persistent navigational filter. Cancellations are the highest-urgency case; a red strip ensures they are never buried.
+**Open question:** Should verified-since-last-visit also appear in the strip? Verification signals billing readiness — important but less urgent than cancellations. Suggest: muted gray text in the strip ("2 jobs verified"), not tinted. Needs user input on whether vendors care enough about verification notifications to warrant any signal at all.
+**File:** `13-hmw-vendor-alerts.html`
+
 ### HMW-V12: How might we show the trip's bag package list on the vendor job detail page for cargo verification at pickup?
 **Options:** A) Inline scrollable table below Cargo section (max-height: 200px, always visible), B) Collapsible accordion with count summary in the header (collapsed by default), C) Summary row + searchable bottom sheet triggered on tap
 **Leaning toward:** A) Inline scrollable table — the bag list is a verification instrument (driver physically cross-references bags against the screen while loading); hiding it behind an accordion or modal adds friction to the most critical moment. The fixed max-height keeps page length predictable. Aggregate (24 bags · 1,247 kg) in the Cargo section above is preserved; the table is the detailed breakdown.

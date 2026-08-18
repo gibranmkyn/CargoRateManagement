@@ -207,7 +207,7 @@ export default function JobDetailPage() {
     <div style={sectionWrap}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <div style={sectionTitle}>Activity Log</div>
-        <span style={{ ...mono, fontSize: 9, background: '#f3f4f6', color: '#9ca3af', padding: '1px 5px', borderRadius: 99 }}>{log.length}</span>
+        <span style={{ ...mono, fontSize: 9, background: '#f3f4f6', color: '#9ca3af', padding: '1px 5px', borderRadius: 6 }}>{log.length}</span>
       </div>
       {log.length === 0 ? (
         <div style={{ padding: 16, textAlign: 'center' }}>
@@ -264,7 +264,7 @@ export default function JobDetailPage() {
   // ===== FM-only sections =====
 
   const renderDriverVehicle = () => (
-    <div style={{ padding: '14px 16px', borderTop: '1px solid #f3f4f6', background: 'rgba(21,44,255,0.02)', border: '1px solid rgba(21,44,255,0.1)', borderRadius: 6, margin: '0 0 4px 0' }}>
+    <div style={{ padding: '14px 16px', background: 'rgba(21,44,255,0.02)', border: '1px solid rgba(21,44,255,0.1)', borderRadius: 6, margin: '0 0 4px 0' }}>
       <div style={sectionTitle}>
         Driver &amp; Vehicle
       </div>

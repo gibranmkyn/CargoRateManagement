@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-V13: Surfacing New Jobs and Cancellations Without Push Notifications</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+
+.page { max-width: 1200px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 16px; font-weight: 700; letter-spacing: -0.2px; margin: 40px 0 6px; color: #152CFF; }
+.hmw { font-size: 14px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 20px; font-size: 11px; color: #92400e; line-height: 1.7; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 12px; font-size: 11px; color: #374151; line-height: 1.7; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.label-a { background: rgba(21,44,255,0.08); color: #152CFF; border: 1px solid rgba(21,44,255,0.18); }
+.label-b { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
+.label-c { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 9px 11px; border-radius: 6px; font-size: 11px; line-height: 1.7; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 40px; }
+.verdict h3 { color: #059669; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.verdict p { font-size: 11px; color: #374151; line-height: 1.7; margin-bottom: 6px; }
+.verdict p:last-child { margin-bottom: 0; }
+
+.screen { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 12px 0 24px; }
+.screen-label { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9ca3af; padding: 8px 12px 4px; }
+
+/* ── Nav ─────────────────────────── */
+.mock-nav { height: 40px; padding: 0 16px; background: #111827; display: flex; align-items: center; gap: 8px; position: relative; }
+.mock-nav .logo { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; flex-shrink: 0; }
+.mock-nav .logo-text { font-weight: 700; font-size: 13px; color: #fff; letter-spacing: -0.3px; }
+.mock-nav .logo-sub { font-size: 10px; color: rgba(255,255,255,0.35); font-weight: 500; }
+.mock-nav .nav-items { display: flex; gap: 2px; margin-right: auto; margin-left: 20px; }
+.mock-nav .nav-link { font-size: 12px; padding: 4px 10px; border-radius: 4px; color: rgba(255,255,255,0.5); cursor: pointer; position: relative; }
+.mock-nav .nav-active { font-size: 12px; padding: 4px 10px; border-radius: 4px; color: #fff; background: rgba(255,255,255,0.1); font-weight: 600; }
+.mock-nav .vendor-name { font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 600; }
+.mock-nav .avatar { width: 22px; height: 22px; border-radius: 4px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; font-size: 9px; color: rgba(255,255,255,0.7); font-weight: 700; }
+
+/* ── Nav badge ─────────────────── */
+.nav-badge { position: absolute; top: -2px; right: -2px; width: 14px; height: 14px; border-radius: 50%; background: #dc2626; border: 1.5px solid #111827; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 700; color: #fff; line-height: 1; }
+
+/* ── Page header ─────────────────── */
+.mock-page-hd { display: flex; align-items: flex-end; justify-content: space-between; padding: 14px 16px 0; }
+.page-title { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; color: #111827; }
+.page-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+.export-btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; background: #fff; color: #374151; border: 1px solid #e5e7eb; }
+
+/* ── Alert strip ──────────────────── */
+.alert-strip { display: flex; align-items: center; gap: 10px; padding: 8px 16px; font-size: 11px; }
+.alert-strip-cancelled { background: #fef2f2; border-bottom: 1px solid #fecaca; }
+.alert-strip-mixed { background: #fffbeb; border-bottom: 1px solid #fde68a; }
+.alert-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.alert-dismiss { margin-left: auto; font-size: 10px; color: #9ca3af; cursor: pointer; font-weight: 500; background: none; border: none; padding: 2px 4px; font-family: inherit; }
+
+/* ── Segment pills bar ────────────── */
+.mock-filter-bar { padding: 8px 16px; border-bottom: 1px solid #e5e7eb; background: #fff; }
+.pills-row { display: flex; align-items: center; gap: 6px; margin-bottom: 7px; flex-wrap: wrap; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 500; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; }
+.pill.active { background: #111827; border-color: #111827; color: #fff; font-weight: 600; }
+.pill.active-cancel { background: #fef2f2; border-color: #dc2626; color: #dc2626; font-weight: 600; }
+.pill .badge { font-size: 10px; padding: 0 5px; border-radius: 8px; font-weight: 700; min-width: 14px; text-align: center; }
+.pill .badge-n { background: #dc2626; color: #fff; border-radius: 8px; padding: 0 5px; font-size: 9px; font-weight: 700; }
+.svc-row { display: flex; align-items: center; gap: 6px; }
+.svc-pill { padding: 2px 6px; border-radius: 99px; font-size: 9px; font-weight: 600; font-family: 'JetBrains Mono', monospace; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; }
+.count-right { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9ca3af; }
+
+/* ── Table ────────────────────────── */
+.mock-table-wrap { padding: 0 16px 16px; }
+.mock-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; table-layout: fixed; }
+.mock-table thead th { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; padding: 6px 12px; text-align: left; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+.mock-table tbody td { padding: 7px 12px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: middle; font-size: 11px; }
+.mock-table tbody tr:last-child td { border-bottom: none; }
+.mock-table tbody tr:hover { background: #f9fafb; }
+
+/* ── New indicator ────────────────── */
+.new-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #152CFF; vertical-align: middle; margin-right: 4px; }
+.new-badge { display: inline-block; font-size: 8px; font-weight: 700; padding: 1px 4px; border-radius: 3px; background: rgba(21,44,255,0.08); color: #152CFF; border: 1px solid rgba(21,44,255,0.18); vertical-align: middle; margin-right: 4px; letter-spacing: 0.04em; text-transform: uppercase; }
+.cancel-badge { display: inline-block; font-size: 8px; font-weight: 700; padding: 1px 4px; border-radius: 3px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; vertical-align: middle; margin-right: 4px; letter-spacing: 0.04em; text-transform: uppercase; }
+
+/* ── Status cell ──────────────────── */
+.status-cell { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.status-ts { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; margin-top: 2px; }
+.status-reason { font-size: 9px; color: #dc2626; margin-top: 2px; }
+
+/* ── Alert count tab ──────────────── */
+.alerts-tab { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid #fecaca; background: #fef2f2; color: #dc2626; }
+
+/* ── Unread shimmer row ─────────────── */
+.unread-row td { background: rgba(21,44,255,0.025); }
+.unread-row:hover td { background: rgba(21,44,255,0.04) !important; }
+.cancelled-row td { background: #fefafa; }
+.cancelled-row:hover td { background: #fef2f2 !important; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-V13</h1>
+<p style="font-size:11px;color:#9ca3af;margin-bottom:18px;">Vendor App — Job Change Alerts</p>
+
+<div class="hmw">How might we ensure vendors never miss a new job assignment or cancellation when they return to the app — without push notifications?</div>
+
+<div class="context">
+  <strong>Context:</strong> Vendor operators check the app periodically — morning, mid-day, after lunch. They do not receive push notifications in v1 (web app, no service worker yet). Their primary pain points: (1) a job was cancelled but they showed up at the pickup point anyway; (2) a new job appeared but they didn't notice it mixed into the existing list. The current table shows all jobs sorted by status/date — there is no "new since you last visited" signal. The vendor must mentally compare today's list to what they remember from last time.
+  <br><br>
+  <strong>Constraint:</strong> No server-side push. No email. The signal must live entirely in the web app, using localStorage to track "last seen" state.
+  <br><br>
+  <strong>References:</strong> VUS-040 (new job notification), VUS-041 (cancellation notification), VUS-042 (verification notification). PRD v1.2.
+</div>
+
+<!-- ─── OPTION A ─────────────────────────────────────────────── -->
+<h2>Option A — Inline "What's Changed" Strip Above the Table</h2>
+<span class="label label-a">Recommended</span>
+
+<div class="rationale">
+  A dismissible strip appears at the top of the filter bar when the app detects changes since the vendor's last visit (tracked via <code>lastSeenAt</code> in localStorage). The strip is specific — it names the types of changes — and auto-dismisses when the vendor explicitly clears it or returns again within the same hour. No new page regions, no new nav chrome. The strip is context-sensitive: red tint for cancellations, amber for a mix of changes, gray for new-only.
+  <br><br>
+  <strong>What counts as "new/changed":</strong> jobs with <code>createdAt > lastSeenAt</code> (new) or jobs with <code>statusChangedAt > lastSeenAt</code> (changed). <code>lastSeenAt</code> is written to localStorage when the vendor successfully logs in (or visits My Jobs when already logged in, stamped at most once per 30 minutes to avoid false resets).
+</div>
+
+<div class="screen">
+  <div class="screen-label">Option A — "1 cancellation + 2 new jobs" strip (red tint)</div>
+  <!-- Nav -->
+  <div class="mock-nav">
+    <div class="logo"></div>
+    <span class="logo-text">Teleport OS</span>
+    <span class="logo-sub">Vendor</span>
+    <div class="nav-items">
+      <span class="nav-active">My Jobs</span>
+      <span class="nav-link">Fleet</span>
+    </div>
+    <span class="vendor-name">HaleSun Logistics</span>
+    <div class="avatar" style="margin-left:8px;">HL</div>
+  </div>
+
+  <!-- Page header -->
+  <div class="mock-page-hd">
+    <div>
+      <div class="page-title">My Jobs</div>
+      <div class="page-sub">Your assigned jobs</div>
+    </div>
+    <button class="export-btn">&#8595; Export</button>
+  </div>
+
+  <!-- Alert strip — mixed: cancellation + new -->
+  <div class="alert-strip alert-strip-cancelled" style="margin-top:8px;">
+    <div class="alert-dot" style="background:#dc2626;"></div>
+    <span><strong style="color:#dc2626;">1 job cancelled</strong><span style="color:#6b7280;"> · </span><strong style="color:#111827;">2 new jobs assigned</strong> <span style="color:#9ca3af;">since your last visit (09:14)</span></span>
+    <span style="color:#9ca3af;margin:0 4px;">·</span>
+    <button style="font-size:10px;color:#152CFF;background:none;border:none;cursor:pointer;font-family:inherit;padding:0;font-weight:500;">Show changes</button>
+    <button class="alert-dismiss">Dismiss ✕</button>
+  </div>
+
+  <!-- Segment pills -->
+  <div class="mock-filter-bar">
+    <div class="pills-row">
+      <button class="pill active">All <span class="badge" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);">14</span></button>
+      <button class="pill">Pending <span class="badge" style="background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">3</span></button>
+      <button class="pill">In Progress <span class="badge" style="background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">4</span></button>
+      <button class="pill">To verify <span class="badge" style="background:#fefce8;color:#a16207;border:1px solid #fde68a;">2</span></button>
+      <button class="pill">Verified <span class="badge" style="background:#f0fdf4;color:#059669;border:1px solid #a7f3d0;">4</span></button>
+      <button class="pill active-cancel">Cancelled <span class="badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;">1 <span class="badge-n">NEW</span></span></button>
+    </div>
+    <div class="svc-row">
+      <span style="font-size:10px;color:#9ca3af;">Service</span>
+      <button class="svc-pill">FM</button>
+      <button class="svc-pill">EC</button>
+      <button class="svc-pill">CS</button>
+      <button class="svc-pill">CR</button>
+      <button class="svc-pill">OH</button>
+      <span style="width:1px;height:16px;background:#e5e7eb;"></span>
+      <span style="font-size:11px;color:#6b7280;">Date range</span>
+      <span class="count-right">14 jobs</span>
+    </div>
+  </div>
+
+  <!-- Table showing "Show changes" view -->
+  <div class="mock-table-wrap" style="margin-top:8px;">
+    <table class="mock-table">
+      <thead>
+        <tr>
+          <th style="width:10%">Trip</th>
+          <th style="width:12%">Customer</th>
+          <th style="width:7%">Service</th>
+          <th style="width:29%">Where</th>
+          <th style="width:9%">Pickup</th>
+          <th style="width:14%">Status</th>
+          <th style="width:11%">Verification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Cancelled row (highlighted) -->
+        <tr class="cancelled-row">
+          <td><span class="mono" style="font-size:10px;color:#111827;">DO-012</span></td>
+          <td style="font-weight:600;color:#111827;">TikTok</td>
+          <td><span class="mono" style="font-size:10px;color:#6b7280;">FM</span></td>
+          <td>
+            <div><span class="cancel-badge">CANCELLED</span>Yantian ICD → HKG</div>
+            <div style="font-size:9px;color:#9ca3af;margin-top:2px;">Zhang Wei · 粤B·12345</div>
+          </td>
+          <td><div class="mono" style="font-size:10px;">18 Aug</div><div class="mono" style="font-size:9px;color:#9ca3af;">08:00</div></td>
+          <td>
+            <div class="status-cell"><div class="status-dot" style="background:#dc2626;"></div><span style="color:#dc2626;font-weight:600;">Cancelled</span></div>
+            <div class="status-ts" style="color:#dc2626;font-size:9px;">Changed 09:02</div>
+            <div class="status-reason">Route conflict — duplicate assignment</div>
+          </td>
+          <td><div class="status-cell"><div class="status-dot" style="background:#d1d5db;"></div><span style="color:#6b7280;">Pending</span></div></td>
+        </tr>
+        <!-- New job row (highlighted) -->
+        <tr class="unread-row">
+          <td><span class="mono" style="font-size:10px;color:#111827;">DO-013</span></td>
+          <td style="font-weight:600;color:#111827;">Shopee</td>
+          <td><span class="mono" style="font-size:10px;color:#6b7280;">FM</span></td>
+          <td>
+            <div><span class="new-badge">NEW</span>Shenzhen Yantian → HKIA</div>
+            <div style="font-size:9px;color:#d1d5db;margin-top:2px;">No driver assigned</div>
+          </td>
+          <td><div class="mono" style="font-size:10px;">19 Aug</div><div class="mono" style="font-size:9px;color:#9ca3af;">07:30</div></td>
+          <td><div class="status-cell"><div class="status-dot" style="background:#d1d5db;"></div><span style="color:#6b7280;">Pending</span></div><div class="status-ts">Assigned 09:11</div></td>
+          <td><div class="status-cell"><div class="status-dot" style="background:#d1d5db;"></div><span style="color:#6b7280;">Pending</span></div></td>
+        </tr>
+        <!-- New job row (highlighted) -->
+        <tr class="unread-row">
+          <td><span class="mono" style="font-size:10px;color:#111827;">DO-014</span></td>
+          <td style="font-weight:600;color:#111827;">Temu</td>
+          <td><span class="mono" style="font-size:10px;color:#6b7280;">OH</span></td>
+          <td>
+            <div><span class="new-badge">NEW</span>Shenzhen Longhua Hub</div>
+            <div style="font-size:9px;color:#6b7280;margin-top:2px;" class="mono">1,240 bags · 3,200 kg</div>
+          </td>
+          <td><div class="mono" style="font-size:10px;">20 Aug</div><div class="mono" style="font-size:9px;color:#9ca3af;">09:00</div></td>
+          <td><div class="status-cell"><div class="status-dot" style="background:#d1d5db;"></div><span style="color:#6b7280;">Pending</span></div><div class="status-ts">Assigned 09:10</div></td>
+          <td><div class="status-cell"><div class="status-dot" style="background:#d1d5db;"></div><span style="color:#6b7280;">Pending</span></div></td>
+        </tr>
+        <!-- Normal rows -->
+        <tr>
+          <td><span class="mono" style="font-size:10px;color:#111827;">DO-008</span></td>
+          <td style="font-weight:600;color:#111827;">Shein</td>
+          <td><span class="mono" style="font-size:10px;color:#6b7280;">FM</span></td>
+          <td>
+            <div>Guangzhou Nansha → HKIA</div>
+            <div style="font-size:9px;color:#6b7280;margin-top:2px;">Li Ming · 粤B·67890</div>
+          </td>
+          <td><div class="mono" style="font-size:10px;">18 Aug</div><div class="mono" style="font-size:9px;color:#9ca3af;">14:00</div></td>
+          <td>
+            <div class="status-cell"><div class="status-dot" style="background:#152CFF;"></div><span style="color:#111827;font-weight:500;">In Progress</span></div>
+            <div class="status-ts">Since 11:32</div>
+          </td>
+          <td><div class="status-cell"><div class="status-dot" style="background:#d1d5db;"></div><span style="color:#6b7280;">Pending</span></div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <strong>Pros</strong><br>
+    · Zero new structural chrome — strip sits above filter bar, dismissed by explicit action<br>
+    · Context-specific tint (red for cancellations, amber for mixed) gives instant urgency signal<br>
+    · "Show changes" triggers a table filter — vendor sees exactly which rows changed<br>
+    · Row-level NEW/CANCELLED badges confirm which rows are affected without cross-referencing<br>
+    · Auto-expires: strip gone once dismissed, or if last visit was &lt;30min ago (same session)
+  </div>
+  <div class="cons">
+    <strong>Cons</strong><br>
+    · "Last seen" timestamp resets on each My Jobs visit — if vendor keeps the tab open, alert may not show<br>
+    · Strip adds temporary height above the filter bar; vendors with many pills may have to scroll slightly more<br>
+    · Relies on client-side localStorage — if vendor uses two devices, alerts don't sync<br>
+    · "Show changes" filter must be manually cleared; no auto-reset
+  </div>
+</div>
+
+<!-- ─── OPTION B ─────────────────────────────────────────────── -->
+<h2>Option B — Nav Badge + Count Enrichment on Segment Pills</h2>
+<span class="label label-b">Simpler but weaker</span>
+
+<div class="rationale">
+  A red dot/count badge on the "My Jobs" nav item appears whenever there are unread changes (new jobs or cancellations since last visit). The Cancelled pill gets a "NEW" sub-count to distinguish total-cancelled from newly-cancelled. No strip, no row badges. The signal is compact — vendors see something changed, but must look at the table to see what. This approach is passive — the vendor notices only if they look at the nav.
+</div>
+
+<div class="screen">
+  <div class="screen-label">Option B — Nav badge + enriched "Cancelled" pill</div>
+  <div class="mock-nav">
+    <div class="logo"></div>
+    <span class="logo-text">Teleport OS</span>
+    <span class="logo-sub">Vendor</span>
+    <div class="nav-items">
+      <!-- My Jobs with badge -->
+      <span style="position:relative;display:inline-block;">
+        <span class="nav-active">My Jobs</span>
+        <span class="nav-badge">3</span>
+      </span>
+      <span class="nav-link">Fleet</span>
+    </div>
+    <span class="vendor-name">HaleSun Logistics</span>
+    <div class="avatar" style="margin-left:8px;">HL</div>
+  </div>
+
+  <div class="mock-page-hd">
+    <div>
+      <div class="page-title">My Jobs</div>
+      <div class="page-sub">Your assigned jobs</div>
+    </div>
+    <button class="export-btn">&#8595; Export</button>
+  </div>
+
+  <div class="mock-filter-bar" style="margin-top:8px;">
+    <div class="pills-row">
+      <button class="pill active">All <span class="badge" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);">14</span></button>
+      <button class="pill">Pending <span class="badge" style="background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">3 <span style="font-size:8px;background:rgba(21,44,255,0.08);color:#152CFF;border:1px solid rgba(21,44,255,0.18);border-radius:3px;padding:0 3px;">+2</span></span></button>
+      <button class="pill">In Progress <span class="badge" style="background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">4</span></button>
+      <button class="pill">To verify <span class="badge" style="background:#fefce8;color:#a16207;border:1px solid #fde68a;">2</span></button>
+      <button class="pill">Verified <span class="badge" style="background:#f0fdf4;color:#059669;border:1px solid #a7f3d0;">4</span></button>
+      <button class="pill active-cancel">Cancelled <span class="badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;">1 <span style="font-size:8px;font-weight:700;">+1 new</span></span></button>
+    </div>
+    <div class="svc-row">
+      <span style="font-size:10px;color:#9ca3af;">Service</span>
+      <button class="svc-pill">FM</button>
+      <button class="svc-pill">EC</button>
+      <button class="svc-pill">CS</button>
+      <button class="svc-pill">CR</button>
+      <button class="svc-pill">OH</button>
+      <span style="width:1px;height:16px;background:#e5e7eb;"></span>
+      <span style="font-size:11px;color:#6b7280;">Date range</span>
+      <span class="count-right">14 jobs</span>
+    </div>
+  </div>
+
+  <div class="mock-table-wrap" style="margin-top:8px;">
+    <table class="mock-table">
+      <thead>
+        <tr>
+          <th style="width:10%">Trip</th>
+          <th style="width:12%">Customer</th>
+          <th style="width:7%">Service</th>
+          <th style="width:29%">Where</th>
+          <th style="width:9%">Pickup</th>
+          <th style="width:14%">Status</th>
+          <th style="width:11%">Verification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- New jobs sorted to top, no inline badge -->
+        <tr>
+          <td><span class="mono" style="font-size:10px;color:#111827;">DO-013</span></td>
+          <td style="font-weight:600;color:#111827;">Shopee</td>
+          <td><span class="mono" style="font-size:10px;color:#6b7280;">FM</span></td>
+          <td>
+            <div>Shenzhen Yantian → HKIA</div>
+            <div style="font-size:9px;color:#d1d5db;margin-top:2px;">No driver assigned</div>
+          </td>
+          <td><div class="mono" style="font-size:10px;">19 Aug</div><div class="mono" style="font-size:9px;color:#9ca3af;">07:30</div></td>
+          <td><div class="status-cell"><div class="status-dot" style="background:#d1d5db;"></div><span style="color:#6b7280;">Pending</span></div><div class="status-ts">Assigned 09:11</div></td>
+          <td><div class="status-cell"><div class="status-dot" style="background:#d1d5db;"></div><span style="color:#6b7280;">Pending</span></div></td>
+        </tr>
+        <tr>
+          <td><span class="mono" style="font-size:10px;color:#111827;">DO-014</span></td>
+          <td style="font-weight:600;color:#111827;">Temu</td>
+          <td><span class="mono" style="font-size:10px;color:#6b7280;">OH</span></td>
+          <td>
+            <div>Shenzhen Longhua Hub</div>
+            <div style="font-size:9px;color:#6b7280;margin-top:2px;" class="mono">1,240 bags · 3,200 kg</div>
+          </td>
+          <td><div class="mono" style="font-size:10px;">20 Aug</div><div class="mono" style="font-size:9px;color:#9ca3af;">09:00</div></td>
+          <td><div class="status-cell"><div class="status-dot" style="background:#d1d5db;"></div><span style="color:#6b7280;">Pending</span></div><div class="status-ts">Assigned 09:10</div></td>
+          <td><div class="status-cell"><div class="status-dot" style="background:#d1d5db;"></div><span style="color:#6b7280;">Pending</span></div></td>
+        </tr>
+        <tr>
+          <td><span class="mono" style="font-size:10px;color:#111827;">DO-008</span></td>
+          <td style="font-weight:600;color:#111827;">Shein</td>
+          <td><span class="mono" style="font-size:10px;color:#6b7280;">FM</span></td>
+          <td>
+            <div>Guangzhou Nansha → HKIA</div>
+            <div style="font-size:9px;color:#6b7280;margin-top:2px;">Li Ming · 粤B·67890</div>
+          </td>
+          <td><div class="mono" style="font-size:10px;">18 Aug</div><div class="mono" style="font-size:9px;color:#9ca3af;">14:00</div></td>
+          <td>
+            <div class="status-cell"><div class="status-dot" style="background:#152CFF;"></div><span style="color:#111827;font-weight:500;">In Progress</span></div>
+            <div class="status-ts">Since 11:32</div>
+          </td>
+          <td><div class="status-cell"><div class="status-dot" style="background:#d1d5db;"></div><span style="color:#6b7280;">Pending</span></div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <strong>Pros</strong><br>
+    · Most compact: no extra layout regions added to My Jobs page<br>
+    · Nav badge is a universal pattern — vendors recognize it immediately<br>
+    · "+N new" sub-count in pills is additive info (total count stays unchanged)<br>
+    · Badge clears automatically once vendor visits the page
+  </div>
+  <div class="cons">
+    <strong>Cons</strong><br>
+    · Nav badge tells you "something changed" but not WHAT — urgency type (cancellation vs new) is hidden<br>
+    · Newly-assigned jobs not visually distinguished in the table — vendor must look for recent timestamps<br>
+    · "+1 new" sub-count in Cancelled pill is easy to miss (small text inside a pill)<br>
+    · Most important case (cancellation) gets weakest signal — vendor may not notice until they scroll to Cancelled tab
+  </div>
+</div>
+
+<!-- ─── OPTION C ─────────────────────────────────────────────── -->
+<h2>Option C — Dedicated "Alerts" Segment Pill</h2>
+<span class="label label-c">Too heavy for v1</span>
+
+<div class="rationale">
+  A new "Alerts" segment pill sits between "All" and "Pending", showing a filtered view of jobs with recent changes (new or status-changed since last visit). Clicking "Alerts" filters to only those jobs. The pill has a count and auto-hides when count is zero. The filtered view uses the same table — it's just a pre-set filter combining new_jobs + recent_cancellations.
+  <br><br>
+  This is the most explicit model, but adds a conditional pill to the pill bar that disappears after dismissal. Vendors may find it confusing that the pill sometimes exists and sometimes doesn't.
+</div>
+
+<div class="screen">
+  <div class="screen-label">Option C — "Alerts" pill in segment bar (3 changes)</div>
+  <div class="mock-nav">
+    <div class="logo"></div>
+    <span class="logo-text">Teleport OS</span>
+    <span class="logo-sub">Vendor</span>
+    <div class="nav-items">
+      <span class="nav-active">My Jobs</span>
+      <span class="nav-link">Fleet</span>
+    </div>
+    <span class="vendor-name">HaleSun Logistics</span>
+    <div class="avatar" style="margin-left:8px;">HL</div>
+  </div>
+
+  <div class="mock-page-hd">
+    <div>
+      <div class="page-title">My Jobs</div>
+      <div class="page-sub">Your assigned jobs</div>
+    </div>
+    <button class="export-btn">&#8595; Export</button>
+  </div>
+
+  <div class="mock-filter-bar" style="margin-top:8px;">
+    <div class="pills-row">
+      <!-- Alerts pill (active) -->
+      <button class="alerts-tab">
+        ⚠ Alerts <span class="badge" style="background:#dc2626;color:#fff;border-radius:8px;padding:0 5px;font-size:9px;font-weight:700;border:none;">3</span>
+      </button>
+      <button class="pill">All <span class="badge" style="background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">14</span></button>
+      <button class="pill">Pending <span class="badge" style="background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">3</span></button>
+      <button class="pill">In Progress <span class="badge" style="background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">4</span></button>
+      <button class="pill">To verify <span class="badge" style="background:#fefce8;color:#a16207;border:1px solid #fde68a;">2</span></button>
+      <button class="pill">Verified <span class="badge" style="background:#f0fdf4;color:#059669;border:1px solid #a7f3d0;">4</span></button>
+      <button class="pill">Cancelled <span class="badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;">1</span></button>
+    </div>
+    <div class="svc-row">
+      <span style="font-size:10px;color:#9ca3af;">Service</span>
+      <button class="svc-pill">FM</button>
+      <button class="svc-pill">EC</button>
+      <button class="svc-pill">CS</button>
+      <button class="svc-pill">CR</button>
+      <button class="svc-pill">OH</button>
+      <span style="width:1px;height:16px;background:#e5e7eb;"></span>
+      <span style="font-size:11px;color:#6b7280;">Date range</span>
+      <span class="count-right">3 alerts</span>
+    </div>
+  </div>
+
+  <!-- Table showing alerts-filtered view -->
+  <div class="mock-table-wrap" style="margin-top:8px;">
+    <table class="mock-table">
+      <thead>
+        <tr>
+          <th style="width:10%">Trip</th>
+          <th style="width:12%">Customer</th>
+          <th style="width:7%">Service</th>
+          <th style="width:29%">Where</th>
+          <th style="width:9%">Pickup</th>
+          <th style="width:14%">Status</th>
+          <th style="width:11%">Verification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="cancelled-row">
+          <td><span class="mono" style="font-size:10px;color:#111827;">DO-012</span></td>
+          <td style="font-weight:600;color:#111827;">TikTok</td>
+          <td><span class="mono" style="font-size:10px;color:#6b7280;">FM</span></td>
+          <td>
+            <div>Yantian ICD → HKG</div>
+            <div style="font-size:9px;color:#dc2626;margin-top:2px;">Route conflict — duplicate assignment</div>
+          </td>
+          <td><div class="mono" style="font-size:10px;">18 Aug</div><div class="mono" style="font-size:9px;color:#9ca3af;">08:00</div></td>
+          <td>
+            <div class="status-cell"><div class="status-dot" style="background:#dc2626;"></div><span style="color:#dc2626;font-weight:600;">Cancelled</span></div>
+            <div class="status-ts" style="color:#dc2626;font-size:9px;">Changed 09:02</div>
+          </td>
+          <td><div class="status-cell"><div class="status-dot" style="background:#d1d5db;"></div><span style="color:#6b7280;">Pending</span></div></td>
+        </tr>
+        <tr>
+          <td><span class="mono" style="font-size:10px;color:#111827;">DO-013</span></td>
+          <td style="font-weight:600;color:#111827;">Shopee</td>
+          <td><span class="mono" style="font-size:10px;color:#6b7280;">FM</span></td>
+          <td>
+            <div>Shenzhen Yantian → HKIA</div>
+            <div style="font-size:9px;color:#d1d5db;margin-top:2px;">No driver assigned</div>
+          </td>
+          <td><div class="mono" style="font-size:10px;">19 Aug</div><div class="mono" style="font-size:9px;color:#9ca3af;">07:30</div></td>
+          <td><div class="status-cell"><div class="status-dot" style="background:#d1d5db;"></div><span style="color:#6b7280;">Pending</span></div><div class="status-ts">Assigned 09:11</div></td>
+          <td><div class="status-cell"><div class="status-dot" style="background:#d1d5db;"></div><span style="color:#6b7280;">Pending</span></div></td>
+        </tr>
+        <tr>
+          <td><span class="mono" style="font-size:10px;color:#111827;">DO-014</span></td>
+          <td style="font-weight:600;color:#111827;">Temu</td>
+          <td><span class="mono" style="font-size:10px;color:#6b7280;">OH</span></td>
+          <td>
+            <div>Shenzhen Longhua Hub</div>
+            <div style="font-size:9px;color:#6b7280;margin-top:2px;" class="mono">1,240 bags · 3,200 kg</div>
+          </td>
+          <td><div class="mono" style="font-size:10px;">20 Aug</div><div class="mono" style="font-size:9px;color:#9ca3af;">09:00</div></td>
+          <td><div class="status-cell"><div class="status-dot" style="background:#d1d5db;"></div><span style="color:#6b7280;">Pending</span></div><div class="status-ts">Assigned 09:10</div></td>
+          <td><div class="status-cell"><div class="status-dot" style="background:#d1d5db;"></div><span style="color:#6b7280;">Pending</span></div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <strong>Pros</strong><br>
+    · Most explicit model: "Alerts" pill surfaces all changes in one click<br>
+    · Table is already filtered to changed jobs — no manual scanning needed<br>
+    · Consistent with existing pill interaction model<br>
+    · Warning icon (⚠) makes the tab immediately identifiable
+  </div>
+  <div class="cons">
+    <strong>Cons</strong><br>
+    · Conditional pill that appears/disappears is hard to learn (nav is not stable)<br>
+    · Warning emoji is decorative — against design system (no emoji icons outside WeChat)<br>
+    · 7 pills is too many for the filter bar (current is 6 — adding Alerts pushes to 7)<br>
+    · "Alerts" semantically conflicts with "Cancelled" tab — vendor must understand the difference
+  </div>
+</div>
+
+<!-- ─── VERDICT ────────────────────────────────────────────────── -->
+<div class="verdict">
+  <h3>Verdict — Option A: Inline "What's Changed" Strip</h3>
+  <p><strong>Recommended approach:</strong> Dismissible strip between the page header and filter bar. Red tint for cancellations, amber for mixed changes. "Show changes" applies a temporary filter to the table. Row-level NEW/CANCELLED inline badges confirm which rows are affected.</p>
+  <p><strong>Why A over B:</strong> Option B's nav badge is universal but weak — it doesn't distinguish "you have a cancellation" (urgent: stop work) from "you have a new job" (actionable: assign a driver). The strip gives vendors specific, actionable information at a glance. The row-level badges (NEW, CANCELLED) close the loop: after seeing the strip, vendors can verify exactly which rows changed without relying on timestamp scanning.</p>
+  <p><strong>Why A over C:</strong> Option C's conditional pill creates an unstable nav structure. Vendors who've dismissed alerts or have a quiet day see a different pill count. Strips are a standard pattern for transient session-specific information (similar to cookie notices, maintenance banners) that the user is expected to handle once. A pill is a persistent navigational filter.</p>
+  <p><strong>Implementation notes:</strong><br>
+    · <code>lastSeenAt</code> written to <code>vendor_last_seen_{vendorCode}</code> localStorage key on My Jobs mount, at most once per 30 min<br>
+    · "New" = <code>job.createdAt &gt; lastSeenAt</code> (new assignment). "Changed" = <code>job.statusChangedAt &gt; lastSeenAt &amp;&amp; job.status === 'Cancelled'</code> (cancellation is the priority change)<br>
+    · "Show changes" sets a temporary alert filter (stored in component state only, not URL). Cleared by "Dismiss" or by switching to another segment pill<br>
+    · Row-level NEW/CANCELLED badges cleared once vendor clicks into the job (per-job localStorage flag)<br>
+    · Threshold: alert strip appears if <code>count &gt; 0</code>. Hides itself when dismissed (same session). Reappears next session if there are new changes<br>
+    · If there is ONLY a cancellation (no new jobs), strip is red tint only. If ONLY new jobs (no cancellations), amber tint. If both, red tint (cancellation is higher urgency).
+  </p>
+  <p><strong>Open question:</strong> Should "verified since last visit" also appear in the strip? Verification (billing gate) is important to vendors — but it's less urgent than cancellations or new assignments. Suggest: verification changes listed in the strip but in muted gray text ("2 jobs verified"), not tinted. Vendor can choose to act or ignore.</p>
+</div>
+
+</div>
+</body>
+</html>
