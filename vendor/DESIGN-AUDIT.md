@@ -1,7 +1,7 @@
 # Vendor App — Design Audit
 
 > Audited against `admin/DESIGN.md` and `vendor/DESIGN.md`.
-> Date: 2026-08-18
+> Last updated: 2026-08-25 (second audit pass)
 
 ## Summary
 
@@ -64,6 +64,76 @@ The local `StateCell` is used only in the Status Action Bar (which shows a singl
 The V01 mockup defines `.svc` as a blue pill (`background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.1); color: #152CFF`). The current design system decision (2026-04-21 slop-reduction alignment) mandates mono gray for service tags: `#6b7280, 10px JetBrains Mono, no pill, no blue`. The live implementation is correct. The mockup is historical.
 
 **Recommendation:** Mockup files are historical records; do not update them. The live implementation and DESIGN.md are the source of truth. No action required.
+
+---
+
+---
+
+### VIOLATION-01 — FM Route section shows 9px date-only, not the "big mono times" the spec requires
+
+**File:** `vendor/src/pages/JobDetailPage.tsx`, `renderRoute()` (approx. line 333)
+**Severity:** Major — contradicts the explicit spec requirement and hides operational urgency
+
+`vendor/DESIGN.md` states: *"Pickup/Delivery Timeline — two-point layout: Origin (location + pickup datetime in big mono) → arrow → Destination (location + delivery datetime). Times are the most important data for FM."*
+
+Current implementation calls `fmtDateMono(job.origin.date)` which strips the time component and returns only `dd MMM` (e.g. "25 Aug") rendered at 9px in `#374151`. The time — the dispatcher's primary urgency signal — is not shown at all.
+
+```jsx
+// Current (wrong)
+<div style={{ ...mono, fontSize: 9, color: '#374151', marginTop: 2 }}>
+  {job.origin.date ? fmtDateMono(job.origin.date) : trip.pickupDate}
+</div>
+
+// Required: hero time at 20px, secondary date at 10px, location at 10px below
+<div style={{ fontFamily: 'var(--font-mono)', fontSize: 20, fontWeight: 600, color: '#111827', letterSpacing: '-0.5px', lineHeight: 1 }}>
+  {job.origin.date ? fmtTime(job.origin.date) : '—'}
+</div>
+<div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#6b7280', marginTop: 3 }}>
+  {job.origin.date ? fmtDateShort(job.origin.date) : 'No date set'}
+</div>
+<div style={{ fontSize: 10, color: '#6b7280', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+  {job.origin.location}
+</div>
+```
+
+The section is also titled "Route" but should be "Pickup / Delivery" to match the two-point timeline meaning. See HMW-V14 for the design mockup and full implementation notes.
+
+**Fix:** Rewrite `renderRoute()` to use `fmtTime()` as the hero element at 20px mono, `fmtDateShort()` as secondary date, and demote the location name to 10px muted text below. Rename the section title from "Route" to "Pickup / Delivery". See `14-hmw-fm-timeline-times.html`, Option B.
+
+---
+
+### VIOLATION-02 — Proof upload zone absent; small "+ Add" button used instead
+
+**File:** `vendor/src/pages/JobDetailPage.tsx`, `renderProofs()` (approx. line 186)
+**Severity:** Moderate — spec-required affordance missing; camera upload not surfaced on tablet
+
+`vendor/DESIGN.md` specifies the upload zone:
+> *"dashed border (1.5px dashed rgba(21,44,255,0.25)), 'Drop files here or browse', '📷 Take Photo' button"*
+
+Current implementation uses a small `+ Add` ghost button in the section header that triggers the hidden file input. The upload zone is only accessible if the vendor finds the small button or uses the Status Action Bar upload button. On tablet, the camera capture path (which requires the `capture="environment"` attribute) is not discoverable.
+
+**Fix:** When `canUpload && !isVerified`, render a dashed upload zone below the proof file list:
+```jsx
+<div
+  style={{
+    border: '1.5px dashed rgba(21,44,255,0.25)',
+    borderRadius: 4,
+    padding: '12px',
+    marginTop: 8,
+    textAlign: 'center',
+    cursor: 'pointer',
+    color: '#9ca3af',
+    fontSize: 11,
+  }}
+  onClick={() => fileRef.current?.click()}
+>
+  Drop files here or browse
+  <button style={{ display: 'block', margin: '6px auto 0', fontSize: 11, ... }}>
+    📷 Take Photo
+  </button>
+</div>
+```
+The `<input>` already has `capture="environment"` support from the existing implementation; the zone makes it discoverable.
 
 ---
 

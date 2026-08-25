@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-V14: FM Job Timeline — Time as Hero Data</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', 'SF Mono', monospace; }
+.page { max-width: 1200px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+/* Nav */
+.mock-nav { height: 40px; padding: 0 12px; background: #111827; display: flex; align-items: center; gap: 8px; }
+.mock-nav .logo { width: 18px; height: 18px; background: #152CFF; border-radius: 4px; }
+.mock-nav .logo-text { font-weight: 700; font-size: 12px; color: #fff; }
+.mock-nav .logo-label { font-size: 9px; color: rgba(255,255,255,0.35); }
+.mock-nav .nav-active { font-size: 11px; padding: 3px 8px; border-radius: 3px; color: #fff; background: rgba(255,255,255,0.1); font-weight: 600; }
+.mock-nav .vendor-id { margin-left: auto; font-size: 10px; color: rgba(255,255,255,0.6); font-weight: 600; }
+
+/* Job detail page container */
+.detail-page { max-width: 960px; margin: 0 auto; padding: 16px; }
+
+/* Header */
+.job-header { padding-bottom: 12px; border-bottom: 1px solid #e5e7eb; margin-bottom: 14px; }
+.job-header-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.back-link { font-size: 12px; font-weight: 500; color: #152CFF; display: inline-flex; align-items: center; gap: 4px; }
+.job-id-badge { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 1px 6px; border-radius: 4px; background: #f3f4f6; border: 1px solid #e5e7eb; color: #9ca3af; }
+.job-service-name { font-size: 14px; font-weight: 700; color: #111827; }
+.job-service-code { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #6b7280; }
+.job-meta { display: flex; align-items: center; gap: 8px; font-size: 11px; }
+
+/* Status Action Bar */
+.status-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border: 1px solid rgba(21,44,255,0.12); border-radius: 4px; margin-bottom: 4px; background: rgba(21,44,255,0.04); }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: #152CFF; display: inline-block; margin-right: 6px; flex-shrink: 0; }
+.status-label { font-size: 12px; font-weight: 500; color: #111827; }
+.status-hint { font-size: 10px; color: #6b7280; margin-top: 2px; }
+.btn-primary { padding: 5px 14px; border: none; border-radius: 4px; background: #152CFF; color: #fff; font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; }
+
+/* Dispatch section */
+.dispatch-section { padding: 12px 14px; background: rgba(21,44,255,0.02); border: 1px solid rgba(21,44,255,0.1); border-radius: 6px; margin-bottom: 4px; }
+.section-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px; }
+.dispatch-assigned { display: flex; align-items: center; gap: 12px; font-size: 11px; }
+
+/* Section wrapper */
+.section-wrap { padding: 14px 16px; border-top: 1px solid #f3f4f6; }
+
+/* Option A — Current: date-first (baseline) */
+.route-a { display: flex; align-items: center; gap: 12px; }
+.route-a .loc-col { flex: 1; }
+.route-a .loc-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 3px; }
+.route-a .loc-name { font-size: 11px; font-weight: 600; color: #111827; }
+.route-a .loc-date { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #374151; margin-top: 2px; }
+.route-a .arrow { font-size: 16px; color: #d1d5db; flex-shrink: 0; }
+
+/* Option B — Time-first hero */
+.route-b { display: flex; align-items: stretch; gap: 0; }
+.route-b .time-col { flex: 1; }
+.route-b .time-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 4px; }
+.route-b .time-hero { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 600; color: #111827; letter-spacing: -0.5px; line-height: 1; }
+.route-b .time-date { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #6b7280; margin-top: 3px; }
+.route-b .time-loc { font-size: 10px; color: #6b7280; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.route-b .arrow-col { display: flex; align-items: center; padding: 0 12px; flex-shrink: 0; }
+.route-b .arrow-col svg { color: #d1d5db; }
+
+/* Option C — Two-row split: times row + locations row */
+.route-c { display: flex; flex-direction: column; gap: 8px; }
+.route-c .times-row { display: flex; align-items: center; gap: 0; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 10px 14px; }
+.route-c .time-col { flex: 1; }
+.route-c .time-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 3px; }
+.route-c .time-big { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 600; color: #111827; letter-spacing: -0.3px; line-height: 1; }
+.route-c .date-small { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9ca3af; margin-top: 2px; }
+.route-c .arrow-mid { padding: 0 12px; display: flex; align-items: center; flex-shrink: 0; }
+.route-c .locs-row { display: flex; align-items: flex-start; gap: 0; }
+.route-c .loc-col { flex: 1; }
+.route-c .loc-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 2px; }
+.route-c .loc-name { font-size: 11px; font-weight: 600; color: #111827; }
+.route-c .loc-arrow { padding: 0 12px; display: flex; align-items: center; font-size: 14px; color: #d1d5db; padding-top: 14px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-V14: FM Job Timeline — Time as Hero Data</h1>
+<p style="font-size:12px;color:#9ca3af;margin-bottom:20px;">Vendor Design Hypotheses · Teleport OS</p>
+
+<div class="hmw">
+  "How might we render the FM pickup and delivery times as the primary visual anchor in the job timeline section, so dispatchers can immediately assess urgency without parsing a cluttered datetime string?"
+</div>
+
+<div class="context">
+  <strong>Context:</strong> FM Trucking jobs have a defined pickup datetime (<code>origin.date</code>) and delivery datetime (<code>destination.date</code>). These are the most operationally critical data points for the dispatcher — they determine whether the driver needs to leave immediately or has lead time. The design spec says <em>"Times are the most important data for FM."</em> Currently, <code>renderRoute()</code> calls <code>fmtDateMono()</code> which strips the time component and shows only <code>dd MMM</code> at 9px as a sub-line below the location name. There is no time shown at all. This is a gap between spec and implementation.
+  <br><br>
+  <strong>Dispatcher's first question:</strong> "When does my driver need to be at pickup?" — not "where is the pickup?"
+  They already know the facilities; urgency drives dispatch, not geography.
+</div>
+
+<!-- ===== OPTION A: CURRENT (BASELINE) ===== -->
+
+<h2>Option A — Current (Baseline)</h2>
+<div class="rationale">
+  Location names are primary (11px bold). Date shown as 9px sub-line in <code>#374151</code>. Time component stripped by <code>fmtDateMono()</code> — only <code>dd MMM</code> visible. Dispatcher cannot assess urgency without mentally parsing "25 Aug" into a time of day. Section titled "Route" (not "Timeline").
+</div>
+
+<div class="label" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;">❌ Not compliant with spec</div>
+
+<div class="screen">
+  <div class="mock-nav">
+    <div class="logo"></div>
+    <span class="logo-text">Teleport OS</span>
+    <span class="logo-label">Vendor</span>
+    <span style="margin-left:16px;" class="nav-active">My Jobs</span>
+    <span class="vendor-id">HaleSun Logistics</span>
+  </div>
+  <div class="detail-page">
+    <div class="job-header">
+      <div class="job-header-top">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="back-link">← My Jobs</span>
+          <span style="color:#d1d5db">|</span>
+          <span class="job-id-badge">J03</span>
+          <span class="job-service-name">FM Trucking</span>
+          <span class="job-service-code">FM</span>
+        </div>
+        <div class="job-meta">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">DO-005</span>
+          <span style="color:#d1d5db">·</span>
+          <span style="font-weight:600;color:#111827;">TikTok</span>
+          <span style="color:#d1d5db">·</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">633-12345678-1</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <div>
+        <div style="display:inline-flex;align-items:center;">
+          <span class="status-dot"></span>
+          <span class="status-label">In Progress</span>
+        </div>
+        <div class="status-hint">Upload proof of service to mark complete</div>
+      </div>
+      <button class="btn-primary">↑ Upload Proof</button>
+    </div>
+
+    <div class="dispatch-section" style="margin-top:4px;">
+      <div class="section-title">Driver &amp; Vehicle</div>
+      <div class="dispatch-assigned">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span style="font-size:12px;font-weight:600;color:#111827;">Zhang Wei</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#374151;">粤B·12345</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">+86 138****1234</span>
+        <span style="margin-left:auto;font-size:9px;color:#6b7280;cursor:pointer;text-decoration:underline;">Reassign</span>
+      </div>
+    </div>
+
+    <!-- Route Section — Option A (current) -->
+    <div class="section-wrap">
+      <div class="section-title">Route</div>
+      <div class="route-a">
+        <div class="loc-col">
+          <div class="loc-label">Pickup</div>
+          <div class="loc-name">HACTL Cargo Terminal</div>
+          <div class="loc-date">25 Aug</div>  <!-- No time. fmtDateMono strips it. -->
+        </div>
+        <span class="arrow">→</span>
+        <div class="loc-col">
+          <div class="loc-label">Delivery</div>
+          <div class="loc-name">Yantian International Terminal</div>
+          <div class="loc-date">25 Aug</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-wrap">
+      <div class="section-title">Cargo</div>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:#111827;">24 bags · 1,280 kg</span>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <strong>Pros</strong><br>
+    · Simple layout<br>
+    · Location names scannable
+  </div>
+  <div class="cons">
+    <strong>Cons</strong><br>
+    · Time completely absent — dispatcher can't see urgency<br>
+    · "25 Aug" gives date but not urgency (was it 06:00 or 23:00?)<br>
+    · Contradicts spec: "Times are the most important data for FM"<br>
+    · Section titled "Route" — misleading for pickup/delivery context
+  </div>
+</div>
+
+<!-- ===== OPTION B: TIME-FIRST HERO ===== -->
+
+<h2>Option B — Time as Hero (Spec-aligned)</h2>
+<div class="rationale">
+  Pickup and delivery times rendered at 20px JetBrains Mono — the single largest text element on the page after the job service name. Date shown at 10px below the time. Location name at 10px below the date, muted. Two-column layout with arrow divider. Section retitled "Pickup / Delivery" to match the two-point nature.
+  <br><br>
+  Dispatcher sees the critical info in one glance: <strong>"09:00 → 14:00"</strong>. The rest is context.
+</div>
+
+<div class="label" style="background:#f0fdf4;color:#059669;border:1px solid #a7f3d0;">✓ Spec-aligned</div>
+
+<div class="screen">
+  <div class="mock-nav">
+    <div class="logo"></div>
+    <span class="logo-text">Teleport OS</span>
+    <span class="logo-label">Vendor</span>
+    <span style="margin-left:16px;" class="nav-active">My Jobs</span>
+    <span class="vendor-id">HaleSun Logistics</span>
+  </div>
+  <div class="detail-page">
+    <div class="job-header">
+      <div class="job-header-top">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="back-link">← My Jobs</span>
+          <span style="color:#d1d5db">|</span>
+          <span class="job-id-badge">J03</span>
+          <span class="job-service-name">FM Trucking</span>
+          <span class="job-service-code">FM</span>
+        </div>
+        <div class="job-meta">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">DO-005</span>
+          <span style="color:#d1d5db">·</span>
+          <span style="font-weight:600;color:#111827;">TikTok</span>
+          <span style="color:#d1d5db">·</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">633-12345678-1</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <div>
+        <div style="display:inline-flex;align-items:center;">
+          <span class="status-dot"></span>
+          <span class="status-label">In Progress</span>
+        </div>
+        <div class="status-hint">Upload proof of service to mark complete</div>
+      </div>
+      <button class="btn-primary">↑ Upload Proof</button>
+    </div>
+
+    <div class="dispatch-section" style="margin-top:4px;">
+      <div class="section-title">Driver &amp; Vehicle</div>
+      <div class="dispatch-assigned">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span style="font-size:12px;font-weight:600;color:#111827;">Zhang Wei</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#374151;">粤B·12345</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">+86 138****1234</span>
+        <span style="margin-left:auto;font-size:9px;color:#6b7280;cursor:pointer;text-decoration:underline;">Reassign</span>
+      </div>
+    </div>
+
+    <!-- Pickup/Delivery Section — Option B (time as hero) -->
+    <div class="section-wrap">
+      <div class="section-title">Pickup / Delivery</div>
+      <div class="route-b">
+        <div class="time-col">
+          <div class="time-label">Pickup</div>
+          <div class="time-hero">09:00</div>
+          <div class="time-date">25 Aug 2026</div>
+          <div class="time-loc">HACTL Cargo Terminal, HK</div>
+        </div>
+        <div class="arrow-col">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </div>
+        <div class="time-col">
+          <div class="time-label">Delivery</div>
+          <div class="time-hero">14:30</div>
+          <div class="time-date">25 Aug 2026</div>
+          <div class="time-loc">Yantian International Terminal, SZ</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-wrap">
+      <div class="section-title">Cargo</div>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:#111827;">24 bags · 1,280 kg</span>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <strong>Pros</strong><br>
+    · "09:00 → 14:30" scannable in &lt;1 second<br>
+    · Directly matches spec ("pickup datetime in big mono")<br>
+    · Same layout works for all 4 job states (Pending/In Progress/Completed/Verified)<br>
+    · Location name preserved as secondary context<br>
+    · Section title "Pickup / Delivery" is more accurate than "Route"
+  </div>
+  <div class="cons">
+    <strong>Cons</strong><br>
+    · Larger vertical footprint than Option A<br>
+    · If no time is set (only date), shows midnight "00:00" unless handled<br>
+    · Long location names truncate — fix with ellipsis on .time-loc
+  </div>
+</div>
+
+<!-- ===== OPTION C: TWO-ROW SPLIT ===== -->
+
+<h2>Option C — Two-Row Split (Times Row + Locations Row)</h2>
+<div class="rationale">
+  Times occupy a dedicated tinted row at the top (18px JetBrains Mono, ghost background). Location names occupy a second row below. Structural separation signals the information hierarchy without requiring the dispatcher to parse vertical proximity. Useful when location names are long and would crowd the time display.
+</div>
+
+<div class="label" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;">⚠ More complex for marginal gain</div>
+
+<div class="screen">
+  <div class="mock-nav">
+    <div class="logo"></div>
+    <span class="logo-text">Teleport OS</span>
+    <span class="logo-label">Vendor</span>
+    <span style="margin-left:16px;" class="nav-active">My Jobs</span>
+    <span class="vendor-id">HaleSun Logistics</span>
+  </div>
+  <div class="detail-page">
+    <div class="job-header">
+      <div class="job-header-top">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="back-link">← My Jobs</span>
+          <span style="color:#d1d5db">|</span>
+          <span class="job-id-badge">J03</span>
+          <span class="job-service-name">FM Trucking</span>
+          <span class="job-service-code">FM</span>
+        </div>
+        <div class="job-meta">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af;">DO-005</span>
+          <span style="color:#d1d5db">·</span>
+          <span style="font-weight:600;color:#111827;">TikTok</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <div>
+        <div style="display:inline-flex;align-items:center;">
+          <span class="status-dot"></span>
+          <span class="status-label">In Progress</span>
+        </div>
+        <div class="status-hint">Upload proof of service to mark complete</div>
+      </div>
+      <button class="btn-primary">↑ Upload Proof</button>
+    </div>
+
+    <div class="dispatch-section" style="margin-top:4px;">
+      <div class="section-title">Driver &amp; Vehicle</div>
+      <div class="dispatch-assigned">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span style="font-size:12px;font-weight:600;color:#111827;">Zhang Wei</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#374151;">粤B·12345</span>
+        <span style="margin-left:auto;font-size:9px;color:#6b7280;cursor:pointer;text-decoration:underline;">Reassign</span>
+      </div>
+    </div>
+
+    <!-- Pickup/Delivery Section — Option C (two-row split) -->
+    <div class="section-wrap">
+      <div class="section-title">Pickup / Delivery</div>
+      <div class="route-c">
+        <!-- Times row (tinted, hero) -->
+        <div class="times-row">
+          <div class="time-col">
+            <div class="time-label">Pickup</div>
+            <div class="time-big">09:00</div>
+            <div class="date-small">25 Aug 2026</div>
+          </div>
+          <div class="arrow-mid">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </div>
+          <div class="time-col">
+            <div class="time-label">Delivery</div>
+            <div class="time-big">14:30</div>
+            <div class="date-small">25 Aug 2026</div>
+          </div>
+        </div>
+        <!-- Locations row (secondary) -->
+        <div class="locs-row">
+          <div class="loc-col">
+            <div class="loc-label">From</div>
+            <div class="loc-name">HACTL Cargo Terminal</div>
+          </div>
+          <div class="loc-arrow">→</div>
+          <div class="loc-col">
+            <div class="loc-label">To</div>
+            <div class="loc-name">Yantian International Terminal</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-wrap">
+      <div class="section-title">Cargo</div>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:#111827;">24 bags · 1,280 kg</span>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <strong>Pros</strong><br>
+    · Clear visual separation between time (hero) and place (context)<br>
+    · Long location names can't crowd the time display<br>
+    · Tinted row reinforces the "this is the critical urgency zone" meaning
+  </div>
+  <div class="cons">
+    <strong>Cons</strong><br>
+    · Two separate rows for one conceptual unit — cognitive overhead<br>
+    · Larger vertical footprint than B — wastes space when location names are short<br>
+    · Tinted times row (#f9fafb) is a new pattern not in the existing design system<br>
+    · Option B already achieves hierarchy without needing structural separation
+  </div>
+</div>
+
+<!-- ===== VERDICT ===== -->
+
+<div class="verdict">
+  <h3>✓ Decision: Option B — Time as Hero</h3>
+
+  <p style="font-size:12px;line-height:1.7;color:#374151;margin-bottom:10px;">
+    <strong>Adopt Option B.</strong> The dispatcher's core question is <em>when</em>, not <em>where</em>. Showing the pickup time at 20px JetBrains Mono as the first visible data point in the section answers that question in &lt;1 second. Location name is secondary context — preserved at 10px below the date. The section should be retitled "Pickup / Delivery" to accurately reflect its two-point nature.
+  </p>
+
+  <p style="font-size:12px;line-height:1.7;color:#374151;margin-bottom:10px;">
+    Option C is rejected: the two-row separation adds visual complexity without meaningful gain over B. Option A is rejected: showing only "25 Aug" at 9px actively hides urgency.
+  </p>
+
+  <p style="font-size:11px;line-height:1.6;color:#374151;font-weight:600;">Implementation notes:</p>
+  <ul style="font-size:11px;line-height:1.6;color:#374151;margin-left:16px;">
+    <li>Use <code>fmtTime(origin.date)</code> for the hero time (HH:MM, 20px mono). Fall back to "—" if no date set.</li>
+    <li>Use <code>fmtDateShort(origin.date)</code> for the secondary date line (dd MMM yyyy, 10px mono, <code>#6b7280</code>).</li>
+    <li>Location name: 10px, <code>#6b7280</code>, overflow ellipsis. Not the hero — don't make it bold.</li>
+    <li>Rename section from "Route" to "Pickup / Delivery" in <code>renderRoute()</code> (or rename the function to <code>renderTimeline()</code>).</li>
+    <li>If <code>origin.date</code> is null: show "—" at 20px mono for the time slot and "No date set" at 10px for the date line.</li>
+    <li>No tinted row (Option C), no background change — the design system does not use tinted rows in the section body.</li>
+  </ul>
+
+  <p style="font-size:11px;line-height:1.6;color:#374151;margin-top:10px;">
+    <strong>Open question:</strong> When the pickup time is within 2 hours from now, should the time hero color change to <code>#dc2626</code> (urgency red) as a scalar signal? The admin app uses red urgency coloring in the Pickup Date column. This would close the urgency loop for dispatchers. Recommend: yes, align with admin pattern — same threshold (2h), same color. Needs user input to confirm.
+  </p>
+</div>
+
+</div>
+</body>
+</html>

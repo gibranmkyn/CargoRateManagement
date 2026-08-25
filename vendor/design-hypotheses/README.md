@@ -2,6 +2,12 @@
 
 ## Open
 
+### HMW-V14: How might we render FM pickup and delivery times as the primary visual anchor in the job timeline section?
+**Options:** A) Current — location names primary, 9px date sub-line, time absent entirely, B) Time-first hero — 20px JetBrains Mono time as largest element, location name and date as secondary lines below, C) Two-row split — tinted times row (hero) + plain locations row (secondary)
+**Leaning toward:** B) Time-first hero — the dispatcher's question is "when?" not "where?" Showing the pickup time at 20px answers urgency in <1 second. Option C is structurally sound but adds complexity for no gain over B. Option A (current) actively hides urgency by stripping time from the datetime.
+**Open question:** When pickup time is within 2 hours from now, should the hero time color change to `#dc2626` (urgency red)? The admin app uses urgency coloring in its Pickup Date column at the same threshold. Aligning would close the urgency loop for dispatchers. Needs user input.
+**File:** `14-hmw-fm-timeline-times.html`
+
 ### HMW-V13: How might we ensure vendors never miss a new job assignment or cancellation when they return to the app — without push notifications?
 **Options:** A) Dismissible "What's Changed" strip above the filter bar (red tint for cancellations, amber for mixed; row-level NEW/CANCELLED inline badges), B) Nav badge count + enriched pill sub-counts ("+2 new" on Pending, "+1 new" on Cancelled), C) Conditional "Alerts" segment pill that appears when there are unread changes
 **Leaning toward:** A) Inline strip — gives specific, actionable information (not just "something changed") and distinguishes cancellation urgency from new-assignment priority. Row-level badges close the loop without requiring the vendor to scan timestamps. Strip pattern is correct for transient session-specific information; a pill is a persistent navigational filter. Cancellations are the highest-urgency case; a red strip ensures they are never buried.
