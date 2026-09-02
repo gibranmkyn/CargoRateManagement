@@ -2,6 +2,12 @@
 
 ## Open
 
+### HMW-V15: How might we let vendor operators flag cargo quantity discrepancies without write access to Teleport's records?
+**Options:** A) Parallel vendor measurement inputs — "Your count" field beside each Teleport quantity; inline match/mismatch badges; single atomic submit, B) Per-quantity flag buttons — small "Flag" button per field; expands inline micro-form with vendor's value + note, C) General dispute note — single "Report discrepancy" button; freetext textarea; unstructured
+**Leaning toward:** A) Parallel fields — produces field-specific, diff-trackable records for admin without interpretation; mirrors how a vendor would compare numbers in Excel; scales to a bulk "disputed quantities" filter in v1.2 reconciliation view. Option B is correct for a more mature product (v2+). Option C is inadequate for structured reconciliation.
+**Open question:** Should vendors be able to submit a discrepancy after admin has already verified the job? Recommend allowing post-verification flags (creates a flag record, doesn't reopen the job), but needs user input.
+**File:** `15-hmw-quantity-reconciliation.html`
+
 ### HMW-V14: How might we render FM pickup and delivery times as the primary visual anchor in the job timeline section?
 **Options:** A) Current — location names primary, 9px date sub-line, time absent entirely, B) Time-first hero — 20px JetBrains Mono time as largest element, location name and date as secondary lines below, C) Two-row split — tinted times row (hero) + plain locations row (secondary)
 **Leaning toward:** B) Time-first hero — the dispatcher's question is "when?" not "where?" Showing the pickup time at 20px answers urgency in <1 second. Option C is structurally sound but adds complexity for no gain over B. Option A (current) actively hides urgency by stripping time from the datetime.
