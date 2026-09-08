@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-V16: Proof Upload Zone</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+/* Mockup nav */
+.mock-nav { height: 40px; padding: 0 12px; background: #111827; display: flex; align-items: center; gap: 8px; }
+.mock-nav .logo { width: 18px; height: 18px; background: #152CFF; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+.mock-nav .logo svg { color: #fff; }
+.mock-nav .logo-text { font-weight: 700; font-size: 12px; color: #fff; }
+.mock-nav .logo-label { font-size: 9px; color: rgba(255,255,255,0.35); }
+.mock-nav .nav-item { font-size: 11px; padding: 3px 8px; border-radius: 3px; color: rgba(255,255,255,0.5); font-weight: 400; }
+.mock-nav .nav-item.active { color: #fff; background: rgba(255,255,255,0.1); font-weight: 600; }
+.mock-nav .vendor-id { margin-left: auto; font-size: 10px; color: rgba(255,255,255,0.6); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.avatar { width: 22px; height: 22px; border-radius: 4px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.7); }
+
+/* State label strip */
+.state-strip { padding: 4px 14px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #6b7280; }
+
+/* State comparison: side-by-side two columns */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.two-col > .col { background: #fff; }
+.two-col > .col + .col { border-left: 1px solid #d1d5db; }
+.col-label { padding: 5px 14px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #6b7280; }
+
+/* Shared section primitives */
+.job-header { padding: 12px 16px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
+.back-link { font-size: 12px; font-weight: 500; color: #152CFF; display: inline-flex; align-items: center; gap: 4px; }
+.job-id-chip { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 1px 6px; border-radius: 4px; background: #f3f4f6; border: 1px solid #e5e7eb; color: #9ca3af; margin: 0 4px; }
+.job-svc { font-size: 14px; font-weight: 700; color: #111827; }
+.job-svc-code { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #6b7280; }
+.job-meta-right { font-size: 10px; display: flex; align-items: center; gap: 4px; color: #9ca3af; }
+.job-meta-right .tri { font-family: 'JetBrains Mono', monospace; }
+.job-meta-right .customer { font-weight: 600; color: #111827; font-size: 11px; }
+
+.status-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.status-label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; }
+.status-hint { font-size: 10px; color: #6b7280; margin-top: 2px; }
+.btn-primary { padding: 5px 14px; background: #152CFF; color: #fff; border: none; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-family: 'Instrument Sans', sans-serif; }
+
+.section-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.section-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; }
+
+/* Upload zone */
+.upload-zone { border: 1.5px dashed rgba(21,44,255,0.25); border-radius: 4px; background: rgba(21,44,255,0.01); padding: 18px 16px; text-align: center; }
+.upload-zone:hover { border-color: rgba(21,44,255,0.4); background: rgba(21,44,255,0.03); }
+.upload-icon { width: 26px; height: 26px; margin: 0 auto 8px; color: #d1d5db; }
+.upload-text { font-size: 11px; color: #6b7280; margin-bottom: 10px; }
+.upload-text a { color: #152CFF; text-decoration: none; font-weight: 500; }
+.upload-btns { display: flex; gap: 6px; justify-content: center; align-items: center; }
+.btn-camera { padding: 5px 12px; background: #152CFF; color: #fff; border: none; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-family: 'Instrument Sans', sans-serif; }
+.btn-browse { padding: 4px 10px; background: #fff; color: #374151; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 11px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-family: 'Instrument Sans', sans-serif; }
+
+/* Proof file rows */
+.proof-row { display: flex; align-items: center; gap: 9px; padding: 7px 0; border-bottom: 1px solid #f3f4f6; }
+.proof-icon { flex-shrink: 0; color: #6b7280; }
+.proof-name { flex: 1; font-size: 12px; color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proof-meta { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9ca3af; }
+.proof-open { font-size: 11px; color: #152CFF; font-weight: 500; flex-shrink: 0; }
+
+/* Camera strip (Option C) */
+.camera-strip { display: flex; align-items: center; gap: 6px; padding: 8px 0 2px; border-top: 1px solid #f3f4f6; }
+.strip-divider { width: 1px; height: 14px; background: #e5e7eb; }
+.btn-strip-camera { padding: 5px 12px; background: #152CFF; color: #fff; border: none; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-family: 'Instrument Sans', sans-serif; }
+.btn-strip-file { padding: 4px 10px; background: #fff; color: #374151; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 11px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-family: 'Instrument Sans', sans-serif; }
+.strip-count { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9ca3af; margin-left: auto; }
+
+/* Locked proof (Verified state) */
+.locked-note { font-size: 10px; color: #9ca3af; font-style: italic; padding: 2px 0 6px; }
+
+/* Section wrap */
+.sw { padding: 14px 16px; border-top: 1px solid #f3f4f6; }
+
+/* Small add button */
+.btn-add-small { padding: 3px 8px; background: #fff; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 10px; font-weight: 600; color: #374151; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-family: 'Instrument Sans', sans-serif; }
+.btn-add-small svg { color: #6b7280; }
+
+/* Green verified text */
+.vtext { font-size: 12px; font-weight: 600; color: #059669; display: inline-flex; align-items: center; gap: 6px; }
+
+/* Amber bar */
+.bar-amber { background: #fefce8; border: 1px solid #fde68a; }
+.bar-blue { background: rgba(21,44,255,0.04); border: 1px solid rgba(21,44,255,0.12); }
+.bar-green { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.bar-gray { background: #f9fafb; border: 1px solid #e5e7eb; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-V16: Proof Upload Zone</h1>
+<div class="hmw">How might we design the proof upload experience on the vendor Job Detail page so that vendors capturing photo evidence on tablets at warehouses and terminals can do so in one tap — without hunting for a button, and without the zone cluttering the page once proof is already uploaded?</div>
+
+<div class="context">
+<strong>Context:</strong> The vendor app targets 768px+ tablet screens. Vendors at cargo terminals and warehouses photograph proof of service on-site — a signed POD, a stamp on a form, or a bag count photo. <code>vendor/DESIGN.md</code> specifies a dashed upload zone with a 📷 camera button (<code>capture="environment"</code>) and a drag-and-drop target. The current implementation renders only a small "+ Add" button in the section header. Three design questions need resolution: (1) How prominent should the upload affordance be? (2) Should it collapse once proof is uploaded? (3) Should the camera and file-browser be separate actions or combined?
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION A: Full Zone — Always Visible         -->
+<!-- ============================================ -->
+<h2>Option A: Full Upload Zone — Always Visible</h2>
+<span class="label" style="background: #dbeafe; color: #1e40af;">Simplest</span>
+
+<div class="rationale">
+The dashed zone is always visible whenever upload is allowed (Pending or In Progress). Camera button primary, Browse secondary. Files appear as rows above the zone. The zone is always the "call to action" regardless of how many files are already uploaded.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Unmissable — first-time upload never requires hunting<br>
+• Camera button always reachable in one tap on tablet<br>
+• Consistent — page looks the same regardless of upload state<br>
+• Drag-and-drop target always present (useful on laptop)</div>
+<div class="cons"><strong>Cons</strong><br>
+• Zone takes vertical space when 3–5 files already uploaded<br>
+• Redundant — the "upload more" affordance competes with the file list for attention<br>
+• Visual noise after job nears completion — vendor is reviewing, not uploading<br>
+• At 768px, the zone + 3 file rows pushes Activity Log below the fold</div>
+</div>
+</div>
+
+<!-- Two-col: empty state and filled state -->
+<div class="two-col">
+  <div class="col">
+    <div class="col-label">State 1 — 0 files (In Progress)</div>
+    <!-- Nav -->
+    <div class="mock-nav">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10"><path d="M2 12h20M12 2l8 10-8 10-8-10z"/></svg>
+      </div>
+      <span class="logo-text">Teleport OS</span><span class="logo-label" style="margin-left:4px;">Vendor</span>
+      <span class="nav-item" style="margin-left:16px;">My Jobs</span>
+      <div class="vendor-id"><span>HaleSun Logistics</span><div class="avatar">HL</div></div>
+    </div>
+    <!-- Header -->
+    <div class="job-header">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="back-link">← My Jobs</span>
+        <span class="job-id-chip">J03</span>
+        <span class="job-svc">FM Trucking</span>
+        <span class="job-svc-code">FM</span>
+      </div>
+      <div class="job-meta-right">
+        <span class="tri">DO-2604-007</span>
+        <span style="color:#d1d5db">·</span>
+        <span class="customer">TikTok Global</span>
+        <span style="color:#d1d5db">·</span>
+        <span class="tri">MH 1234 5678</span>
+      </div>
+    </div>
+    <!-- Status bar: In Progress -->
+    <div class="status-bar bar-blue" style="margin:0;border-left:none;border-right:none;border-radius:0;">
+      <div>
+        <div class="status-label">
+          <span class="status-dot" style="background:#152CFF;"></span>
+          <span style="color:#111827;font-weight:500;">In Progress</span>
+        </div>
+        <div class="status-hint">Upload proof of service to mark complete</div>
+      </div>
+      <button class="btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload Proof
+      </button>
+    </div>
+    <!-- Proof section: 0 files -->
+    <div class="sw">
+      <div class="section-title-row">
+        <span class="section-title">Proof of Service · 0 files</span>
+      </div>
+      <div class="upload-zone">
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="26" height="26" style="display:block;margin:0 auto;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <div class="upload-text">Drop files here or <a>browse</a></div>
+        <div class="upload-btns">
+          <button class="btn-camera">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            Take Photo
+          </button>
+          <button class="btn-browse">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M2 9h20"/></svg>
+            Browse Files
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="col-label">State 2 — 2 files uploaded (In Progress, can upload more)</div>
+    <div class="mock-nav">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10"><path d="M2 12h20M12 2l8 10-8 10-8-10z"/></svg>
+      </div>
+      <span class="logo-text">Teleport OS</span><span class="logo-label" style="margin-left:4px;">Vendor</span>
+      <span class="nav-item" style="margin-left:16px;">My Jobs</span>
+      <div class="vendor-id"><span>HaleSun Logistics</span><div class="avatar">HL</div></div>
+    </div>
+    <div class="job-header">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="back-link">← My Jobs</span>
+        <span class="job-id-chip">J03</span>
+        <span class="job-svc">FM Trucking</span>
+        <span class="job-svc-code">FM</span>
+      </div>
+      <div class="job-meta-right">
+        <span class="tri">DO-2604-007</span>
+        <span style="color:#d1d5db">·</span>
+        <span class="customer">TikTok Global</span>
+      </div>
+    </div>
+    <div class="status-bar bar-blue" style="margin:0;border-left:none;border-right:none;border-radius:0;">
+      <div>
+        <div class="status-label">
+          <span class="status-dot" style="background:#152CFF;"></span>
+          <span style="color:#111827;font-weight:500;">In Progress</span>
+        </div>
+        <div class="status-hint">Upload proof of service to mark complete</div>
+      </div>
+      <button class="btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload Proof
+      </button>
+    </div>
+    <!-- Proof section: 2 files + full zone still visible -->
+    <div class="sw">
+      <div class="section-title-row">
+        <span class="section-title">Proof of Service · 2 files</span>
+      </div>
+      <!-- Existing file rows -->
+      <div class="proof-row">
+        <svg class="proof-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+        <div style="flex:1;min-width:0;">
+          <div class="proof-name">pod-signed-front.jpg</div>
+          <div class="proof-meta">29 Apr · HaleSun Logistics</div>
+        </div>
+        <span class="proof-open">Open ↗</span>
+      </div>
+      <div class="proof-row" style="margin-bottom:10px;">
+        <svg class="proof-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+        <div style="flex:1;min-width:0;">
+          <div class="proof-name">pod-signed-back.jpg</div>
+          <div class="proof-meta">29 Apr · HaleSun Logistics</div>
+        </div>
+        <span class="proof-open">Open ↗</span>
+      </div>
+      <!-- Upload zone STILL visible — this is the Option A behavior -->
+      <div class="upload-zone">
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="26" height="26" style="display:block;margin:0 auto;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <div class="upload-text">Add more files or <a>browse</a></div>
+        <div class="upload-btns">
+          <button class="btn-camera">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            Take Photo
+          </button>
+          <button class="btn-browse">Browse</button>
+        </div>
+      </div>
+      <!-- Problem visible: zone takes up extra space after files are present -->
+      <div style="margin-top:8px;font-size:10px;color:#dc2626;font-style:italic;">↑ Zone takes 92px even when files exist — pushes Activity Log below fold at 768px</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION B: Smart Collapse                     -->
+<!-- ============================================ -->
+<h2>Option B: Smart Collapse — Zone on Empty, Compact on Fill</h2>
+<span class="label" style="background: #d1fae5; color: #065f46;">Recommended</span>
+
+<div class="rationale">
+When no files are uploaded, show the full dashed zone (same as Option A). Once files are added, the zone collapses: the file list is shown, and a small "+ Add" button appears in the section header. Camera and file-browse are both available from the compact button. The zone re-expands only on click.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Full affordance when needed (0 files = zone front-and-center)<br>
+• Density-appropriate after upload (files are the content, not the zone)<br>
+• Section header "+ Add" is always reachable without scrolling<br>
+• Mirrors how logistics apps (Flexport, Lalamove) handle proof capture<br>
+• Activity Log stays above fold after upload</div>
+<div class="cons"><strong>Cons</strong><br>
+• Two different states require slight mental model shift<br>
+• "+ Add" button in header is smaller target than the full zone (acceptable tradeoff)<br>
+• Camera is inside the mini-menu rather than a single tap (adds one interaction)</div>
+</div>
+</div>
+
+<!-- Three-col: empty, filled, verified -->
+<div class="two-col">
+  <div class="col">
+    <div class="col-label">State A — 0 files (Pending or In Progress) → full zone</div>
+    <div class="mock-nav">
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10"><path d="M2 12h20M12 2l8 10-8 10-8-10z"/></svg></div>
+      <span class="logo-text">Teleport OS</span><span class="logo-label" style="margin-left:4px;">Vendor</span>
+      <span class="nav-item" style="margin-left:16px;">My Jobs</span>
+      <div class="vendor-id"><span>HaleSun Logistics</span><div class="avatar">HL</div></div>
+    </div>
+    <div class="job-header">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="back-link">← My Jobs</span>
+        <span class="job-id-chip">J03</span>
+        <span class="job-svc">FM Trucking</span>
+        <span class="job-svc-code">FM</span>
+      </div>
+    </div>
+    <div class="status-bar bar-gray" style="margin:0;border-left:none;border-right:none;border-radius:0;">
+      <div>
+        <div class="status-label">
+          <span class="status-dot" style="background:#d1d5db;"></span>
+          <span style="color:#6b7280;font-weight:400;">Pending</span>
+        </div>
+        <div class="status-hint">Start this job when you begin work</div>
+      </div>
+      <button class="btn-primary">Start Job →</button>
+    </div>
+    <!-- Cargo summary row above -->
+    <div class="sw" style="border-top:1px solid #f3f4f6;padding:10px 16px;">
+      <div class="section-title" style="margin-bottom:6px;">Cargo</div>
+      <div style="font-size:11px;color:#111827;font-family:'JetBrains Mono',monospace;">24 bags · 1,280 kg</div>
+    </div>
+    <!-- Proof section: 0 files → full zone -->
+    <div class="sw">
+      <div class="section-title-row">
+        <span class="section-title">Proof of Service · 0 files</span>
+        <!-- No add button when 0 files — zone IS the button -->
+      </div>
+      <div class="upload-zone">
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="26" height="26" style="display:block;margin:0 auto;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <div class="upload-text">Drop files here or <a>browse</a></div>
+        <div class="upload-btns">
+          <button class="btn-camera">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            Take Photo
+          </button>
+          <button class="btn-browse">Browse Files</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="col-label">State B — 2 files uploaded (In Progress) → compact</div>
+    <div class="mock-nav">
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10"><path d="M2 12h20M12 2l8 10-8 10-8-10z"/></svg></div>
+      <span class="logo-text">Teleport OS</span><span class="logo-label" style="margin-left:4px;">Vendor</span>
+      <span class="nav-item" style="margin-left:16px;">My Jobs</span>
+      <div class="vendor-id"><span>HaleSun Logistics</span><div class="avatar">HL</div></div>
+    </div>
+    <div class="job-header">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="back-link">← My Jobs</span>
+        <span class="job-id-chip">J03</span>
+        <span class="job-svc">FM Trucking</span>
+        <span class="job-svc-code">FM</span>
+      </div>
+    </div>
+    <div class="status-bar bar-blue" style="margin:0;border-left:none;border-right:none;border-radius:0;">
+      <div>
+        <div class="status-label">
+          <span class="status-dot" style="background:#152CFF;"></span>
+          <span style="color:#111827;font-weight:500;">In Progress</span>
+        </div>
+        <div class="status-hint">Upload proof of service to mark complete</div>
+      </div>
+      <button class="btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload Proof
+      </button>
+    </div>
+    <div class="sw" style="border-top:1px solid #f3f4f6;padding:10px 16px;">
+      <div class="section-title" style="margin-bottom:6px;">Cargo</div>
+      <div style="font-size:11px;color:#111827;font-family:'JetBrains Mono',monospace;">24 bags · 1,280 kg</div>
+    </div>
+    <!-- Proof section: 2 files → compact (zone hidden, small add button in header) -->
+    <div class="sw">
+      <div class="section-title-row">
+        <span class="section-title">Proof of Service · 2 files</span>
+        <!-- Zone collapsed → small add button appears in header -->
+        <button class="btn-add-small">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add files
+        </button>
+      </div>
+      <!-- File rows only — no zone -->
+      <div class="proof-row">
+        <svg class="proof-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+        <div style="flex:1;min-width:0;">
+          <div class="proof-name">pod-signed-front.jpg</div>
+          <div class="proof-meta">29 Apr · HaleSun Logistics</div>
+        </div>
+        <span class="proof-open">Open ↗</span>
+      </div>
+      <div class="proof-row">
+        <svg class="proof-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+        <div style="flex:1;min-width:0;">
+          <div class="proof-name">pod-signed-back.jpg</div>
+          <div class="proof-meta">29 Apr · HaleSun Logistics</div>
+        </div>
+        <span class="proof-open">Open ↗</span>
+      </div>
+      <!-- Zone re-expands inline on "+ Add files" click — shown below as a ghost -->
+      <div style="margin-top:8px;font-size:10px;color:#059669;font-style:italic;">✓ Zone hidden — saves 92px. "+ Add files" in header triggers same zone inline.</div>
+    </div>
+    <!-- Bonus: show Verified state below as third state -->
+    <div class="sw" style="border-top:2px solid #f3f4f6;background:#fafafa;">
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">State C — Verified (locked)</div>
+      <div class="section-title-row">
+        <span class="section-title">Proof of Service · 2 files</span>
+        <!-- No add button when Verified -->
+      </div>
+      <div class="proof-row">
+        <svg class="proof-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M9 9h6M9 12h6"/></svg>
+        <div style="flex:1;min-width:0;">
+          <div class="proof-name">pod-signed-front.jpg</div>
+          <div class="proof-meta">29 Apr · HaleSun</div>
+        </div>
+        <span class="proof-open">Open ↗</span>
+      </div>
+      <div class="proof-row">
+        <svg class="proof-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M9 9h6M9 12h6"/></svg>
+        <div style="flex:1;min-width:0;">
+          <div class="proof-name">pod-signed-back.jpg</div>
+          <div class="proof-meta">29 Apr · HaleSun</div>
+        </div>
+        <span class="proof-open">Open ↗</span>
+      </div>
+      <div class="locked-note" style="margin-top:6px;">Locked — verified by Teleport Ops on 30 Apr. No further uploads.</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION C: Camera-First Bottom Strip          -->
+<!-- ============================================ -->
+<h2>Option C: Camera-First Action Strip</h2>
+<span class="label" style="background: #fef3c7; color: #92400e;">Mobile-Inspired</span>
+
+<div class="rationale">
+Replace the upload zone with a compact horizontal action strip pinned to the bottom of the Proof section. Camera (primary) and Files (secondary) sit side-by-side as small buttons. The file list renders above. No drag-and-drop target — just two tappable actions. Inspired by WhatsApp/WeChat message attachment patterns.
+
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>
+• Densest layout — no zone takes space, ever<br>
+• Camera and file-browse always visible in one strip<br>
+• No state change needed — same layout in empty and filled states<br>
+• Very tab-friendly on touchscreen — two large target buttons</div>
+<div class="cons"><strong>Cons</strong><br>
+• No empty-state affordance — first upload not obviously invited<br>
+• No drag-and-drop capability (relevant for laptop users)<br>
+• Strip can feel visually detached from the file list above<br>
+• Breaks the "smart spreadsheet" principle — feels more mobile-app than ops tool<br>
+• Unclear to first-time users: what does "Take Photo" do to the job status?</div>
+</div>
+</div>
+
+<div class="screen" style="max-width: 640px; margin: 10px auto 24px;">
+  <div class="state-strip">State: 1 file uploaded, In Progress (camera-first strip)</div>
+  <!-- Mini job detail section just for proof area context -->
+  <div class="sw">
+    <div class="section-title-row">
+      <span class="section-title">Proof of Service · 1 file</span>
+    </div>
+    <!-- File row -->
+    <div class="proof-row">
+      <svg class="proof-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+      <div style="flex:1;min-width:0;">
+        <div class="proof-name">stamp-custom-clearance.pdf</div>
+        <div class="proof-meta">29 Apr · Gonda 3PL</div>
+      </div>
+      <span class="proof-open">Open ↗</span>
+    </div>
+    <!-- Camera strip — pinned at bottom of section -->
+    <div class="camera-strip">
+      <button class="btn-strip-camera">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Take Photo
+      </button>
+      <div class="strip-divider"></div>
+      <button class="btn-strip-file">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Browse Files
+      </button>
+      <span class="strip-count">1 uploaded</span>
+    </div>
+  </div>
+  <!-- Empty state problem callout -->
+  <div style="padding:8px 16px 12px;border-top:1px solid #f3f4f6;">
+    <div style="font-size:10px;color:#dc2626;font-style:italic;">Problem: With 0 files, the section only shows the strip — not obvious this is where to upload proof. First-time users may miss the action entirely.</div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- VERDICT                                      -->
+<!-- ============================================ -->
+<div class="verdict">
+<h3>✓ Verdict: Option B — Smart Collapse</h3>
+<p style="font-size:12px;line-height:1.6;color:#374151;">
+<strong>Option B wins</strong> on the core tension between discoverability and density. The full dashed zone appears only when no files exist — exactly when upload is the primary action and discoverability matters most. Once files are uploaded, the zone collapses to a small "+ Add files" button in the section header, keeping the dense smart-spreadsheet layout intact.
+</p>
+<p style="font-size:12px;line-height:1.6;color:#374151;margin-top:8px;">
+<strong>Implementation details for the chosen option:</strong><br>
+• Empty state (0 files): full dashed zone with 📷 Take Photo (primary, <code>capture="environment"</code>) + Browse Files (secondary). No add button in section header.<br>
+• Filled state (≥1 file): zone hidden. File list rows. Small "+ Add files" button in section header expands zone inline on click.<br>
+• Verified state: no upload affordance. File list + "Locked — verified by Teleport Ops." note in muted italic below last row.<br>
+• Cancelled state: same as Verified — no upload. Files viewable.<br>
+• Input attributes: <code>&lt;input type="file" accept="image/*,.pdf" multiple&gt;</code> for Browse; <code>&lt;input type="file" accept="image/*" capture="environment"&gt;</code> for Take Photo (separate hidden inputs).<br>
+• Both inputs trigger on the same <code>handleUpload</code> handler. Batch log entry: "Uploaded 3 files: pod-front.jpg, …".<br>
+• OH (Outbound Hub) service: upload available — hub ops teams do use the vendor app on tablets.
+</p>
+<p style="font-size:12px;line-height:1.6;color:#374151;margin-top:8px;">
+<strong>Open question (needs user input):</strong><br>
+The Status Action Bar on the <em>In Progress</em> state already shows an "Upload Proof" button. Should clicking this button scroll to the Proof section + expand the zone, or trigger the file input directly from the status bar without scrolling? Direct-trigger is one tap fewer but bypasses the file list (vendor can't see what's already uploaded). Scroll-to-expand keeps the context. Recommendation: scroll to expand zone, but needs confirmation.
+</p>
+</div>
+
+</div>
+</body>
+</html>

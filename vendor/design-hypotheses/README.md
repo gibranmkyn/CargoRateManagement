@@ -2,6 +2,12 @@
 
 ## Open
 
+### HMW-V16: How might we design the proof upload experience for vendors capturing photo evidence on tablets at cargo terminals?
+**Options:** A) Full dashed zone always visible when upload is allowed — zone + files coexist, B) Smart collapse — full zone on empty state, compact "+ Add files" button in section header when files exist; zone collapses, C) Camera-first action strip — no zone, just a persistent [📷 Camera] [📄 Files] strip at bottom of the section
+**Leaning toward:** B) Smart collapse — full affordance when needed (first upload = zone front-and-center), density-appropriate after upload (files are the content, not the zone), Activity Log stays above fold after upload. Option A wastes 92px of vertical space when files exist at 768px. Option C lacks an empty-state affordance (first-time upload not obvious) and sacrifices drag-and-drop for laptop users.
+**Open question:** The Status Action Bar on the In Progress state shows an "Upload Proof" button in the top bar. Should clicking this button (a) scroll to the Proof section + expand the zone inline, or (b) trigger the file input directly from the status bar without scrolling? Direct-trigger is one tap fewer but bypasses the file list context. Scroll-to-expand preserves context. Needs user input.
+**File:** `16-hmw-proof-upload-zone.html`
+
 ### HMW-V15: How might we let vendor operators flag cargo quantity discrepancies without write access to Teleport's records?
 **Options:** A) Parallel vendor measurement inputs — "Your count" field beside each Teleport quantity; inline match/mismatch badges; single atomic submit, B) Per-quantity flag buttons — small "Flag" button per field; expands inline micro-form with vendor's value + note, C) General dispute note — single "Report discrepancy" button; freetext textarea; unstructured
 **Leaning toward:** A) Parallel fields — produces field-specific, diff-trackable records for admin without interpretation; mirrors how a vendor would compare numbers in Excel; scales to a bulk "disputed quantities" filter in v1.2 reconciliation view. Option B is correct for a more mature product (v2+). Option C is inadequate for structured reconciliation.
