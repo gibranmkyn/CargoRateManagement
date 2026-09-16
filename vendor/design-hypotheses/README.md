@@ -2,6 +2,12 @@
 
 ## Open
 
+### HMW-V17: How might we let vendor operators quickly locate specific jobs by trip ID, customer, or MAWB without breaking the dense-table design?
+**Options:** A) Inline text search input in filter bar (real-time, searches Trip ID + Customer + MAWB), B) Customer quick-filter pills derived from vendor's job history (no freetext), C) Search with autocomplete suggestions (customer names, trip IDs)
+**Leaning toward:** A) Inline text search — mirrors admin filter bar pattern exactly, handles all three query types (trip ID, customer name, MAWB), no structural change to the 2-row filter bar, chainable with existing service + date filters. Option B is a valid v1.1 complement for vendors serving a small customer set. Option C is overengineered for current scale (<50 active jobs).
+**Open questions:** (1) Should matched text be highlighted inline in table rows, or is the filtered result set sufficient? (2) Should MAWB be in scope for search? (3) Should customer pills (Option B) ship as a simultaneous enhancement alongside Option A, or defer to v1.1?
+**File:** `17-hmw-vendor-job-search.html`
+
 ### HMW-V16: How might we design the proof upload experience for vendors capturing photo evidence on tablets at cargo terminals?
 **Options:** A) Full dashed zone always visible when upload is allowed — zone + files coexist, B) Smart collapse — full zone on empty state, compact "+ Add files" button in section header when files exist; zone collapses, C) Camera-first action strip — no zone, just a persistent [📷 Camera] [📄 Files] strip at bottom of the section
 **Leaning toward:** B) Smart collapse — full affordance when needed (first upload = zone front-and-center), density-appropriate after upload (files are the content, not the zone), Activity Log stays above fold after upload. Option A wastes 92px of vertical space when files exist at 768px. Option C lacks an empty-state affordance (first-time upload not obvious) and sacrifices drag-and-drop for laptop users.

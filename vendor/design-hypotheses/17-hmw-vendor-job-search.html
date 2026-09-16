@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-V17: Vendor Job Search & Quick-Find</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', 'SF Mono', monospace; }
+.page { max-width: 1200px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+.open-q { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 12px; margin-top: 16px; font-size: 11px; color: #1e40af; line-height: 1.6; }
+
+/* ── Shared mockup atoms ── */
+.mock-nav { height: 40px; padding: 0 16px; background: #111827; display: flex; align-items: center; gap: 8px; }
+.mock-nav .logo { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; }
+.mock-nav .logo-text { font-weight: 700; font-size: 13px; color: #fff; }
+.mock-nav .logo-label { font-size: 10px; color: rgba(255,255,255,0.35); font-weight: 500; }
+.mock-nav .nav-active { font-size: 12px; padding: 4px 10px; border-radius: 4px; color: #fff; background: rgba(255,255,255,0.1); font-weight: 600; }
+.mock-nav .nav-item { font-size: 12px; padding: 4px 10px; border-radius: 4px; color: rgba(255,255,255,0.5); }
+.mock-nav .vendor-id { margin-left: auto; font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 600; }
+.mock-nav .avatar { width: 22px; height: 22px; border-radius: 4px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; font-size: 9px; color: rgba(255,255,255,0.7); font-weight: 700; }
+
+.filter-bar { border-bottom: 1px solid #e5e7eb; background: #fff; padding: 8px 16px; }
+.pill-row { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; margin-bottom: 8px; }
+.filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+
+.pill { font-size: 11px; padding: 5px 10px; border-radius: 4px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; font-weight: 500; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.pill .ct { font-family: 'JetBrains Mono', monospace; font-size: 9px; opacity: 0.7; }
+.pill.active-dark { border-color: #111827; background: #111827; color: #fff; font-weight: 600; }
+.pill.active-amber { border-color: #a16207; background: #fefce8; color: #a16207; font-weight: 600; }
+.pill.active-green { border-color: #059669; background: #f0fdf4; color: #059669; font-weight: 600; }
+.pill.active-red { border-color: #dc2626; background: #fef2f2; color: #dc2626; font-weight: 600; }
+
+.svc-pill { font-size: 9px; padding: 2px 6px; border-radius: 99px; font-weight: 600; cursor: pointer; font-family: 'JetBrains Mono', monospace; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; }
+.svc-pill.on { border-color: #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; }
+
+.mock-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.mock-table thead th { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #f9fafb; padding: 6px 12px; text-align: left; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+.mock-table tbody td { padding: 7px 12px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: middle; }
+.mock-table tbody tr:hover { background: #f9fafb; }
+.mock-table tbody tr.row-highlighted { background: rgba(21,44,255,0.03); }
+
+.dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+
+/* Status dot+label patterns */
+.status-pending { color: #6b7280; font-weight: 400; }
+.status-pending .dot { background: #d1d5db; }
+.status-progress { color: #111827; font-weight: 500; }
+.status-progress .dot { background: #152CFF; }
+.status-completed { color: #374151; font-weight: 500; }
+.status-completed .dot { background: #a16207; }
+.status-verified { color: #059669; font-weight: 600; }
+.status-verified .dot { background: #059669; }
+.status-ts { display: block; font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; margin-top: 1px; }
+
+/* Search input variants */
+.search-input-wrap { position: relative; display: flex; align-items: center; }
+.search-icon { position: absolute; left: 7px; top: 50%; transform: translateY(-50%); color: #9ca3af; pointer-events: none; }
+.search-input { padding: 4px 28px 4px 24px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 11px; font-family: 'Instrument Sans', system-ui, sans-serif; color: #111827; background: #fff; width: 200px; outline: none; }
+.search-input:focus { border-color: rgba(21,44,255,0.4); box-shadow: 0 0 0 2px rgba(21,44,255,0.06); }
+.search-input.has-value { border-color: #111827; }
+.search-clear { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); font-size: 10px; color: #9ca3af; cursor: pointer; background: none; border: none; line-height: 1; }
+
+/* Autocomplete dropdown */
+.autocomplete { position: absolute; top: calc(100% + 3px); left: 0; width: 280px; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); z-index: 20; overflow: hidden; }
+.autocomplete-group { padding: 4px 8px 2px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; border-top: 1px solid #f3f4f6; }
+.autocomplete-group:first-child { border-top: none; }
+.autocomplete-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer; }
+.autocomplete-item:hover { background: #f9fafb; }
+.autocomplete-item-label { font-size: 11px; color: #111827; font-weight: 500; flex: 1; }
+.autocomplete-item-sub { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; }
+.match-highlight { background: rgba(21,44,255,0.1); color: #152CFF; border-radius: 2px; padding: 0 1px; }
+
+/* Customer pill row variant */
+.customer-pill { font-size: 10px; padding: 3px 8px; border-radius: 4px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; font-weight: 500; cursor: pointer; white-space: nowrap; }
+.customer-pill.on { border-color: #111827; background: #111827; color: #fff; font-weight: 600; }
+
+/* Divider */
+.sep { width: 1px; height: 16px; background: #e5e7eb; flex-shrink: 0; }
+
+/* Result count badge */
+.result-count { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9ca3af; white-space: nowrap; }
+
+/* "No results" empty state */
+.empty-state { text-align: center; padding: 32px 16px; color: #6b7280; font-size: 12px; }
+
+/* Status quo callout */
+.gap-tag { display: inline-block; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 3px; background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; margin-left: 6px; }
+.new-tag { display: inline-block; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 3px; background: rgba(21,44,255,0.06); border: 1px solid rgba(21,44,255,0.15); color: #152CFF; margin-left: 6px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-V17: Vendor Job Search & Quick-Find</h1>
+<div class="hmw">How might we let vendor operators quickly locate specific jobs in their list — by trip ID, customer, or MAWB — without breaking the dense-table design or adding a separate search page?</div>
+
+<div class="context">
+  <strong>Context:</strong> The vendor app currently has no text search (DESIGN.md: "No search — no search input currently (future iteration)"). Vendors have status pills, service pills, and a date range filter — but no way to find a job by trip ID (e.g., "where is DO-007?"), customer name ("show all TikTok jobs"), or MAWB. At 5–30 jobs/day with 50-per-page pagination, history accumulates quickly. The admin app's filter bar has a single search input as its first element. The vendor filter bar should converge on the same pattern — but the vendor's narrower context (no vendor column, simpler query vocabulary) changes the design constraints.
+</div>
+
+<!-- ============================================================ -->
+<!-- STATUS QUO — Current state (no search)                       -->
+<!-- ============================================================ -->
+<h2>Status Quo — No Search <span class="gap-tag">Gap</span></h2>
+<div class="rationale">
+  The current vendor filter bar has status pills + service pills + date range. Vendor must scroll through pages or use the date range to narrow results. No way to jump directly to a trip ID or a specific customer's jobs.
+</div>
+
+<div class="screen">
+  <div class="mock-nav">
+    <div class="logo"></div>
+    <span class="logo-text">Teleport OS</span>
+    <span class="logo-label">Vendor</span>
+    <div style="margin-left: 16px; display: flex; gap: 2px;">
+      <span class="nav-active">My Jobs</span>
+      <span class="nav-item">Fleet</span>
+    </div>
+    <span class="vendor-id">HaleSun Logistics</span>
+    <div class="avatar">HS</div>
+  </div>
+
+  <div class="filter-bar">
+    <!-- Status pills row -->
+    <div class="pill-row">
+      <button class="pill active-dark">All <span class="ct">18</span></button>
+      <button class="pill">Pending <span class="ct">4</span></button>
+      <button class="pill">In Progress <span class="ct">3</span></button>
+      <button class="pill active-amber" style="background: #fff; border-color: #e5e7eb; color: #6b7280; font-weight: 500;">To verify <span class="ct">5</span></button>
+      <button class="pill">Verified <span class="ct">6</span></button>
+      <button class="pill">Cancelled <span class="ct">0</span></button>
+    </div>
+    <!-- Service + date row — no search -->
+    <div class="filter-row">
+      <span style="font-size: 10px; color: #9ca3af;">Service</span>
+      <button class="svc-pill">FM</button>
+      <button class="svc-pill on">EC</button>
+      <button class="svc-pill">CS</button>
+      <button class="svc-pill">CR</button>
+      <button class="svc-pill">OH</button>
+      <div class="sep"></div>
+      <button class="pill" style="font-size: 10px; padding: 3px 8px;">📅 Date range</button>
+      <span class="result-count">18 jobs</span>
+    </div>
+  </div>
+
+  <table class="mock-table" style="table-layout: fixed;">
+    <thead>
+      <tr>
+        <th style="width:10%">Trip</th>
+        <th style="width:13%">Customer</th>
+        <th style="width:7%">Service</th>
+        <th style="width:29%">Where</th>
+        <th style="width:9%">Pickup</th>
+        <th style="width:14%">Status</th>
+        <th style="width:11%">Verification</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="mono" style="font-size:10px; color:#111827;">DO-001</span></td>
+        <td style="font-size:11px; font-weight:600; color:#111827;">TikTok</td>
+        <td><span class="mono" style="font-size:10px; color:#6b7280;">EC</span></td>
+        <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:0;">
+          HKIA Cargo Terminal<br>
+          <span class="mono" style="font-size:9px; color:#6b7280;">MAWB 176-2293 0841</span>
+        </td>
+        <td><span class="mono" style="font-size:10px;">12 Apr</span><br><span class="mono" style="font-size:9px; color:#9ca3af;">09:00</span></td>
+        <td>
+          <span class="status-progress"><span class="dot"></span>In Progress</span>
+          <span class="status-ts">2h ago</span>
+        </td>
+        <td>
+          <span class="status-pending"><span class="dot"></span>Pending</span>
+          <span class="status-ts">—</span>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size:10px; color:#111827;">DO-003</span></td>
+        <td style="font-size:11px; font-weight:600; color:#111827;">Shopee</td>
+        <td><span class="mono" style="font-size:10px; color:#6b7280;">FM</span></td>
+        <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:0;">
+          Shenzhen WH → HKIA T1<br>
+          <span style="font-size:9px; color:#6b7280;">👤 Zhang Wei · 粤B·12345</span>
+        </td>
+        <td><span class="mono" style="font-size:10px;">13 Apr</span><br><span class="mono" style="font-size:9px; color:#9ca3af;">08:30</span></td>
+        <td>
+          <span class="status-pending"><span class="dot"></span>Pending</span>
+          <span class="status-ts">1d ago</span>
+        </td>
+        <td>
+          <span class="status-pending"><span class="dot"></span>Pending</span>
+          <span class="status-ts">—</span>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size:10px; color:#111827;">DO-007</span></td>
+        <td style="font-size:11px; font-weight:600; color:#111827;">Shein</td>
+        <td><span class="mono" style="font-size:10px; color:#6b7280;">EC</span></td>
+        <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:0;">
+          HKIA Cargo Terminal<br>
+          <span class="mono" style="font-size:9px; color:#6b7280;">MAWB 176-8801 4422</span>
+        </td>
+        <td><span class="mono" style="font-size:10px;">14 Apr</span><br><span class="mono" style="font-size:9px; color:#9ca3af;">14:00</span></td>
+        <td>
+          <span class="status-completed"><span class="dot"></span>Completed</span>
+          <span class="status-ts">3h ago</span>
+        </td>
+        <td>
+          <span class="status-pending"><span class="dot"></span>Pending</span>
+          <span class="status-ts">—</span>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="7" style="padding: 8px 12px; text-align:center; font-size:10px; color:#9ca3af;">…15 more rows&nbsp;&nbsp;·&nbsp;&nbsp;No way to jump to a specific trip or customer</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============================================================ -->
+<!-- OPTION A: Inline text search                                  -->
+<!-- ============================================================ -->
+<h2>Option A: Inline Text Search <span class="new-tag">Recommended</span></h2>
+<span class="label" style="background: rgba(21,44,255,0.06); color: #152CFF;">Compact · Real-time · No extra row</span>
+
+<div class="rationale">
+  Add a compact search input to the existing filter bar's second row — left of the "Service" label. Same 4px radius, 1px border, 11px font as all other inputs. Searches Trip ID, Customer name, and MAWB in real time. Combines with existing segment + service + date filters. Clears via the × button. When the input has a value, it shows as active (dark border) so vendors know search is in effect.
+
+  <div class="pros-cons">
+    <div class="pros">
+      <strong>Pros</strong><br>
+      · Matches admin app's filter bar pattern exactly<br>
+      · Handles all query types (trip ID lookup, customer name, MAWB scan)<br>
+      · No structural change — same 2-row filter bar<br>
+      · Chainable with other filters (search "TikTok" + service "EC")<br>
+      · Expected pattern — no onboarding needed
+    </div>
+    <div class="cons">
+      <strong>Cons</strong><br>
+      · Adds 200px of permanent width to the filter row<br>
+      · At 768px viewport, filter row wraps — needs careful responsive treatment<br>
+      · Free-text search has no autocomplete for trip IDs the vendor may not remember
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="mock-nav">
+    <div class="logo"></div>
+    <span class="logo-text">Teleport OS</span>
+    <span class="logo-label">Vendor</span>
+    <div style="margin-left: 16px; display: flex; gap: 2px;">
+      <span class="nav-active">My Jobs</span>
+      <span class="nav-item">Fleet</span>
+    </div>
+    <span class="vendor-id">HaleSun Logistics</span>
+    <div class="avatar">HS</div>
+  </div>
+
+  <div class="filter-bar">
+    <div class="pill-row">
+      <button class="pill active-dark">All <span class="ct">18</span></button>
+      <button class="pill">Pending <span class="ct">4</span></button>
+      <button class="pill">In Progress <span class="ct">3</span></button>
+      <button class="pill">To verify <span class="ct">5</span></button>
+      <button class="pill">Verified <span class="ct">6</span></button>
+      <button class="pill">Cancelled <span class="ct">0</span></button>
+    </div>
+    <div class="filter-row">
+      <!-- Search input — NEW -->
+      <div class="search-input-wrap">
+        <svg class="search-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="search-input has-value" type="search" value="TikTok" placeholder="Trip ID, customer, MAWB…" style="width:175px;">
+        <button class="search-clear">×</button>
+      </div>
+
+      <div class="sep"></div>
+      <span style="font-size: 10px; color: #9ca3af;">Service</span>
+      <button class="svc-pill">FM</button>
+      <button class="svc-pill on">EC</button>
+      <button class="svc-pill">CS</button>
+      <button class="svc-pill">CR</button>
+      <button class="svc-pill">OH</button>
+      <div class="sep"></div>
+      <button class="pill" style="font-size: 10px; padding: 3px 8px;">📅 Date range</button>
+      <span class="result-count">2 jobs</span>
+    </div>
+  </div>
+
+  <table class="mock-table" style="table-layout: fixed;">
+    <thead>
+      <tr>
+        <th style="width:10%">Trip</th>
+        <th style="width:13%">Customer</th>
+        <th style="width:7%">Service</th>
+        <th style="width:29%">Where</th>
+        <th style="width:9%">Pickup</th>
+        <th style="width:14%">Status</th>
+        <th style="width:11%">Verification</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Matched rows highlighted faintly -->
+      <tr class="row-highlighted">
+        <td><span class="mono" style="font-size:10px; color:#111827;">DO-001</span></td>
+        <td style="font-size:11px; font-weight:600; color:#111827;"><span class="match-highlight">TikTok</span></td>
+        <td><span class="mono" style="font-size:10px; color:#6b7280;">EC</span></td>
+        <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:0;">
+          HKIA Cargo Terminal<br>
+          <span class="mono" style="font-size:9px; color:#6b7280;">MAWB 176-2293 0841</span>
+        </td>
+        <td><span class="mono" style="font-size:10px;">12 Apr</span><br><span class="mono" style="font-size:9px; color:#9ca3af;">09:00</span></td>
+        <td>
+          <span class="status-progress"><span class="dot"></span>In Progress</span>
+          <span class="status-ts">2h ago</span>
+        </td>
+        <td>
+          <span class="status-pending"><span class="dot"></span>Pending</span>
+          <span class="status-ts">—</span>
+        </td>
+      </tr>
+      <tr class="row-highlighted">
+        <td><span class="mono" style="font-size:10px; color:#111827;">DO-009</span></td>
+        <td style="font-size:11px; font-weight:600; color:#111827;"><span class="match-highlight">TikTok</span></td>
+        <td><span class="mono" style="font-size:10px; color:#6b7280;">EC</span></td>
+        <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:0;">
+          HKIA Cargo Terminal<br>
+          <span class="mono" style="font-size:9px; color:#6b7280;">MAWB 176-0021 9934</span>
+        </td>
+        <td><span class="mono" style="font-size:10px;">16 Apr</span><br><span class="mono" style="font-size:9px; color:#9ca3af;">11:30</span></td>
+        <td>
+          <span class="status-completed"><span class="dot"></span>Completed</span>
+          <span class="status-ts">1d ago</span>
+        </td>
+        <td>
+          <span class="status-verified" style="color:#059669;"><span class="dot" style="background:#059669;"></span>Verified</span>
+          <span class="status-ts">14 Apr 10:22</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Variant: search by trip ID -->
+<p style="font-size: 11px; color: #6b7280; margin: -12px 0 8px;">Sub-variant: searching by Trip ID "DO-007"</p>
+<div class="screen">
+  <div class="filter-bar" style="padding: 6px 16px;">
+    <div class="filter-row">
+      <div class="search-input-wrap">
+        <svg class="search-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="search-input has-value" type="search" value="DO-007" placeholder="Trip ID, customer, MAWB…" style="width:175px;">
+        <button class="search-clear">×</button>
+      </div>
+      <div class="sep"></div>
+      <span style="font-size: 10px; color: #9ca3af;">Service</span>
+      <button class="svc-pill">FM</button>
+      <button class="svc-pill">EC</button>
+      <button class="svc-pill">CS</button>
+      <button class="svc-pill">CR</button>
+      <button class="svc-pill">OH</button>
+      <div class="sep"></div>
+      <button class="pill" style="font-size: 10px; padding: 3px 8px;">📅 Date range</button>
+      <span class="result-count">1 job</span>
+    </div>
+  </div>
+
+  <table class="mock-table" style="table-layout: fixed;">
+    <thead>
+      <tr>
+        <th style="width:10%">Trip</th>
+        <th style="width:13%">Customer</th>
+        <th style="width:7%">Service</th>
+        <th style="width:29%">Where</th>
+        <th style="width:9%">Pickup</th>
+        <th style="width:14%">Status</th>
+        <th style="width:11%">Verification</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="row-highlighted">
+        <td><span class="mono" style="font-size:10px; color:#111827;"><span class="match-highlight">DO-007</span></span></td>
+        <td style="font-size:11px; font-weight:600; color:#111827;">Shein</td>
+        <td><span class="mono" style="font-size:10px; color:#6b7280;">EC</span></td>
+        <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:0;">
+          HKIA Cargo Terminal<br>
+          <span class="mono" style="font-size:9px; color:#6b7280;">MAWB 176-8801 4422</span>
+        </td>
+        <td><span class="mono" style="font-size:10px;">14 Apr</span><br><span class="mono" style="font-size:9px; color:#9ca3af;">14:00</span></td>
+        <td>
+          <span class="status-completed"><span class="dot"></span>Completed</span>
+          <span class="status-ts">3h ago</span>
+        </td>
+        <td>
+          <span class="status-pending"><span class="dot"></span>Pending</span>
+          <span class="status-ts">—</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============================================================ -->
+<!-- OPTION B: Customer pills (no freetext)                        -->
+<!-- ============================================================ -->
+<h2>Option B: Customer Quick-Filter Pills</h2>
+<span class="label" style="background: #f9fafb; color: #6b7280; border: 1px solid #e5e7eb;">Structural · Predictable · Limited scope</span>
+
+<div class="rationale">
+  Add a third row to the filter bar: customer name pills derived from the vendor's actual job history. Clicking a customer pill filters the table to that customer's jobs. No freetext input — the customer set is always finite and known. Works well when vendors serve a small number of distinct customers (HaleSun serves TikTok, Shopee, and Shein; 3 pills is clean). Degrades if a vendor serves 10+ customers (too many pills, row wraps badly).
+
+  <div class="pros-cons">
+    <div class="pros">
+      <strong>Pros</strong><br>
+      · Zero typing — tap once to filter by customer<br>
+      · No ambiguity — pills are derived from actual job data<br>
+      · Works well at 768px (pills wrap neatly)<br>
+      · Chainable with service + date filters<br>
+      · Obvious affordance — no placeholder text needed
+    </div>
+    <div class="cons">
+      <strong>Cons</strong><br>
+      · Cannot find a specific trip ID or MAWB (most urgent use case)<br>
+      · Breaks for vendors with many customers (10+ pills = unusable)<br>
+      · Adds a permanent third filter row — heavier visual weight<br>
+      · Overlap with "All" status pill makes the pattern harder to read
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="mock-nav">
+    <div class="logo"></div>
+    <span class="logo-text">Teleport OS</span>
+    <span class="logo-label">Vendor</span>
+    <div style="margin-left: 16px; display: flex; gap: 2px;">
+      <span class="nav-active">My Jobs</span>
+      <span class="nav-item">Fleet</span>
+    </div>
+    <span class="vendor-id">HaleSun Logistics</span>
+    <div class="avatar">HS</div>
+  </div>
+
+  <div class="filter-bar">
+    <!-- Row 1: status pills -->
+    <div class="pill-row">
+      <button class="pill active-dark">All <span class="ct">18</span></button>
+      <button class="pill">Pending <span class="ct">4</span></button>
+      <button class="pill">In Progress <span class="ct">3</span></button>
+      <button class="pill">To verify <span class="ct">5</span></button>
+      <button class="pill">Verified <span class="ct">6</span></button>
+      <button class="pill">Cancelled <span class="ct">0</span></button>
+    </div>
+
+    <!-- Row 2: customer pills — NEW third row -->
+    <div class="filter-row" style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #f3f4f6;">
+      <span style="font-size: 10px; color: #9ca3af; flex-shrink:0;">Customer</span>
+      <button class="customer-pill on">TikTok</button>
+      <button class="customer-pill">Shopee</button>
+      <button class="customer-pill">Shein</button>
+      <button class="customer-pill">AliExpress</button>
+      <!-- Overflow: if >5 customers, this row gets messy -->
+      <span style="font-size:9px; color:#d1d5db; font-style:italic;">+3 more…</span>
+    </div>
+
+    <!-- Row 3: service + date -->
+    <div class="filter-row">
+      <span style="font-size: 10px; color: #9ca3af;">Service</span>
+      <button class="svc-pill">FM</button>
+      <button class="svc-pill on">EC</button>
+      <button class="svc-pill">CS</button>
+      <button class="svc-pill">CR</button>
+      <button class="svc-pill">OH</button>
+      <div class="sep"></div>
+      <button class="pill" style="font-size: 10px; padding: 3px 8px;">📅 Date range</button>
+      <span class="result-count">2 jobs · TikTok</span>
+    </div>
+  </div>
+
+  <table class="mock-table" style="table-layout: fixed;">
+    <thead>
+      <tr>
+        <th style="width:10%">Trip</th>
+        <th style="width:13%">Customer</th>
+        <th style="width:7%">Service</th>
+        <th style="width:29%">Where</th>
+        <th style="width:9%">Pickup</th>
+        <th style="width:14%">Status</th>
+        <th style="width:11%">Verification</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="mono" style="font-size:10px; color:#111827;">DO-001</span></td>
+        <td style="font-size:11px; font-weight:600; color:#111827;">TikTok</td>
+        <td><span class="mono" style="font-size:10px; color:#6b7280;">EC</span></td>
+        <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:0;">
+          HKIA Cargo Terminal<br>
+          <span class="mono" style="font-size:9px; color:#6b7280;">MAWB 176-2293 0841</span>
+        </td>
+        <td><span class="mono" style="font-size:10px;">12 Apr</span><br><span class="mono" style="font-size:9px; color:#9ca3af;">09:00</span></td>
+        <td>
+          <span class="status-progress"><span class="dot"></span>In Progress</span>
+          <span class="status-ts">2h ago</span>
+        </td>
+        <td>
+          <span class="status-pending"><span class="dot"></span>Pending</span>
+          <span class="status-ts">—</span>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="mono" style="font-size:10px; color:#111827;">DO-009</span></td>
+        <td style="font-size:11px; font-weight:600; color:#111827;">TikTok</td>
+        <td><span class="mono" style="font-size:10px; color:#6b7280;">EC</span></td>
+        <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:0;">
+          HKIA Cargo Terminal<br>
+          <span class="mono" style="font-size:9px; color:#6b7280;">MAWB 176-0021 9934</span>
+        </td>
+        <td><span class="mono" style="font-size:10px;">16 Apr</span><br><span class="mono" style="font-size:9px; color:#9ca3af;">11:30</span></td>
+        <td>
+          <span class="status-completed"><span class="dot"></span>Completed</span>
+          <span class="status-ts">1d ago</span>
+        </td>
+        <td>
+          <span class="status-verified"><span class="dot" style="background:#059669;"></span>Verified</span>
+          <span class="status-ts">14 Apr 10:22</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============================================================ -->
+<!-- OPTION C: Search with autocomplete suggestions               -->
+<!-- ============================================================ -->
+<h2>Option C: Search with Smart Suggestions</h2>
+<span class="label" style="background: #f9fafb; color: #6b7280; border: 1px solid #e5e7eb;">Richest UX · Most build effort · Phase 2</span>
+
+<div class="rationale">
+  A text input that shows autocomplete suggestions as the user types: customer names (from job history), trip IDs (exact match on DO-* prefix), and MAWB numbers. Selecting a suggestion snaps directly to that result. The dropdown is a floating card (4px radius, 1px border, subtle shadow — same as other popovers in the system). This is the most capable option but requires the most build effort and introduces a new interaction pattern (autocomplete) into a system that otherwise avoids them.
+
+  <div class="pros-cons">
+    <div class="pros">
+      <strong>Pros</strong><br>
+      · Fastest for exact lookups — type 3 chars, see trip IDs<br>
+      · Surfaces customers without requiring freetext recall<br>
+      · Drop-down acts as a "recently-used" affordance<br>
+      · Best for large job histories (200+ jobs across date ranges)
+    </div>
+    <div class="cons">
+      <strong>Cons</strong><br>
+      · Highest implementation cost<br>
+      · Autocomplete adds interaction complexity for simple queries<br>
+      · Dropdown management (open/close, keyboard nav) is a non-trivial UX surface<br>
+      · Overengineered for the current scale (most vendors: &lt;50 active jobs)
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="mock-nav">
+    <div class="logo"></div>
+    <span class="logo-text">Teleport OS</span>
+    <span class="logo-label">Vendor</span>
+    <div style="margin-left: 16px; display: flex; gap: 2px;">
+      <span class="nav-active">My Jobs</span>
+      <span class="nav-item">Fleet</span>
+    </div>
+    <span class="vendor-id">HaleSun Logistics</span>
+    <div class="avatar">HS</div>
+  </div>
+
+  <div class="filter-bar" style="position:relative;">
+    <div class="pill-row">
+      <button class="pill active-dark">All <span class="ct">18</span></button>
+      <button class="pill">Pending <span class="ct">4</span></button>
+      <button class="pill">In Progress <span class="ct">3</span></button>
+      <button class="pill">To verify <span class="ct">5</span></button>
+      <button class="pill">Verified <span class="ct">6</span></button>
+      <button class="pill">Cancelled <span class="ct">0</span></button>
+    </div>
+    <div class="filter-row" style="position: relative;">
+      <div class="search-input-wrap" style="position: relative;">
+        <svg class="search-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="search-input has-value" type="search" value="Tik" placeholder="Trip ID, customer, MAWB…" style="width:175px; border-color: rgba(21,44,255,0.4); box-shadow: 0 0 0 2px rgba(21,44,255,0.06);">
+
+        <!-- Autocomplete dropdown -->
+        <div class="autocomplete">
+          <div class="autocomplete-group">Customers</div>
+          <div class="autocomplete-item" style="background: #f9fafb;">
+            <div>
+              <div class="autocomplete-item-label"><span class="match-highlight">Tik</span>Tok</div>
+              <div class="autocomplete-item-sub">7 jobs · EC, FM</div>
+            </div>
+          </div>
+          <div class="autocomplete-group">Trips</div>
+          <div class="autocomplete-item">
+            <div>
+              <div class="autocomplete-item-label">DO-001</div>
+              <div class="autocomplete-item-sub">TikTok · EC · 12 Apr</div>
+            </div>
+          </div>
+          <div class="autocomplete-item">
+            <div>
+              <div class="autocomplete-item-label">DO-009</div>
+              <div class="autocomplete-item-sub">TikTok · EC · 16 Apr</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+      <span style="font-size: 10px; color: #9ca3af;">Service</span>
+      <button class="svc-pill">FM</button>
+      <button class="svc-pill">EC</button>
+      <button class="svc-pill">CS</button>
+      <button class="svc-pill">CR</button>
+      <button class="svc-pill">OH</button>
+      <div class="sep"></div>
+      <button class="pill" style="font-size: 10px; padding: 3px 8px;">📅 Date range</button>
+      <span class="result-count">18 jobs</span>
+    </div>
+  </div>
+
+  <table class="mock-table" style="table-layout: fixed;">
+    <thead>
+      <tr>
+        <th style="width:10%">Trip</th>
+        <th style="width:13%">Customer</th>
+        <th style="width:7%">Service</th>
+        <th style="width:29%">Where</th>
+        <th style="width:9%">Pickup</th>
+        <th style="width:14%">Status</th>
+        <th style="width:11%">Verification</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="mono" style="font-size:10px; color:#111827;">DO-001</span></td>
+        <td style="font-size:11px; font-weight:600; color:#111827;">TikTok</td>
+        <td><span class="mono" style="font-size:10px; color:#6b7280;">EC</span></td>
+        <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:0;">
+          HKIA Cargo Terminal<br>
+          <span class="mono" style="font-size:9px; color:#6b7280;">MAWB 176-2293 0841</span>
+        </td>
+        <td><span class="mono" style="font-size:10px;">12 Apr</span><br><span class="mono" style="font-size:9px; color:#9ca3af;">09:00</span></td>
+        <td>
+          <span class="status-progress"><span class="dot"></span>In Progress</span>
+          <span class="status-ts">2h ago</span>
+        </td>
+        <td>
+          <span class="status-pending"><span class="dot"></span>Pending</span>
+          <span class="status-ts">—</span>
+        </td>
+      </tr>
+      <tr style="opacity: 0.35;">
+        <td><span class="mono" style="font-size:10px; color:#111827;">DO-003</span></td>
+        <td style="font-size:11px; font-weight:600; color:#111827;">Shopee</td>
+        <td><span class="mono" style="font-size:10px; color:#6b7280;">FM</span></td>
+        <td colspan="4" style="font-size:10px; color:#9ca3af; font-style:italic;">…dimmed while autocomplete is open</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============================================================ -->
+<!-- VERDICT                                                       -->
+<!-- ============================================================ -->
+<div class="verdict">
+  <h3>Verdict: Option A — Inline Text Search</h3>
+  <p style="font-size: 12px; color: #374151; line-height: 1.7; margin-top: 6px;">
+    <strong>Implement Option A.</strong> A compact search input in the existing filter row is the right call for this product phase.
+  </p>
+  <ul style="font-size: 11px; color: #374151; line-height: 1.8; margin: 10px 0 0 16px;">
+    <li><strong>Mirrors the admin app.</strong> Admin's filter bar leads with a single search input. Vendors using both apps will find the same pattern — zero relearning.</li>
+    <li><strong>Covers all query types.</strong> Trip ID lookup ("DO-007"), customer name ("TikTok"), and MAWB scan are the three real search moments. A single input handles all three.</li>
+    <li><strong>No structural change.</strong> The 2-row filter bar stays 2 rows. Service pills and date range remain in the same row. No new visual weight.</li>
+    <li><strong>Chainable.</strong> Searching "TikTok" while the "EC" service pill is active gives "all TikTok customs-clearance jobs" — no extra design work needed.</li>
+    <li><strong>Option B is a complement, not a replacement.</strong> Customer pills add value for vendors serving a small set of known customers (e.g., 3 customers). Ship it as a v1.1 enhancement on top of Option A if user research confirms the pattern — not instead of it.</li>
+    <li><strong>Option C is a future concern.</strong> Autocomplete is correct for large datasets (500+ jobs). At the current scale (&lt;50 active jobs per vendor), the suggestion overhead isn't warranted. Revisit at v2.</li>
+  </ul>
+  <p style="font-size: 11px; color: #374151; line-height: 1.7; margin-top: 10px;">
+    <strong>Responsive note:</strong> At 768px viewport, the filter row wraps. The search input should appear first in the wrapped layout (above service pills), so it remains the primary filter affordance on tablets. On ≥1024px, it sits left of the Service label in the same row.
+  </p>
+  <p style="font-size: 11px; color: #374151; line-height: 1.7; margin-top: 8px;">
+    <strong>Search scope:</strong> Trip ID (exact prefix match), Customer name (case-insensitive substring), MAWB (exact substring). Location names intentionally excluded — vendors know their locations by service and date, not by warehouse name.
+  </p>
+</div>
+
+<div class="open-q">
+  <strong>Open questions for user input:</strong><br>
+  1. <strong>Highlight matches:</strong> Should the search term be highlighted in the table (as shown in the mockup with the faint blue highlight on matched text)? Or is a filtered result set sufficient without inline highlighting?<br>
+  2. <strong>Scope of search:</strong> Should MAWB be searchable? Vendors operating at air cargo terminals may have the MAWB on a printout but not the Trip ID. Including MAWB makes the input more useful but increases the search logic complexity.<br>
+  3. <strong>Customer pills as v1.1:</strong> Worth implementing Option B's customer pills as a secondary enhancement alongside Option A — or does the segment pill + search combination provide sufficient filtering for the current customer set?
+</div>
+
+</div>
+</body>
+</html>
