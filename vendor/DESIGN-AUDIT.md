@@ -1,6 +1,6 @@
 # Design Audit — Teleport OS Vendor
 
-> Last updated: 2026-09-16
+> Last updated: 2026-09-22
 > Scope: `vendor/src/` — checked against `admin/DESIGN.md` + `vendor/DESIGN.md`
 > Method: Full file read of MyJobsPage.tsx, JobDetailPage.tsx, FleetPage.tsx, Navbar.tsx
 
@@ -8,7 +8,7 @@
 
 ## Summary
 
-The vendor app is substantially compliant with the design system. The slop-reduction pass (2026-03-30) and the status model reconciliation (2026-04-21) have both landed cleanly. Three findings remain — one medium-severity inconsistency and two low-severity observations.
+The vendor app is substantially compliant with the design system. The slop-reduction pass (2026-03-30) and the status model reconciliation (2026-04-21) have both landed cleanly. Four findings remain — two medium-severity data/component inconsistencies and two low-severity observations.
 
 ---
 
@@ -63,6 +63,37 @@ Line 471 references `job.rejectionReason` in the context of `verificationStatus 
 The current filter bar (status pills + service pills + date range) has no text search. This is a documented intentional gap, not a design violation. The design exploration for this is captured in HMW-V17.
 
 **Status:** Design explored in `vendor/design-hypotheses/17-hmw-vendor-job-search.html`. Awaiting user decision before implementation.
+
+---
+
+### FINDING-04 — MEDIUM: `JobDetailPage.tsx` loads fleet data from seed constants, not Fleet page's localStorage store
+
+**File:** `vendor/src/pages/JobDetailPage.tsx:104–105, 151–153`
+**Standard:** Fleet page (TODO-047 ✅) stores vendor fleet data under `localStorage` key `vendor_fleet_{vendorCode}`. Driver and vehicle additions via the Fleet page are persisted there.
+
+**Detail:**
+`JobDetailPage.tsx` lines 104–105 query `seedDrivers` and `seedVehicles` directly (hardcoded imports from `shared/mockData`):
+```ts
+const vendorDrivers = seedDrivers.filter((d) => d.vendorCode === vendorCode && d.isActive);
+const vendorVehicles = seedVehicles.filter((v) => v.vendorCode === vendorCode && v.isActive);
+```
+And lines 151–153 also look up driver/vehicle from the same seed arrays for the `handleAssignDispatch` function.
+
+This means: any driver or vehicle added, edited, or deactivated via the **Fleet** page is invisible in the **Job Detail dispatch dropdowns**. The two views are out of sync. A dispatcher who adds a new driver in Fleet and then opens a job expects to see that driver in the assignment dropdown — currently they won't.
+
+**Recommended fix:** Replace the direct seed imports with the same `loadFleetData(vendorCode)` helper the Fleet page already uses:
+```ts
+import { loadFleetData } from '../pages/FleetPage'; // or extract to a shared util
+const { drivers: vendorDrivers, vehicles: vendorVehicles } = useMemo(
+  () => vendorCode ? loadFleetData(vendorCode) : { drivers: [], vehicles: [] },
+  [vendorCode]
+);
+const activeDrivers = vendorDrivers.filter(d => d.isActive);
+const activeVehicles = vendorVehicles.filter(v => v.isActive);
+```
+Alternatively, extract `loadFleetData` and `saveFleetData` into a shared utility file (e.g., `vendor/src/utils/fleetStorage.ts`) so both pages import from the same place.
+
+**Severity note:** This is a data-plumbing bug, not a visual design violation. However, it is the prerequisite for the HMW-V18 Option B (dispatch availability column) — availability can only be derived correctly once the data pipeline is end-to-end.
 
 ---
 

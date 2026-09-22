@@ -2,6 +2,13 @@
 
 ## Open
 
+### HMW-V18: How might we help FM dispatchers know which drivers and vehicles are free — without leaving the Fleet page to check active jobs?
+**Options:** A) Current — pure CRUD table with Active/Inactive status only, B) Dispatch-aware availability column showing "On job · J04" vs "Available" derived from TripContext, C) Visual dispatch board panel above CRUD table (card grid — rejected: violates tables-not-cards rule)
+**Leaning toward:** B) Dispatch-aware availability column — answers the dispatcher's "who's free?" in one screen using only existing color tokens (green = available, blue dot = on-job, mirrors job status system), derived from shared TripContext with no new data model. Option C rejected as AI slop (card grid breaks 768px, duplicates the CRUD table, violates design system). Option A is already shipped.
+**Open question:** Should "Dispatched (Pending job)" and "On job (In Progress job)" be two distinct states in the Availability column, or collapsed to a single "Busy" state? Distinct states preserve semantic consistency with the job status model but add complexity. Needs user input.
+**Prerequisite:** Fix `JobDetailPage.tsx` data plumbing — currently loads `seedDrivers`/`seedVehicles` instead of Fleet page's localStorage fleet data. Drivers added via Fleet don't appear in job assignment dropdowns. Must be resolved before Availability column is meaningful.
+**File:** `18-hmw-fleet-dispatch-availability.html`
+
 ### HMW-V17: How might we let vendor operators quickly locate specific jobs by trip ID, customer, or MAWB without breaking the dense-table design?
 **Options:** A) Inline text search input in filter bar (real-time, searches Trip ID + Customer + MAWB), B) Customer quick-filter pills derived from vendor's job history (no freetext), C) Search with autocomplete suggestions (customer names, trip IDs)
 **Leaning toward:** A) Inline text search — mirrors admin filter bar pattern exactly, handles all three query types (trip ID, customer name, MAWB), no structural change to the 2-row filter bar, chainable with existing service + date filters. Option B is a valid v1.1 complement for vendors serving a small customer set. Option C is overengineered for current scale (<50 active jobs).
