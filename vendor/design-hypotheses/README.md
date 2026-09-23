@@ -2,6 +2,13 @@
 
 ## Open
 
+### HMW-V19: How might we surface Status and Verification as two independent signals in the vendor's job detail action bar — without conflating them into a single merged label?
+**Root cause:** `JobDetailPage.tsx` uses a local `StateCell` calling `getStateStyle()` (merged state getter). For a Completed+Rejected job, the bar shows "Verify rejected" instead of the correct "Completed" status chip. Verified by reading `shared/statusStyles.ts:40–41`.
+**Options:** A) Two-row action bar (status row + verification row, second row hidden when Pending), B) Admin-style labeled pair above the action bar (cleanest separation, most vertical space), C) Fix component swap only — replace `StateCell` with `StatusCell` + add a small inline verification badge for Rejected state
+**Leaning toward:** C) StatusCell swap + Rejected badge — smallest change, fixes the conflation bug, no layout impact. The bar background color continues to encode combined urgency; the chip now correctly shows only the operational status; the badge makes Rejected explicit without competing with the action button. Option B is architecturally cleaner but adds ~50px to an already-long full-page layout; appropriate if vendor app adds more signals in future.
+**Open question:** Should the verification badge also appear for the Verified state (green badge alongside Completed chip), or is the all-green bar + "Ready for billing" text sufficient? Leaning toward: omit the Verified badge (bar color is sufficient signal); show badge only for Rejected (unexpected, needs action). Needs user input.
+**File:** `19-hmw-status-verification-action-bar.html`
+
 ### HMW-V18: How might we help FM dispatchers know which drivers and vehicles are free — without leaving the Fleet page to check active jobs?
 **Options:** A) Current — pure CRUD table with Active/Inactive status only, B) Dispatch-aware availability column showing "On job · J04" vs "Available" derived from TripContext, C) Visual dispatch board panel above CRUD table (card grid — rejected: violates tables-not-cards rule)
 **Leaning toward:** B) Dispatch-aware availability column — answers the dispatcher's "who's free?" in one screen using only existing color tokens (green = available, blue dot = on-job, mirrors job status system), derived from shared TripContext with no new data model. Option C rejected as AI slop (card grid breaks 768px, duplicates the CRUD table, violates design system). Option A is already shipped.

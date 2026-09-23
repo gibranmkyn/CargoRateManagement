@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-V19: Status + Verification in Vendor Job Detail</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', 'SF Mono', monospace; }
+.page { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #f9fafb; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.screen-label { padding: 8px 14px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; background: #f9fafb; color: #9ca3af; border-bottom: 1px solid #e5e7eb; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+.finding { background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 10px 12px; font-size: 11px; color: #991b1b; margin-bottom: 12px; line-height: 1.6; }
+.note { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 12px; font-size: 11px; color: #6b7280; margin-bottom: 12px; line-height: 1.6; }
+
+/* Mock chrome */
+.mock-nav { height: 40px; padding: 0 12px; background: #111827; display: flex; align-items: center; gap: 8px; }
+.mock-nav .logo { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; display: flex; align-items: center; justify-content: center; }
+.mock-nav .logo-text { font-weight: 700; font-size: 13px; letter-spacing: -0.3px; color: #fff; }
+.mock-nav .logo-label { font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.35); }
+.mock-nav .nav-active { font-size: 12px; padding: 4px 10px; border-radius: 4px; color: #fff; background: rgba(255,255,255,0.1); font-weight: 600; margin-left: 24px; }
+.mock-nav .vendor-id { margin-left: auto; font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 600; }
+.mock-nav .avatar { width: 22px; height: 22px; border-radius: 4px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.7); margin-left: 8px; }
+
+.mock-page { background: #fff; padding: 0; }
+.mock-header { padding: 16px 20px 12px; border-bottom: 1px solid #e5e7eb; }
+.mock-header-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mock-back { font-size: 12px; font-weight: 500; color: #152CFF; display: inline-flex; align-items: center; gap: 4px; }
+.mock-job-id { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 1px 6px; border-radius: 4px; background: #f3f4f6; border: 1px solid #e5e7eb; color: #9ca3af; }
+.mock-job-title { font-size: 14px; font-weight: 700; color: #111827; }
+.mock-job-code { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #6b7280; }
+.mock-trip-meta { font-size: 11px; color: #9ca3af; display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.mock-trip-meta .mono-val { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9ca3af; }
+.mock-trip-meta .customer { font-weight: 600; color: #111827; }
+
+.mock-body { padding: 16px 20px; }
+.section-wrap { padding: 14px 0; border-top: 1px solid #f3f4f6; }
+.section-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px; }
+
+/* Shared status chip */
+.status-chip { display: inline-flex; align-items: center; gap: 6px; line-height: 1.2; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+.status-ts { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9ca3af; display: block; margin-top: 2px; }
+
+/* Buttons */
+.btn-primary { padding: 5px 14px; border: none; border-radius: 4px; background: #152CFF; color: #fff; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-family: inherit; }
+.btn-ghost { padding: 5px 11px; border: 1px solid #e5e7eb; border-radius: 4px; background: #fff; color: #374151; font-size: 11px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-family: inherit; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-V19: Status + Verification in Job Detail Action Bar</h1>
+<p style="font-size: 12px; color: #6b7280; margin-bottom: 24px;">Vendor design-hypotheses · 2026-09-23</p>
+
+<div class="hmw">"How might we surface Status and Verification as two independent signals in the vendor's job detail action bar — without conflating them into a single merged label that obscures which signal changed?"</div>
+
+<div class="context">
+  <strong>Root cause (FINDING-01 / FINDING-05):</strong>
+  <code>JobDetailPage.tsx</code> uses a local <code>StateCell</code> component calling <code>getStateStyle()</code> — the pre-2026-04-21 <em>merged state</em> getter. When <code>verificationStatus === 'Rejected'</code>, <code>getStateStyle</code> returns label="Verify rejected", masking the actual operational status "Completed". The vendor sees a red bar labeled "Verify rejected" — correct emotionally but incorrect semantically. The separation principle (client spec, 2026-04-21) requires Status and Verification to always render as independent signals.<br><br>
+  <strong>Context:</strong> On the My Jobs list, this is correctly handled with two columns: StatusCell (status only) + VerificationCell (verification only). On the Job Detail full-page, both signals collapse into the action bar. This document explores how to correctly separate them there.
+</div>
+
+<div class="rationale">
+  <strong>The five combined states the action bar must cover:</strong><br>
+  1. <strong>Pending + Pending verification</strong> → gray. Primary action: Start Job.<br>
+  2. <strong>In Progress + Pending verification</strong> → blue. Primary action: Upload Proof.<br>
+  3. <strong>Completed + Pending verification</strong> → amber. No action (waiting on ops). Timestamp.<br>
+  4. <strong>Completed + Rejected verification</strong> → currently red bar + "Verify rejected" label. Primary action: Re-upload Proof.<br>
+  5. <strong>Any status + Verified</strong> → green. No action (locked, billing-ready). Timestamp.<br>
+  6. <strong>Cancelled + any</strong> → red. No action. Cancel reason.<br><br>
+  In states 1–3 and 6, showing only the Status chip is correct (verification is Pending = not relevant to the vendor yet). In state 4, both signals are relevant: the STATUS is "Completed" (the work is done) but the VERIFICATION is "Rejected" (the proof needs re-submission). In state 5, both signals are relevant: STATUS can be anything, but VERIFICATION "Verified" locks everything.
+</div>
+
+<!-- ============================================================ -->
+<h2>Option A — Split status bar: verification appears as a second row</h2>
+
+<div class="rationale">
+  The primary bar row shows the operational Status chip + action button (unchanged). A second row appears only when <code>verificationStatus</code> is non-Pending, showing the verification signal inline in the same bar. The bar background color is driven by the higher-urgency signal.
+  <div class="pros-cons">
+    <div class="pros">
+      ✓ Status and Verification clearly labeled and separated<br>
+      ✓ Second row hidden when verification is Pending (states 1–2) — no clutter<br>
+      ✓ No new layout regions, stays within the action bar footprint<br>
+      ✓ Bar background still encodes the highest-urgency signal
+    </div>
+    <div class="cons">
+      ✗ Bar height varies (1 vs 2 rows) — layout shift when verification changes<br>
+      ✗ Two rows visually weaker than one clean row + action button<br>
+      ✗ Bar becomes a "dual-purpose" element (workflow guidance + status display)
+    </div>
+  </div>
+</div>
+
+<!-- State 4: Completed + Rejected -->
+<p style="font-size: 11px; font-weight: 600; color: #6b7280; margin-bottom: 4px;">State 4: Completed status + Rejected verification</p>
+<div class="screen">
+  <div class="screen-label">Option A — Split bar: Completed + Rejected</div>
+  <div class="mock-page">
+    <div class="mock-nav">
+      <div class="logo"></div>
+      <span class="logo-text">Teleport OS</span>
+      <span class="logo-label">Vendor</span>
+      <span class="nav-active">My Jobs</span>
+      <span class="vendor-id">HaleSun Logistics</span>
+      <div class="avatar">HL</div>
+    </div>
+    <div class="mock-header">
+      <div class="mock-header-top">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="mock-back">← My Jobs</span>
+          <span style="color:#d1d5db">|</span>
+          <span class="mock-job-id">J03</span>
+          <span class="mock-job-title">FM Trucking</span>
+          <span class="mock-job-code">FM</span>
+        </div>
+        <div class="mock-trip-meta">
+          <span class="mono-val">DO-008</span>
+          <span>·</span>
+          <span class="customer">Shein</span>
+          <span>·</span>
+          <span class="mono-val">172-23456781</span>
+        </div>
+      </div>
+    </div>
+    <div class="mock-body" style="padding-top:12px;padding-bottom:0;">
+      <!-- Option A: Two-row bar, state 4 -->
+      <div style="border:1px solid #fecaca;border-radius:4px;margin-bottom:4px;background:#fef2f2;overflow:hidden;">
+        <!-- Row 1: Status -->
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 14px;border-bottom:1px solid #fecaca;">
+          <div>
+            <div class="status-chip">
+              <span class="status-dot" style="background:#a16207;"></span>
+              <span style="font-size:12px;font-weight:500;color:#374151;">Completed</span>
+            </div>
+            <span class="status-ts">3d ago</span>
+          </div>
+          <button class="btn-primary" style="background:#dc2626;font-size:11px;">↑ Re-upload Proof</button>
+        </div>
+        <!-- Row 2: Verification (only shown when non-Pending) -->
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 14px;">
+          <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;flex-shrink:0;">Verification</span>
+          <div class="status-chip">
+            <span class="status-dot" style="background:#dc2626;"></span>
+            <span style="font-size:11px;font-weight:600;color:#dc2626;">Rejected</span>
+          </div>
+          <span style="font-size:10px;color:#dc2626;font-style:italic;">"Stamp missing on page 3"</span>
+          <span class="mono" style="font-size:9px;color:#9ca3af;margin-left:auto;">2d ago</span>
+        </div>
+      </div>
+      <!-- Sections placeholder -->
+      <div style="height:80px;display:flex;align-items:center;justify-content:center;color:#d1d5db;font-size:11px;border-top:1px solid #f3f4f6;margin-top:8px;">Driver &amp; Vehicle → Route → Cargo → Proof → Log …</div>
+    </div>
+  </div>
+</div>
+
+<!-- State 5: Verified -->
+<p style="font-size: 11px; font-weight: 600; color: #6b7280; margin-bottom: 4px;">State 5: In Progress status + Verified (edge case)</p>
+<div class="screen">
+  <div class="screen-label">Option A — Split bar: Completed + Verified (normal)</div>
+  <div class="mock-page">
+    <div style="background:#fff;padding:12px 20px 16px;">
+      <div style="border:1px solid #a7f3d0;border-radius:4px;margin-bottom:4px;background:#f0fdf4;overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 14px;border-bottom:1px solid #a7f3d0;">
+          <div>
+            <div class="status-chip">
+              <span class="status-dot" style="background:#a16207;"></span>
+              <span style="font-size:12px;font-weight:500;color:#374151;">Completed</span>
+            </div>
+            <span class="status-ts">5d ago</span>
+          </div>
+          <span class="mono" style="font-size:10px;color:#059669;">22 Sep · 14:32</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 14px;">
+          <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;flex-shrink:0;">Verification</span>
+          <div class="status-chip">
+            <span class="status-dot" style="background:#059669;"></span>
+            <span style="font-size:11px;font-weight:600;color:#059669;">Verified</span>
+          </div>
+          <span style="font-size:10px;color:#6b7280;">Ready for billing</span>
+          <span class="mono" style="font-size:9px;color:#9ca3af;margin-left:auto;">1d ago</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>Option B — Labeled pair above action bar (mirrors admin slide-out)</h2>
+
+<div class="rationale">
+  Separate the information display (Status + Verification as a labeled pair, same as admin slide-out header) from the action trigger (a contextual action row below). The labeled pair is always visible regardless of state; the action row only appears when there's a vendor action available.
+  <div class="pros-cons">
+    <div class="pros">
+      ✓ Perfect parallel to admin slide-out labeled pair — consistent platform language<br>
+      ✓ Both signals always explicitly labeled, impossible to conflate<br>
+      ✓ Action row is clean — one purpose (trigger), no status reading required<br>
+      ✓ Works at all states including the Pending/Pending case without looking empty
+    </div>
+    <div class="cons">
+      ✗ Two distinct regions where one bar previously served — feels like two sections<br>
+      ✗ Most vertical space: labeled pair (~50px) + action row (~40px) vs single bar (~40px)<br>
+      ✗ Vendor may not read the labeled pair and just look for the action button<br>
+      ✗ The "bar background as urgency signal" is lost — color is now in the action row only
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="screen-label">Option B — Labeled pair + action row: Completed + Rejected</div>
+  <div class="mock-page">
+    <div class="mock-nav">
+      <div class="logo"></div>
+      <span class="logo-text">Teleport OS</span>
+      <span class="logo-label">Vendor</span>
+      <span class="nav-active">My Jobs</span>
+      <span class="vendor-id">HaleSun Logistics</span>
+      <div class="avatar">HL</div>
+    </div>
+    <div class="mock-header">
+      <div class="mock-header-top">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="mock-back">← My Jobs</span>
+          <span style="color:#d1d5db">|</span>
+          <span class="mock-job-id">J03</span>
+          <span class="mock-job-title">FM Trucking</span>
+          <span class="mock-job-code">FM</span>
+        </div>
+        <div class="mock-trip-meta">
+          <span class="mono-val">DO-008</span>
+          <span>·</span>
+          <span class="customer">Shein</span>
+        </div>
+      </div>
+    </div>
+    <div class="mock-body" style="padding-top:12px;padding-bottom:0;">
+      <!-- Option B: Labeled pair -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;border:1px solid #e5e7eb;border-radius:4px;overflow:hidden;margin-bottom:4px;">
+        <!-- Status column -->
+        <div style="padding:10px 14px;background:#fff;border-right:1px solid #e5e7eb;">
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin-bottom:6px;">Status</div>
+          <div class="status-chip">
+            <span class="status-dot" style="background:#a16207;"></span>
+            <span style="font-size:12px;font-weight:500;color:#374151;">Completed</span>
+          </div>
+          <span class="status-ts">3d ago</span>
+        </div>
+        <!-- Verification column -->
+        <div style="padding:10px 14px;background:#fef2f2;">
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin-bottom:6px;">Verification</div>
+          <div class="status-chip">
+            <span class="status-dot" style="background:#dc2626;"></span>
+            <span style="font-size:12px;font-weight:600;color:#dc2626;">Rejected</span>
+          </div>
+          <span style="font-size:10px;color:#dc2626;display:block;margin-top:2px;">"Stamp missing on page 3"</span>
+        </div>
+      </div>
+      <!-- Separate action row -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border:1px solid #fecaca;border-radius:4px;background:#fef2f2;margin-bottom:4px;">
+        <span style="font-size:11px;color:#374151;">Proof rejected — please re-upload a corrected document</span>
+        <button class="btn-primary" style="background:#dc2626;">↑ Re-upload</button>
+      </div>
+      <div style="height:80px;display:flex;align-items:center;justify-content:center;color:#d1d5db;font-size:11px;border-top:1px solid #f3f4f6;margin-top:8px;">Driver &amp; Vehicle → Route → Cargo → Proof → Log …</div>
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="screen-label">Option B — Labeled pair: Completed + Verified (no action row)</div>
+  <div class="mock-page">
+    <div style="background:#fff;padding:12px 20px 16px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;border:1px solid #a7f3d0;border-radius:4px;overflow:hidden;margin-bottom:4px;">
+        <div style="padding:10px 14px;background:#fff;border-right:1px solid #e5e7eb;">
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin-bottom:6px;">Status</div>
+          <div class="status-chip"><span class="status-dot" style="background:#a16207;"></span><span style="font-size:12px;font-weight:500;color:#374151;">Completed</span></div>
+          <span class="status-ts">5d ago</span>
+        </div>
+        <div style="padding:10px 14px;background:#f0fdf4;">
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin-bottom:6px;">Verification</div>
+          <div class="status-chip"><span class="status-dot" style="background:#059669;"></span><span style="font-size:12px;font-weight:600;color:#059669;">Verified</span></div>
+          <span style="font-size:10px;color:#6b7280;display:block;margin-top:2px;">Ready for billing · 22 Sep</span>
+        </div>
+      </div>
+      <!-- No action row for Verified -->
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>Option C — Action bar stays primary workflow signal; StatusCell replaces StateCell</h2>
+
+<div class="rationale">
+  Minimal-change option. Keep the single action bar exactly as designed in vendor/DESIGN.md. Fix only the component error: replace the local <code>StateCell</code> (merged) with the shared <code>StatusCell</code> (status-only). Verification is communicated via the bar background color + hint text — implicit but correct. Add a small verification inline badge in the bar when verification is Rejected/Verified.
+  <div class="pros-cons">
+    <div class="pros">
+      ✓ Smallest change to current implementation (1 component swap + 1 badge)<br>
+      ✓ Bar stays single-row — no layout shift, familiar to vendors<br>
+      ✓ Status chip now correctly shows "Completed" (not "Verify rejected")<br>
+      ✓ Verification badge is a secondary signal — does not compete with the action button<br>
+      ✓ Bar background color still encodes the combined urgency as before
+    </div>
+    <div class="cons">
+      ✗ Verification badge is secondary and may be missed if vendor only glances at action button<br>
+      ✗ In the Pending + Pending state, the Status chip shows "Pending" while bar is gray — correct but the verification signal is completely invisible (acceptable: no action needed)<br>
+      ✗ The verification signal is still implicit (bar color) for most states; only explicit when badge is shown
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="screen-label">Option C — Fixed bar: Completed + Rejected (StatusCell + verification badge)</div>
+  <div class="mock-page">
+    <div class="mock-nav">
+      <div class="logo"></div>
+      <span class="logo-text">Teleport OS</span>
+      <span class="logo-label">Vendor</span>
+      <span class="nav-active">My Jobs</span>
+      <span class="vendor-id">HaleSun Logistics</span>
+      <div class="avatar">HL</div>
+    </div>
+    <div class="mock-header">
+      <div class="mock-header-top">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="mock-back">← My Jobs</span>
+          <span style="color:#d1d5db">|</span>
+          <span class="mock-job-id">J03</span>
+          <span class="mock-job-title">FM Trucking</span>
+          <span class="mock-job-code">FM</span>
+        </div>
+        <div class="mock-trip-meta">
+          <span class="mono-val">DO-008</span>
+          <span>·</span>
+          <span class="customer">Shein</span>
+        </div>
+      </div>
+    </div>
+    <div class="mock-body" style="padding-top:12px;padding-bottom:0;">
+      <!-- Option C: Single bar, StatusCell + verification badge -->
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border:1px solid #fecaca;border-radius:4px;margin-bottom:4px;background:#fef2f2;">
+        <div>
+          <!-- StatusCell (status-only — shows "Completed" amber, not "Verify rejected") -->
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <div>
+              <div class="status-chip">
+                <span class="status-dot" style="background:#a16207;"></span>
+                <span style="font-size:12px;font-weight:500;color:#374151;">Completed</span>
+              </div>
+              <span class="status-ts">3d ago</span>
+            </div>
+            <!-- Verification badge: appears when Rejected or Verified -->
+            <div style="display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:4px;border:1px solid #fecaca;background:rgba(220,38,38,0.06);">
+              <span class="status-dot" style="background:#dc2626;width:5px;height:5px;"></span>
+              <span style="font-size:10px;font-weight:600;color:#dc2626;">Verification rejected</span>
+            </div>
+          </div>
+          <span style="font-size:10px;color:#6b7280;display:block;margin-top:4px;">Proof rejected — please re-upload a corrected document</span>
+        </div>
+        <button class="btn-primary" style="background:#dc2626;">↑ Re-upload</button>
+      </div>
+      <div style="height:80px;display:flex;align-items:center;justify-content:center;color:#d1d5db;font-size:11px;border-top:1px solid #f3f4f6;margin-top:8px;">Driver &amp; Vehicle → Route → Cargo → Proof → Log …</div>
+    </div>
+  </div>
+</div>
+
+<!-- All states matrix -->
+<div class="screen">
+  <div class="screen-label">Option C — All 6 states at a glance</div>
+  <div class="mock-page" style="padding:12px 20px;display:flex;flex-direction:column;gap:6px;">
+
+    <!-- State 1: Pending + Pending -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid #e5e7eb;border-radius:4px;background:#f9fafb;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="status-chip"><span class="status-dot" style="background:#d1d5db;"></span><span style="font-size:11px;color:#6b7280;">Pending</span></div>
+        <span style="font-size:10px;color:#9ca3af;">Start this job when you begin work</span>
+      </div>
+      <button class="btn-primary" style="font-size:10px;padding:4px 10px;">Start Job →</button>
+    </div>
+
+    <!-- State 2: In Progress + Pending -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid rgba(21,44,255,0.12);border-radius:4px;background:rgba(21,44,255,0.04);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="status-chip"><span class="status-dot" style="background:#152CFF;"></span><span style="font-size:11px;font-weight:500;color:#111827;">In Progress</span></div>
+        <span style="font-size:10px;color:#9ca3af;">Upload proof of service to mark complete</span>
+      </div>
+      <button class="btn-primary" style="font-size:10px;padding:4px 10px;">↑ Upload Proof</button>
+    </div>
+
+    <!-- State 3: Completed + Pending -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid #fde68a;border-radius:4px;background:#fefce8;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="status-chip"><span class="status-dot" style="background:#a16207;"></span><span style="font-size:11px;font-weight:500;color:#374151;">Completed</span></div>
+        <span style="font-size:10px;color:#9ca3af;">Waiting for Teleport verification</span>
+      </div>
+      <span class="mono" style="font-size:10px;color:#9ca3af;">19 Sep · 09:41</span>
+    </div>
+
+    <!-- State 4: Completed + Rejected -->
+    <div style="display:flex;flex-direction:column;gap:4px;padding:8px 12px;border:1px solid #fecaca;border-radius:4px;background:#fef2f2;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <div class="status-chip"><span class="status-dot" style="background:#a16207;"></span><span style="font-size:11px;font-weight:500;color:#374151;">Completed</span></div>
+          <div style="display:inline-flex;align-items:center;gap:4px;padding:1px 6px;border-radius:4px;border:1px solid #fecaca;background:rgba(220,38,38,0.06);">
+            <span class="status-dot" style="background:#dc2626;width:5px;height:5px;"></span>
+            <span style="font-size:9px;font-weight:600;color:#dc2626;">Verification rejected</span>
+          </div>
+        </div>
+        <button class="btn-primary" style="background:#dc2626;font-size:10px;padding:4px 10px;">↑ Re-upload</button>
+      </div>
+      <span style="font-size:10px;color:#dc2626;">"Stamp missing on page 3"</span>
+    </div>
+
+    <!-- State 5: Completed + Verified -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid #a7f3d0;border-radius:4px;background:#f0fdf4;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="status-chip"><span class="status-dot" style="background:#a16207;"></span><span style="font-size:11px;font-weight:500;color:#374151;">Completed</span></div>
+        <div style="display:inline-flex;align-items:center;gap:4px;padding:1px 6px;border-radius:4px;border:1px solid #a7f3d0;background:rgba(5,150,105,0.06);">
+          <span class="status-dot" style="background:#059669;width:5px;height:5px;"></span>
+          <span style="font-size:9px;font-weight:600;color:#059669;">Verified</span>
+        </div>
+        <span style="font-size:10px;color:#059669;">Ready for billing</span>
+      </div>
+      <span class="mono" style="font-size:10px;color:#059669;">22 Sep · 14:32</span>
+    </div>
+
+    <!-- State 6: Cancelled -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid #fecaca;border-radius:4px;background:#fef2f2;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="status-chip"><span class="status-dot" style="background:#dc2626;"></span><span style="font-size:11px;font-weight:600;color:#dc2626;">Cancelled</span></div>
+        <span style="font-size:10px;color:#9ca3af;">Cancelled by Teleport — unable to collect at origin</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<div class="verdict">
+  <h3>Verdict: Option C — StatusCell swap + verification badge (minimal, correct)</h3>
+  <p style="font-size: 12px; color: #374151; line-height: 1.7; margin-bottom: 12px;">
+    <strong>Ship Option C.</strong> Option A and B both correctly separate the signals, but the vendor job detail page is a <em>workflow page</em>, not a data-dense table. The action bar's job is to answer "what do I do next?" — not to display both signals at their full weight. Option C accomplishes the design system goal (correct data, no conflation) with the smallest structural change:
+  </p>
+  <ul style="font-size: 12px; color: #374151; line-height: 1.7; margin-left: 16px; margin-bottom: 12px;">
+    <li><strong>Replace <code>StateCell</code> with <code>StatusCell</code></strong> in the action bar. The status chip now correctly shows "Completed" (amber) when the job is completed, even if verification was rejected. One component swap, no layout change.</li>
+    <li><strong>Add a verification badge</strong> inline with the status chip, visible only when <code>verificationStatus === 'Rejected'</code> or <code>verificationStatus === 'Verified'</code>. The badge uses the same dot + label pattern but at 9-10px (secondary). No badge for Pending verification (irrelevant to vendor until there's action to take).</li>
+    <li>The <strong>bar background color</strong> continues to encode the combined urgency — red for rejected verification, green for verified — giving the immediate emotional cue. The explicit chip + badge underneath make it machine-readable.</li>
+  </ul>
+  <p style="font-size: 11px; color: #6b7280; line-height: 1.6;">
+    <strong>Option B is the "right" answer architecturally</strong> (cleanest signal separation, mirrors admin labeled pair), but it adds ~50px to an already-long full-page layout and creates two regions for closely related information. It would be appropriate if the vendor app adds more signals (e.g., a "Dispute" state or a separate billing signal). Until then, Option C achieves correctness without growing the interface.
+  </p>
+  <p style="font-size: 11px; color: #6b7280; line-height: 1.6; margin-top: 8px;">
+    <strong>Implementation note:</strong> The verification badge in Option C reuses the design system's existing pill shape (4px radius, 1px border, tinted bg). It is NOT a filled chip — the background opacity is 6% to keep it secondary. The colors match the verification status system exactly: <code>#059669</code> for Verified, <code>#dc2626</code> for Rejected.
+  </p>
+  <p style="font-size: 11px; color: #374151; margin-top: 10px;">
+    <strong>Open question:</strong> Should the verification badge in the Verified state show <em>inside</em> the action bar, or should the whole bar just go green (current behavior) and the badge be omitted? The all-green bar already communicates "verified" very clearly to the vendor. Showing a redundant green "Verified" badge alongside the status chip may create visual noise. Recommend: omit the badge for the Verified state (bar color + "Ready for billing" text is sufficient); show the badge only for Rejected state where it is an <em>unexpected</em> signal the vendor needs to notice.
+  </p>
+</div>
+
+</div>
+</body>
+</html>

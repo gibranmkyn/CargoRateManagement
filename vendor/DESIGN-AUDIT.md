@@ -1,14 +1,14 @@
 # Design Audit — Teleport OS Vendor
 
-> Last updated: 2026-09-22
+> Last updated: 2026-09-23
 > Scope: `vendor/src/` — checked against `admin/DESIGN.md` + `vendor/DESIGN.md`
-> Method: Full file read of MyJobsPage.tsx, JobDetailPage.tsx, FleetPage.tsx, Navbar.tsx
+> Method: Full file read of MyJobsPage.tsx, JobDetailPage.tsx, FleetPage.tsx, Navbar.tsx, StatusCell.tsx, shared/statusStyles.ts
 
 ---
 
 ## Summary
 
-The vendor app is substantially compliant with the design system. The slop-reduction pass (2026-03-30) and the status model reconciliation (2026-04-21) have both landed cleanly. Four findings remain — two medium-severity data/component inconsistencies and two low-severity observations.
+The vendor app is substantially compliant with the design system. The slop-reduction pass (2026-03-30) and the status model reconciliation (2026-04-21) have both landed cleanly. Five findings remain — two medium-severity data/component inconsistencies, one medium-severity signal-conflation issue, and two low-severity observations.
 
 ---
 
@@ -94,6 +94,46 @@ const activeVehicles = vendorVehicles.filter(v => v.isActive);
 Alternatively, extract `loadFleetData` and `saveFleetData` into a shared utility file (e.g., `vendor/src/utils/fleetStorage.ts`) so both pages import from the same place.
 
 **Severity note:** This is a data-plumbing bug, not a visual design violation. However, it is the prerequisite for the HMW-V18 Option B (dispatch availability column) — availability can only be derived correctly once the data pipeline is end-to-end.
+
+---
+
+### FINDING-05 — MEDIUM: Status Action Bar shows merged label ("Verify rejected") instead of independent Status chip
+
+**File:** `vendor/src/pages/JobDetailPage.tsx:442`
+**Standard:** 2026-04-21 client status model — Status and Verification are **separate independent signals**. The "Status chip" in the action bar (per `vendor/DESIGN.md`) must reflect only the operational `status` field.
+
+**Detail:**
+FINDING-01 noted that `JobDetailPage.tsx` uses a local `StateCell` component calling `getStateStyle()`. The impact is more specific than just a maintenance concern: for a job with `status === 'Completed'` and `verificationStatus === 'Rejected'`, `getStateStyle()` returns `{ label: 'Verify rejected', dot: '#dc2626' }` (see `shared/statusStyles.ts:40–41`). This makes the Status chip in the action bar show **"Verify rejected"** instead of **"Completed"**.
+
+This breaks the design system's separation principle:
+- The operational **Status** is "Completed" (the work was done; amber dot)
+- The billing-gate **Verification** is "Rejected" (the proof needs resubmission; red)
+- The current output collapses both into a single merged label "Verify rejected"
+
+The bar background being red is correct (urgency signal). But the chip label is wrong — a vendor who understands the two-signal model would be confused to see their job described as "Verify rejected" when the correct reading is "Completed, verification rejected."
+
+**Design exploration:** HMW-V19 (`19-hmw-status-verification-action-bar.html`) explores three options. **Verdict: Option C** — replace `StateCell` at line 442 with `StatusCell` (status-only chip) and add an inline verification badge that appears only when verification is Rejected. This is a two-line implementation change with no layout impact.
+
+**Recommended fix:**
+```tsx
+// Before (line 442, inside the Status Action Bar IIFE):
+<StateCell job={job} fontSize={12} withSubline={false} />
+
+// After:
+import StatusCell from '../components/StatusCell';
+// The verification badge (only shown when Rejected):
+<>
+  <StatusCell job={job} />
+  {job.verificationStatus === 'Rejected' && (
+    <span style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'1px 6px',
+      borderRadius:4, border:'1px solid #fecaca', background:'rgba(220,38,38,0.06)',
+      fontSize:9, fontWeight:600, color:'#dc2626' }}>
+      <span style={{ width:5, height:5, borderRadius:'50%', background:'#dc2626' }} />
+      Verification rejected
+    </span>
+  )}
+</>
+```
 
 ---
 
