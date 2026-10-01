@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-V20: Trip Progress Context in Vendor Job List</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', 'SF Mono', monospace; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+/* === SHARED MOCKUP STYLES === */
+.mock-nav { height: 40px; padding: 0 16px; background: #111827; display: flex; align-items: center; gap: 8px; }
+.mock-nav .logo-box { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; display: flex; align-items: center; justify-content: center; }
+.mock-nav .logo-text { font-weight: 700; font-size: 13px; color: #fff; letter-spacing: -0.3px; }
+.mock-nav .logo-label { font-size: 10px; color: rgba(255,255,255,0.35); font-weight: 500; }
+.mock-nav .nav-link { font-size: 12px; padding: 4px 10px; border-radius: 4px; color: rgba(255,255,255,0.5); font-weight: 400; }
+.mock-nav .nav-active { font-size: 12px; padding: 4px 10px; border-radius: 4px; color: #fff; background: rgba(255,255,255,0.1); font-weight: 600; }
+.mock-nav .vendor-id { margin-left: auto; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); }
+.mock-nav .avatar { width: 22px; height: 22px; border-radius: 4px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.7); }
+
+.mock-filters { padding: 8px 16px; border-bottom: 1px solid #e5e7eb; background: #fff; }
+.mock-pills { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.mock-pill { font-size: 11px; padding: 5px 10px; border-radius: 4px; border: 1px solid #e5e7eb; color: #6b7280; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
+.mock-pill.active { background: #111827; color: #fff; border-color: #111827; font-weight: 600; }
+.mock-pill .ct { font-size: 10px; padding: 0 5px; border-radius: 8px; font-weight: 700; min-width: 14px; text-align: center; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); }
+.mock-pill .ct-off { font-size: 10px; padding: 0 5px; border-radius: 8px; font-weight: 700; min-width: 14px; text-align: center; background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+.mock-svc-pills { display: flex; align-items: center; gap: 8px; }
+.mock-svc-pill { font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 99px; border: 1px solid #e5e7eb; color: #6b7280; font-family: 'JetBrains Mono', monospace; }
+.mock-svc-pill.on { border-color: #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; }
+
+.mock-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.mock-table thead th { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; background: #f9fafb; padding: 6px 12px; text-align: left; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+.mock-table tbody td { padding: 7px 12px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: middle; }
+.mock-table tbody tr:hover { background: #f9fafb; }
+.mock-table tbody tr.trip-header-row td { background: #f9fafb; border-bottom: 1px solid #e5e7eb; border-top: 1px solid #e5e7eb; padding: 4px 12px; }
+
+/* status cells — dot + label */
+.status-cell { display: flex; flex-direction: column; gap: 2px; }
+.status-line { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 500; color: #111827; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.status-sub { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9ca3af; }
+
+/* trip progress fraction */
+.trip-frac { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; margin-top: 2px; display: block; }
+.trip-frac .done { color: #059669; font-weight: 600; }
+.trip-frac .total { color: #9ca3af; }
+
+/* trip header row */
+.trip-header-cell { display: flex; align-items: center; gap: 10px; }
+.trip-id-badge { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; color: #9ca3af; padding: 1px 6px; border-radius: 4px; background: #f3f4f6; border: 1px solid #e5e7eb; }
+.trip-customer { font-size: 12px; font-weight: 600; color: #111827; }
+.trip-mawb { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9ca3af; }
+.trip-progress-bar { flex: 1; max-width: 120px; display: flex; gap: 2px; align-items: center; }
+.progress-track { height: 3px; background: #e5e7eb; border-radius: 2px; flex: 1; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 2px; }
+.progress-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #6b7280; white-space: nowrap; }
+.chevron { color: #9ca3af; font-size: 10px; }
+
+/* contextual sub-line in trip id cell */
+.trip-id-cell { display: flex; flex-direction: column; gap: 2px; }
+
+/* breadcrumb strip on detail page */
+.detail-breadcrumb { padding: 8px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; }
+.bc-trip { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9ca3af; }
+.bc-sep { color: #d1d5db; font-size: 11px; }
+.bc-job { font-size: 11px; font-weight: 600; color: #111827; }
+.bc-progress-strip { display: flex; gap: 3px; align-items: center; margin-left: 8px; }
+.bc-job-dot { width: 18px; height: 18px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+.bc-job-dot.this { border: 1.5px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; }
+.bc-job-dot.done { background: #059669; color: #fff; }
+.bc-job-dot.pending { background: #f3f4f6; color: #9ca3af; border: 1px solid #e5e7eb; }
+.bc-job-dot.inprog { background: rgba(21,44,255,0.06); color: #152CFF; border: 1.5px solid rgba(21,44,255,0.3); }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-V20: Trip Progress Context</h1>
+<div class="hmw">How might we help vendor operators see which trips are fully settled vs. still active — without adding a separate Trip view — so they can focus on what needs their attention right now?</div>
+
+<div class="context">
+<strong>Context:</strong> A vendor's My Jobs list is a flat table of individual jobs. A trip (MAWB) often has multiple jobs (FM + EC, or FM + CS, etc). Vendors don't think in "jobs" — they think in "trips". When DO-001 has 3 jobs and 2 are verified but 1 is still in progress, the vendor can't see this at a glance. They have to count rows. This costs attention on a checklist-style app used in noisy cargo terminals.
+<br><br>
+<strong>Constraints:</strong> The design system is "smart spreadsheet" — tables, not cards. No structural overhaul. The solution must work at 768px tablet width. The existing 7-column table layout must survive.
+</div>
+
+<!-- ============================================ -->
+<!-- OPTION A: Trip Header Rows -->
+<!-- ============================================ -->
+<h2>Option A: Trip Header Rows (Group by Trip)</h2>
+<span class="label" style="background: #dbeafe; color: #1e40af;">Structural</span>
+
+<div class="rationale">
+Add collapsible trip header rows above each group of jobs. The header row spans all columns and shows: Trip ID badge | Customer | MAWB | progress bar + fraction + pickup date. Individual job rows are indented slightly (or use a subtle left border) to show grouping. This is how accounting software groups items under a parent — same grammar as the admin TripsPage sub-table pattern, inverted.
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>· Trip context is front-and-center<br>· Progress bar gives visual urgency at a glance<br>· Natural hierarchy matches how dispatchers think<br>· Collapsible for dense views (10+ trips)</div>
+<div class="cons"><strong>Cons</strong><br>· Adds N extra rows (1 per trip) — more scrolling<br>· Complicates segment filters (do "Pending" pills still work?)<br>· Trip header row needs a different visual grammar from job rows<br>· Loses the "flat table = easy scan" benefit</div>
+</div>
+</div>
+
+<div class="screen">
+  <div class="mock-nav">
+    <div class="logo-box"><span style="color:#fff;font-size:9px;font-weight:700">T</span></div>
+    <span class="logo-text" style="margin-left:4px">Teleport OS</span>
+    <span class="logo-label" style="margin-left:2px">Vendor</span>
+    <div style="width:1px;height:16px;background:rgba(255,255,255,0.15);margin:0 12px"></div>
+    <span class="nav-active">My Jobs</span>
+    <span class="nav-link">Fleet</span>
+    <span class="vendor-id">HaleSun</span>
+    <div class="avatar" style="margin-left:8px">HS</div>
+  </div>
+
+  <div style="padding:16px 16px 0">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:0">
+      <div>
+        <h1 style="font-size:16px;font-weight:800;letter-spacing:-0.3px;color:#111827;margin:0">My Jobs</h1>
+        <p style="font-size:11px;color:#9ca3af;margin:2px 0 0 0">Your assigned jobs</p>
+      </div>
+      <button style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;background:#fff;color:#374151;border:1px solid #e5e7eb;cursor:pointer">Export</button>
+    </div>
+  </div>
+
+  <div class="mock-filters">
+    <div class="mock-pills">
+      <button class="mock-pill active">All <span class="ct">8</span></button>
+      <button class="mock-pill">Pending <span class="ct-off">2</span></button>
+      <button class="mock-pill">In Progress <span class="ct-off">2</span></button>
+      <button class="mock-pill">To verify <span class="ct-off">1</span></button>
+      <button class="mock-pill">Verified <span class="ct-off">3</span></button>
+      <button class="mock-pill">Cancelled <span class="ct-off">0</span></button>
+    </div>
+    <div class="mock-svc-pills">
+      <span style="font-size:10px;color:#9ca3af">Service</span>
+      <span class="mock-svc-pill">FM</span>
+      <span class="mock-svc-pill">EC</span>
+      <span class="mock-svc-pill">CS</span>
+      <span class="mock-svc-pill">CR</span>
+      <span class="mock-svc-pill">OH</span>
+      <span style="width:1px;height:16px;background:#e5e7eb;margin:0 2px"></span>
+      <span style="font-size:11px;color:#9ca3af;font-family:'JetBrains Mono',monospace;margin-left:auto">8 jobs</span>
+    </div>
+  </div>
+
+  <div style="padding:0 16px 24px">
+    <table class="mock-table" style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden">
+      <thead>
+        <tr>
+          <th style="width:10%">Trip</th>
+          <th style="width:12%">Customer</th>
+          <th style="width:7%">Service</th>
+          <th style="width:29%">Where</th>
+          <th style="width:9%">Pickup</th>
+          <th style="width:14%">Status</th>
+          <th style="width:11%">Verification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Trip header: DO-001 -->
+        <tr class="trip-header-row">
+          <td colspan="7">
+            <div class="trip-header-cell">
+              <span class="trip-id-badge">DO-001</span>
+              <span class="trip-customer">TikTok Fulfillment</span>
+              <span class="trip-mawb">157-23456789</span>
+              <div style="flex:1;max-width:140px;display:flex;gap:6px;align-items:center">
+                <div class="progress-track" style="flex:1"><div class="progress-fill" style="width:67%;background:#059669"></div></div>
+                <span class="progress-label"><span style="color:#059669;font-weight:600">2</span>/3 verified</span>
+              </div>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;margin-left:auto">28 Apr</span>
+              <span class="chevron">›</span>
+            </div>
+          </td>
+        </tr>
+        <!-- Jobs under DO-001 -->
+        <tr style="cursor:pointer" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">
+          <td style="padding-left:24px">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af">J01</span>
+          </td>
+          <td style="font-size:11px;font-weight:600;color:#111827">TikTok</td>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#6b7280">FM</span></td>
+          <td style="font-size:10px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0">
+            <div>Shenzhen Baoan → HK Tsing Yi</div>
+            <div style="font-size:9px;color:#6b7280;margin-top:2px;display:flex;align-items:center;gap:3px">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:8px;height:8px"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Zhang Wei · 粤B·12345
+            </div>
+          </td>
+          <td style="font-family:'JetBrains Mono',monospace;font-size:10px">
+            <div>28 Apr</div>
+            <div style="font-size:9px;color:#9ca3af">08:00</div>
+          </td>
+          <td>
+            <div class="status-cell">
+              <div class="status-line"><span class="status-dot" style="background:#059669"></span><span style="color:#059669;font-weight:600;font-size:11px">Completed</span></div>
+              <span class="status-sub">28 Apr 14:22</span>
+            </div>
+          </td>
+          <td>
+            <div class="status-cell">
+              <div class="status-line"><span class="status-dot" style="background:#059669"></span><span style="color:#059669;font-weight:600;font-size:11px">Verified</span></div>
+              <span class="status-sub">29 Apr 09:10</span>
+            </div>
+          </td>
+        </tr>
+        <tr style="cursor:pointer" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">
+          <td style="padding-left:24px">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af">J02</span>
+          </td>
+          <td style="font-size:11px;font-weight:600;color:#111827">TikTok</td>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#6b7280">EC</span></td>
+          <td style="font-size:10px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0">
+            <div>HK Airport HACTL T1</div>
+            <div style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#6b7280;margin-top:2px">MAWB 157-23456789</div>
+          </td>
+          <td style="font-family:'JetBrains Mono',monospace;font-size:10px">
+            <div>28 Apr</div>
+            <div style="font-size:9px;color:#9ca3af">11:00</div>
+          </td>
+          <td>
+            <div class="status-cell">
+              <div class="status-line"><span class="status-dot" style="background:#059669"></span><span style="color:#059669;font-weight:600;font-size:11px">Completed</span></div>
+              <span class="status-sub">28 Apr 16:45</span>
+            </div>
+          </td>
+          <td>
+            <div class="status-cell">
+              <div class="status-line"><span class="status-dot" style="background:#059669"></span><span style="color:#059669;font-weight:600;font-size:11px">Verified</span></div>
+              <span class="status-sub">29 Apr 09:12</span>
+            </div>
+          </td>
+        </tr>
+        <!-- J03 — still in progress (the problem job) -->
+        <tr style="cursor:pointer" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">
+          <td style="padding-left:24px">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af">J03</span>
+          </td>
+          <td style="font-size:11px;font-weight:600;color:#111827">TikTok</td>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#6b7280">CS</span></td>
+          <td style="font-size:10px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0">
+            <div>HK Airport HACTL T1</div>
+            <div style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#6b7280;margin-top:2px">MAWB 157-23456789</div>
+          </td>
+          <td style="font-family:'JetBrains Mono',monospace;font-size:10px">
+            <div>28 Apr</div>
+            <div style="font-size:9px;color:#9ca3af">13:00</div>
+          </td>
+          <td>
+            <div class="status-cell">
+              <div class="status-line"><span class="status-dot" style="background:#152CFF"></span><span style="color:#111827;font-weight:500;font-size:11px">In Progress</span></div>
+              <span class="status-sub">28 Apr 09:00</span>
+            </div>
+          </td>
+          <td>
+            <div class="status-cell">
+              <div class="status-line"><span class="status-dot" style="background:#d1d5db"></span><span style="color:#6b7280;font-weight:400;font-size:11px">Pending</span></div>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Trip header: DO-002 -->
+        <tr class="trip-header-row">
+          <td colspan="7">
+            <div class="trip-header-cell">
+              <span class="trip-id-badge">DO-002</span>
+              <span class="trip-customer">Shopee SEA</span>
+              <span class="trip-mawb">157-34567890</span>
+              <div style="flex:1;max-width:140px;display:flex;gap:6px;align-items:center">
+                <div class="progress-track" style="flex:1"><div class="progress-fill" style="width:0%;background:#059669"></div></div>
+                <span class="progress-label"><span style="color:#9ca3af;font-weight:600">0</span>/2 verified</span>
+              </div>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;margin-left:auto">30 Apr</span>
+              <span class="chevron">›</span>
+            </div>
+          </td>
+        </tr>
+        <tr style="cursor:pointer" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">
+          <td style="padding-left:24px"><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af">J04</span></td>
+          <td style="font-size:11px;font-weight:600;color:#111827">Shopee</td>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#6b7280">FM</span></td>
+          <td style="font-size:10px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0">
+            <div>Guangzhou Baiyun → HK Kwai Chung</div>
+            <div style="font-size:9px;color:#d1d5db;margin-top:2px">No driver assigned</div>
+          </td>
+          <td style="font-family:'JetBrains Mono',monospace;font-size:10px"><div>30 Apr</div><div style="font-size:9px;color:#9ca3af">07:30</div></td>
+          <td>
+            <div class="status-cell">
+              <div class="status-line"><span class="status-dot" style="background:#d1d5db"></span><span style="color:#6b7280;font-weight:400;font-size:11px">Pending</span></div>
+            </div>
+          </td>
+          <td>
+            <div class="status-cell">
+              <div class="status-line"><span class="status-dot" style="background:#d1d5db"></span><span style="color:#6b7280;font-weight:400;font-size:11px">Pending</span></div>
+            </div>
+          </td>
+        </tr>
+        <tr style="cursor:pointer" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">
+          <td style="padding-left:24px"><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af">J05</span></td>
+          <td style="font-size:11px;font-weight:600;color:#111827">Shopee</td>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#6b7280">EC</span></td>
+          <td style="font-size:10px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0">
+            <div>HK Airport HACTL T1</div>
+            <div style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#6b7280;margin-top:2px">MAWB 157-34567890</div>
+          </td>
+          <td style="font-family:'JetBrains Mono',monospace;font-size:10px"><div>30 Apr</div><div style="font-size:9px;color:#9ca3af">12:00</div></td>
+          <td>
+            <div class="status-cell">
+              <div class="status-line"><span class="status-dot" style="background:#d1d5db"></span><span style="color:#6b7280;font-weight:400;font-size:11px">Pending</span></div>
+            </div>
+          </td>
+          <td>
+            <div class="status-cell">
+              <div class="status-line"><span class="status-dot" style="background:#d1d5db"></span><span style="color:#6b7280;font-weight:400;font-size:11px">Pending</span></div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="pros-cons">
+<div class="pros"><strong>Option A — Verdict</strong><br>Trip context is clear and persistent. The progress bar in each header gives immediate urgency signal. Dispatchers can collapse verified trips to cut clutter. BUT: extra DOM rows + filter complexity. The segment pills ("To verify = 1") may need to filter on jobs, not trips. Implementation effort is medium-high.</div>
+<div class="cons"><strong>Concern</strong><br>The "To verify" pill count becomes confusing: does it count 1 job or 1 trip? If a vendor clicks "To verify" and sees grouped trips where only some jobs match, the experience fragments. Group-by-trip also requires a decision: what if a trip has jobs from multiple vendors? (Answer: vendor sees only their own jobs, so partial trips are the norm. Header rows always show partial progress.)</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION B: Trip ID Cell Enrichment -->
+<!-- ============================================ -->
+<h2>Option B: Trip ID Cell — Fraction Sub-line</h2>
+<span class="label" style="background: #f0fdf4; color: #059669;">Minimal Change</span>
+
+<div class="rationale">
+Leave the flat table structure intact. Add one extra sub-line to the Trip ID cell: a small mono fraction showing how many of this trip's jobs are verified out of total. Example: "2/3 verified" below the trip ID badge. Color the fraction green when fully verified, amber when partially done, gray when at zero. No structural change to the table. No new header rows. No new column.
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>· Zero layout change — same 7 columns, same row height (+3px)<br>· Smart spreadsheet density preserved<br>· Works with all segment filter states<br>· Immediately obvious to ops users who read fractions naturally<br>· Cheap to implement (1 extra div in Trip cell)</div>
+<div class="cons"><strong>Cons</strong><br>· Fraction is repeated on every job row for the same trip (redundant<br>  for trips with 3 jobs — "2/3" appears 3 times)<br>· No urgency signal — "0/2" and "1/2" look similar without color<br>· The trip ID cell is already narrow (10%)</div>
+</div>
+</div>
+
+<div class="screen">
+  <div class="mock-nav">
+    <div class="logo-box"><span style="color:#fff;font-size:9px;font-weight:700">T</span></div>
+    <span class="logo-text" style="margin-left:4px">Teleport OS</span>
+    <span class="logo-label" style="margin-left:2px">Vendor</span>
+    <div style="width:1px;height:16px;background:rgba(255,255,255,0.15);margin:0 12px"></div>
+    <span class="nav-active">My Jobs</span>
+    <span class="nav-link">Fleet</span>
+    <span class="vendor-id">HaleSun</span>
+    <div class="avatar" style="margin-left:8px">HS</div>
+  </div>
+
+  <div class="mock-filters" style="padding:8px 16px">
+    <div class="mock-pills" style="margin-bottom:8px">
+      <button class="mock-pill active">All <span class="ct">8</span></button>
+      <button class="mock-pill">Pending <span class="ct-off">2</span></button>
+      <button class="mock-pill">In Progress <span class="ct-off">2</span></button>
+      <button class="mock-pill">To verify <span class="ct-off">1</span></button>
+      <button class="mock-pill">Verified <span class="ct-off">3</span></button>
+      <button class="mock-pill">Cancelled <span class="ct-off">0</span></button>
+    </div>
+    <div class="mock-svc-pills">
+      <span style="font-size:10px;color:#9ca3af">Service</span>
+      <span class="mock-svc-pill">FM</span><span class="mock-svc-pill">EC</span><span class="mock-svc-pill">CS</span><span class="mock-svc-pill">CR</span><span class="mock-svc-pill">OH</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#9ca3af;margin-left:auto">8 jobs</span>
+    </div>
+  </div>
+
+  <div style="padding:0 16px 24px">
+    <table class="mock-table" style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden">
+      <thead>
+        <tr>
+          <th style="width:10%">Trip</th>
+          <th style="width:12%">Customer</th>
+          <th style="width:7%">Svc</th>
+          <th style="width:29%">Where</th>
+          <th style="width:9%">Pickup</th>
+          <th style="width:14%">Status</th>
+          <th style="width:11%">Verification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- DO-001 · J01 — fully verified trip · 2/3 shown -->
+        <tr style="cursor:pointer" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">
+          <td>
+            <div class="trip-id-cell">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#111827;font-weight:500">DO-001</span>
+              <span class="trip-frac"><span class="done">2</span><span class="total">/3 verified</span></span>
+            </div>
+          </td>
+          <td style="font-size:11px;font-weight:600;color:#111827">TikTok</td>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#6b7280">FM</span></td>
+          <td style="font-size:10px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0">
+            <div>Shenzhen Baoan → HK Tsing Yi</div>
+            <div style="font-size:9px;color:#6b7280;margin-top:2px">Zhang Wei · 粤B·12345</div>
+          </td>
+          <td style="font-family:'JetBrains Mono',monospace;font-size:10px"><div>28 Apr</div><div style="font-size:9px;color:#9ca3af">08:00</div></td>
+          <td>
+            <div class="status-cell">
+              <div class="status-line"><span class="status-dot" style="background:#059669"></span><span style="color:#059669;font-weight:600;font-size:11px">Completed</span></div>
+              <span class="status-sub">28 Apr 14:22</span>
+            </div>
+          </td>
+          <td>
+            <div class="status-cell">
+              <div class="status-line"><span class="status-dot" style="background:#059669"></span><span style="color:#059669;font-weight:600;font-size:11px">Verified</span></div>
+              <span class="status-sub">29 Apr 09:10</span>
+            </div>
+          </td>
+        </tr>
+        <tr style="cursor:pointer" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">
+          <td>
+            <div class="trip-id-cell">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#111827;font-weight:500">DO-001</span>
+              <span class="trip-frac"><span class="done">2</span><span class="total">/3 verified</span></span>
+            </div>
+          </td>
+          <td style="font-size:11px;font-weight:600;color:#111827">TikTok</td>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#6b7280">EC</span></td>
+          <td style="font-size:10px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0">
+            <div>HK Airport HACTL T1</div>
+            <div style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#6b7280;margin-top:2px">MAWB 157-23456789</div>
+          </td>
+          <td style="font-family:'JetBrains Mono',monospace;font-size:10px"><div>28 Apr</div><div style="font-size:9px;color:#9ca3af">11:00</div></td>
+          <td>
+            <div class="status-cell">
+              <div class="status-line"><span class="status-dot" style="background:#059669"></span><span style="color:#059669;font-weight:600;font-size:11px">Completed</span></div>
+              <span class="status-sub">28 Apr 16:45</span>
+            </div>
+          </td>
+          <td>
+            <div class="status-cell">
+              <div class="status-line"><span class="status-dot" style="background:#059669"></span><span style="color:#059669;font-weight:600;font-size:11px">Verified</span></div>
+              <span class="status-sub">29 Apr 09:12</span>
+            </div>
+          </td>
+        </tr>
+        <!-- J03 — the laggard -->
+        <tr style="cursor:pointer" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">
+          <td>
+            <div class="trip-id-cell">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#111827;font-weight:500">DO-001</span>
+              <span class="trip-frac"><span class="done">2</span><span class="total">/3 verified</span></span>
+            </div>
+          </td>
+          <td style="font-size:11px;font-weight:600;color:#111827">TikTok</td>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#6b7280">CS</span></td>
+          <td style="font-size:10px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0">
+            <div>HK Airport HACTL T1</div>
+            <div style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#6b7280;margin-top:2px">MAWB 157-23456789</div>
+          </td>
+          <td style="font-family:'JetBrains Mono',monospace;font-size:10px"><div>28 Apr</div><div style="font-size:9px;color:#9ca3af">13:00</div></td>
+          <td>
+            <div class="status-cell">
+              <div class="status-line"><span class="status-dot" style="background:#152CFF"></span><span style="color:#111827;font-weight:500;font-size:11px">In Progress</span></div>
+              <span class="status-sub">28 Apr 09:00</span>
+            </div>
+          </td>
+          <td>
+            <div class="status-cell">
+              <div class="status-line"><span class="status-dot" style="background:#d1d5db"></span><span style="color:#6b7280;font-weight:400;font-size:11px">Pending</span></div>
+            </div>
+          </td>
+        </tr>
+
+        <!-- DO-002 — all pending, 0/2 -->
+        <tr style="cursor:pointer" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">
+          <td>
+            <div class="trip-id-cell">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#111827;font-weight:500">DO-002</span>
+              <span class="trip-frac"><span style="color:#9ca3af;font-weight:600">0</span><span class="total">/2 verified</span></span>
+            </div>
+          </td>
+          <td style="font-size:11px;font-weight:600;color:#111827">Shopee</td>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#6b7280">FM</span></td>
+          <td style="font-size:10px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0">
+            <div>Guangzhou Baiyun → HK Kwai Chung</div>
+            <div style="font-size:9px;color:#d1d5db;margin-top:2px">No driver assigned</div>
+          </td>
+          <td style="font-family:'JetBrains Mono',monospace;font-size:10px"><div>30 Apr</div><div style="font-size:9px;color:#9ca3af">07:30</div></td>
+          <td>
+            <div class="status-cell">
+              <div class="status-line"><span class="status-dot" style="background:#d1d5db"></span><span style="color:#6b7280;font-weight:400;font-size:11px">Pending</span></div>
+            </div>
+          </td>
+          <td>
+            <div class="status-cell">
+              <div class="status-line"><span class="status-dot" style="background:#d1d5db"></span><span style="color:#6b7280;font-weight:400;font-size:11px">Pending</span></div>
+            </div>
+          </td>
+        </tr>
+        <tr style="cursor:pointer" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''">
+          <td>
+            <div class="trip-id-cell">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#111827;font-weight:500">DO-002</span>
+              <span class="trip-frac"><span style="color:#9ca3af;font-weight:600">0</span><span class="total">/2 verified</span></span>
+            </div>
+          </td>
+          <td style="font-size:11px;font-weight:600;color:#111827">Shopee</td>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#6b7280">EC</span></td>
+          <td style="font-size:10px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0">
+            <div>HK Airport HACTL T1</div>
+            <div style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#6b7280;margin-top:2px">MAWB 157-34567890</div>
+          </td>
+          <td style="font-family:'JetBrains Mono',monospace;font-size:10px"><div>30 Apr</div><div style="font-size:9px;color:#9ca3af">12:00</div></td>
+          <td>
+            <div class="status-cell">
+              <div class="status-line"><span class="status-dot" style="background:#d1d5db"></span><span style="color:#6b7280;font-weight:400;font-size:11px">Pending</span></div>
+            </div>
+          </td>
+          <td>
+            <div class="status-cell">
+              <div class="status-line"><span class="status-dot" style="background:#d1d5db"></span><span style="color:#6b7280;font-weight:400;font-size:11px">Pending</span></div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="pros-cons">
+<div class="pros"><strong>Option B — Verdict</strong><br>Zero structural change. The fraction is scannable in mono. Dispatchers reading the list see "DO-001 · 2/3 verified" and immediately know one job is lagging. Green "2" vs gray "0" is a sufficient urgency signal without a progress bar. Trip ID cell at 10% is narrow but the sub-line is 9px mono — fits even at 768px.</div>
+<div class="cons"><strong>Concern</strong><br>The same fraction appears 3 times for a 3-job trip. This is intentional (the fraction is row-local context), but could feel noisy to users who process the list top-to-bottom and re-read the same number. Some users may find the repetition distracting. Filtering by "Verified" pill makes the fraction disappear since only verified rows show — context lost when segment-filtered.</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- OPTION C: Trip Progress Strip on Job Detail -->
+<!-- ============================================ -->
+<h2>Option C: Trip Progress Strip on Job Detail Page</h2>
+<span class="label" style="background: #fefce8; color: #a16207;">Detail-side</span>
+
+<div class="rationale">
+Leave My Jobs table unchanged. Add trip-level context only on the Job Detail page — a compact strip below the header showing all jobs on this trip as small labeled dots (J1 / J2 / J3), with the current job highlighted and others showing their status color. Allows the vendor to navigate to sibling jobs directly from any job detail.
+<div class="pros-cons">
+<div class="pros"><strong>Pros</strong><br>· Doesn't touch the list view at all — zero risk<br>· Answers "what else is on this trip?" at the moment the vendor needs it most (mid-execution)<br>· Clickable job dots enable in-detail navigation between sibling jobs<br>· 768px-safe: dots wrap gracefully if trip has many jobs</div>
+<div class="cons"><strong>Cons</strong><br>· Doesn't help with the core problem: vendors can't spot incomplete trips while scanning the list<br>· User must already be on a job detail to see trip context<br>· Adds vertical real estate to an already-long full-page layout</div>
+</div>
+</div>
+
+<div class="screen">
+  <div class="mock-nav">
+    <div class="logo-box"><span style="color:#fff;font-size:9px;font-weight:700">T</span></div>
+    <span class="logo-text" style="margin-left:4px">Teleport OS</span>
+    <span class="logo-label" style="margin-left:2px">Vendor</span>
+    <div style="width:1px;height:16px;background:rgba(255,255,255,0.15);margin:0 12px"></div>
+    <span class="nav-active">My Jobs</span>
+    <span class="nav-link">Fleet</span>
+    <span class="vendor-id">HaleSun</span>
+    <div class="avatar" style="margin-left:8px">HS</div>
+  </div>
+
+  <!-- Job detail page header area only -->
+  <div style="padding:16px">
+    <div style="padding-bottom:12px;border-bottom:1px solid #e5e7eb">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <button style="background:none;border:none;cursor:pointer;font-size:12px;font-weight:500;color:#152CFF;padding:0;display:inline-flex;align-items:center;gap:4px">&larr; My Jobs</button>
+          <span style="color:#d1d5db">|</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;padding:1px 6px;border-radius:4px;background:#f3f4f6;border:1px solid #e5e7eb;color:#9ca3af">J03</span>
+          <span style="font-size:14px;font-weight:700;color:#111827">Cargo Services</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6b7280">CS</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af">DO-001</span>
+          <span style="color:#d1d5db">&middot;</span>
+          <span style="font-weight:600;color:#111827">TikTok Fulfillment</span>
+          <span style="color:#d1d5db">&middot;</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#9ca3af">157-23456789</span>
+        </div>
+      </div>
+
+      <!-- Trip progress strip — Option C's key addition -->
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 0 0">
+        <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af">This trip</span>
+        <span style="color:#d1d5db;font-size:10px">&middot;</span>
+        <div class="bc-progress-strip">
+          <div class="bc-job-dot done" title="J01 · FM · Verified">J1</div>
+          <div class="bc-job-dot done" title="J02 · EC · Verified">J2</div>
+          <div class="bc-job-dot this" title="J03 · CS · In Progress — you are here">J3</div>
+        </div>
+        <span style="font-size:10px;color:#9ca3af;font-family:'JetBrains Mono',monospace;margin-left:4px">2/3 verified</span>
+        <span style="font-size:10px;color:#d1d5db">·</span>
+        <span style="font-size:10px;color:#6b7280">J1, J2 verified &middot; <span style="color:#111827;font-weight:500">J3 in progress</span></span>
+      </div>
+    </div>
+
+    <!-- Status action bar (abbreviated) -->
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border:1px solid rgba(21,44,255,0.12);border-radius:4px;margin-top:4px;background:rgba(21,44,255,0.04)">
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <div style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#111827;font-weight:500">
+          <span style="width:6px;height:6px;border-radius:50%;background:#152CFF;display:inline-block"></span>
+          In Progress
+        </div>
+        <span style="font-size:10px;color:#6b7280">Upload proof of service to mark complete</span>
+      </div>
+      <button style="padding:5px 14px;border:none;border-radius:4px;background:#152CFF;color:#fff;font-size:11px;font-weight:600;cursor:pointer">↑ Upload Proof</button>
+    </div>
+  </div>
+
+  <div style="padding:8px 16px;font-size:11px;color:#9ca3af;font-style:italic;border-top:1px solid #f3f4f6">↓ Location · Cargo · Proofs · Activity Log (below)</div>
+</div>
+
+<div class="pros-cons">
+<div class="pros"><strong>Option C — Verdict</strong><br>Most elegant for the detail page. Clicking J1 or J2 dots navigates directly to that sibling job without going back to the list. The color coding (green dots = verified, blue dot = this job, gray = pending) uses only existing status tokens. But it solves the wrong problem: vendors first need to spot incomplete trips IN THE LIST before they open a detail.</div>
+<div class="cons"><strong>Open question</strong><br>Should Option C be a complement to Option B (list fraction + detail strip) or a standalone? If both are implemented, the list fraction gives the quick scan signal and the detail strip gives deep navigation. Combined cost is low — both are additive enrichments with no structural change.</div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- VERDICT -->
+<!-- ============================================ -->
+<div class="verdict">
+  <h3>Recommendation: Option B + C combined</h3>
+  <p style="font-size:12px;color:#374151;line-height:1.7;margin-bottom:10px">
+    <strong>Option B (Trip ID sub-line)</strong> is the primary change: add a 9px mono fraction sub-line to the Trip ID cell showing "<span style="color:#059669;font-weight:600">2</span>/3 verified". Green numerator when progress exists, gray at zero. This is a single-div addition per row, zero layout change, zero interaction complexity. It answers "which trips are not fully settled?" while scanning the flat table.
+  </p>
+  <p style="font-size:12px;color:#374151;line-height:1.7;margin-bottom:10px">
+    <strong>Option C (detail strip)</strong> complements it: add the job-dot progress strip to the Job Detail page header, enabling sibling-job navigation within a trip. This enriches the detail experience without touching the list. Together B+C close both the scan problem (list) and the navigation problem (detail).
+  </p>
+  <p style="font-size:12px;color:#374151;line-height:1.7;margin-bottom:10px">
+    <strong>Option A (trip header rows)</strong> rejected: structural complexity, broken segment filter semantics, extra scroll weight, and fragmentation at the 768px breakpoint outweigh the visual clarity benefit. The flat table is the vendor app's identity — don't compromise it.
+  </p>
+  <p style="font-size:12px;color:#6b7280;line-height:1.7">
+    <strong>Open question:</strong> For the Trip ID cell sub-line (Option B), should the count be "N/T verified" (billing-gate language) or "N/T done" (operational language)? "Verified" is more precise but "done" is clearer at a glance. Given that vendors see separate Status and Verification columns, "verified" is the correct term — it distinguishes "completed but not billing-ready" from "billing-ready". Recommend: keep "verified".
+  </p>
+</div>
+
+</div><!-- end page -->
+</body>
+</html>

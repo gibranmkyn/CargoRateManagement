@@ -2,6 +2,13 @@
 
 ## Open
 
+### HMW-V20: How might we help vendor operators see which trips are fully settled vs. still active, without adding a separate Trip view?
+**Root cause:** The My Jobs flat table shows individual jobs with no trip-level context. A vendor with 3 jobs on DO-001 (2 verified, 1 in progress) cannot see the partial progress while scanning the list — they must count matching trip ID rows manually.
+**Options:** A) Trip header rows grouped by trip (structural change, broken segment filter semantics), B) Trip ID cell sub-line showing "2/3 verified" fraction (zero layout change, single div addition), C) Trip progress dot-strip on Job Detail page only (helps navigation, doesn't fix list scan)
+**Leaning toward:** B + C combined — B answers the list scan problem; C answers the detail-page navigation problem. Neither changes table structure. Both use existing status color tokens (green numerator = progress, green dots = verified, gray = not started). Implementation cost: low.
+**Open question:** Should the Trip ID sub-line show "N/T verified" (billing-gate language) or "N/T done" (operational)? Recommend "verified" — it aligns with the two-signal model (Status ≠ Verification) and vendors already see both columns.
+**File:** `20-hmw-trip-progress-context.html`
+
 ### HMW-V19: How might we surface Status and Verification as two independent signals in the vendor's job detail action bar — without conflating them into a single merged label?
 **Root cause:** `JobDetailPage.tsx` uses a local `StateCell` calling `getStateStyle()` (merged state getter). For a Completed+Rejected job, the bar shows "Verify rejected" instead of the correct "Completed" status chip. Verified by reading `shared/statusStyles.ts:40–41`.
 **Options:** A) Two-row action bar (status row + verification row, second row hidden when Pending), B) Admin-style labeled pair above the action bar (cleanest separation, most vertical space), C) Fix component swap only — replace `StateCell` with `StatusCell` + add a small inline verification badge for Rejected state
