@@ -1,94 +1,140 @@
 # Design Audit — Teleport OS Vendor App
 
-> Audit date: 2026-10-01
-> Auditor: Autonomous design assessment agent
-> Reference: `admin/DESIGN.md`, `vendor/DESIGN.md`
+> Last audit: 2026-10-20. Checked against `admin/DESIGN.md` + `vendor/DESIGN.md`.
 
 ## Critical Bugs
 
-### AUDIT-01: `getStateStyle` (merged state getter) used in Job Detail action bar
-**File:** `vendor/src/pages/JobDetailPage.tsx`
-**Lines:** 9 (import), 49–68 (local `StateCell` function)
-**Violation:** The Status Action Bar uses a local `StateCell` that calls `getStateStyle()` from `shared/statusStyles.ts`. This function merges `status` + `verificationStatus` into a single combined label. For a job that is `Completed` + `verificationStatus: Rejected`, it returns `label: 'Verify rejected'` instead of `'Completed'`. This conflates the two independent signals that the design system explicitly separates.
-**Expected behavior:** The action bar chip should show `StatusCell` (operational status only: Pending / In Progress / Completed / Cancelled). The verification state should be displayed separately (rejection reason inline below, per the existing rejection reason block at line 470–481).
-**See:** HMW-V19 (Open) for design options. Recommended fix: replace local `StateCell` with the shared `StatusCell` component (already used correctly in `MyJobsPage.tsx`).
-**Severity:** Critical — causes incorrect status label for the Completed+Rejected state.
+### AUDIT-01: StateCell conflates Status + Verification in Job Detail action bar
+**File:** `vendor/src/pages/JobDetailPage.tsx` lines 9, 49–68, 442  
+**Severity:** High — wrong information shown to vendor for Completed+Rejected jobs  
+
+The Status Action Bar in `JobDetailPage.tsx` uses a local `StateCell` component that calls `getStateStyle()` from `shared/statusStyles.ts`. This is the *merged* state getter — it collapses both `status` and `verificationStatus` into a single label. For a job with `status === 'Completed'` and `verificationStatus === 'Rejected'`, it returns the merged label "Verify rejected" instead of showing the operational status "Completed" correctly.
+
+**Expected behavior:** The Status Action Bar should show the operational status chip only (dot + label from `StatusCell`), separate from the verification signal. This matches the two-signal model documented in `admin/DESIGN.md` and is how `MyJobsPage.tsx` already works (it uses `StatusCell` + `VerificationCell` independently).
+
+**Fix:** Replace the local `StateCell` with the shared `StatusCell` component:
+```diff
+- import { getStateStyle, ... } from '../../../shared/statusStyles';
++ import StatusCell from '../components/StatusCell';
+
+// In the status action bar JSX (line 442):
+- <StateCell job={job} fontSize={12} withSubline={false} />
++ <StatusCell job={job} />
+```
+
+**Reference:** HMW-V19 (`19-hmw-status-verification-action-bar.html`) documents this bug and recommends Option C (StatusCell swap).
 
 ---
 
-### AUDIT-02: Fleet data not used in Job Detail dispatch dropdowns
-**File:** `vendor/src/pages/JobDetailPage.tsx`
-**Lines:** 6 (import), 104–105 (filter calls)
-**Violation:** The Dispatch Assignment section loads drivers and vehicles from `seedDrivers`/`seedVehicles` (imported from `shared/mockData`). The Fleet page (`FleetPage.tsx`) stores vendor-specific data in localStorage under `vendor_fleet_${vendorCode}`. Drivers and vehicles added or modified via the Fleet page never appear in the job dispatch dropdowns.
-**Expected behavior:** `renderDriverVehicle()` should load fleet data from the same localStorage key that `FleetPage.tsx` writes to, so the Fleet page and Job Detail page share the same data.
-**Fix pattern:** In `JobDetailPage.tsx`, replace the `seedDrivers`/`seedVehicles` import and filter with a `loadFleetData(vendorCode)` call (same helper already defined in `FleetPage.tsx`). Since `FleetPage.tsx` is in the same app, extract `loadFleetData` to a shared utility or duplicate the read logic.
-**See:** HMW-V18 prerequisite note.
-**Severity:** Critical — core feature (dispatch assignment) does not persist changes made via Fleet page.
+### AUDIT-02: Fleet data plumbing — seedDrivers/seedVehicles bypass localStorage fleet
+**File:** `vendor/src/pages/JobDetailPage.tsx` lines 6–7, 104–105, 151–153  
+**Severity:** High — Fleet page changes are invisible in job assignment dropdowns  
+
+`JobDetailPage.tsx` imports `seedDrivers` and `seedVehicles` from `shared/mockData`:
+```ts
+import { seedDrivers, seedVehicles } from '../../../shared/mockData';
+```
+Then uses them to populate the driver/vehicle assignment dropdowns (line 104–105) and to look up the assigned driver/vehicle on confirm (lines 151–153).
+
+`FleetPage.tsx` stores its data at `localStorage key: vendor_fleet_${vendorCode}` (see `FleetPage.tsx` lines 38–60). Drivers/vehicles added, edited, or deactivated via the Fleet page are **never read by `JobDetailPage.tsx`**, so the assignment dropdowns always show the 3 hardcoded seed records regardless of what the vendor has set up.
+
+**Fix:** Read fleet data from localStorage in `JobDetailPage.tsx`, using the same `loadFleetData(vendorCode)` pattern as `FleetPage.tsx`. The function already handles the seed-data fallback.
+
+```ts
+// Instead of: const vendorDrivers = seedDrivers.filter(...)
+// Use the same localStorage reader that FleetPage uses:
+const [fleetData] = useState(() => loadFleetData(vendorCode));
+const vendorDrivers = fleetData.drivers.filter((d) => d.isActive);
+const vendorVehicles = fleetData.vehicles.filter((v) => v.isActive);
+```
+
+The `loadFleetData` function (or a version of it) should be extracted to a shared utility so both pages use the same source of truth.
+
+**Reference:** HMW-V18 (`18-hmw-fleet-dispatch-availability.html`) lists this as a prerequisite bug.
 
 ---
 
 ## Design System Violations
 
-### AUDIT-03: Route section shows 9px dates, not 20px hero times for FM
-**File:** `vendor/src/pages/JobDetailPage.tsx`
-**Lines:** 333–357 (`renderRoute()`)
-**Violation:** The design spec (vendor/DESIGN.md, "Pickup/Delivery Timeline") describes FM jobs as showing "Origin (location + pickup datetime in big mono) → Destination". HMW-V14 recommends 20px JetBrains Mono as the primary visual anchor for FM dispatchers. The current implementation shows a 9px mono date sub-line — the time is entirely absent.
-**Impact:** FM dispatchers cannot see pickup/delivery times without opening a separate source. The design's core promise ("dispatcher's question is 'when?' not 'where?'") is not met.
-**Note:** HMW-V14 is still "Open" (unresolved design question). This is a design gap, not a confirmed violation. Resolving HMW-V14 first is recommended.
-**Severity:** Design gap (HMW-V14 decision pending).
+### AUDIT-03: Proof of Service section missing upload drop zone
+**File:** `vendor/src/pages/JobDetailPage.tsx` lines 186–204  
+**Severity:** Medium — tablet/warehouse UX degraded; camera affordance absent  
+
+The current "Proof of Service" section shows only a plain file list and a small "+ Add" button in the section header. Per `vendor/DESIGN.md`:
+
+> Upload zone: dashed border (1.5px dashed rgba(21,44,255,0.25)), "Drop files here or browse", "📷 Take Photo" button
+
+The dashed drop zone serves two purposes:
+1. **Discoverability:** On an empty state ("No proof uploaded yet"), there is no visual affordance for drag-and-drop — only a small gray text link.
+2. **Camera affordance:** The "📷 Take Photo" button (using `capture="environment"`) is the primary upload path for vendors at warehouses with tablets. It is completely absent.
+
+The design spec in `vendor/DESIGN.md` also describes smart collapse behavior (HMW-V16): full drop zone when empty, compact "+ Add files" in header after first upload. The current implementation has neither the zone nor the collapse behavior.
+
+**Impact:** Vendors at warehouses using tablets cannot easily photograph proof — the most common upload path for on-site cargo verification.
+
+**Fix:** Implement the dashed drop zone on the empty state, with a `📷 Take Photo` button using `<input capture="environment">`. After first upload, collapse the zone and keep the small "+ Add" in the section header.
 
 ---
 
-### AUDIT-04: Proof upload zone not implemented — minimal "Add" button only
-**File:** `vendor/src/pages/JobDetailPage.tsx`
-**Lines:** 186–204 (`renderProofs()`)
-**Violation:** The design spec (vendor/DESIGN.md, "Proof of Service") describes a dashed upload zone: "dashed border (1.5px dashed rgba(21,44,255,0.25)), 'Drop files here or browse', '📷 Take Photo' button with `capture='environment'`". The implementation shows a small "+ Add" ghost button in the section header — no zone, no camera affordance.
-**Impact:** On tablets at cargo terminals, the "+ Add" button is small and easy to miss. The camera affordance (critical for on-site photo capture) is not surfaced.
-**Note:** HMW-V16 is still "Open" (unresolved design question). Two upload UX patterns are explored there. Resolving HMW-V16 first is recommended.
-**Severity:** Design gap (HMW-V16 decision pending).
+### AUDIT-04: Activity log count badge uses borderRadius: 6 (should be 4)
+**File:** `vendor/src/pages/JobDetailPage.tsx` line 210  
+**Severity:** Low — 2px visual inconsistency  
+
+```tsx
+<span style={{ ...mono, fontSize: 9, background: '#f3f4f6', color: '#9ca3af', 
+  padding: '1px 5px', borderRadius: 6 }}>{log.length}</span>
+```
+
+Per `admin/DESIGN.md`: "Job chips: 4px" — inline data badges should use `borderRadius: 4`. The value `6` is the table-container radius, not the chip radius.
+
+**Fix:** Change `borderRadius: 6` → `borderRadius: 4` on the activity log count badge.
 
 ---
 
-## Conformance Checks (pass)
+### AUDIT-05: Cargo section layout deviates from design spec
+**File:** `vendor/src/pages/JobDetailPage.tsx` lines 170–184 (`renderCargo`)  
+**Severity:** Low — density regression from spec  
 
-| Check | Result |
-|-------|--------|
-| Status/Verification as separate columns in My Jobs | ✅ `StatusCell` + `VerificationCell` used correctly |
-| Service tag: mono gray, no blue pill | ✅ `#6b7280`, no `#152CFF` |
-| Trip ID: ink mono, no blue chip | ✅ `#111827`, no `#152CFF` |
-| Nav height 40px | ✅ `height: 40` |
-| Nav dark bg `#111827` | ✅ |
-| Vendor label 10px/500 `rgba(255,255,255,0.35)` | ✅ |
-| Segment pills match spec | ✅ All/Pending/In Progress/To verify/Verified/Cancelled |
-| Service pills: rounded (99px), blue when active | ✅ `borderRadius: 99` |
-| No stats bar above My Jobs table | ✅ |
-| No row tints for cancelled/rejected rows | ✅ |
-| No card grids in proof list | ✅ flat file rows |
-| No shadows (except toast) | ✅ |
-| Border radius ≤6px (except service pills) | ✅ max 6px observed |
-| Segment pill colors: amber (To verify), green (Verified), red (Cancelled), dark (others) | ✅ |
-| "Where" column with service sub-lines (HMW-V04) | ✅ FM=driver, EC/CS=MAWB, OH/CR=bags+weight |
-| Driver sub-line: `#6b7280` when assigned, `#d1d5db` "No driver assigned" when not | ✅ |
-| FM dispatch section background `rgba(21,44,255,0.02)` with `rgba(21,44,255,0.1)` border | ✅ |
-| Activity log timeline rail for >10 entries | ✅ |
-| Multi-file proof upload `<input multiple>` | ✅ |
-| Status Action Bar tinted per state (gray/blue/amber/green/red) | ✅ |
-| Rejection reason inline, no tinted box | ✅ |
-| Cancel reason inline, no tinted box | ✅ |
-| FM service-adaptive layout (dispatch+timeline vs location-only) | ✅ |
-| Fleet page: flat dot+text Active/Inactive (no filled badge) | ✅ |
-| Fleet page: truck type and plate in mono gray (no blue pill) | ✅ |
-| No stats bar on Fleet page | ✅ |
-| Avatar initials 22×22, 4px radius | ✅ (borderRadius: 4 in Navbar.tsx) |
+Current implementation renders Bags and Weight as two separate labeled columns (like a mini data grid). `vendor/DESIGN.md` specifies:
+
+> Cargo — compact inline row: `24 bags · 1,280 kg · 8.4 CBM`
+
+The inline row format is denser, matches the sub-table sub-line format already used in `MyJobsPage.tsx`, and avoids the `sectionWrap` overhead for a single line of data.
+
+**Fix:** Replace the two-column layout with a single inline row:
+```tsx
+<div style={sectionWrap}>
+  <div style={sectionTitle}>Cargo</div>
+  <div style={{ ...mono, fontSize: 11, fontWeight: 600, color: '#111827' }}>
+    {trip.bags.toLocaleString()} bags · {trip.weight.toLocaleString()} kg
+    {trip.cbm ? ` · ${trip.cbm} CBM` : ''}
+  </div>
+</div>
+```
 
 ---
 
-## Summary
+### AUDIT-06: `rejectionReason` field still referenced
+**File:** `vendor/src/pages/JobDetailPage.tsx` line 471  
+**Severity:** Low — potential undefined access if field has been renamed  
 
-**2 critical bugs** (AUDIT-01, AUDIT-02) should be fixed before the next release:
-1. Replace `getStateStyle` / local `StateCell` in `JobDetailPage.tsx` with shared `StatusCell`
-2. Load fleet data from `vendor_fleet_${vendorCode}` localStorage instead of `seedDrivers`/`seedVehicles`
+```tsx
+{job.verificationStatus === 'Rejected' && job.rejectionReason && (
+```
 
-**2 design gaps** (AUDIT-03, AUDIT-04) depend on resolving open HMWs (V14, V16) first.
+TODO-026 renamed `rejectionReason` to `cancelReason` for job cancellation. Verify whether `rejectionReason` still exists on the `Job` type for verification rejection (distinct from job cancellation). If the type was cleaned up and verification rejection uses a different field name, this renders nothing on rejected jobs.
 
-Overall conformance is strong — 22/22 checked properties pass. No unauthorized colors, no excessive border radii, no shadows, no card grids.
+**Fix:** Check `shared/types.ts` — if `rejectionReason` still exists for verification rejections, no change needed. If it was removed or renamed, update this reference.
+
+---
+
+## No Violations Found
+
+- **Status/Verification color tokens:** `MyJobsPage.tsx` correctly uses `StatusCell` + `VerificationCell` with the 5-signal color system. Colors match `admin/DESIGN.md` exactly.
+- **Border radius:** Buttons (`borderRadius: 4`), section containers (`borderRadius: 6`), service pills (`borderRadius: 99`) all correct.
+- **Shadows:** No box-shadows found on table or cards in either page. Status Action Bar tint backgrounds are per the spec table in `vendor/DESIGN.md`.
+- **Typography:** Page title 16px/800, section labels 9px/700 uppercase, body 11–12px/500–600, mono data with JetBrains Mono — all within spec.
+- **Accent `#152CFF`:** Used only on interactive elements (primary buttons, back link, active nav). Not on trip IDs, service tags, or data chrome.
+- **No decorative colors:** No gradients, teal accents, rainbow status chips, or filled status badges found.
+- **Inline styles:** All visual properties use inline styles, not Tailwind color/spacing classes.
+- **Table structure:** `MyJobsPage.tsx` uses `<table>` with `border-collapse: collapse`. No card-grid layouts.

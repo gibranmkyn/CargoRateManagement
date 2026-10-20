@@ -2,6 +2,13 @@
 
 ## Open
 
+### HMW-V21: How might we give FM dispatchers a print-ready driver job sheet — without adding a separate print workflow to the vendor app?
+**Root cause:** When a vendor assigns an FM job to a driver, the dispatcher needs to hand them job details (pickup/delivery address, time window, cargo counts, reference numbers) before departure. Currently there is no way to produce this from Teleport OS — dispatchers screenshot, type manually into WeChat, or maintain parallel Excel templates. No standard format → errors, missing info, delays at pickup.
+**Options:** A) Browser @media print — "Print" button triggers window.print() with a print CSS that hides UI chrome; zero new screens but browser print dialog varies, B) Copy for WeChat — a "📋 Copy" button copies a structured Chinese-labeled text block to clipboard for WeChat forwarding; matches real-world logistics coordination but text-only, C) Print-preview modal — "Print Job Sheet" button opens a modal showing the exact A4 layout; modal has both [Print A4] and [Copy for WeChat] actions
+**Leaning toward:** C) Print-preview modal + B) Copy for WeChat as companion — what-you-see-is-what-prints eliminates browser dialog uncertainty; having both actions in one surface serves dispatchers with or without printers. Button only visible on FM jobs with a driver assigned.
+**Open questions:** (1) Should the WeChat text use Chinese primary labels (提货/送货) or English? Recommend Chinese for driver-facing content. (2) Should "Job sheet printed" be logged in the activity log as an audit trace? Recommend yes. (3) Should a QR code link to the future WeChat mini program job detail? Reserve the layout slot in v1 (gray placeholder), wire up in v1.1 when WeChat mini program ships.
+**File:** `21-hmw-driver-job-sheet.html`
+
 ### HMW-V20: How might we help vendor operators see which trips are fully settled vs. still active, without adding a separate Trip view?
 **Root cause:** The My Jobs flat table shows individual jobs with no trip-level context. A vendor with 3 jobs on DO-001 (2 verified, 1 in progress) cannot see the partial progress while scanning the list — they must count matching trip ID rows manually.
 **Options:** A) Trip header rows grouped by trip (structural change, broken segment filter semantics), B) Trip ID cell sub-line showing "2/3 verified" fraction (zero layout change, single div addition), C) Trip progress dot-strip on Job Detail page only (helps navigation, doesn't fix list scan)

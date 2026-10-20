@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-V21: Printable Driver Job Sheet</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', 'SF Mono', monospace; }
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 36px 0 6px; color: #152CFF; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+
+/* Shared mockup styles */
+.mock-nav { height: 40px; padding: 0 12px; background: #111827; display: flex; align-items: center; gap: 8px; }
+.mock-nav .logo { width: 18px; height: 18px; background: #152CFF; border-radius: 4px; }
+.mock-nav .logo-text { font-weight: 700; font-size: 12px; color: #fff; }
+.mock-nav .logo-label { font-size: 9px; color: rgba(255,255,255,0.35); font-weight: 400; }
+.mock-nav .nav-link { font-size: 11px; padding: 3px 8px; border-radius: 3px; color: rgba(255,255,255,0.6); }
+.mock-nav .nav-active { font-size: 11px; padding: 3px 8px; border-radius: 3px; color: #fff; background: rgba(255,255,255,0.1); font-weight: 600; }
+.mock-nav .vendor-id { margin-left: auto; font-size: 10px; color: rgba(255,255,255,0.6); font-weight: 600; }
+
+.mock-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.mock-table thead th { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #f9fafb; padding: 6px 12px; text-align: left; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+.mock-table tbody td { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: middle; }
+
+.chip { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 500; }
+.chip .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.dot-pending { background: #d1d5db; }
+.dot-progress { background: #152CFF; }
+.dot-completed { background: #a16207; }
+.dot-verified { background: #059669; }
+
+.status-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid #e5e7eb; }
+.status-bar.pending { background: #f9fafb; border-left: 3px solid #d1d5db; }
+.status-bar.inprogress { background: rgba(21,44,255,0.04); border-left: 3px solid #152CFF; }
+
+.section-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px; }
+
+.btn-primary { padding: 5px 14px; border: none; border-radius: 4px; background: #152CFF; color: #fff; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-family: inherit; }
+.btn-ghost { padding: 5px 11px; border: 1px solid #e5e7eb; border-radius: 4px; background: #fff; color: #374151; font-size: 11px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-family: inherit; }
+.btn-print { padding: 5px 12px; border: 1px solid #e5e7eb; border-radius: 4px; background: #fff; color: #374151; font-size: 11px; font-weight: 500; display: inline-flex; align-items: center; gap: 5px; }
+.btn-wechat { padding: 5px 12px; border: 1px solid #d1fae5; border-radius: 4px; background: #f0fdf4; color: #059669; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; }
+
+/* Job detail simulation */
+.jd-wrap { max-width: 960px; margin: 0 auto; padding: 16px; }
+.jd-header { padding-bottom: 12px; border-bottom: 1px solid #e5e7eb; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.jd-header-left { display: flex; align-items: center; gap: 8px; }
+.jd-header-right { display: flex; align-items: center; gap: 8px; }
+.section-wrap { padding: 14px 0; border-top: 1px solid #f3f4f6; }
+
+/* Action buttons added to detail page */
+.action-strip { display: flex; gap: 6px; align-items: center; padding: 8px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+.action-strip .divider { width: 1px; height: 16px; background: #e5e7eb; }
+
+/* Print preview modal */
+.modal-overlay { background: rgba(0,0,0,0.45); position: relative; padding: 20px; }
+.modal-box { background: #fff; border-radius: 6px; max-width: 640px; margin: 0 auto; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.18); }
+.modal-header { padding: 10px 16px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
+.modal-body { padding: 16px; background: #f3f4f6; }
+
+/* A4 job sheet */
+.a4-sheet { background: #fff; border: 1px solid #d1d5db; width: 100%; max-width: 560px; margin: 0 auto; font-family: 'Instrument Sans', sans-serif; }
+.a4-top { background: #111827; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; }
+.a4-top .co-logo { display: flex; align-items: center; gap: 6px; }
+.a4-top .co-square { width: 16px; height: 16px; background: #152CFF; border-radius: 3px; }
+.a4-top .co-text { font-size: 11px; font-weight: 700; color: #fff; }
+.a4-top .co-label { font-size: 9px; color: rgba(255,255,255,0.4); }
+.a4-top .job-ref { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: #fff; }
+.a4-body { padding: 12px 16px; }
+.a4-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.a4-field { }
+.a4-field .a4-label { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 2px; }
+.a4-field .a4-val { font-size: 12px; font-weight: 600; color: #111827; line-height: 1.3; }
+.a4-field .a4-sub { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #6b7280; margin-top: 1px; }
+.a4-sep { border: none; border-top: 1px solid #e5e7eb; margin: 10px 0; }
+.a4-route { display: flex; align-items: stretch; gap: 10px; margin-bottom: 10px; }
+.a4-route-pin { display: flex; flex-direction: column; align-items: center; }
+.a4-route-pin .pin { width: 8px; height: 8px; border-radius: 50%; border: 2px solid; flex-shrink: 0; margin-top: 2px; }
+.a4-route-pin .pin-from { border-color: #152CFF; background: #fff; }
+.a4-route-pin .pin-to { border-color: #059669; background: #fff; }
+.a4-route-pin .pin-line { flex: 1; width: 1px; background: #e5e7eb; margin: 2px 0; }
+.a4-route-leg { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.a4-route-stop { }
+.a4-route-stop .stop-label { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; }
+.a4-route-stop .stop-loc { font-size: 12px; font-weight: 700; color: #111827; }
+.a4-route-stop .stop-time { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #374151; margin-top: 2px; }
+.a4-cargo { display: flex; gap: 16px; padding: 8px 10px; background: #f9fafb; border-radius: 4px; border: 1px solid #e5e7eb; }
+.a4-cargo .c-field { }
+.a4-cargo .c-label { font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; }
+.a4-cargo .c-val { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #111827; }
+.a4-driver { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: rgba(21,44,255,0.02); border: 1px solid rgba(21,44,255,0.1); border-radius: 4px; }
+.a4-driver .drv-name { font-size: 12px; font-weight: 700; color: #111827; }
+.a4-driver .drv-detail { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #6b7280; }
+.a4-qr { width: 52px; height: 52px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 3px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.a4-footer { padding: 6px 16px; border-top: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
+.a4-footer .ft-ref { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; }
+.a4-footer .ft-note { font-size: 9px; color: #d1d5db; }
+
+/* WeChat text format */
+.wechat-preview { background: #f0fdf4; border: 1px solid #a7f3d0; border-radius: 6px; padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.7; color: #111827; margin-top: 8px; white-space: pre-wrap; }
+
+/* Option tags */
+.opt-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 6px; }
+.opt-a { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.opt-b { background: #f0fdf4; color: #059669; border: 1px solid #a7f3d0; }
+.opt-c { background: #fefce8; color: #a16207; border: 1px solid #fde68a; }
+
+/* Annotation callout */
+.callout { background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px; padding: 8px 10px; font-size: 11px; color: #92400e; margin-top: 8px; line-height: 1.5; }
+.callout strong { font-weight: 700; }
+
+.qr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+.qr-grid div { background: #111827; width: 10px; height: 10px; }
+.qr-grid div.w { background: #fff; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>HMW-V21</h1>
+<div class="hmw">"How might we give FM dispatchers a print-ready driver job sheet — without adding a separate print workflow to the vendor app?"</div>
+
+<div class="context">
+  <strong>Root cause:</strong> When an FM job is assigned to a driver, the dispatcher needs to hand them physical or digital job details before departure: pickup address, delivery address, cargo counts, time window, and a reference number for WeChat coordination. Currently there is no way to get this from the Teleport OS vendor app. Dispatchers screenshot the screen, type manually into WeChat, or maintain a parallel Excel template. No standard format → errors, missing information, delays at pickup.
+  <br><br>
+  <strong>Context:</strong> FM trucking in Chinese cross-border logistics still relies heavily on paper job sheets (派车单) handed to drivers before departure. Even where drivers use WeChat, dispatchers send a structured text block ("DO ref, pickup address, delivery address, bags count, time"). The job sheet must work at 768px tablet (dispatcher's screen at warehouse), survive printing on basic A4 thermal printers common at logistics offices, and optionally be forwarded via WeChat.
+</div>
+
+<div class="rationale">
+  <strong>Three options:</strong>
+  <ol style="margin-left: 18px; margin-top: 6px; line-height: 1.8;">
+    <li><strong>Option A — Browser @media print:</strong> Add "Print" button to Job Detail header. A print CSS stylesheet hides all navigation and renders a clean A4 job sheet when the user triggers Ctrl+P or clicks Print.</li>
+    <li><strong>Option B — Copy-for-WeChat button:</strong> A "📋 Copy" button on the Job Detail page copies a structured plain-text block to clipboard. Dispatcher pastes directly into WeChat to the driver. No paper, no new screen.</li>
+    <li><strong>Option C — Print preview modal:</strong> "Print Job Sheet" button opens a full-screen modal with the exact A4 layout rendered on screen. Dispatcher reviews before sending to printer. Modal has [Print] and [Copy for WeChat] actions.</li>
+  </ol>
+</div>
+
+<!-- ======================================================= -->
+<h2>Option A — Browser print via @media print CSS</h2>
+
+<div class="opt-tag opt-a">Option A</div>
+<p class="rationale">A dedicated "Print Job Sheet" button is added to the Job Detail page header action area (next to "← My Jobs"). Clicking it triggers <code>window.print()</code>. A <code>@media print</code> stylesheet hides the nav, status bar, and action buttons, and renders the job details in a clean A4 job-sheet format. The vendor app's existing layout reflows into the print layout — no extra screens required.</p>
+
+<div class="screen" style="max-width: 860px;">
+  <!-- Nav -->
+  <div class="mock-nav">
+    <div class="logo"></div>
+    <span class="logo-text">Teleport OS</span>
+    <span class="logo-label">Vendor</span>
+    <span style="width:1px;height:16px;background:rgba(255,255,255,0.15);margin:0 4px;"></span>
+    <span class="nav-active">My Jobs</span>
+    <span class="nav-link">Fleet</span>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <div class="vendor-id">HaleSun</div>
+      <div style="width:22px;height:22px;border-radius:4px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:rgba(255,255,255,0.8);">HS</div>
+    </div>
+  </div>
+
+  <!-- Job Detail: header + print button -->
+  <div class="jd-wrap">
+    <div class="jd-header">
+      <div class="jd-header-left">
+        <span style="font-size:12px;font-weight:500;color:#152CFF;cursor:pointer;">← My Jobs</span>
+        <span style="color:#d1d5db;">|</span>
+        <span class="mono" style="font-size:10px;padding:1px 6px;border-radius:4px;background:#f3f4f6;border:1px solid #e5e7eb;color:#9ca3af;">J04</span>
+        <span style="font-size:14px;font-weight:700;color:#111827;">FM Trucking</span>
+        <span class="mono" style="font-size:10px;color:#6b7280;">FM</span>
+      </div>
+      <div class="jd-header-right">
+        <!-- Print button added to existing header -->
+        <button class="btn-print">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print Job Sheet
+        </button>
+        <span class="mono" style="font-size:10px;color:#9ca3af;">DO-008</span>
+        <span style="font-weight:600;color:#111827;font-size:11px;">TikTok</span>
+        <span class="mono" style="font-size:10px;color:#9ca3af;">172-1234 5678</span>
+      </div>
+    </div>
+
+    <!-- Status bar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border:1px solid rgba(21,44,255,0.12);border-radius:4px;margin-bottom:4px;background:rgba(21,44,255,0.04);">
+      <div style="display:flex;flex-direction:column;gap:2px;">
+        <div class="chip"><div class="dot dot-progress"></div><span style="font-size:12px;font-weight:500;color:#111827;">In Progress</span></div>
+        <span style="font-size:10px;color:#6b7280;">Upload proof of service to mark complete</span>
+      </div>
+      <button class="btn-primary" style="font-size:11px;">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+        Upload Proof
+      </button>
+    </div>
+  </div>
+
+  <div style="background:#fffbeb;border-top:1px solid #fde68a;padding:8px 20px;font-size:11px;color:#92400e;">
+    ↑ Clicking <strong>Print Job Sheet</strong> triggers <code>window.print()</code> with a CSS <code>@media print</code> rule that hides nav, status bar, action buttons, and renders a clean A4 layout from the existing page data.
+  </div>
+</div>
+
+<div style="margin-bottom:8px;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Resulting print output (A4 portrait, as seen in print preview):</div>
+
+<div class="screen" style="max-width: 560px; margin-bottom: 24px;">
+  <div class="a4-sheet">
+    <div class="a4-top">
+      <div class="a4-co-logo" style="display:flex;align-items:center;gap:6px;">
+        <div class="a4-co-square" style="width:16px;height:16px;background:#152CFF;border-radius:3px;"></div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:#fff;">Teleport OS</div>
+          <div style="font-size:8px;color:rgba(255,255,255,0.4);">Driver Job Sheet</div>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div class="mono" style="font-size:14px;font-weight:700;color:#fff;">J04 · DO-008</div>
+        <div class="mono" style="font-size:9px;color:rgba(255,255,255,0.5);">FM Trucking · HaleSun</div>
+      </div>
+    </div>
+    <div class="a4-body">
+      <!-- Route -->
+      <div class="a4-route">
+        <div class="a4-route-pin">
+          <div class="pin pin-from" style="width:8px;height:8px;border-radius:50%;border:2px solid #152CFF;background:#fff;margin-top:4px;"></div>
+          <div class="pin-line" style="flex:1;width:1px;background:#e5e7eb;margin:3px auto;"></div>
+          <div class="pin-to" style="width:8px;height:8px;border-radius:50%;border:2px solid #059669;background:#fff;"></div>
+        </div>
+        <div class="a4-route-leg">
+          <div class="a4-route-stop">
+            <div class="stop-label" style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;">PICKUP</div>
+            <div class="stop-loc" style="font-size:13px;font-weight:700;color:#111827;">Shenzhen Pinghu Warehouse</div>
+            <div class="stop-time mono" style="font-size:12px;font-weight:700;color:#152CFF;margin-top:3px;">26 Apr 2026 · 09:30</div>
+            <div style="font-size:10px;color:#6b7280;margin-top:2px;">平湖物流中心 · 龙岗区 · 深圳</div>
+          </div>
+          <div style="height:6px;"></div>
+          <div class="a4-route-stop">
+            <div class="stop-label" style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;">DELIVERY</div>
+            <div class="stop-loc" style="font-size:13px;font-weight:700;color:#111827;">Hong Kong Airport Cargo Village</div>
+            <div class="stop-time mono" style="font-size:12px;font-weight:700;color:#374151;margin-top:3px;">26 Apr 2026 · 15:00</div>
+            <div style="font-size:10px;color:#6b7280;margin-top:2px;">Cathay Pacific Cargo · HKIA · Terminal 5</div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="a4-sep">
+
+      <!-- Cargo -->
+      <div style="margin-bottom:6px;">
+        <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin-bottom:5px;">Cargo</div>
+        <div class="a4-cargo">
+          <div class="c-field">
+            <div class="c-label" style="font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;">Customer</div>
+            <div class="c-val" style="font-size:11px;font-weight:700;color:#111827;">TikTok</div>
+          </div>
+          <div class="c-field">
+            <div class="c-label" style="font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;">MAWB</div>
+            <div class="c-val mono" style="font-size:11px;font-weight:600;color:#374151;">172-1234 5678</div>
+          </div>
+          <div class="c-field">
+            <div class="c-label" style="font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;">Bags</div>
+            <div class="c-val mono" style="font-size:13px;font-weight:700;color:#111827;">24</div>
+          </div>
+          <div class="c-field">
+            <div class="c-label" style="font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;">Weight</div>
+            <div class="c-val mono" style="font-size:13px;font-weight:700;color:#111827;">1,280 kg</div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="a4-sep">
+
+      <!-- Driver -->
+      <div style="margin-bottom:6px;">
+        <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin-bottom:5px;">Assigned Driver</div>
+        <div class="a4-driver">
+          <div style="width:28px;height:28px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#6b7280;flex-shrink:0;">ZW</div>
+          <div style="flex:1;">
+            <div class="drv-name" style="font-size:12px;font-weight:700;color:#111827;">Zhang Wei</div>
+            <div class="drv-detail mono" style="font-size:10px;color:#6b7280;">+86 138****1234 · 粤B·12345 · 5T</div>
+          </div>
+          <!-- QR placeholder: links to driver job detail in WeChat mini program (future) -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+            <div style="width:44px;height:44px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:3px;display:flex;align-items:center;justify-content:center;">
+              <!-- Simulated QR pattern -->
+              <svg width="34" height="34" viewBox="0 0 7 7" fill="#111827" xmlns="http://www.w3.org/2000/svg">
+                <rect x="0" y="0" width="3" height="3"/>
+                <rect x="4" y="0" width="3" height="3" fill="none" stroke="#111827" stroke-width="0.4"/>
+                <rect x="1" y="1" width="1" height="1" fill="#fff"/>
+                <rect x="4" y="4" width="3" height="3"/>
+                <rect x="5" y="5" width="1" height="1" fill="#fff"/>
+                <rect x="0" y="4" width="1" height="1"/>
+                <rect x="2" y="4" width="1" height="1"/>
+                <rect x="0" y="6" width="1" height="1"/>
+                <rect x="2" y="5" width="1" height="2"/>
+                <rect x="3" y="3" width="1" height="1"/>
+                <rect x="4" y="3" width="1" height="1"/>
+                <rect x="3" y="1" width="1" height="1"/>
+                <rect x="3" y="2" width="1" height="1"/>
+              </svg>
+            </div>
+            <div style="font-size:7px;color:#d1d5db;text-align:center;">WeChat job</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="a4-footer" style="padding:6px 16px;border-top:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;">
+      <span class="mono" style="font-size:8px;color:#9ca3af;">J04 · DO-008 · 26 Apr 2026 09:12</span>
+      <span style="font-size:8px;color:#d1d5db;">Teleport OS Vendor — HaleSun</span>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <strong>Pros</strong>
+    <ul style="margin-left: 14px; margin-top: 4px;">
+      <li>Zero new UI screen or modal — print CSS only</li>
+      <li>Works offline; no network needed to print</li>
+      <li>Standard browser workflow dispatchers already know</li>
+      <li>One-time CSS addition covers all FM jobs forever</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <strong>Cons</strong>
+    <ul style="margin-left: 14px; margin-top: 4px;">
+      <li>Print preview dialog varies across browsers and printers</li>
+      <li>Dispatcher cannot preview what will print before triggering dialog</li>
+      <li>No digital share option — driver still needs a physical copy or WhatsApp</li>
+      <li>Relies on CSS @media print — harder to maintain as page evolves</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<h2>Option B — Copy for WeChat (clipboard text)</h2>
+
+<div class="opt-tag opt-b">Option B</div>
+<p class="rationale">A "📋 Copy" button copies a structured text block in Chinese logistics format to the clipboard. Dispatcher pastes directly into a WeChat message to the driver. No print required. This matches existing real-world behavior in Chinese 3PL dispatch — coordinators already exchange job info via WeChat text; the goal is standardizing the format, not changing the channel.</p>
+
+<div class="screen" style="max-width:680px;">
+  <!-- action strip with copy button -->
+  <div class="action-strip">
+    <button class="btn-ghost" style="font-size:11px;">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Print Job Sheet
+    </button>
+    <div class="divider"></div>
+    <button class="btn-wechat">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      Copy for WeChat
+    </button>
+    <span style="font-size:10px;color:#9ca3af;margin-left:4px;">Copies formatted text block to clipboard</span>
+  </div>
+
+  <div style="padding:12px 16px;">
+    <div style="font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Clipboard preview (what gets pasted into WeChat):</div>
+    <div class="wechat-preview">【Teleport OS 派车单】
+单号: DO-008 / J04
+客户: TikTok
+服务: FM Trucking (FM)
+MAWB: 172-1234 5678
+
+📍 提货
+深圳平湖物流中心
+2026年4月26日 09:30
+
+📍 送货
+香港机场货站 Cathay Cargo Village
+2026年4月26日 15:00
+
+📦 货物: 24件 / 1,280 kg
+🚚 车牌: 粤B·12345 (5T)
+
+Teleport OS 联系: ops@teleport.it</div>
+
+    <div class="callout">
+      <strong>After clicking Copy for WeChat:</strong> A green toast "Copied to clipboard" appears for 2 seconds. Dispatcher opens WeChat on their tablet → long-press in chat → Paste → Send.
+      The text block includes Chinese field labels (提货/送货/货物) because drivers communicate in Chinese even within international logistics companies.
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <strong>Pros</strong>
+    <ul style="margin-left: 14px; margin-top: 4px;">
+      <li>Works on tablets without printers at site</li>
+      <li>Aligns with real-world WeChat logistics coordination</li>
+      <li>Instant — no dialog, no paper, no printer required</li>
+      <li>Chinese labels appropriate for driver-facing content</li>
+      <li>Zero layout risk — pure JavaScript clipboard API</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <strong>Cons</strong>
+    <ul style="margin-left: 14px; margin-top: 4px;">
+      <li>Text-only: no QR code, no map link, no structured data</li>
+      <li>Formatting collapses in some WeChat versions</li>
+      <li>No paper copy for gate checks at cargo terminals</li>
+      <li>No audit trail — system can't confirm driver received info</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<h2>Option C — Print-preview modal (recommended)</h2>
+
+<div class="opt-tag opt-c">Option C — Recommended</div>
+<p class="rationale">A "Print Job Sheet" button opens a full-screen modal that renders the exact A4 job sheet layout on screen before printing. Dispatcher reviews the sheet, then clicks [Print A4] (triggers <code>window.print()</code>) or [Copy for WeChat] (clipboard text from Option B). This gives the dispatcher confidence in what gets printed, without the surprise of browser print preview formatting differences.</p>
+
+<div class="screen" style="max-width:860px;">
+  <div class="mock-nav">
+    <div class="logo"></div>
+    <span class="logo-text">Teleport OS</span>
+    <span class="logo-label">Vendor</span>
+    <span style="width:1px;height:16px;background:rgba(255,255,255,0.15);margin:0 4px;"></span>
+    <span class="nav-active">My Jobs</span>
+    <span class="nav-link">Fleet</span>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <div class="vendor-id">HaleSun</div>
+      <div style="width:22px;height:22px;border-radius:4px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:rgba(255,255,255,0.8);">HS</div>
+    </div>
+  </div>
+
+  <!-- Modal overlay over blurred job detail -->
+  <div class="modal-overlay">
+    <!-- Hint: underneath this modal is the normal job detail page (blurred) -->
+    <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(249,250,251,0.7);backdrop-filter:blur(2px);z-index:0;"></div>
+    <div class="modal-box" style="position:relative;z-index:1;">
+      <div class="modal-header">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          <span style="font-size:13px;font-weight:700;color:#111827;">Driver Job Sheet — J04</span>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="btn-wechat" style="font-size:10px;padding:4px 10px;">
+            📋 Copy for WeChat
+          </button>
+          <button class="btn-primary" style="font-size:11px;padding:5px 14px;">
+            🖨 Print A4
+          </button>
+          <button style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:16px;padding:0 4px;">×</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <!-- A4 preview inside modal -->
+        <div class="a4-sheet">
+          <div class="a4-top">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div style="width:16px;height:16px;background:#152CFF;border-radius:3px;"></div>
+              <div>
+                <div style="font-size:10px;font-weight:700;color:#fff;">Teleport OS</div>
+                <div style="font-size:8px;color:rgba(255,255,255,0.4);">Driver Job Sheet</div>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div class="mono" style="font-size:14px;font-weight:700;color:#fff;">J04 · DO-008</div>
+              <div class="mono" style="font-size:9px;color:rgba(255,255,255,0.5);">FM Trucking · HaleSun</div>
+            </div>
+          </div>
+          <div class="a4-body">
+            <div class="a4-route">
+              <div style="display:flex;flex-direction:column;align-items:center;width:12px;flex-shrink:0;">
+                <div style="width:8px;height:8px;border-radius:50%;border:2px solid #152CFF;background:#fff;margin-top:4px;"></div>
+                <div style="flex:1;width:1px;background:#e5e7eb;margin:3px auto;"></div>
+                <div style="width:8px;height:8px;border-radius:50%;border:2px solid #059669;background:#fff;"></div>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:8px;margin-left:8px;">
+                <div>
+                  <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;">PICKUP</div>
+                  <div style="font-size:13px;font-weight:700;color:#111827;">Shenzhen Pinghu Warehouse</div>
+                  <div class="mono" style="font-size:12px;font-weight:700;color:#152CFF;margin-top:2px;">26 Apr 2026 · 09:30</div>
+                  <div style="font-size:10px;color:#6b7280;">平湖物流中心 · 龙岗区</div>
+                </div>
+                <div>
+                  <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;">DELIVERY</div>
+                  <div style="font-size:13px;font-weight:700;color:#111827;">Hong Kong Airport Cargo Village</div>
+                  <div class="mono" style="font-size:12px;font-weight:700;color:#374151;margin-top:2px;">26 Apr 2026 · 15:00</div>
+                  <div style="font-size:10px;color:#6b7280;">Cathay Pacific Cargo · HKIA</div>
+                </div>
+              </div>
+            </div>
+            <hr style="border:none;border-top:1px solid #e5e7eb;margin:10px 0;">
+            <div class="a4-cargo">
+              <div><div class="c-label" style="font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;">Customer</div><div class="mono" style="font-size:11px;font-weight:700;color:#111827;">TikTok</div></div>
+              <div><div class="c-label" style="font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;">MAWB</div><div class="mono" style="font-size:11px;color:#374151;">172-1234 5678</div></div>
+              <div><div class="c-label" style="font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;">Bags</div><div class="mono" style="font-size:14px;font-weight:700;color:#111827;">24</div></div>
+              <div><div class="c-label" style="font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;">Weight</div><div class="mono" style="font-size:14px;font-weight:700;color:#111827;">1,280 kg</div></div>
+            </div>
+            <hr style="border:none;border-top:1px solid #e5e7eb;margin:10px 0;">
+            <div class="a4-driver">
+              <div style="width:28px;height:28px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#6b7280;flex-shrink:0;">ZW</div>
+              <div style="flex:1;">
+                <div style="font-size:12px;font-weight:700;color:#111827;">Zhang Wei</div>
+                <div class="mono" style="font-size:10px;color:#6b7280;">+86 138****1234 · 粤B·12345 · 5T</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                <div style="width:44px;height:44px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:3px;display:flex;align-items:center;justify-content:center;">
+                  <svg width="34" height="34" viewBox="0 0 7 7" fill="#111827" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="0" y="0" width="3" height="3"/>
+                    <rect x="4" y="0" width="3" height="3" fill="none" stroke="#111827" stroke-width="0.4"/>
+                    <rect x="1" y="1" width="1" height="1" fill="#fff"/>
+                    <rect x="4" y="4" width="3" height="3"/>
+                    <rect x="5" y="5" width="1" height="1" fill="#fff"/>
+                    <rect x="0" y="4" width="1" height="1"/>
+                    <rect x="2" y="4" width="1" height="1"/>
+                    <rect x="0" y="6" width="1" height="1"/>
+                    <rect x="2" y="5" width="1" height="2"/>
+                    <rect x="3" y="3" width="1" height="1"/>
+                    <rect x="4" y="3" width="1" height="1"/>
+                    <rect x="3" y="1" width="1" height="1"/>
+                    <rect x="3" y="2" width="1" height="1"/>
+                  </svg>
+                </div>
+                <div style="font-size:7px;color:#d1d5db;text-align:center;">WeChat job</div>
+              </div>
+            </div>
+          </div>
+          <div style="padding:6px 16px;border-top:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;">
+            <span class="mono" style="font-size:8px;color:#9ca3af;">J04 · DO-008 · 26 Apr 2026 09:12</span>
+            <span style="font-size:8px;color:#d1d5db;">Teleport OS Vendor — HaleSun</span>
+          </div>
+        </div>
+        <div style="text-align:center;margin-top:10px;font-size:10px;color:#9ca3af;">Preview matches printed output — A4 portrait · no nav · no sidebar</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <strong>Pros</strong>
+    <ul style="margin-left: 14px; margin-top: 4px;">
+      <li>What-you-see-is-what-prints — no surprise from browser print dialog</li>
+      <li>Both print and copy-for-WeChat in one surface</li>
+      <li>Modal pattern is already in the design system (slide-out precedent)</li>
+      <li>A4 sheet can be styled for thermal printers used at logistics sites</li>
+      <li>QR code placeholder future-proofs WeChat mini program integration</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <strong>Cons</strong>
+    <ul style="margin-left: 14px; margin-top: 4px;">
+      <li>One more component to maintain (the modal + print layout)</li>
+      <li>Modal blocks the full screen — uncomfortable on tablet if not styled correctly</li>
+      <li>Print from modal via <code>window.print()</code> still triggers browser print dialog (one unavoidable step)</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<div class="verdict">
+  <h3>✓ Recommendation: Option C (print preview modal) + Option B (copy for WeChat)</h3>
+  <p style="font-size: 12px; line-height: 1.7; color: #374151; margin-top: 6px;">
+    Implement <strong>Option C</strong>: a "Print Job Sheet" button in the FM job detail header opens a modal with the exact A4 layout. The modal also contains "Copy for WeChat" (Option B) so dispatchers who don't have a printer can still standardize their WeChat job handover format.
+  </p>
+  <p style="font-size: 12px; line-height: 1.7; color: #374151; margin-top: 8px;">
+    <strong>Trigger:</strong> Button only appears on FM jobs with a driver assigned. On non-FM jobs or jobs without a driver, the button is absent (no driver to hand a sheet to).
+  </p>
+  <p style="font-size: 12px; line-height: 1.7; color: #374151; margin-top: 8px;">
+    <strong>Print CSS:</strong> The A4 print layout should be a dedicated hidden <code>&lt;div id="print-only"&gt;</code> injected into the DOM when the modal is open, targeted by <code>@media print { body &gt; * { display: none } #print-only { display: block } }</code>. This is more reliable than transforming the existing page via CSS.
+  </p>
+  <p style="font-size: 12px; line-height: 1.7; color: #374151; margin-top: 8px;">
+    <strong>QR code:</strong> In v1, render a static placeholder QR square (gray box). In v1.1 when the WeChat mini program exists, generate a real QR linking to <code>weixin://dl/jobdetail?j=J04&amp;token=abc</code> using a QR library. The field slot is already reserved in the layout.
+  </p>
+  <p style="font-size: 12px; line-height: 1.7; color: #374151; margin-top: 8px;">
+    <strong>Open questions:</strong>
+  </p>
+  <ul style="margin-left: 18px; font-size: 12px; line-height: 1.8; color: #374151;">
+    <li>Should the WeChat text use Chinese or English labels, or bilingual? Recommend: Chinese primary labels (提货/送货), English reference numbers and location names (dispatchers are bilingual; drivers read Chinese).</li>
+    <li>Should the job sheet include vendor emergency contact? Useful if driver can't reach dispatcher. Recommend: yes — pull from vendor profile (v1.1 when vendor profile is built).</li>
+    <li>Should print history be logged in the activity log ("Job sheet printed — 26 Apr 09:14")? Recommend: yes, as an audit trace for dispatcher accountability.</li>
+  </ul>
+</div>
+
+</div>
+</body>
+</html>
