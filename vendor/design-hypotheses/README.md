@@ -2,6 +2,13 @@
 
 ## Open
 
+### HMW-V22: How might we let FM dispatchers assign drivers to multiple pending jobs at the start of the day — without navigating to each individual job detail page?
+**Root cause:** The current workflow requires a full page navigation for each FM driver assignment (My Jobs → click job → scroll to Dispatch section → select driver + vehicle → Assign → back → repeat). A dispatcher with 4 FM jobs needs 8 navigations before the day starts. The job list already surfaces unassigned FM jobs via the "No driver assigned" sub-line, but offers no way to act from the list.
+**Options:** A) Inline expandable row — "Assign →" button on the FM row expands an inline sub-row with driver+vehicle selects (spreadsheet-style), B) Dispatch Mode drawer — right-side panel listing all unassigned FM jobs with dropdowns + "Save All" (batched), C) Quick-assign popover — small "Assign ▾" button on each unassigned FM row opens a compact 280px popover with driver + vehicle dropdowns
+**Leaning toward:** C) Quick-assign popover — keeps table row heights intact, works at 768px without cramping, no new UI mode concept, amber row tint (`#fffbeb` bg + `border-left: 2px solid #fde68a`) passively surfaces urgency. Option A disrupts table density at 768px. Option B is overkill for typical 2–4 FM jobs/day scale.
+**Open question:** Should "Assign ▾" also appear on already-assigned FM jobs as a "Reassign" shortcut, or only on unassigned rows? Leaning toward: unassigned only.
+**File:** `22-hmw-bulk-dispatch.html`
+
 ### HMW-V21: How might we give FM dispatchers a print-ready driver job sheet — without adding a separate print workflow to the vendor app?
 **Root cause:** When a vendor assigns an FM job to a driver, the dispatcher needs to hand them job details (pickup/delivery address, time window, cargo counts, reference numbers) before departure. Currently there is no way to produce this from Teleport OS — dispatchers screenshot, type manually into WeChat, or maintain parallel Excel templates. No standard format → errors, missing info, delays at pickup.
 **Options:** A) Browser @media print — "Print" button triggers window.print() with a print CSS that hides UI chrome; zero new screens but browser print dialog varies, B) Copy for WeChat — a "📋 Copy" button copies a structured Chinese-labeled text block to clipboard for WeChat forwarding; matches real-world logistics coordination but text-only, C) Print-preview modal — "Print Job Sheet" button opens a modal showing the exact A4 layout; modal has both [Print A4] and [Copy for WeChat] actions
