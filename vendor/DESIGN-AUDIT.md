@@ -1,6 +1,7 @@
 # Design Audit — Teleport OS Vendor App
 
-> Last audit: 2026-10-20. Checked against `admin/DESIGN.md` + `vendor/DESIGN.md`.
+> Last audit: 2026-10-27. Checked against `admin/DESIGN.md` + `vendor/DESIGN.md`.
+> Previous audit: 2026-10-20. All 6 findings from 2026-10-20 remain unresolved (no code changes observed in `vendor/src/pages/JobDetailPage.tsx` between audits).
 
 ## Critical Bugs
 

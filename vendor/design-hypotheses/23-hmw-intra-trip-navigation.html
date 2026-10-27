@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-V23: Intra-Trip Job Navigation</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', 'SF Mono', monospace; }
+.page { max-width: 1200px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; margin: 40px 0 6px; color: #152CFF; }
+.hmw { font-size: 15px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 14px; font-size: 12px; color: #374151; line-height: 1.6; }
+.screen { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin: 10px 0 24px; }
+.screen-label { font-size: 11px; font-weight: 700; color: #6b7280; padding: 8px 12px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.label-a { background: rgba(21,44,255,0.08); color: #152CFF; }
+.label-b { background: #f0fdf4; color: #059669; }
+.label-c { background: #fefce8; color: #a16207; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fef2f2; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 32px; }
+.verdict h3 { color: #059669; font-size: 14px; margin-bottom: 6px; }
+.verdict p { font-size: 12px; color: #374151; line-height: 1.7; margin-top: 6px; }
+
+/* === Shared mock nav === */
+.mock-nav { height: 40px; padding: 0 12px; background: #111827; display: flex; align-items: center; gap: 8px; }
+.mock-nav .logo-sq { width: 18px; height: 18px; background: #152CFF; border-radius: 4px; flex-shrink: 0; }
+.mock-nav .logo-text { font-weight: 700; font-size: 12px; color: #fff; }
+.mock-nav .logo-lbl { font-size: 9px; color: rgba(255,255,255,0.35); }
+.mock-nav .nav-link { font-size: 11px; padding: 3px 8px; border-radius: 3px; color: rgba(255,255,255,0.7); font-weight: 500; }
+.mock-nav .nav-active { font-size: 11px; padding: 3px 8px; border-radius: 3px; color: #fff; background: rgba(255,255,255,0.1); font-weight: 600; }
+.mock-nav .vendor-id { margin-left: auto; font-size: 10px; color: rgba(255,255,255,0.65); font-weight: 600; }
+.mock-nav .avatar { width: 22px; height: 22px; border-radius: 4px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.75); }
+
+/* === Job detail mock === */
+.detail-wrap { max-width: 960px; margin: 0 auto; padding: 16px; }
+
+/* Header */
+.detail-header { padding-bottom: 12px; border-bottom: 1px solid #e5e7eb; margin-bottom: 12px; }
+.detail-header-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.back-link { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; color: #152CFF; }
+.job-id-badge { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 1px 6px; border-radius: 4px; background: #f3f4f6; border: 1px solid #e5e7eb; color: #9ca3af; }
+.service-name { font-size: 14px; font-weight: 700; color: #111827; }
+.service-code { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #6b7280; }
+.trip-ref { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9ca3af; }
+.customer-name { font-size: 11px; font-weight: 600; color: #111827; }
+.mawb-ref { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9ca3af; }
+
+/* Status bar */
+.status-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-radius: 4px; margin-bottom: 4px; }
+.status-bar-blue { border: 1px solid rgba(21,44,255,0.12); background: rgba(21,44,255,0.04); }
+.status-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: #111827; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.status-dot-blue { background: #152CFF; }
+.status-dot-gray { background: #d1d5db; }
+.status-dot-amber { background: #a16207; }
+.status-dot-green { background: #059669; }
+.hint-text { font-size: 10px; color: '#6b7280'; }
+.btn-primary { padding: 5px 14px; border: none; border-radius: 4px; background: #152CFF; color: #fff; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-family: inherit; }
+
+/* Section */
+.section { padding: 12px 0; border-top: 1px solid #f3f4f6; }
+.section-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px; }
+
+/* === OPTION A: Trip job strip === */
+.trip-strip { border-bottom: 1px solid #e5e7eb; background: #f9fafb; padding: 6px 12px; display: flex; align-items: center; gap: 6px; overflow-x: auto; }
+.trip-strip-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: '#9ca3af'; white-space: nowrap; color: #9ca3af; margin-right: 4px; }
+.trip-strip-trip { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #9ca3af; white-space: nowrap; margin-right: 6px; }
+.job-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: pointer; white-space: nowrap; border: 1px solid #e5e7eb; background: #fff; color: #374151; text-decoration: none; }
+.job-chip:hover { background: #f3f4f6; }
+.job-chip-current { border-color: #152CFF; background: rgba(21,44,255,0.06); color: #152CFF; cursor: default; }
+.job-chip-dot { width: 5px; height: 5px; border-radius: 50%; }
+
+/* === OPTION B: Breadcrumb forward/back nav === */
+.breadcrumb-bar { padding: 0 0 10px; display: flex; align-items: center; gap: 4px; }
+.crumb-sep { color: #d1d5db; font-size: 11px; }
+.crumb-link { font-size: 11px; font-weight: 500; color: #152CFF; cursor: pointer; }
+.crumb-current { font-size: 11px; font-weight: 700; color: #111827; }
+.crumb-nav { display: flex; align-items: center; gap: 3px; margin-left: auto; }
+.crumb-arrow { width: 24px; height: 24px; border-radius: 4px; border: 1px solid #e5e7eb; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #6b7280; cursor: pointer; }
+.crumb-arrow:hover { background: #f3f4f6; color: #111827; }
+.crumb-arrow-dim { opacity: 0.4; cursor: default; }
+.crumb-position { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: '#9ca3af'; color: #9ca3af; margin: 0 2px; }
+.next-peek { font-size: 9px; color: #6b7280; white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+
+/* === OPTION C: Bottom sibling panel === */
+.sibling-section { margin-top: 2px; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+.sibling-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #f9fafb; cursor: pointer; }
+.sibling-title { font-size: 10px; font-weight: 600; color: #374151; }
+.sibling-meta { font-size: 9px; color: '#9ca3af'; color: #9ca3af; font-family: 'JetBrains Mono', monospace; }
+.sibling-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-top: 1px solid #f3f4f6; cursor: pointer; }
+.sibling-row:hover { background: #f9fafb; }
+.sibling-id { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: '#111827'; color: #111827; font-weight: 500; }
+.sibling-svc { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: '#6b7280'; color: #6b7280; }
+.sibling-status { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: #111827; }
+.sibling-where { font-size: 10px; color: '#374151'; color: #374151; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sibling-arrow { font-size: 11px; color: #d1d5db; }
+
+/* Annotation bubbles */
+.ann { display: inline-block; background: #152CFF; color: #fff; border-radius: 99px; font-size: 9px; font-weight: 700; padding: 1px 6px; vertical-align: middle; margin-left: 4px; }
+
+/* Truncate helper */
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>HMW-V23: Intra-Trip Job Navigation</h1>
+  <p style="font-size:12px;color:#6b7280;margin-bottom:20px;">Teleport OS Vendor — Design Hypothesis</p>
+
+  <div class="hmw">
+    How might we let vendors navigate between jobs on the same trip — without returning to My Jobs each time?
+  </div>
+
+  <div class="context">
+    <strong>Root cause:</strong> A vendor with multiple jobs on the same trip (e.g., DO-001 has FM + EC + OH jobs) must navigate back to My Jobs between each one: Job Detail → ← My Jobs → click next row → Job Detail. On a 10-job dispatch morning that's 18 navigations. The job detail header already shows the trip ID, but it's plain monospace text — not a link, not a navigator. Vendors have no way to know how many jobs belong to the current trip, or whether sibling jobs need action, without exiting to the list.
+    <br><br>
+    <strong>Context:</strong> HaleSun Logistics handles an average of 3–5 jobs per trip. Dispatchers typically open jobs in sequence (FM first to assign a driver, then EC to check customs status, then OH to confirm hub ops). The round-trip to My Jobs is dead navigation overhead.
+  </div>
+
+  <!-- ============================
+       OPTION A — TRIP JOB STRIP
+       ============================ -->
+  <h2>Option A — Trip Job Strip</h2>
+  <div class="label label-a">Option A</div>
+  <div class="rationale">
+    A compact strip sits <strong>below the header rule</strong> and above the Status Action Bar. It shows the trip ID on the left, then one chip per job in the trip (left-to-right order, current job highlighted in blue). Each chip has a 5px status dot + job ID. Click any chip to navigate. The strip is always visible when there are 2+ jobs on the trip; hidden on single-job trips. Overflow scrolls horizontally on tablet.
+  </div>
+
+  <div class="screen">
+    <div class="screen-label">Option A — Trip Job Strip (FM Trucking job, In Progress) · 960px view</div>
+    <div class="mock-nav">
+      <div class="logo-sq"></div>
+      <span class="logo-text">Teleport OS</span>
+      <span class="logo-lbl">Vendor</span>
+      <span style="width:1px;height:16px;background:rgba(255,255,255,0.12);margin:0 4px"></span>
+      <a class="nav-link">My Jobs</a>
+      <a class="nav-link">Fleet</a>
+      <span class="vendor-id">HaleSun Logistics</span>
+      <div class="avatar">HS</div>
+    </div>
+
+    <div class="detail-wrap">
+
+      <!-- Header -->
+      <div class="detail-header">
+        <div class="detail-header-top">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="back-link">← My Jobs</span>
+            <span style="color:#d1d5db">|</span>
+            <span class="job-id-badge">J01</span>
+            <span class="service-name">FM Trucking</span>
+            <span class="service-code">FM</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="trip-ref">DO-001</span>
+            <span style="color:#d1d5db">·</span>
+            <span class="customer-name">TikTok Commerce</span>
+            <span style="color:#d1d5db">·</span>
+            <span class="mawb-ref">172-12345678</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- TRIP JOB STRIP (Option A) -->
+      <div class="trip-strip">
+        <span class="trip-strip-label">Trip</span>
+        <span class="trip-strip-trip">DO-001</span>
+        <span style="color:#e5e7eb;font-size:10px;margin-right:4px;">·</span>
+
+        <!-- J01 = current -->
+        <span class="job-chip job-chip-current">
+          <span class="job-chip-dot status-dot-blue"></span>
+          J01 FM
+        </span>
+
+        <!-- J02 = pending -->
+        <a class="job-chip">
+          <span class="job-chip-dot status-dot-gray"></span>
+          J02 EC
+        </a>
+
+        <!-- J03 = completed/to verify -->
+        <a class="job-chip">
+          <span class="job-chip-dot status-dot-amber"></span>
+          J03 OH
+        </a>
+
+        <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;white-space:nowrap;">3 jobs on this trip</span>
+      </div>
+
+      <!-- Status bar -->
+      <div class="status-bar status-bar-blue" style="margin-top:12px;">
+        <div>
+          <div class="status-chip">
+            <span class="status-dot status-dot-blue"></span>
+            In Progress
+          </div>
+          <div style="font-size:10px;color:#6b7280;margin-top:2px;">Upload proof of service to mark complete</div>
+        </div>
+        <button class="btn-primary">↑ Upload Proof</button>
+      </div>
+
+      <!-- Driver section (FM) -->
+      <div class="section">
+        <div class="section-title">Driver &amp; Vehicle</div>
+        <div style="display:flex;align-items:center;gap:12px;padding:6px 0;font-size:12px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <strong style="color:#111827;">Zhang Wei</strong>
+          <span class="mono" style="font-size:11px;color:#374151;">粤B·12345</span>
+          <span class="mono" style="font-size:10px;color:#9ca3af;">📞 138-0013-8000</span>
+          <a style="margin-left:auto;font-size:9px;color:#6b7280;text-decoration:underline;cursor:pointer;">Reassign</a>
+        </div>
+      </div>
+
+      <!-- Route (truncated for space) -->
+      <div class="section">
+        <div class="section-title">Route</div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="flex:1">
+            <div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin-bottom:3px;">Pickup</div>
+            <div style="font-size:11px;font-weight:600;color:#111827;">HaleSun SZX Warehouse</div>
+            <div class="mono" style="font-size:9px;color:#374151;margin-top:2px;">28 Oct · 09:00</div>
+          </div>
+          <span style="font-size:16px;color:#d1d5db;">→</span>
+          <div style="flex:1">
+            <div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin-bottom:3px;">Delivery</div>
+            <div style="font-size:11px;font-weight:600;color:#111827;">HKIA Cargo Terminal</div>
+            <div class="mono" style="font-size:9px;color:#374151;margin-top:2px;">28 Oct · 14:00</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <strong>Pros</strong><br>
+      • Zero extra navigation steps — strip is always present<br>
+      • Status dots surface sibling urgency at a glance (amber J03 needs attention)<br>
+      • Compact: 24px strip height, does not displace any content<br>
+      • Horizontal scroll on 768px tablet — no columns lost<br>
+      • Hidden on single-job trips — no clutter<br>
+      • Uses existing vocabulary (dots, job IDs, service codes)
+    </div>
+    <div class="cons">
+      <strong>Cons</strong><br>
+      • On trips with 10+ jobs, strip requires horizontal scroll (rare case)<br>
+      • Chips show job ID + service code only — customer/route not visible (detail is one click away)<br>
+      • Requires trip context data to be available in JobDetailPage (currently fetched via useTrips — already works)
+    </div>
+  </div>
+
+
+  <!-- ============================
+       OPTION B — BREADCRUMB NAV
+       ============================ -->
+  <h2>Option B — Forward / Back Navigation with Next-Job Peek</h2>
+  <div class="label label-b">Option B</div>
+  <div class="rationale">
+    The header breadcrumb gains ← / → navigation arrows that move between jobs on the current trip in their natural order (J01 → J02 → J03). The current job position is shown as a mono fraction (2/3). Each arrow also shows a small peek label of the next/previous job (service + status). This replaces the strip with a more minimal in-header pattern.
+  </div>
+
+  <div class="screen">
+    <div class="screen-label">Option B — Breadcrumb Forward/Back (FM Trucking J01, viewing job 1 of 3) · 960px view</div>
+    <div class="mock-nav">
+      <div class="logo-sq"></div>
+      <span class="logo-text">Teleport OS</span>
+      <span class="logo-lbl">Vendor</span>
+      <span style="width:1px;height:16px;background:rgba(255,255,255,0.12);margin:0 4px"></span>
+      <a class="nav-link">My Jobs</a>
+      <a class="nav-link">Fleet</a>
+      <span class="vendor-id">HaleSun Logistics</span>
+      <div class="avatar">HS</div>
+    </div>
+
+    <div class="detail-wrap">
+
+      <!-- Header with breadcrumb + nav -->
+      <div class="detail-header">
+        <!-- Top: back + job identity + trip info -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="back-link">← My Jobs</span>
+            <span style="color:#d1d5db">|</span>
+            <span class="job-id-badge">J01</span>
+            <span class="service-name">FM Trucking</span>
+            <span class="service-code">FM</span>
+          </div>
+          <!-- Breadcrumb forward/back nav -->
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="trip-ref">DO-001</span>
+            <span style="color:#d1d5db">·</span>
+            <span class="customer-name">TikTok Commerce</span>
+            <!-- nav arrows -->
+            <div class="crumb-nav" style="margin-left:12px;">
+              <button class="crumb-arrow crumb-arrow-dim" title="Previous job" style="border:1px solid #e5e7eb;background:#fff;border-radius:4px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#d1d5db;cursor:default;">←</button>
+              <span class="crumb-position mono" style="font-size:9px;color:#9ca3af;padding:0 4px;">1 / 3</span>
+              <div style="position:relative;display:inline-flex;flex-direction:column;align-items:flex-start;">
+                <button class="crumb-arrow" title="Next: EC · Pending" style="border:1px solid #e5e7eb;background:#fff;border-radius:4px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#6b7280;cursor:pointer;">→</button>
+              </div>
+              <!-- Peek label below right arrow -->
+              <div style="font-size:9px;color:#9ca3af;white-space:nowrap;margin-left:2px;display:flex;align-items:center;gap:3px;">
+                <span class="job-chip-dot status-dot-gray" style="width:5px;height:5px;border-radius:50%;background:#d1d5db;display:inline-block;"></span>
+                J02 EC · Pending
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status bar -->
+      <div class="status-bar status-bar-blue">
+        <div>
+          <div class="status-chip">
+            <span class="status-dot status-dot-blue"></span>
+            In Progress
+          </div>
+          <div style="font-size:10px;color:#6b7280;margin-top:2px;">Upload proof of service to mark complete</div>
+        </div>
+        <button class="btn-primary">↑ Upload Proof</button>
+      </div>
+
+      <!-- Abbreviated body -->
+      <div class="section">
+        <div class="section-title">Driver &amp; Vehicle</div>
+        <div style="font-size:11px;color:#374151;padding:4px 0;">Zhang Wei · 粤B·12345</div>
+      </div>
+      <div class="section">
+        <div class="section-title">Route</div>
+        <div style="font-size:11px;color:#374151;padding:4px 0;">HaleSun SZX Warehouse → HKIA Cargo Terminal</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <strong>Pros</strong><br>
+      • Very minimal footprint — lives in the header, no extra layout region<br>
+      • The "1/3" fraction confirms trip scope immediately<br>
+      • Peek label (J02 EC · Pending) previews the next job without navigating<br>
+      • Keyboard-friendly: ← → arrows are obvious affordances
+    </div>
+    <div class="cons">
+      <strong>Cons</strong><br>
+      • Only exposes linear sequential access — can't jump to J03 from J01 without passing through J02<br>
+      • "Order" of jobs (J01→J02→J03) may not reflect urgency (amber J03 is not reachable in one click)<br>
+      • Header becomes visually dense: back link + job id + service name + trip ref + customer + nav arrows<br>
+      • On 768px, the nav arrows + peek label risk wrapping or truncating<br>
+      • Peek label is text-only — dispatcher must remember that "Pending" means needs attention
+    </div>
+  </div>
+
+
+  <!-- ============================
+       OPTION C — SIBLING PANEL
+       ============================ -->
+  <h2>Option C — Sibling Jobs Panel (Bottom of Page)</h2>
+  <div class="label label-c">Option C</div>
+  <div class="rationale">
+    A collapsible "Other jobs on this trip" section at the bottom of the detail page, after the Activity Log. Collapsed by default, showing only the count: "2 more jobs on DO-001 ▾". Expanded: a compact mini-table listing sibling jobs with status, service, and route. Click any row to navigate.
+  </div>
+
+  <div class="screen">
+    <div class="screen-label">Option C — Sibling Panel (expanded, after Activity Log) · 960px view</div>
+    <div class="mock-nav">
+      <div class="logo-sq"></div>
+      <span class="logo-text">Teleport OS</span>
+      <span class="logo-lbl">Vendor</span>
+      <span style="width:1px;height:16px;background:rgba(255,255,255,0.12);margin:0 4px"></span>
+      <a class="nav-link">My Jobs</a>
+      <a class="nav-link">Fleet</a>
+      <span class="vendor-id">HaleSun Logistics</span>
+      <div class="avatar">HS</div>
+    </div>
+
+    <div class="detail-wrap">
+      <!-- Abbreviated header -->
+      <div class="detail-header">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="back-link">← My Jobs</span>
+          <span style="color:#d1d5db">|</span>
+          <span class="job-id-badge">J01</span>
+          <span class="service-name">FM Trucking</span>
+          <span class="service-code">FM</span>
+        </div>
+      </div>
+
+      <div class="status-bar status-bar-blue">
+        <div class="status-chip"><span class="status-dot status-dot-blue"></span> In Progress</div>
+        <button class="btn-primary">↑ Upload Proof</button>
+      </div>
+
+      <!-- …content sections abbreviated… -->
+      <div class="section" style="padding:8px 0;">
+        <div style="font-size:11px;color:#9ca3af;font-style:italic;">[ Route · Cargo · Proof · Activity Log sections ]</div>
+      </div>
+
+      <!-- SIBLING PANEL (Option C) -->
+      <div class="sibling-section" style="margin-top:16px;">
+        <div class="sibling-header">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="sibling-title">Other jobs on this trip</span>
+            <span class="sibling-meta">DO-001 · 2 more</span>
+          </div>
+          <span style="font-size:10px;color:#9ca3af;">▲ Collapse</span>
+        </div>
+
+        <!-- Sibling J02 EC -->
+        <div class="sibling-row">
+          <span class="sibling-id">J02</span>
+          <span class="sibling-svc">EC</span>
+          <div class="sibling-status">
+            <span class="job-chip-dot status-dot-gray" style="width:5px;height:5px;border-radius:50%;background:#d1d5db;display:inline-block;"></span>
+            <span style="font-size:10px;color:#6b7280;">Pending</span>
+          </div>
+          <span class="sibling-where">HKIA Cargo Terminal</span>
+          <span class="sibling-arrow">→</span>
+        </div>
+
+        <!-- Sibling J03 OH -->
+        <div class="sibling-row">
+          <span class="sibling-id">J03</span>
+          <span class="sibling-svc">OH</span>
+          <div class="sibling-status">
+            <span class="job-chip-dot status-dot-amber" style="width:5px;height:5px;border-radius:50%;background:#a16207;display:inline-block;"></span>
+            <span style="font-size:10px;color:#374151;">Completed</span>
+            <span style="font-size:9px;color:#a16207;font-weight:600;margin-left:4px;">· To verify</span>
+          </div>
+          <span class="sibling-where">HKIA Air Cargo Hub</span>
+          <span class="sibling-arrow">→</span>
+        </div>
+      </div>
+
+      <!-- Also show collapsed state -->
+      <div style="margin-top:12px;">
+        <div style="font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Collapsed state ↓</div>
+        <div class="sibling-section">
+          <div class="sibling-header">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="sibling-title">Other jobs on this trip</span>
+              <span class="sibling-meta">DO-001 · 2 more</span>
+              <span style="display:inline-flex;align-items:center;gap:3px;">
+                <span class="job-chip-dot status-dot-gray" style="width:5px;height:5px;border-radius:50%;background:#d1d5db;display:inline-block;"></span>
+                <span class="job-chip-dot status-dot-amber" style="width:5px;height:5px;border-radius:50%;background:#a16207;display:inline-block;"></span>
+              </span>
+            </div>
+            <span style="font-size:10px;color:#9ca3af;">▼ Show</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <strong>Pros</strong><br>
+      • Keeps the header clean — no structural changes above<br>
+      • Shows service type + route in the sibling row (richer context than a chip)<br>
+      • Natural page flow: primary job first, context at the end<br>
+      • Status dots inline in collapsed header give a quick signal even when collapsed
+    </div>
+    <div class="cons">
+      <strong>Cons</strong><br>
+      • Requires scrolling to the bottom before you can navigate (wrong ergonomics — dispatchers usually check siblings <em>before</em> working the current job, not after)<br>
+      • Collapsed by default hides the signal — the amber J03 "To verify" is invisible until expanded<br>
+      • Adds a new UI region (collapsible accordion) — a new interaction pattern for one page<br>
+      • On tablet, the page is already long. Adding a sibling table below the Activity Log pushes them further down
+    </div>
+  </div>
+
+
+  <!-- ============================
+       VERDICT
+       ============================ -->
+  <div class="verdict">
+    <h3>✓ Verdict: Option A — Trip Job Strip</h3>
+    <p><strong>Why A wins:</strong> The strip answers "what else is on this trip and what state is it in?" before the dispatcher begins work on the current job — not after. It adds one 24px horizontal band with no disruption to the existing status bar → sections → log layout. The status dots surface urgency (J03 amber = to verify) in the same visual language as the rest of the app. Option B's arrows are linear and force sequential access; Option C's panel is correctly placed in the wrong spot (bottom of page, after Activity Log).</p>
+    <p><strong>Implementation notes:</strong>
+      <br>• Add a <code>TripJobStrip</code> component to <code>vendor/src/components/</code>. Receives <code>trip.jobs</code> + <code>currentJobId</code>.
+      <br>• Render between the detail-header rule and the Status Action Bar, only when <code>trip.jobs.length &gt; 1</code>.
+      <br>• Chip styles: current job = <code>border: 1px solid #152CFF; background: rgba(21,44,255,0.06); color: #152CFF</code>. Other jobs = standard ghost chip with status dot derived from <code>getJobStatusDot()</code> helper (already in <code>shared/statusStyles.ts</code>).
+      <br>• Click handler: <code>navigate(\`/jobs/\${trip.id}/\${job.id}\`)</code>.
+      <br>• On trips with 8+ jobs: <code>overflow-x: auto</code> with the strip scrolling horizontally. Count label ("N jobs on this trip") pinned at the right end.
+      <br>• Hide on single-job trips: <code>trip.jobs.length === 1 ? null : &lt;TripJobStrip/&gt;</code>.
+    </p>
+    <p><strong>Open questions:</strong>
+      <br>1. Should the strip also show a small alert badge on chips when a sibling job has status = "To verify" (Completed + Pending verification)? Recommend: no extra badge — the amber dot is sufficient signal. Badges add visual noise.
+      <br>2. Should clicking a chip that belongs to a different vendor be blocked or allowed? (Vendors only see their own jobs.) Since the jobs list is already filtered to the current vendor, all sibling chips would always belong to the same vendor — no need for any restriction.
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

@@ -2,6 +2,13 @@
 
 ## Open
 
+### HMW-V23: How might we let vendors navigate between jobs on the same trip — without returning to My Jobs each time?
+**Root cause:** A vendor with multiple jobs on the same trip (e.g., DO-001 has FM + EC + OH) must navigate back to My Jobs between each job detail page. The header already shows the trip ID as plain mono text — not a link, not a navigator. Vendors cannot see how many sibling jobs exist or whether any require action without exiting.
+**Options:** A) Trip job strip — 24px horizontal band below the header showing one chip per trip job (current highlighted, status dot on each), B) Forward/back breadcrumb arrows — ← / → in the header with position fraction (1/3) and next-job peek label, C) Sibling jobs panel — collapsible section at the bottom of the page after the Activity Log
+**Leaning toward:** A) Trip job strip — answers the "what else needs action?" question before the dispatcher begins work, not after. Status dots surface urgency (amber = to verify) in the existing vocabulary. Zero layout disruption: one 24px strip, hidden on single-job trips. Option B forces linear sequential access (can't jump to J03 from J01). Option C is placed after the Activity Log — too late in the workflow.
+**Open questions:** (1) Should the trip strip appear even when all sibling jobs are for the same vendor (always) or only when there are different vendors? Since the vendor portal already filters to the logged-in vendor, all trip jobs shown are theirs — no ambiguity. Show always when 2+ jobs exist. (2) On trips with 10+ jobs, horizontal scroll on the strip is acceptable — but should there be a "view all jobs" overflow link? Recommend: yes, only if job count > 8 (rare case).
+**File:** `23-hmw-intra-trip-navigation.html`
+
 ### HMW-V22: How might we let FM dispatchers assign drivers to multiple pending jobs at the start of the day — without navigating to each individual job detail page?
 **Root cause:** The current workflow requires a full page navigation for each FM driver assignment (My Jobs → click job → scroll to Dispatch section → select driver + vehicle → Assign → back → repeat). A dispatcher with 4 FM jobs needs 8 navigations before the day starts. The job list already surfaces unassigned FM jobs via the "No driver assigned" sub-line, but offers no way to act from the list.
 **Options:** A) Inline expandable row — "Assign →" button on the FM row expands an inline sub-row with driver+vehicle selects (spreadsheet-style), B) Dispatch Mode drawer — right-side panel listing all unassigned FM jobs with dropdowns + "Save All" (batched), C) Quick-assign popover — small "Assign ▾" button on each unassigned FM row opens a compact 280px popover with driver + vehicle dropdowns
