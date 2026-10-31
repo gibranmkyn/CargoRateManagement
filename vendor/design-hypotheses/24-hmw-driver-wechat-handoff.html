@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMW-V24: Driver WeChat Handoff — Connecting Dispatch Assignment to WeChat Mini Program</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Instrument Sans', -apple-system, system-ui, sans-serif; background: #f3f4f6; color: #111827; font-size: 12px; line-height: 1.4; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+
+.page { max-width: 1380px; margin: 0 auto; padding: 32px 24px 80px; }
+h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+h2 { font-size: 16px; font-weight: 700; letter-spacing: -0.2px; margin: 40px 0 6px; color: #152CFF; }
+.hmw { font-size: 14px; font-weight: 700; color: #111827; font-style: italic; margin-bottom: 20px; padding: 12px 16px; background: #fff; border-left: 3px solid #152CFF; border-radius: 0 6px 6px 0; }
+.context { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px; margin-bottom: 20px; font-size: 11px; color: #92400e; line-height: 1.6; }
+.context strong { font-weight: 700; }
+.rationale { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 12px; font-size: 11px; color: #374151; line-height: 1.6; }
+.label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; display: inline-block; margin-bottom: 8px; }
+.label-a { background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; }
+.label-b { background: #fef3c7; border: 1px solid #fde68a; color: #b45309; }
+.label-c { background: #f0fdf4; border: 1px solid #a7f3d0; color: #047857; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pros, .cons { padding: 9px 11px; border-radius: 6px; font-size: 11px; line-height: 1.7; }
+.pros { background: #f0fdf4; border: 1px solid #a7f3d0; }
+.cons { background: #fefafa; border: 1px solid #fecaca; }
+.verdict { background: #f0fdf4; border: 2px solid #a7f3d0; border-radius: 6px; padding: 16px; margin-top: 36px; }
+.verdict h3 { color: #059669; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.verdict p { font-size: 11px; color: #374151; line-height: 1.7; margin-bottom: 6px; }
+.verdict p:last-child { margin-bottom: 0; }
+
+/* ─── Two-column option layout ─── */
+.option-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 14px 0 32px; align-items: start; }
+.option-cols-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin: 14px 0 32px; align-items: start; }
+
+/* ─── Vendor app mockup (Teleport OS) ─── */
+.vendor-frame { border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; background: #fff; }
+.frame-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #9ca3af; margin-bottom: 6px; text-align: center; }
+.mock-nav { height: 40px; padding: 0 16px; background: #111827; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.mock-logo-sq { width: 20px; height: 20px; background: #152CFF; border-radius: 5px; display: flex; align-items: center; justify-content: center; }
+.mock-logo-sq svg { width: 10px; height: 10px; }
+.mock-logo-text { font-weight: 700; font-size: 13px; color: #fff; letter-spacing: -0.3px; }
+.mock-logo-sub { font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.35); }
+.mock-nav-link { font-size: 12px; padding: 4px 10px; border-radius: 4px; font-weight: 600; }
+.mock-nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+.mock-nav-link.inactive { color: rgba(255,255,255,0.5); }
+.mock-vendor-name { margin-left: auto; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); }
+.mock-avatar { width: 22px; height: 22px; border-radius: 4px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.7); }
+.mock-body { padding: 16px 20px; background: #fff; }
+.mock-back { font-size: 12px; font-weight: 500; color: #152CFF; display: flex; align-items: center; gap: 4px; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb; margin-bottom: 16px; }
+.mock-job-hdr { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.mock-job-id { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 1px 6px; border-radius: 4px; background: #f3f4f6; border: 1px solid #e5e7eb; color: #9ca3af; }
+.mock-job-svc { font-size: 14px; font-weight: 700; color: #111827; }
+.mock-job-code { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #6b7280; }
+.mock-trip-meta { font-size: 11px; color: #9ca3af; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+
+/* Status action bar */
+.mock-status-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 14px; border: 1px solid rgba(21,44,255,0.12); border-radius: 4px; margin-bottom: 12px; background: rgba(21,44,255,0.04); }
+.mock-status-left { display: flex; flex-direction: column; gap: 2px; }
+.mock-dot-row { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: #111827; }
+.mock-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.mock-hint { font-size: 10px; color: #6b7280; }
+.mock-btn-blue { padding: '5px 14px'; border: 'none'; border-radius: 4px; background: #152CFF; color: #fff; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; padding: 5px 14px; font-family: 'Instrument Sans', sans-serif; }
+
+/* Dispatch section */
+.dispatch-section { padding: 14px 16px; background: rgba(21,44,255,0.02); border: 1px solid rgba(21,44,255,0.1); border-radius: 6px; margin-bottom: 4px; }
+.sec-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 8px; }
+.driver-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+.driver-name { font-size: 12px; font-weight: 600; color: #111827; }
+.driver-plate { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #374151; }
+.driver-phone { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9ca3af; display: flex; align-items: center; gap: 2px; }
+.reassign-link { margin-left: auto; font-size: 9px; color: #6b7280; text-decoration: underline; cursor: pointer; }
+
+/* QR code placeholder */
+.qr-block { display: flex; align-items: center; gap: 14px; padding-top: 10px; border-top: 1px solid rgba(21,44,255,0.08); margin-top: 8px; }
+.qr-code { width: 56px; height: 56px; border: 1px solid #e5e7eb; border-radius: 4px; background: #fff; display: grid; grid-template-columns: repeat(7,1fr); gap: 1px; padding: 5px; flex-shrink: 0; }
+.qr-cell { border-radius: 1px; }
+.qr-label-wrap { flex: 1; }
+.qr-label-title { font-size: 11px; font-weight: 600; color: #111827; margin-bottom: 2px; }
+.qr-label-sub { font-size: 10px; color: #6b7280; line-height: 1.5; }
+.qr-copy-btn { font-size: 10px; font-weight: 500; color: #152CFF; background: none; border: 1px solid rgba(21,44,255,0.2); border-radius: 3px; padding: 2px 7px; cursor: pointer; margin-top: 6px; display: inline-block; }
+
+/* Subscription message mockup (WeChat-style message bubble) */
+.wx-chat-wrap { background: #EDEDED; padding: 12px 10px; display: flex; flex-direction: column; gap: 6px; }
+.wx-chat-time { text-align: center; font-size: 10px; color: #9ca3af; margin-bottom: 2px; }
+.wx-msg-row { display: flex; align-items: flex-start; gap: 8px; }
+.wx-avatar { width: 36px; height: 36px; border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; }
+.wx-tmpl-bubble { background: #fff; border-radius: 4px 8px 8px 8px; padding: 10px 12px; max-width: 220px; }
+.wx-tmpl-header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 0.5px solid #F3F3F3; }
+.wx-tmpl-logo { width: 20px; height: 20px; background: #152CFF; border-radius: 3px; }
+.wx-tmpl-source { font-size: 11px; font-weight: 600; color: #111; }
+.wx-tmpl-row { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; font-size: 11px; }
+.wx-tmpl-k { color: #9ca3af; }
+.wx-tmpl-v { color: #111; font-weight: 500; text-align: right; }
+.wx-tmpl-cta { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding-top: 6px; border-top: 0.5px solid #F3F3F3; font-size: 11px; color: #1773EA; font-weight: 500; }
+.wx-tmpl-chevron { width: 10px; height: 10px; display: inline-block; border-top: 1.5px solid #1773EA; border-right: 1.5px solid #1773EA; transform: rotate(45deg); }
+
+/* WeChat phone chrome */
+.wx-phone-wrap { display: flex; flex-direction: column; align-items: center; }
+.wx-phone { width: 100%; max-width: 270px; border-radius: 18px; border: 7px solid #1a1a1a; background: #1a1a1a; box-shadow: 0 8px 32px rgba(0,0,0,0.35), inset 0 0 0 1px #333; overflow: hidden; margin: 0 auto; }
+.wx-phone-inner { background: #EDEDED; height: 520px; display: flex; flex-direction: column; position: relative; overflow: hidden; font-size: 12px; }
+.wx-sb { height: 22px; background: #EDEDED; display: flex; align-items: center; padding: 0 14px; flex-shrink: 0; }
+.wx-sb-time { font-size: 12px; font-weight: 700; color: #111; letter-spacing: -0.2px; }
+.wx-sb-right { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.wx-signal { display: flex; align-items: flex-end; gap: 1px; height: 9px; }
+.wx-signal span { width: 3px; background: #111; border-radius: 0.5px; }
+.wx-bat { width: 18px; height: 9px; border: 1.5px solid #111; border-radius: 2px; position: relative; }
+.wx-bat::after { content: ''; position: absolute; right: -4px; top: 50%; transform: translateY(-50%); width: 2px; height: 5px; background: #111; border-radius: 0 1px 1px 0; }
+.wx-bat::before { content: ''; position: absolute; left: 1px; top: 1px; bottom: 1px; right: 4px; background: #111; border-radius: 1px; }
+.wx-nav { height: 44px; background: #F7F8FA; border-bottom: 0.5px solid #DADADA; display: flex; align-items: center; padding: 0 12px; flex-shrink: 0; position: relative; }
+.wx-nav-back { display: flex; align-items: center; gap: 1px; color: #1773EA; font-size: 13px; }
+.wx-nav-title { position: absolute; left: 50%; transform: translateX(-50%); font-size: 15px; font-weight: 600; color: #111; white-space: nowrap; }
+.wx-content { flex: 1; overflow-y: auto; overflow-x: hidden; background: #EDEDED; }
+.wx-scroll { padding-bottom: 62px; }
+.wx-card { background: #fff; margin: 8px 10px 0; border-radius: 8px; overflow: hidden; }
+.wx-card-hdr { display: flex; align-items: center; justify-content: space-between; padding: 9px 13px; border-bottom: 0.5px solid #F3F3F3; }
+.wx-card-hdr-title { font-size: 12px; font-weight: 600; color: #111; }
+.wx-card-hdr-badge { font-family: 'JetBrains Mono', monospace; font-size: 10px; background: #F5F5F5; color: #888; padding: 1px 5px; border-radius: 4px; }
+.wx-route-wrap { padding: 10px 13px; }
+.wx-rt { display: flex; gap: 10px; align-items: flex-start; }
+.wx-rt-marker { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+.wx-rt-dot { width: 10px; height: 10px; border-radius: 50%; }
+.wx-rt-stem { width: 1.5px; height: 22px; margin: 3px 0; }
+.wx-rt-name { font-size: 13px; font-weight: 600; color: #111; line-height: 1.2; }
+.wx-rt-meta { font-size: 10px; color: #888; margin-top: 2px; }
+.wx-rt-time { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: #111; }
+.wx-cargo-strip { display: flex; padding: 10px 13px; border-top: 0.5px solid #F3F3F3; }
+.wx-cargo-item { flex: 1; }
+.wx-cargo-item + .wx-cargo-item { border-left: 0.5px solid #F0F0F0; padding-left: 14px; }
+.wx-cargo-num { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 600; color: #111827; line-height: 1; }
+.wx-cargo-unit { font-size: 10px; color: #888; margin-top: 3px; }
+.wx-action-bar { position: absolute; bottom: 0; left: 0; right: 0; background: #fff; border-top: 0.5px solid #E0E0E0; padding: 8px 12px 10px; }
+.wx-btn { width: 100%; padding: 11px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; }
+.wx-btn-blue { background: #152CFF; color: #fff; }
+
+/* Pull / mini program home screen */
+.wx-mp-home { background: #F7F8FA; padding: 12px 10px; }
+.wx-mp-greeting { font-size: 15px; font-weight: 700; color: #111; margin-bottom: 2px; }
+.wx-mp-sub { font-size: 11px; color: #888; margin-bottom: 12px; }
+.wx-job-card { background: #fff; border-radius: 8px; padding: 10px 13px; margin-bottom: 8px; }
+.wx-job-card-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.wx-job-id { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9ca3af; }
+.wx-job-status { display: flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; }
+.wx-job-route { font-size: 13px; font-weight: 600; color: #111; margin-bottom: 3px; line-height: 1.3; }
+.wx-job-meta { font-size: 10px; color: #888; }
+.wx-job-sep { height: 0.5px; background: #F3F3F3; margin: 8px 0; }
+.wx-job-time-row { display: flex; gap: 16px; }
+.wx-job-time-item { }
+.wx-job-time-label { font-size: 9px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+.wx-job-time-val { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; color: #111; }
+.wx-job-time-date { font-size: 9px; color: #888; margin-top: 1px; }
+.wx-section-label { font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; margin: 12px 0 6px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>HMW-V24</h1>
+  <div class="hmw">"How might we connect a driver to their assigned FM job via WeChat — so the dispatcher can hand off job details instantly after assignment, without WhatsApp copy-paste?"</div>
+
+  <div class="context">
+    <strong>Gap in the current flow:</strong> TODO-048 (driver assignment — shipped) lets a dispatcher select Zhang Wei + 粤B·12345 in Teleport OS. But after pressing Assign, there is no mechanism to tell the driver. In practice, dispatchers screenshot the job detail, paste into a WeChat group, or read the address aloud. The WeChat Mini Program (HMW-V09) is designed but not yet built. This HMW explores how the assignment event bridges to the driver's WeChat experience. <strong>Three meaningfully different options:</strong> (A) QR code deep-link generated at assignment time, (B) WeChat subscription/template message sent to driver's WeChat ID, (C) Driver pulls their own jobs list in the mini program each morning. Each option has different integration requirements and driver UX implications.
+  </div>
+
+  <!-- ================================================================ -->
+  <h2>Option A — QR Code at Assignment (Zero Integration)</h2>
+
+  <div class="rationale">
+    <span class="label label-a">Option A</span><br>
+    When the dispatcher assigns a driver + vehicle in Teleport OS, a QR code immediately appears below the assigned driver in the Dispatch Assignment section. The QR encodes a deep link to the WeChat mini program for that specific job (e.g., <code style="font-family:monospace;font-size:10px">pages/job/detail?tripId=DO-001&jobId=J04</code>). Driver scans with WeChat's built-in QR scanner → mini program opens to the exact job. The QR code is also included in the printable Job Sheet (HMW-V21, which reserves a slot for this exact purpose). The dispatcher does not need to copy text or describe the address — the QR is the handoff artifact.
+  </div>
+
+  <div class="option-cols">
+    <!-- Vendor side: after assignment, QR appears in dispatch section -->
+    <div>
+      <div class="frame-label">Teleport OS Vendor — Job Detail (FM Job, after assignment)</div>
+      <div class="vendor-frame">
+        <div class="mock-nav">
+          <div class="mock-logo-sq">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+          </div>
+          <span class="mock-logo-text">Teleport OS</span>
+          <span class="mock-logo-sub">Vendor</span>
+          <div style="display:flex;gap:2px;margin-left:16px;">
+            <span class="mock-nav-link inactive">My Jobs</span>
+            <span class="mock-nav-link active">Fleet</span>
+          </div>
+          <span class="mock-vendor-name" style="margin-left:auto;">HaleSun Logistics</span>
+          <div class="mock-avatar">HS</div>
+        </div>
+        <div class="mock-body">
+          <div class="mock-back">← My Jobs</div>
+          <div class="mock-job-hdr">
+            <span class="mock-job-id">J04</span>
+            <span class="mock-job-svc">FM Trucking</span>
+            <span class="mock-job-code">FM</span>
+          </div>
+          <div class="mock-trip-meta" style="margin-bottom:14px;">DO-001 · Apple Inc · MAWB 176-11223344</div>
+
+          <!-- Status Action Bar: In Progress -->
+          <div class="mock-status-bar">
+            <div class="mock-status-left">
+              <div class="mock-dot-row">
+                <span class="mock-dot" style="background:#152CFF;"></span>
+                In Progress
+              </div>
+              <span class="mock-hint">Upload proof of service to mark complete</span>
+            </div>
+            <button class="mock-btn-blue" style="font-size:11px;padding:5px 12px;border:none;border-radius:4px;background:#152CFF;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;">↑ Upload Proof</button>
+          </div>
+
+          <!-- Dispatch section: assigned + QR code -->
+          <div class="dispatch-section">
+            <div class="sec-title">Driver &amp; Vehicle</div>
+            <div class="driver-row">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;flex-shrink:0;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span class="driver-name">Zhang Wei</span>
+              <span class="driver-plate">粤B·12345</span>
+              <span class="driver-phone">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:9px;height:9px;display:inline;vertical-align:middle;margin-right:1px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.2l3-.01a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.29 6.29l1.85-1.85a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                +86 138****1234
+              </span>
+              <span class="reassign-link">Reassign</span>
+            </div>
+
+            <!-- QR code block — appears after assignment -->
+            <div class="qr-block">
+              <!-- QR code visual placeholder (7×7 grid approximation) -->
+              <div class="qr-code">
+                <!-- Row 1: finder pattern top-left -->
+                <div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#fff;"></div><div class="qr-cell" style="background:#111;"></div>
+                <div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#fff;"></div><div class="qr-cell" style="background:#fff;"></div><div class="qr-cell" style="background:#fff;"></div><div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#fff;"></div><div class="qr-cell" style="background:#111;"></div>
+                <div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#fff;"></div><div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#fff;"></div><div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#111;"></div>
+                <div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#fff;"></div><div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#fff;"></div><div class="qr-cell" style="background:#fff;"></div><div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#fff;"></div>
+                <div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#fff;"></div><div class="qr-cell" style="background:#fff;"></div><div class="qr-cell" style="background:#fff;"></div><div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#fff;"></div><div class="qr-cell" style="background:#111;"></div>
+                <div class="qr-cell" style="background:#fff;"></div><div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#fff;"></div><div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#fff;"></div><div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#fff;"></div>
+                <div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#fff;"></div><div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#111;"></div><div class="qr-cell" style="background:#fff;"></div><div class="qr-cell" style="background:#111;"></div>
+              </div>
+              <div class="qr-label-wrap">
+                <div class="qr-label-title">Driver WeChat Link</div>
+                <div class="qr-label-sub">Zhang Wei scans this with<br>WeChat camera to open the job</div>
+                <span class="qr-copy-btn">Copy link</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Driver side: WeChat scan → mini program -->
+    <div>
+      <div class="frame-label">Driver's WeChat — Scans QR → Opens Mini Program</div>
+      <div class="wx-phone-wrap">
+        <div class="wx-phone">
+          <div class="wx-phone-inner">
+            <div class="wx-sb">
+              <span class="wx-sb-time">09:14</span>
+              <div class="wx-sb-right">
+                <div class="wx-signal"><span style="height:4px;"></span><span style="height:6px;"></span><span style="height:8px;"></span><span style="height:9px;"></span></div>
+                <div class="wx-bat"></div>
+              </div>
+            </div>
+            <div class="wx-nav">
+              <div class="wx-nav-back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#1773EA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:7px;height:12px;"><polyline points="15 18 9 12 15 6"/></svg>
+                <span style="font-size:14px;color:#1773EA;">Scan</span>
+              </div>
+              <span class="wx-nav-title">Teleport OS</span>
+            </div>
+            <div class="wx-content">
+              <div class="wx-scroll">
+                <!-- Job status banner -->
+                <div class="wx-card" style="margin-top:8px;">
+                  <div style="display:flex;align-items:center;gap:9px;padding:10px 13px;">
+                    <div style="width:8px;height:8px;border-radius:50%;background:#152CFF;flex-shrink:0;margin-top:2px;"></div>
+                    <div>
+                      <div style="font-size:13px;font-weight:600;color:#111;">In Progress</div>
+                      <div style="font-size:10px;color:#888;margin-top:2px;">Upload proof to complete</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Route card -->
+                <div class="wx-card">
+                  <div class="wx-card-hdr">
+                    <span class="wx-card-hdr-title">Route</span>
+                    <span class="wx-card-hdr-badge">J04</span>
+                  </div>
+                  <div class="wx-route-wrap">
+                    <div class="wx-rt">
+                      <div class="wx-rt-marker">
+                        <div class="wx-rt-dot" style="background:#152CFF;"></div>
+                        <div class="wx-rt-stem" style="background:#d1d5db;"></div>
+                        <div class="wx-rt-dot" style="background:#111827;border:2px solid #d1d5db;background:#fff;"></div>
+                      </div>
+                      <div style="flex:1;">
+                        <div style="margin-bottom:22px;">
+                          <div class="wx-rt-name">前海综合保税区</div>
+                          <div class="wx-rt-meta">
+                            <span class="wx-rt-time">08:30</span>
+                            <span style="color:#9ca3af;">· 26 Apr</span>
+                          </div>
+                        </div>
+                        <div>
+                          <div class="wx-rt-name">广州白云国际机场</div>
+                          <div class="wx-rt-meta">
+                            <span class="wx-rt-time">14:00</span>
+                            <span style="color:#9ca3af;">· 26 Apr</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="wx-cargo-strip">
+                    <div class="wx-cargo-item">
+                      <div class="wx-cargo-num">24</div>
+                      <div class="wx-cargo-unit">bags</div>
+                    </div>
+                    <div class="wx-cargo-item">
+                      <div class="wx-cargo-num">1,280</div>
+                      <div class="wx-cargo-unit">kg</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Customer -->
+                <div class="wx-card" style="padding:9px 13px;font-size:11px;color:#888;">
+                  Apple Inc &middot; MAWB 176-11223344
+                </div>
+              </div>
+            </div>
+            <!-- Action bar -->
+            <div class="wx-action-bar">
+              <button class="wx-btn wx-btn-blue">已到达提货点 Arrived at Pickup</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <strong>Pros</strong><br>
+      • Zero WeChat developer overhead — no subscription template approval<br>
+      • Works offline (QR can be printed on job sheet)<br>
+      • QR slot already reserved in HMW-V21 print-preview<br>
+      • Clear physical handoff artifact: dispatcher holds phone, driver scans<br>
+      • If driver loses the link, dispatcher regenerates from the same screen
+    </div>
+    <div class="cons">
+      <strong>Cons</strong><br>
+      • Requires driver to be physically close (or dispatcher screenshot → WeChat)<br>
+      • QR must be regenerated if job is reassigned to different driver<br>
+      • Driver has no push notification — must scan to know they're assigned<br>
+      • WeChat mini program must be built first (QR is useless without it)
+    </div>
+  </div>
+
+  <!-- ================================================================ -->
+  <h2>Option B — WeChat Template Message (Push Notification)</h2>
+
+  <div class="rationale">
+    <span class="label label-b">Option B</span><br>
+    When the dispatcher assigns a driver in Teleport OS, the system sends a WeChat template/subscription message to the driver's registered WeChat ID (stored in the Driver master data: <code style="font-family:monospace;font-size:10px">Driver.wechatId</code>). The message contains: job ID, pickup location, pickup time, cargo summary, and a deep-link to open the mini program. The driver taps the card in their WeChat message list → mini program opens directly to the job. No dispatcher action beyond the normal assignment.
+  </div>
+
+  <div class="option-cols">
+    <!-- Vendor side: no extra step, just the assignment -->
+    <div>
+      <div class="frame-label">Teleport OS Vendor — No extra step for dispatcher</div>
+      <div class="vendor-frame">
+        <div class="mock-nav">
+          <div class="mock-logo-sq">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:10px;height:10px;"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+          </div>
+          <span class="mock-logo-text">Teleport OS</span>
+          <span class="mock-logo-sub">Vendor</span>
+          <span class="mock-vendor-name" style="margin-left:auto;">HaleSun Logistics</span>
+          <div class="mock-avatar">HS</div>
+        </div>
+        <div class="mock-body">
+          <div style="font-size:12px;color:#6b7280;margin-bottom:12px;">← My Jobs</div>
+          <div class="mock-job-hdr" style="margin-bottom:12px;">
+            <span class="mock-job-id">J04</span>
+            <span class="mock-job-svc">FM Trucking</span>
+          </div>
+          <div class="dispatch-section">
+            <div class="sec-title">Driver &amp; Vehicle</div>
+            <div class="driver-row">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;flex-shrink:0;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span class="driver-name">Zhang Wei</span>
+              <span class="driver-plate">粤B·12345</span>
+              <span class="reassign-link">Reassign</span>
+            </div>
+            <!-- Delivery status indicator -->
+            <div style="display:flex;align-items:center;gap:6px;padding-top:8px;border-top:1px solid rgba(21,44,255,0.08);margin-top:8px;">
+              <div style="width:6px;height:6px;border-radius:50%;background:#059669;flex-shrink:0;"></div>
+              <span style="font-size:10px;color:#059669;font-weight:500;">WeChat notification sent</span>
+              <span style="font-size:10px;color:#9ca3af;font-family:'JetBrains Mono',monospace;margin-left:auto;">09:14</span>
+            </div>
+          </div>
+          <div style="margin-top:12px;padding:10px 12px;background:#f9fafb;border-radius:4px;border:1px solid #e5e7eb;font-size:10px;color:#6b7280;">
+            Driver WeChat ID: <span style="font-family:'JetBrains Mono',monospace;color:#111827;">zhangwei88</span><br>
+            <span style="color:#9ca3af;font-size:9px;">Notification delivered automatically when assigned</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Driver side: receives WeChat template message -->
+    <div>
+      <div class="frame-label">Driver's WeChat — Receives job assignment notification</div>
+      <div class="wx-phone-wrap">
+        <div class="wx-phone">
+          <div class="wx-phone-inner">
+            <div class="wx-sb">
+              <span class="wx-sb-time">09:14</span>
+              <div class="wx-sb-right">
+                <div class="wx-signal"><span style="height:4px;"></span><span style="height:6px;"></span><span style="height:8px;"></span><span style="height:9px;"></span></div>
+                <div class="wx-bat"></div>
+              </div>
+            </div>
+            <div class="wx-nav" style="background:#fff;">
+              <span style="position:absolute;left:50%;transform:translateX(-50%);font-size:15px;font-weight:600;color:#111;">消息</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#1773EA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;margin-left:auto;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+            <!-- WeChat message list -->
+            <div style="background:#EDEDED;flex:1;padding:1px 0;">
+              <!-- Teleport OS message row -->
+              <div style="background:#fff;display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-bottom:0.5px solid #F3F3F3;">
+                <div style="width:40px;height:40px;border-radius:4px;background:#152CFF;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/></svg>
+                </div>
+                <div style="flex:1;min-width:0;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
+                    <span style="font-size:13px;font-weight:600;color:#111;">Teleport OS</span>
+                    <span style="font-size:11px;color:#9ca3af;">09:14</span>
+                  </div>
+                  <div style="font-size:12px;color:#111;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">[任务通知] 您已被分配到新任务</div>
+                </div>
+                <div style="width:18px;height:18px;border-radius:9px;background:#dc2626;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
+              </div>
+              <!-- Other messages -->
+              <div style="background:#fff;display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:0.5px solid #F3F3F3;">
+                <div style="width:40px;height:40px;border-radius:4px;background:#d1d5db;flex-shrink:0;"></div>
+                <div style="flex:1;"><div style="font-size:12px;color:#9ca3af;">物流群</div><div style="font-size:11px;color:#d1d5db;">Zhang Wei: ok</div></div>
+              </div>
+            </div>
+            <!-- Template message overlay / tap view -->
+            <div style="position:absolute;top:66px;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);display:flex;align-items:flex-start;padding:8px 10px;">
+              <div class="wx-tmpl-bubble">
+                <div class="wx-tmpl-header">
+                  <div class="wx-tmpl-logo"></div>
+                  <span class="wx-tmpl-source">Teleport OS</span>
+                </div>
+                <div style="font-size:11px;font-weight:700;color:#111;margin-bottom:8px;">新任务分配 · Job Assigned</div>
+                <div class="wx-tmpl-row"><span class="wx-tmpl-k">任务号</span><span class="wx-tmpl-v mono">J04 / DO-001</span></div>
+                <div class="wx-tmpl-row"><span class="wx-tmpl-k">提货点</span><span class="wx-tmpl-v">前海综合保税区</span></div>
+                <div class="wx-tmpl-row"><span class="wx-tmpl-k">提货时间</span><span class="wx-tmpl-v mono">08:30 · 26 Apr</span></div>
+                <div class="wx-tmpl-row"><span class="wx-tmpl-k">货物</span><span class="wx-tmpl-v">24件 · 1,280 kg</span></div>
+                <div class="wx-tmpl-row"><span class="wx-tmpl-k">车辆</span><span class="wx-tmpl-v mono">粤B·12345</span></div>
+                <div class="wx-tmpl-cta">
+                  <span>查看任务详情</span>
+                  <span class="wx-tmpl-chevron"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <strong>Pros</strong><br>
+      • Instant — driver is notified the moment dispatcher assigns<br>
+      • No dispatcher action after assignment (notification is automatic)<br>
+      • Deep-links directly to the job in mini program<br>
+      • Driver receives assignment notification even if not at warehouse
+    </div>
+    <div class="cons">
+      <strong>Cons</strong><br>
+      • Requires WeChat developer account + subscription message template approval (24-48h review, requires official entity registration)<br>
+      • Driver must follow the Teleport OS service account to receive messages<br>
+      • Template message content is heavily regulated — format constraints<br>
+      • If WeChat ID is wrong/outdated in fleet data, notification fails silently<br>
+      • High regulatory friction for prototype stage
+    </div>
+  </div>
+
+  <!-- ================================================================ -->
+  <h2>Option C — Driver Pulls Own Jobs in Mini Program (No Notification)</h2>
+
+  <div class="rationale">
+    <span class="label label-c">Option C</span><br>
+    No push mechanism at all. Drivers open the Teleport OS WeChat mini program each day, authenticate by phone number (their number on file in the Driver master data), and see all jobs assigned to them. The mini program home screen is a date-sorted job list filtered to that driver. Driver navigates to their job from the list. Dispatcher tells the driver "check your Teleport app" via existing channels (WeChat, phone). This requires the fewest integrations — just the mini program with a driver auth flow.
+  </div>
+
+  <div style="max-width:300px;margin:14px auto 32px;">
+    <div class="frame-label">Driver's WeChat Mini Program — Home Screen (Pull)</div>
+    <div class="wx-phone-wrap">
+      <div class="wx-phone">
+        <div class="wx-phone-inner">
+          <div class="wx-sb">
+            <span class="wx-sb-time">09:14</span>
+            <div class="wx-sb-right">
+              <div class="wx-signal"><span style="height:4px;"></span><span style="height:6px;"></span><span style="height:8px;"></span><span style="height:9px;"></span></div>
+              <div class="wx-bat"></div>
+            </div>
+          </div>
+          <div class="wx-nav" style="background:#F7F8FA;">
+            <span style="position:absolute;left:50%;transform:translateX(-50%);font-size:15px;font-weight:600;color:#111;">我的任务</span>
+          </div>
+          <div class="wx-content">
+            <div style="padding:12px 10px 0;">
+              <div class="wx-mp-greeting">早上好，张威</div>
+              <div class="wx-mp-sub">今天 · 26 Apr · 3 jobs assigned</div>
+
+              <!-- Job card 1: In Progress -->
+              <div class="wx-job-card">
+                <div class="wx-job-card-hdr">
+                  <span class="wx-job-id">J04 · DO-001</span>
+                  <div class="wx-job-status" style="color:#152CFF;">
+                    <span style="width:6px;height:6px;border-radius:50%;background:#152CFF;display:inline-block;"></span>
+                    进行中
+                  </div>
+                </div>
+                <div class="wx-job-route">前海综保区 → 白云机场</div>
+                <div class="wx-job-meta">Apple Inc · 24件 · 1,280 kg · 粤B·12345</div>
+                <div class="wx-job-sep"></div>
+                <div class="wx-job-time-row">
+                  <div class="wx-job-time-item">
+                    <div class="wx-job-time-label">提货</div>
+                    <div class="wx-job-time-val">08:30</div>
+                    <div class="wx-job-time-date">26 Apr</div>
+                  </div>
+                  <div class="wx-job-time-item">
+                    <div class="wx-job-time-label">送达</div>
+                    <div class="wx-job-time-val">14:00</div>
+                    <div class="wx-job-time-date">26 Apr</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Job card 2: Pending -->
+              <div class="wx-job-card" style="border-left:2px solid #d1d5db;">
+                <div class="wx-job-card-hdr">
+                  <span class="wx-job-id">J07 · DO-003</span>
+                  <div class="wx-job-status" style="color:#9ca3af;">
+                    <span style="width:6px;height:6px;border-radius:50%;background:#d1d5db;display:inline-block;"></span>
+                    待开始
+                  </div>
+                </div>
+                <div class="wx-job-route" style="color:#6b7280;">龙华仓库 → 前海综保区</div>
+                <div class="wx-job-meta">Nike Inc · 18件 · 860 kg</div>
+              </div>
+
+              <!-- Tomorrow label -->
+              <div class="wx-section-label">明天 · 27 Apr</div>
+              <div class="wx-job-card" style="border-left:2px solid #d1d5db;opacity:0.6;">
+                <div class="wx-job-card-hdr">
+                  <span class="wx-job-id">J09 · DO-005</span>
+                  <div class="wx-job-status" style="color:#9ca3af;">
+                    <span style="width:6px;height:6px;border-radius:50%;background:#d1d5db;display:inline-block;"></span>
+                    待开始
+                  </div>
+                </div>
+                <div class="wx-job-route" style="color:#6b7280;">白云机场 → 深圳机场</div>
+                <div class="wx-job-meta">Samsung HK · 32件 · 2,100 kg</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <strong>Pros</strong><br>
+      • Fewest integrations — mini program auth only (phone number)<br>
+      • Driver has full daily job overview in one screen<br>
+      • Works even if WeChat ID data is missing<br>
+      • Driver can check upcoming jobs and plan the day<br>
+      • No WeChat platform approval needed beyond mini program itself
+    </div>
+    <div class="cons">
+      <strong>Cons</strong><br>
+      • Driver must proactively open the app to learn about assignments<br>
+      • Relies on dispatcher to verbally tell driver "check the app"<br>
+      • Misses the WeChat-native notification workflow drivers already use<br>
+      • Driver may miss re-assignments or cancellations without checking<br>
+      • Adds friction to the handoff vs. existing WhatsApp group message
+    </div>
+  </div>
+
+  <!-- ================================================================ -->
+  <div class="verdict">
+    <h3>Recommendation: Option A (QR Code) for v1 — Option B (Push) for v1.1</h3>
+    <p><strong>Ship QR first.</strong> Option A requires no WeChat platform registration beyond the mini program itself. The QR code slot is already reserved in HMW-V21's print-preview job sheet. Implementation cost: generate the mini program deep link URL when a driver is assigned and render it as a QR in the Dispatch Assignment section. The dispatcher taps "Copy link" to forward via WeChat if not physically co-located. Zero new infrastructure.</p>
+    <p><strong>Plan subscription messages for v1.1.</strong> Option B is the correct long-term UX — drivers are already conditioned to act on WeChat template messages from logistics platforms. Start the WeChat service account application and subscription message template approval in parallel with v1 shipping. Approval takes 2-4 weeks. Wire it up in v1.1 once approved. Both A and B can coexist: the QR stays as a fallback if the driver hasn't subscribed.</p>
+    <p><strong>Reject Option C as default.</strong> Pure pull is insufficient because drivers miss re-assignments and cancellations. Option C works only as a supplement to A or B — the daily job overview screen is valuable, but it cannot be the sole notification mechanism in a time-sensitive dispatch workflow.</p>
+    <p><strong>Open question for user:</strong> Does the WeChat mini program authenticate drivers by (a) phone number match against fleet data, (b) WeChat OAuth (driver authorizes with their WeChat account), or (c) vendor code + driver name? Option (b) is most reliable (phone numbers change; WeChat ID is persistent) but requires more OAuth scope approval. Recommend (b) for v1.1, (a) for the v1 QR fallback.</p>
+  </div>
+
+</div>
+</body>
+</html>

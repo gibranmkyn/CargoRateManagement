@@ -2,6 +2,13 @@
 
 ## Open
 
+### HMW-V24: How might we connect a driver to their assigned FM job via WeChat — so the dispatcher can hand off job details instantly after assignment, without WhatsApp copy-paste?
+**Root cause:** TODO-048 (driver assignment) shipped — a dispatcher can assign Zhang Wei + 粤B·12345 in Teleport OS. But after pressing Assign, there is no mechanism to notify the driver. In practice, dispatchers screenshot and paste into WeChat. The WeChat Mini Program (HMW-V09) is designed but not built; this HMW explores the dispatch→driver handoff moment.
+**Options:** A) QR code deep-link generated at assignment time in the Dispatch Assignment section (driver scans with WeChat), B) WeChat subscription/template message sent to driver's WeChat ID (registered in fleet master data) when dispatcher assigns, C) Driver-initiated pull — driver opens mini program each morning and sees all assigned jobs (no push mechanism)
+**Leaning toward:** A) QR code for v1 — zero WeChat platform approval overhead, QR slot already reserved in HMW-V21 print-preview job sheet, works offline (printable). B is the correct long-term UX (apply for WeChat service account subscription template in parallel, ship in v1.1). C alone is insufficient — drivers miss re-assignments and cancellations without a push signal.
+**Open question:** Should the WeChat mini program authenticate drivers by (a) phone number match against fleet data, (b) WeChat OAuth (driver authorizes with their WeChat account — persistent and reliable), or (c) vendor code + driver name? Recommend (b) for v1.1, (a) for v1 QR fallback. Needs user input.
+**File:** `24-hmw-driver-wechat-handoff.html`
+
 ### HMW-V23: How might we let vendors navigate between jobs on the same trip — without returning to My Jobs each time?
 **Root cause:** A vendor with multiple jobs on the same trip (e.g., DO-001 has FM + EC + OH) must navigate back to My Jobs between each job detail page. The header already shows the trip ID as plain mono text — not a link, not a navigator. Vendors cannot see how many sibling jobs exist or whether any require action without exiting.
 **Options:** A) Trip job strip — 24px horizontal band below the header showing one chip per trip job (current highlighted, status dot on each), B) Forward/back breadcrumb arrows — ← / → in the header with position fraction (1/3) and next-job peek label, C) Sibling jobs panel — collapsible section at the bottom of the page after the Activity Log
