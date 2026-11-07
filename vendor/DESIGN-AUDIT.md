@@ -1,123 +1,103 @@
 # Design Audit — Teleport OS Vendor
-**Audited:** 2026-10-31 | **Auditor:** Autonomous design assessment agent
-**Scope:** `vendor/src/` against `admin/DESIGN.md` and `vendor/DESIGN.md`
 
----
+> Run: 2026-11-07. Audit against `vendor/DESIGN.md` and `admin/DESIGN.md`.
 
-## Summary
+## Critical (Functional Regressions)
 
-| # | Severity | File | Finding |
-|---|----------|------|---------|
-| 1 | **Bug** | `JobDetailPage.tsx:49–68` | Local `StateCell` uses merged `getStateStyle()` — conflates Status + Verification |
-| 2 | **Bug** | `JobDetailPage.tsx:104–105` | Dispatch dropdowns read from `seedDrivers`/`seedVehicles`, not fleet localStorage data |
-| 3 | Info | `JobDetailPage.tsx:333–358` | FM route section shows date only, not pickup/delivery time (design intent per HMW-V14) |
-| 4 | Info | `MyJobsPage.tsx:418` | Segment pill badge `borderRadius: 8` — one pixel above the 6px cap |
+### AUDIT-01: Fee Breakdown section missing from Job Detail page
+**File:** `vendor/src/pages/JobDetailPage.tsx:501–517`
+**Severity:** Critical — vendor reconciliation is the app's primary purpose
 
-No violations of color budget, shadow policy, or typography found in the audit.
-
----
-
-## Finding 1 — StateCell conflation bug (HMW-V19)
-
-**File:** `vendor/src/pages/JobDetailPage.tsx` lines 49–68, 442  
-**Severity:** Bug — affects correctness of the Status Action Bar
-
-**Problem:** `JobDetailPage.tsx` defines a local `StateCell` component that calls `getStateStyle()`. This function (`shared/statusStyles.ts`) derives a single merged label from Status + Verification together. For example, a job with `status: Completed, verificationStatus: Rejected` returns the merged label "Verify rejected" rather than showing the operational status "Completed" separately.
-
-The vendor design spec requires: *"Status and Verification are independent signals"* and the Status Action Bar should show the operational status chip using `StatusCell` — the same component used in the `MyJobsPage` table.
-
-**Also at line 442:** `<StateCell job={job} fontSize={12} withSubline={false} />` renders inside the action bar. This produces the wrong merged label for Completed+Rejected jobs.
-
-**Fix:** Replace the local `StateCell` in `JobDetailPage.tsx` with the shared `StatusCell` component (already imported in `MyJobsPage.tsx`). For the Rejected verification state, add a small inline rejection badge (`#dc2626` border, "Rejected" label) beside the status chip — per HMW-V19 option C recommendation.
-
-```tsx
-// Remove lines 49–68 (local StateCell definition)
-// Import StatusCell from '../components/StatusCell'
-// At line 442, replace:
-<StateCell job={job} fontSize={12} withSubline={false} />
-// With:
-<StatusCell job={job} />
-{job.verificationStatus === 'Rejected' && (
-  <span style={{ fontSize: 10, fontWeight: 600, color: '#dc2626', marginLeft: 6 }}>· Rejected</span>
-)}
+The service-adaptive layout renders:
+```
+FM:     renderDriverVehicle() → renderRoute() → renderCargo() → renderProofs() → renderActivityLog()
+Non-FM: renderLocation() → renderHubOpsProgress() → renderCargo() → renderProofs() → renderActivityLog()
 ```
 
+`renderFees()` is not called in either branch. The fee breakdown table (the reason vendors open the app) is not shown anywhere on the job detail page.
+
+**Spec (`vendor/DESIGN.md`):**
+FM: Dispatch Assignment → Pickup/Delivery Timeline → Cargo → **Fee Breakdown** → Proofs → Log
+Non-FM: Location → Cargo → **Fee Breakdown** → Proofs → Log
+
+**Fix:** Add `renderFees()` section between `renderCargo()` and `renderProofs()` in both branches.
+
 ---
 
-## Finding 2 — Fleet data plumbing bug (HMW-V18 prerequisite)
+### AUDIT-02: Status Action Bar conflates Status + Verification into one label
+**File:** `vendor/src/pages/JobDetailPage.tsx:9, 47–68, 442`
+**Severity:** High — design spec violation, misreports job state to vendors
 
-**File:** `vendor/src/pages/JobDetailPage.tsx` lines 104–105, 151–153  
-**Severity:** Bug — drivers/vehicles added via Fleet page don't appear in dispatch dropdowns
+A local `StateCell` component is defined using `getStateStyle()`, which merges Status + Verification into a single combined label. For a Completed + Rejected job, this shows "Verify rejected" instead of the correct status ("Completed").
 
-**Problem:** `JobDetailPage.tsx` sources fleet data from `seedDrivers` and `seedVehicles` (imported from `shared/mockData`):
+The two-signal model (Status + Verification are independent) is a first-class design principle. `getStateStyle` was the old merged approach; `StatusCell` + `VerificationCell` are the corrected components.
 
+**Spec:** Use `StatusCell` from `vendor/src/components/StatusCell.tsx` for the operational status chip in the action bar. The verification signal (Rejected/Verified) is handled by bar color + hint text, which is already correct — only the chip is wrong.
+
+**Reference:** HMW-V19 (Open) documents this exact bug.
+
+**Fix:**
+1. Remove local `StateCell` function and `getStateStyle` import.
+2. Import `StatusCell` from `../components/StatusCell`.
+3. Replace `<StateCell job={job} fontSize={12} withSubline={false} />` at line 442 with `<StatusCell job={job} />`.
+
+---
+
+### AUDIT-03: Driver/Vehicle assignment loads seed data instead of fleet localStorage
+**File:** `vendor/src/pages/JobDetailPage.tsx:6, 104–105, 151–153`
+**Severity:** High — functional bug; drivers added via Fleet page don't appear in job assignment dropdowns
+
+Lines 104–105:
 ```ts
 const vendorDrivers = seedDrivers.filter((d) => d.vendorCode === vendorCode && d.isActive);
 const vendorVehicles = seedVehicles.filter((v) => v.vendorCode === vendorCode && v.isActive);
 ```
 
-But `FleetPage.tsx` stores and loads fleet data from localStorage under the key `vendor_fleet_${vendorCode}` (see `FleetPage.tsx:39–62`). When a dispatcher adds a new driver via the Fleet page and then opens a job to assign that driver, the driver does not appear in the dispatch dropdown — because `JobDetailPage` never reads from localStorage.
+`seedDrivers` and `seedVehicles` are static fixtures from `mockData.ts`. The Fleet page stores its data under `vendor_fleet_{vendorCode}` in localStorage. Any driver or vehicle added via FleetPage is invisible to the assignment dropdowns.
 
-Additionally, `handleAssignDispatch` (lines 151–153) uses `seedDrivers.find(...)` and `seedVehicles.find(...)` to look up driver/vehicle objects by ID, which will also fail for any fleet-added records since their IDs won't exist in the seed arrays.
-
-**Fix:** Extract the `loadFleetData(vendorCode)` helper from `FleetPage.tsx` into a shared utility or hook, and call it from `JobDetailPage.tsx` instead of reading seed arrays directly.
-
+Lines 151–153 repeat the error on save:
 ```ts
-// Option 1: Inline the same localStorage read in JobDetailPage
-const fleetKey = `vendor_fleet_${vendorCode}`;
-const fleetRaw = localStorage.getItem(fleetKey);
-const fleet = fleetRaw ? JSON.parse(fleetRaw) as { drivers: Driver[]; vehicles: Vehicle[] } : { drivers: seedDrivers.filter(d => d.vendorCode === vendorCode), vehicles: seedVehicles.filter(v => v.vendorCode === vendorCode) };
-const vendorDrivers = fleet.drivers.filter(d => d.isActive);
-const vendorVehicles = fleet.vehicles.filter(v => v.isActive);
-
-// Option 2 (recommended): Move loadFleetData to shared/fleetData.ts and import it in both FleetPage and JobDetailPage
+const driver = seedDrivers.find((d) => d.id === selectedDriverId);
+const vehicle = seedVehicles.find((v) => v.id === selectedVehicleId);
 ```
 
-**Blocker note:** This bug blocks HMW-V18's "dispatch-aware availability" column from being meaningful — the Fleet page's drivers won't appear in job detail assignment if this isn't fixed first.
+**Reference:** HMW-V18 (Open) flags this as a prerequisite: "Fix `JobDetailPage.tsx` data plumbing — currently loads `seedDrivers`/`seedVehicles` instead of Fleet page's localStorage fleet data."
+
+**Fix:** Load fleet data from `localStorage.getItem('vendor_fleet_' + vendorCode)` and fall back to seed data if absent, mirroring `FleetPage.tsx`'s `loadFleetData()` helper. Then use the loaded lists in both the dropdown render and the save handler.
 
 ---
 
-## Finding 3 — FM route section shows date, not pickup/delivery time (Design intent, not bug)
+## Design Spec Deviations
 
-**File:** `vendor/src/pages/JobDetailPage.tsx` lines 333–358  
-**Severity:** Info — tracked in HMW-V14
+### AUDIT-04: FM route section shows dates, not the big-mono-time hero layout
+**File:** `vendor/src/pages/JobDetailPage.tsx:333–358`
+**Severity:** Medium — spec calls for 20px JetBrains Mono time as primary visual anchor
 
-**Observation:** The `renderRoute()` function shows pickup/delivery location names with `fmtDateMono()` (e.g., "26 Apr") but omits pickup and delivery times. The vendor DESIGN.md specifies: *"Pickup/Delivery Timeline — two-point layout: Origin (location + pickup datetime in big mono) → arrow → Destination."* Times are the most important data for FM dispatchers.
+`renderRoute()` shows location names at 11px with a date subline (`fmtDateMono` → "12 Nov"). The DESIGN.md spec (and HMW-V14 resolution) requires:
 
-This matches the open question in HMW-V14 (urgency coloring when < 2h to pickup) which is still unresolved. The current implementation is not wrong per se — the time data may simply not be in the seed data — but the section title "Route" should be "Pickup/Delivery Timeline" to match the DESIGN.md spec, and datetime should use `fmtDateTime()` or similar when time data exists.
+> "Time-first hero — 20px JetBrains Mono time as largest element, location name and date as secondary lines below"
 
-**Not a fix required now** — track against HMW-V14 resolution.
+The dispatcher's primary question is "when?" not "where?". Hiding the pickup time behind a date string actively hides urgency.
+
+**Fix:** Render `fmtTime(job.origin.date)` at 20px JetBrains Mono as the primary text, with location name at 11px and date at 10px muted mono below. See `14-hmw-fm-timeline-times.html` for the designed layout.
 
 ---
 
-## Finding 4 — Segment pill badge border-radius 8px (minor)
+### AUDIT-05: Rejection reason references `job.rejectionReason` (old field name)
+**File:** `vendor/src/pages/JobDetailPage.tsx:471`
+**Severity:** Low — verification rejection reason may not display
 
-**File:** `vendor/src/pages/MyJobsPage.tsx` line 418  
-**Severity:** Minor — 2px over the 6px cap
-
-**Observation:** The segment pill count badge uses `borderRadius: 8`:
 ```tsx
-style={{ fontSize: 10, padding: '0 5px', borderRadius: 8, fontWeight: 700, ... }}
+{job.verificationStatus === 'Rejected' && job.rejectionReason && (
 ```
 
-The design system cap is 4–6px for containers (99px allowed only for full-pill shapes). A badge at 8px is negligible visually but technically out of spec. Fix: change to `borderRadius: 6`.
+The active data model uses `job.rejectionReason` for verification rejections (distinct from `job.cancelReason` for job cancellations). If the shared types renamed this field, the rejection reason display will silently fail. Verify against `shared/types.ts` that `rejectionReason` is the current field name on the Job type for verification rejection reason.
 
 ---
 
-## Design System Compliance (Pass)
+## Compliant (no violations found)
 
-| Check | Result |
-|-------|--------|
-| Status/Verification colors match the 5-color system | ✓ Pass |
-| No Tailwind color classes in vendor pages | ✓ Pass |
-| Service tag: mono gray `#6b7280`, no pill, no blue | ✓ Pass |
-| Trip ID: ink mono `#111827`, no chip, no blue | ✓ Pass |
-| Nav background `#111827`, height 40px | ✓ Pass |
-| Accent `#152CFF` on interactive elements only | ✓ Pass |
-| No box-shadow on table rows or cards | ✓ Pass |
-| No filled status chips (dot + text only) | ✓ Pass |
-| StatusCell + VerificationCell used in My Jobs table | ✓ Pass |
-| No stats bar on My Jobs or Fleet page | ✓ Pass |
-| Empty state: muted text + clear filters link | ✓ Pass |
-| Driver/vehicle plate and truck type: mono gray, not blue | ✓ Pass |
-| Fonts: Instrument Sans + JetBrains Mono | ✓ Pass |
+- **Navbar.tsx** — Colors, sizing, avatar initials, vendor label, border-radius all correct.
+- **MyJobsPage.tsx** — Table density, pill styling, two-column Status+Verification, filter bar, service pills all correct. Pagination buttons correctly use blue only for active state.
+- **FleetPage.tsx** — Tab styling, truck type as mono gray (not blue), status dots (green/ghost), CRUD table density, border-radius ≤6px all correct. No decorative colors or shadows.
+- **StatusCell.tsx / VerificationCell.tsx** — Correct dot+label+timestamp pattern.
